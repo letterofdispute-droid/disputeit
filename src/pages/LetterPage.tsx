@@ -3,6 +3,7 @@ import Layout from '@/components/layout/Layout';
 import { getTemplateBySlug } from '@/data/letterTemplates';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
+import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
 
 const LetterPage = () => {
@@ -15,6 +16,11 @@ const LetterPage = () => {
 
   return (
     <Layout>
+      <SEOHead 
+        title={template.seoTitle}
+        description={template.seoDescription}
+        canonicalPath={`/complaint-letter/${template.slug}`}
+      />
       {/* SEO-Optimized Header */}
       <section className="bg-primary py-12 md:py-16">
         <div className="container-wide">
