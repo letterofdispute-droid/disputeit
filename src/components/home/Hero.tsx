@@ -16,8 +16,8 @@ const Hero = () => {
         <div className="max-w-3xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
-            <Shield className="h-4 w-4" />
-            <span>Trusted by 50,000+ consumers</span>
+            <FileCheck className="h-4 w-4" />
+            <span>Professional Letter Templates</span>
           </div>
 
           {/* Headline */}
@@ -28,8 +28,8 @@ const Hero = () => {
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Generate legally-structured complaint letters for refunds, landlord issues, and consumer disputes. 
-            No legal jargon. No confusion. Just results.
+            Generate professionally structured complaint letters for refunds, landlord issues, and consumer disputes. 
+            Clear. Professional. Well-organized.
           </p>
 
           {/* CTAs */}
@@ -59,7 +59,7 @@ const Hero = () => {
             </div>
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <Shield className="h-5 w-5 text-accent" />
-              <span className="text-sm">Legally structured</span>
+              <span className="text-sm">Professionally formatted</span>
             </div>
           </div>
         </div>
