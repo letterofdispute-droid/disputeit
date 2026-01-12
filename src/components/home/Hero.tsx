@@ -1,4 +1,4 @@
-import { ArrowRight, Shield, Clock, FileCheck } from 'lucide-react';
+import { ArrowRight, Target, ShieldCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -16,20 +16,20 @@ const Hero = () => {
         <div className="max-w-3xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
-            <FileCheck className="h-4 w-4" />
-            <span>Professional Letter Templates</span>
+            <ShieldCheck className="h-4 w-4" />
+            <span>Pre-Validated Legal Templates</span>
           </div>
 
           {/* Headline */}
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6 animate-fade-up">
             Professional Dispute Letters,{' '}
-            <span className="text-accent">Created in Minutes</span>
+            <span className="text-accent">Without the Guesswork</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Generate professionally structured complaint letters for refunds, landlord issues, and consumer disputes. 
-            Clear. Professional. Well-organized.
+            Pre-validated templates with controlled language, consistent structure, and legal precision. 
+            No trial and error. Just predictable, professional results.
           </p>
 
           {/* CTAs */}
@@ -50,16 +50,16 @@ const Hero = () => {
           {/* Trust Indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
+              <Target className="h-5 w-5 text-accent" />
+              <span className="text-sm">Certainty, not guesswork</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
+              <ShieldCheck className="h-5 w-5 text-accent" />
+              <span className="text-sm">Pre-validated templates</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <Clock className="h-5 w-5 text-accent" />
-              <span className="text-sm">Ready in 5 minutes</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <FileCheck className="h-5 w-5 text-accent" />
-              <span className="text-sm">Professional templates</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <Shield className="h-5 w-5 text-accent" />
-              <span className="text-sm">Professionally formatted</span>
+              <span className="text-sm">Legal-safe language</span>
             </div>
           </div>
         </div>

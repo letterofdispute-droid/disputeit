@@ -132,7 +132,14 @@ const CategoryPage = () => {
       {/* Templates Grid */}
       <section className="py-12 md:py-16 bg-background">
         <div className="container-wide">
-          <div className="mb-8">
+          {/* Trust Message */}
+          <div className="mb-8 p-4 bg-success/5 border border-success/20 rounded-lg">
+            <p className="text-sm text-foreground">
+              <span className="font-medium">All templates in this category</span> use pre-validated language with proper legal references. No guessing, no prompt engineering—just predictable, professional results.
+            </p>
+          </div>
+
+          <div className="mb-6">
             <p className="text-muted-foreground">
               {templates.length} templates available
             </p>

@@ -50,9 +50,14 @@ const Pricing = () => {
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-6">
             Pay only for what you need. No subscriptions, no hidden fees.
           </p>
+          <div className="inline-block px-4 py-3 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">What you're paying for:</span> Not AI tokens. Pre-validated templates, legal-safe phrasing, and the certainty that your letter won't hurt your case.
+            </p>
+          </div>
         </div>
 
         {/* Pricing Cards */}

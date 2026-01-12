@@ -7,6 +7,10 @@ import {
 
 const faqs = [
   {
+    question: 'Why should I use this instead of ChatGPT?',
+    answer: 'Generic AI tools are powerful but not built for formal disputes. They often use the wrong legal tone, mix jurisdictions, omit required elements like reference numbers or deadlines, and can generate misleading statements that weaken your claim. Results are inconsistent and require trial and error. Our templates remove those risks: each letter is pre-validated for a specific dispute type with controlled language, consistent structure, and appropriate escalation wording. You get predictable, professional results every time.',
+  },
+  {
     question: 'Is this legal advice?',
     answer: 'No. DisputeLetters provides document templates only and does not constitute legal advice. Our letters are professionally structured but are not reviewed by legal professionals. For complex legal matters, we recommend consulting a qualified attorney in your jurisdiction.',
   },
