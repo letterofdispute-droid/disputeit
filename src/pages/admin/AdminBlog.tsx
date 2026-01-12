@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Search, Edit, Trash2, Eye, 
-  MoreHorizontal, Calendar 
+  MoreHorizontal, Calendar, Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -21,61 +21,79 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const mockPosts = [
-  {
-    id: '1',
-    title: 'How to Write an Effective Complaint Letter That Gets Results',
-    category: 'Legal Guides',
-    status: 'published',
-    author: 'DisputeLetters Team',
-    date: '2024-01-15',
-    views: 1234,
-  },
-  {
-    id: '2',
-    title: 'Your Rights When Products Arrive Damaged',
-    category: 'Consumer Rights',
-    status: 'published',
-    author: 'DisputeLetters Team',
-    date: '2024-01-10',
-    views: 892,
-  },
-  {
-    id: '3',
-    title: 'Getting Your Security Deposit Back',
-    category: 'Landlord & Tenant',
-    status: 'published',
-    author: 'DisputeLetters Team',
-    date: '2024-01-08',
-    views: 756,
-  },
-  {
-    id: '4',
-    title: 'EU261 Flight Compensation Guide',
-    category: 'Travel Disputes',
-    status: 'draft',
-    author: 'DisputeLetters Team',
-    date: '2024-01-05',
-    views: 0,
-  },
-  {
-    id: '5',
-    title: 'How to Dispute Errors on Your Credit Report',
-    category: 'Financial Tips',
-    status: 'published',
-    author: 'DisputeLetters Team',
-    date: '2024-01-02',
-    views: 543,
-  },
-];
+interface BlogPost {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  author: string;
+  created_at: string;
+  views: number;
+}
 
 const AdminBlog = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const filteredPosts = mockPosts.filter(post => 
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast({
+        title: 'Error fetching posts',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setPosts(data || []);
+    }
+    setIsLoading(false);
+  };
+
+  const deletePost = async (id: string) => {
+    const { error } = await supabase
+      .from('blog_posts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: 'Error deleting post',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Post deleted',
+        description: 'The blog post has been deleted.',
+      });
+      fetchPosts();
+    }
+  };
+
+  const filteredPosts = posts.filter(post => 
     post.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">
@@ -116,73 +134,86 @@ const AdminBlog = () => {
       {/* Posts Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40%]">Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Views</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPosts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-foreground">{post.title}</p>
-                      <p className="text-sm text-muted-foreground">{post.author}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{post.category}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={post.status === 'published' ? 'default' : 'outline'}
-                      className={post.status === 'published' ? 'bg-success' : ''}
-                    >
-                      {post.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(post.date).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {post.views.toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {filteredPosts.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Views</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredPosts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-foreground">{post.title}</p>
+                        <p className="text-sm text-muted-foreground">{post.author}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{post.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={post.status === 'published' ? 'default' : 'outline'}
+                        className={post.status === 'published' ? 'bg-success' : ''}
+                      >
+                        {post.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {post.views.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => deletePost(post.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">No blog posts yet</p>
+              <Button variant="accent">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Post
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

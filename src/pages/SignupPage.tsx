@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, CheckCircle } from 'lucide-react';
+import { FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const benefits = [
   'Save and manage your letters',
@@ -16,6 +19,49 @@ const benefits = [
 ];
 
 const SignupPage = () => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!agreedToTerms) {
+      toast({
+        title: 'Please accept the terms',
+        description: 'You must agree to the Terms of Service and Privacy Policy.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await signUp(email, password, firstName, lastName);
+
+    if (error) {
+      toast({
+        title: 'Error creating account',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Account created!',
+        description: 'Welcome to DisputeLetters.',
+      });
+      navigate('/dashboard');
+    }
+
+    setIsLoading(false);
+  };
+
   return (
     <Layout>
       <SEOHead 
@@ -55,15 +101,25 @@ const SignupPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First name</Label>
-                    <Input id="firstName" placeholder="John" />
+                    <Input 
+                      id="firstName" 
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last name</Label>
-                    <Input id="lastName" placeholder="Doe" />
+                    <Input 
+                      id="lastName" 
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -71,7 +127,10 @@ const SignupPage = () => {
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="you@example.com" 
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -79,14 +138,22 @@ const SignupPage = () => {
                   <Input 
                     id="password" 
                     type="password" 
-                    placeholder="••••••••" 
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
                   />
                 </div>
                 <div className="flex items-start space-x-2">
-                  <Checkbox id="terms" />
+                  <Checkbox 
+                    id="terms" 
+                    checked={agreedToTerms}
+                    onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                  />
                   <label 
                     htmlFor="terms" 
-                    className="text-sm text-muted-foreground leading-tight"
+                    className="text-sm text-muted-foreground leading-tight cursor-pointer"
                   >
                     I agree to the{' '}
                     <Link to="/terms" className="text-primary hover:underline">
@@ -98,7 +165,8 @@ const SignupPage = () => {
                     </Link>
                   </label>
                 </div>
-                <Button type="submit" className="w-full" variant="accent">
+                <Button type="submit" className="w-full" variant="accent" disabled={isLoading}>
+                  {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Create account
                 </Button>
               </form>
