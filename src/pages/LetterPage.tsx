@@ -1,6 +1,6 @@
 import { useParams, Navigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import { getTemplateBySlug } from '@/data/letterTemplates';
+import { getTemplateBySlug, getTemplatesByCategory } from '@/data/allTemplates';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
 import SEOHead from '@/components/SEOHead';
@@ -70,21 +70,18 @@ const LetterPage = () => {
             Other Letter Types You Might Need
           </h2>
           <div className="flex flex-wrap justify-center gap-4">
-            {['refund', 'landlord-repairs', 'damaged-goods']
-              .filter(s => s !== slug)
-              .map(s => {
-                const t = getTemplateBySlug(s);
-                if (!t) return null;
-                return (
-                  <a
-                    key={s}
-                    href={`/complaint-letter/${s}`}
-                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    {t.title}
-                  </a>
-                );
-              })}
+            {getTemplatesByCategory(template.category)
+              .filter(t => t.slug !== slug)
+              .slice(0, 5)
+              .map(t => (
+                <a
+                  key={t.slug}
+                  href={`/complaint-letter/${t.slug}`}
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+                >
+                  {t.title}
+                </a>
+              ))}
           </div>
         </div>
       </section>
