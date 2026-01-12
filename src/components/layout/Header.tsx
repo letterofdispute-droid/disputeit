@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Menu, User, LogOut } from 'lucide-react';
+import { FileText, Menu, User, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
@@ -21,7 +21,7 @@ import {
 
 const Header = () => {
   const [open, setOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -52,6 +52,14 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
               <>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/admin">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Admin
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/dashboard">
                     <User className="h-4 w-4 mr-2" />
@@ -161,6 +169,14 @@ const Header = () => {
                 <div className="border-t border-border pt-4 mt-2 flex flex-col gap-3">
                   {user ? (
                     <>
+                      {isAdmin && (
+                        <Button variant="default" size="sm" className="w-full" asChild>
+                          <Link to="/admin" onClick={() => setOpen(false)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Admin Panel
+                          </Link>
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" className="w-full" asChild>
                         <Link to="/dashboard" onClick={() => setOpen(false)}>
                           <User className="h-4 w-4 mr-2" />
