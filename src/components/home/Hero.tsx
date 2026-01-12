@@ -41,7 +41,7 @@ const Hero = () => {
               </Link>
             </Button>
             <Button variant="heroOutline" size="xl" asChild>
-              <Link to="/how-it-works">
+              <Link to="/#how-it-works">
                 See How It Works
               </Link>
             </Button>
