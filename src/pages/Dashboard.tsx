@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   FileText, Download, Clock, CheckCircle, 
-  AlertCircle, ArrowRight, User,
+  AlertCircle, ArrowRight, User, Shield,
   Plus, Loader2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,7 +22,7 @@ interface UserLetter {
 }
 
 const Dashboard = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [letters, setLetters] = useState<UserLetter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,7 +205,20 @@ const Dashboard = () => {
         <section className="py-8 pb-16">
           <div className="container-wide">
             <h2 className="font-serif text-xl font-bold text-foreground mb-6">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {isAdmin && (
+                <Card className="cursor-pointer hover:shadow-lg transition-all border-primary/50 bg-primary/5">
+                  <Link to="/admin">
+                    <CardHeader>
+                      <div className="p-3 bg-primary/20 rounded-lg w-fit mb-2">
+                        <Shield className="h-6 w-6 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg">Admin Panel</CardTitle>
+                      <CardDescription>Manage users, content & settings</CardDescription>
+                    </CardHeader>
+                  </Link>
+                </Card>
+              )}
               <Card className="cursor-pointer hover:shadow-lg transition-all">
                 <CardHeader>
                   <div className="p-3 bg-primary/10 rounded-lg w-fit mb-2">
