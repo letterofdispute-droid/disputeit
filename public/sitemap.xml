@@ -7,48 +7,194 @@
     <priority>1.0</priority>
   </url>
   
-  <!-- Letter Type Pages -->
+  <!-- Category Pages -->
   <url>
-    <loc>https://disputeletters.com/complaint-letter/refund</loc>
+    <loc>https://disputeletters.com/category/refunds</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://disputeletters.com/complaint-letter/landlord-repairs</loc>
+    <loc>https://disputeletters.com/category/housing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://disputeletters.com/complaint-letter/damaged-goods</loc>
+    <loc>https://disputeletters.com/category/travel</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/damaged-goods</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/utilities</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/financial</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/insurance</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/vehicle</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/healthcare</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/employment</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/ecommerce</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://disputeletters.com/category/hoa</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   
-  <!-- Future: Country-specific variants -->
-  <!--
-  <url>
-    <loc>https://disputeletters.com/complaint-letter/refund/uk</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://disputeletters.com/complaint-letter/refund/germany</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  -->
+  <!-- Refunds & Purchases Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/refund-general</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-defective-product</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-service-not-rendered</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-subscription-cancellation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-overcharge</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-deposit-return</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-event-cancellation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-gym-membership</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-online-course</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-contractor-incomplete-work</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-prepaid-service</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-gift-card</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-layaway</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-restocking-fee-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/refund-warranty-claim</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   
-  <!-- Future: Long-tail pages -->
-  <!--
-  <url>
-    <loc>https://disputeletters.com/complaint-letter/refund-airline</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://disputeletters.com/complaint-letter/landlord-mold</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  -->
+  <!-- Housing Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/landlord-repairs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/security-deposit-return</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/rent-increase-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/habitability-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/noise-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/lease-violation-landlord</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/pest-infestation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/utility-responsibility-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/property-damage-landlord</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/illegal-eviction</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/mold-remediation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/appliance-replacement</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/privacy-violation-landlord</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/discrimination-housing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Travel Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/airline-flight-delay-compensation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/airline-lost-baggage</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/airline-overbooking</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/hotel-booking-issue</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/car-rental-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/cruise-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/travel-agency-misrepresentation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/train-delay-compensation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/vacation-rental-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/tour-operator-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/travel-insurance-claim</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/rideshare-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Damaged Goods Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/damaged-goods</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/shipping-damage</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/manufacturing-defect</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/wrong-item-received</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/missing-parts</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/quality-not-as-described</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/counterfeit-product</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/expired-product</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Utilities Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/utility-billing-error</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/internet-service-quality</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/phone-contract-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/cable-tv-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/electricity-meter-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/water-bill-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/early-termination-fee</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/service-outage-compensation</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/unauthorized-charges-telecom</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/equipment-return-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Financial Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/bank-fee-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/credit-report-error</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/credit-card-chargeback</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/debt-collection-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/loan-servicing-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/overdraft-fee-reversal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/mortgage-escrow-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/identity-theft-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/investment-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/wire-transfer-error</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Insurance Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/insurance-claim-denial</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/insurance-underpayment</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/insurance-cancellation-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/insurance-premium-increase</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/health-insurance-appeal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/auto-insurance-claim</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/home-insurance-claim</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/insurance-bad-faith</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Vehicle Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/car-dealer-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/lemon-law-claim</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/auto-repair-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/warranty-repair-delay</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/vehicle-recall-issue</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/parking-ticket-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/towing-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/vehicle-title-issue</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Healthcare Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/medical-billing-error</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/surprise-medical-bill</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/medical-records-request</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/pharmacy-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/dental-billing-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/medical-provider-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- Employment Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/unpaid-wages</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/wrongful-termination</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/workplace-discrimination</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/final-paycheck-demand</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/overtime-pay-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/hostile-work-environment</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- E-commerce Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/marketplace-seller-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/online-order-not-received</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/account-suspension-appeal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/data-privacy-request</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/digital-product-complaint</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  
+  <!-- HOA Templates -->
+  <url><loc>https://disputeletters.com/complaint-letter/hoa-fee-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/hoa-violation-appeal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://disputeletters.com/complaint-letter/neighbor-dispute</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>

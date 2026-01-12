@@ -23,15 +23,11 @@ const LetterCategories = () => {
 
         {/* Category Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templateCategories.map((category) => {
-            const templates = getTemplatesByCategory(category.id);
-            const firstTemplate = templates[0];
-            const href = firstTemplate ? `/complaint-letter/${firstTemplate.slug}` : '#';
-
+        {templateCategories.map((category) => {
             return (
               <Link
                 key={category.id}
-                to={href}
+                to={`/category/${category.id}`}
                 className="group"
               >
                 <Card className="relative h-full p-6 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">

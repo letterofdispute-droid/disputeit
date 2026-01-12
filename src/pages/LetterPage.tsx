@@ -1,10 +1,19 @@
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import { getTemplateBySlug, getTemplatesByCategory } from '@/data/allTemplates';
+import { getTemplateBySlug, getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
+import { ChevronRight } from 'lucide-react';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 const LetterPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -14,6 +23,34 @@ const LetterPage = () => {
     return <Navigate to="/404" replace />;
   }
 
+  const categoryId = getCategoryIdFromName(template.category);
+
+  // BreadcrumbList schema for SEO
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://disputeletters.com/',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: template.category,
+        item: `https://disputeletters.com/category/${categoryId}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: template.title,
+        item: `https://disputeletters.com/complaint-letter/${template.slug}`,
+      },
+    ],
+  };
+
   return (
     <Layout>
       <SEOHead 
@@ -21,13 +58,48 @@ const LetterPage = () => {
         description={template.seoDescription}
         canonicalPath={`/complaint-letter/${template.slug}`}
       />
+
+      {/* Inject structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       {/* SEO-Optimized Header */}
       <section className="bg-primary py-12 md:py-16">
         <div className="container-wide">
+          {/* Breadcrumb Navigation */}
+          <Breadcrumb className="mb-6">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/" className="text-primary-foreground/70 hover:text-primary-foreground">
+                    Home
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4 text-primary-foreground/50" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={`/category/${categoryId}`} className="text-primary-foreground/70 hover:text-primary-foreground">
+                    {template.category}
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4 text-primary-foreground/50" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-primary-foreground">
+                  {template.title}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
           <div className="max-w-3xl">
-            <div className="inline-block px-3 py-1 text-xs font-medium bg-primary-foreground/10 text-primary-foreground rounded-full mb-4">
-              {template.category}
-            </div>
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
               {template.seoTitle}
             </h1>
@@ -70,17 +142,17 @@ const LetterPage = () => {
             Other Letter Types You Might Need
           </h2>
           <div className="flex flex-wrap justify-center gap-4">
-            {getTemplatesByCategory(template.category)
+            {getTemplatesByCategory(categoryId)
               .filter(t => t.slug !== slug)
               .slice(0, 5)
               .map(t => (
-                <a
+                <Link
                   key={t.slug}
-                  href={`/complaint-letter/${t.slug}`}
+                  to={`/complaint-letter/${t.slug}`}
                   className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
                 >
                   {t.title}
-                </a>
+                </Link>
               ))}
           </div>
         </div>
