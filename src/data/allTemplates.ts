@@ -12,6 +12,22 @@ import { employmentTemplates } from './templates/employmentTemplates';
 import { ecommerceTemplates } from './templates/ecommerceTemplates';
 import { hoaTemplates } from './templates/hoaTemplates';
 
+// Map category IDs to display names used in templates
+const categoryIdToName: Record<string, string> = {
+  'refunds': 'Refunds & Purchases',
+  'housing': 'Housing',
+  'travel': 'Travel',
+  'damaged-goods': 'Damaged Goods',
+  'utilities': 'Utilities & Telecom',
+  'financial': 'Financial',
+  'insurance': 'Insurance',
+  'vehicle': 'Vehicle',
+  'healthcare': 'Healthcare',
+  'employment': 'Employment',
+  'ecommerce': 'E-commerce',
+  'hoa': 'HOA & Property',
+};
+
 export const allTemplates: LetterTemplate[] = [
   ...refundsTemplates,
   ...housingTemplates,
@@ -31,8 +47,9 @@ export function getTemplateBySlug(slug: string): LetterTemplate | undefined {
   return allTemplates.find(t => t.slug === slug);
 }
 
-export function getTemplatesByCategory(category: string): LetterTemplate[] {
-  return allTemplates.filter(t => t.category === category);
+export function getTemplatesByCategory(categoryId: string): LetterTemplate[] {
+  const categoryName = categoryIdToName[categoryId] || categoryId;
+  return allTemplates.filter(t => t.category === categoryName);
 }
 
 export function getAllCategories(): string[] {
