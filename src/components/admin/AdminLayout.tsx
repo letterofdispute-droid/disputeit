@@ -40,7 +40,9 @@ const AdminLayout = () => {
       <div className="flex">
         {/* Sidebar */}
         <aside className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200 lg:translate-x-0 lg:static",
+          "fixed left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200",
+          "top-[57px] h-[calc(100vh-57px)] lg:top-0 lg:h-auto lg:inset-y-0",
+          "lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="flex flex-col h-full">
