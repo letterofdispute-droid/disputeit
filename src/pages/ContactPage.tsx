@@ -34,6 +34,7 @@ const ContactPage = () => {
       <SEOHead 
         title="Contact Us | DisputeLetters"
         description="Get in touch with the DisputeLetters team. We're here to help with your questions and support needs."
+        canonicalPath="/contact"
       />
 
       {/* Hero */}

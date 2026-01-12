@@ -13,6 +13,7 @@ const LoginPage = () => {
       <SEOHead 
         title="Login | DisputeLetters"
         description="Sign in to your DisputeLetters account"
+        canonicalPath="/login"
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">

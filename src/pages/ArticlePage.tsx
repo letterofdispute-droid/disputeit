@@ -24,6 +24,7 @@ const ArticlePage = () => {
       <SEOHead 
         title={`${post.title} | DisputeLetters Blog`}
         description={post.excerpt}
+        canonicalPath={`/articles/${post.categorySlug}/${post.slug}`}
       />
 
       {/* Breadcrumb */}

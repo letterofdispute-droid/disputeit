@@ -33,6 +33,7 @@ const AboutPage = () => {
       <SEOHead 
         title="About Us | DisputeLetters"
         description="Learn about DisputeLetters - our mission to empower consumers with professional dispute resolution tools."
+        canonicalPath="/about"
       />
 
       {/* Hero */}

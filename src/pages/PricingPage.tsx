@@ -59,6 +59,7 @@ const PricingPage = () => {
       <SEOHead 
         title="Pricing | DisputeLetters"
         description="Simple, transparent pricing for professional dispute letters. Pay per letter or subscribe for unlimited access."
+        canonicalPath="/pricing"
       />
 
       {/* Hero */}

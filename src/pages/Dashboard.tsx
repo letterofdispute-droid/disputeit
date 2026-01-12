@@ -41,6 +41,7 @@ const Dashboard = () => {
       <SEOHead 
         title="Dashboard | DisputeLetters"
         description="View and manage your dispute letters"
+        canonicalPath="/dashboard"
       />
 
       <div className="bg-background min-h-screen">

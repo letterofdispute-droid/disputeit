@@ -21,6 +21,7 @@ const SignupPage = () => {
       <SEOHead 
         title="Sign Up | DisputeLetters"
         description="Create your DisputeLetters account and start resolving disputes"
+        canonicalPath="/signup"
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">
