@@ -23,6 +23,8 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBlog from "./pages/admin/AdminBlog";
 import AdminBlogEditor from "./pages/admin/AdminBlogEditor";
+import AdminPages from "./pages/admin/AdminPages";
+import AdminPageEditor from "./pages/admin/AdminPageEditor";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -63,6 +65,9 @@ const App = () => (
             <Route path="blog" element={<AdminBlog />} />
             <Route path="blog/new" element={<AdminBlogEditor />} />
             <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
+            <Route path="pages" element={<AdminPages />} />
+            <Route path="pages/new" element={<AdminPageEditor />} />
+            <Route path="pages/edit/:id" element={<AdminPageEditor />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="settings" element={<AdminSettings />} />

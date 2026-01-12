@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,12 +22,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface BlogPost {
   id: string;
   title: string;
+  slug: string;
   category: string;
   status: string;
   author: string;
@@ -40,6 +51,8 @@ const AdminBlog = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,11 +96,14 @@ const AdminBlog = () => {
       });
       fetchPosts();
     }
+    setDeletingPostId(null);
   };
 
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   if (isLoading) {
     return (
@@ -125,9 +141,24 @@ const AdminBlog = () => {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">All</Button>
-              <Button variant="ghost">Published</Button>
-              <Button variant="ghost">Draft</Button>
+              <Button 
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('all')}
+              >
+                All
+              </Button>
+              <Button 
+                variant={statusFilter === 'published' ? 'default' : 'ghost'}
+                onClick={() => setStatusFilter('published')}
+              >
+                Published
+              </Button>
+              <Button 
+                variant={statusFilter === 'draft' ? 'default' : 'ghost'}
+                onClick={() => setStatusFilter('draft')}
+              >
+                Draft
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -185,7 +216,7 @@ const AdminBlog = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category}/${post.id}`, '_blank')}>
+                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category}/${post.slug || post.id}`, '_blank')}>
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
@@ -195,7 +226,7 @@ const AdminBlog = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
-                            onClick={() => deletePost(post.id)}
+                            onClick={() => setDeletingPostId(post.id)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -209,15 +240,42 @@ const AdminBlog = () => {
             </Table>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">No blog posts yet</p>
-              <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Post
-              </Button>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery || statusFilter !== 'all' 
+                  ? 'No posts match your filters' 
+                  : 'No blog posts yet'}
+              </p>
+              {!searchQuery && statusFilter === 'all' && (
+                <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Post
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingPostId} onOpenChange={() => setDeletingPostId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Blog Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this blog post? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingPostId && deletePost(deletingPostId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
