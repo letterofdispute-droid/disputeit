@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, MoreHorizontal, Mail, Ban, 
-  UserCheck, Calendar, Loader2
+  UserCheck, Calendar, Loader2, Shield, ShieldOff
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -22,8 +23,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
   id: string;
@@ -35,18 +47,25 @@ interface UserProfile {
   plan: string;
   letters_count: number;
   created_at: string;
+  is_admin: boolean;
+  role: string | null;
 }
 
 const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [adminAction, setAdminAction] = useState<'grant' | 'revoke'>('grant');
   const [stats, setStats] = useState({
     total: 0,
     pro: 0,
     unlimited: 0,
+    admins: 0,
   });
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -71,7 +90,8 @@ const AdminUsers = () => {
       const total = data?.length || 0;
       const pro = data?.filter(u => u.plan === 'pro').length || 0;
       const unlimited = data?.filter(u => u.plan === 'unlimited').length || 0;
-      setStats({ total, pro, unlimited });
+      const admins = data?.filter(u => u.is_admin).length || 0;
+      setStats({ total, pro, unlimited, admins });
     }
     setIsLoading(false);
   };
@@ -95,6 +115,40 @@ const AdminUsers = () => {
       });
       fetchUsers();
     }
+  };
+
+  const handleAdminAction = (user: UserProfile, action: 'grant' | 'revoke') => {
+    setSelectedUser(user);
+    setAdminAction(action);
+    setAdminDialogOpen(true);
+  };
+
+  const confirmAdminAction = async () => {
+    if (!selectedUser) return;
+
+    const isGranting = adminAction === 'grant';
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        is_admin: isGranting,
+        role: isGranting ? 'admin' : 'user'
+      })
+      .eq('id', selectedUser.id);
+
+    if (error) {
+      toast({
+        title: 'Error updating admin status',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: isGranting ? 'Admin granted' : 'Admin revoked',
+        description: `${selectedUser.email} ${isGranting ? 'is now an admin' : 'is no longer an admin'}`,
+      });
+      fetchUsers();
+    }
+    setAdminDialogOpen(false);
   };
 
   const filteredUsers = users.filter(user => {
@@ -134,15 +188,21 @@ const AdminUsers = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-bold text-foreground">Users</h1>
-        <p className="text-muted-foreground">Manage user accounts and subscriptions</p>
+        <p className="text-muted-foreground">Manage user accounts, subscriptions, and admin access</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <p className="text-sm text-muted-foreground">Total Users</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-foreground">{stats.admins}</div>
+            <p className="text-sm text-muted-foreground">Administrators</p>
           </CardContent>
         </Card>
         <Card>
@@ -175,7 +235,7 @@ const AdminUsers = () => {
             <div className="flex gap-2">
               <Button variant="outline">All</Button>
               <Button variant="ghost">Active</Button>
-              <Button variant="ghost">Inactive</Button>
+              <Button variant="ghost">Admins</Button>
             </div>
           </div>
         </CardContent>
@@ -189,6 +249,7 @@ const AdminUsers = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Letters</TableHead>
@@ -213,9 +274,19 @@ const AdminUsers = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {user.is_admin ? (
+                        <Badge className="bg-primary">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">User</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge 
                         variant={user.status === 'active' ? 'default' : 'secondary'}
-                        className={user.status === 'active' ? 'bg-success' : ''}
+                        className={user.status === 'active' ? 'bg-green-600' : ''}
                       >
                         {user.status}
                       </Badge>
@@ -248,12 +319,28 @@ const AdminUsers = () => {
                             <UserCheck className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {user.is_admin ? (
+                            <DropdownMenuItem 
+                              onClick={() => handleAdminAction(user, 'revoke')}
+                              disabled={user.user_id === currentUser?.id}
+                            >
+                              <ShieldOff className="h-4 w-4 mr-2" />
+                              Revoke Admin
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleAdminAction(user, 'grant')}>
+                              <Shield className="h-4 w-4 mr-2" />
+                              Make Admin
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive"
-                            onClick={() => updateUserStatus(user.id, 'suspended')}
+                            onClick={() => updateUserStatus(user.id, user.status === 'suspended' ? 'active' : 'suspended')}
                           >
                             <Ban className="h-4 w-4 mr-2" />
-                            Suspend
+                            {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -269,6 +356,29 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Admin Confirmation Dialog */}
+      <AlertDialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {adminAction === 'grant' ? 'Grant Admin Access' : 'Revoke Admin Access'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {adminAction === 'grant' 
+                ? `Are you sure you want to make ${selectedUser?.email} an administrator? They will have full access to the admin dashboard.`
+                : `Are you sure you want to revoke admin access from ${selectedUser?.email}? They will no longer be able to access the admin dashboard.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAdminAction}>
+              {adminAction === 'grant' ? 'Grant Admin' : 'Revoke Admin'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
