@@ -1,8 +1,37 @@
+# DisputeLetters Robots.txt
+# https://disputeletters.com
+
+# ============================================
+# Search Engine Crawlers - Full Access
+# ============================================
+
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 2
+
+# ============================================
+# Social Media Crawlers - Full Access
+# ============================================
 
 User-agent: Twitterbot
 Allow: /
@@ -10,8 +39,20 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
+User-agent: LinkedInBot
 Allow: /
 
-# Sitemap
+# ============================================
+# Default Rule - All Other Bots
+# ============================================
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_*
+
+# ============================================
+# Sitemap Location
+# ============================================
+
 Sitemap: https://disputeletters.com/sitemap.xml
