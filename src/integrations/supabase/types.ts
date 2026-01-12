@@ -44,57 +44,128 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author: string
+          author_id: string | null
           category: string
           category_slug: string
           content: string
           created_at: string
           excerpt: string | null
           featured: boolean
+          featured_image_url: string | null
           id: string
+          meta_description: string | null
+          meta_title: string | null
           published_at: string | null
           read_time: string | null
+          scheduled_at: string | null
           slug: string
           status: string
+          tags: string[] | null
           title: string
           updated_at: string
           views: number
         }
         Insert: {
           author?: string
+          author_id?: string | null
           category: string
           category_slug: string
           content: string
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          featured_image_url?: string | null
           id?: string
+          meta_description?: string | null
+          meta_title?: string | null
           published_at?: string | null
           read_time?: string | null
+          scheduled_at?: string | null
           slug: string
           status?: string
+          tags?: string[] | null
           title: string
           updated_at?: string
           views?: number
         }
         Update: {
           author?: string
+          author_id?: string | null
           category?: string
           category_slug?: string
           content?: string
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          featured_image_url?: string | null
           id?: string
+          meta_description?: string | null
+          meta_title?: string | null
           published_at?: string | null
           read_time?: string | null
+          scheduled_at?: string | null
           slug?: string
           status?: string
+          tags?: string[] | null
           title?: string
           updated_at?: string
           views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      blog_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -108,6 +179,7 @@ export type Database = {
           last_name: string | null
           letters_count: number
           plan: string
+          role: string | null
           status: string
           updated_at: string
           user_id: string
@@ -121,6 +193,7 @@ export type Database = {
           last_name?: string | null
           letters_count?: number
           plan?: string
+          role?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -134,6 +207,7 @@ export type Database = {
           last_name?: string | null
           letters_count?: number
           plan?: string
+          role?: string | null
           status?: string
           updated_at?: string
           user_id?: string
