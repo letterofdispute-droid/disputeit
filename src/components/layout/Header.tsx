@@ -1,10 +1,25 @@
 import { Link } from 'react-router-dom';
-import { FileText, Menu, X } from 'lucide-react';
+import { FileText, Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import MegaMenu from './MegaMenu';
+import { templateCategories } from '@/data/templateCategories';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const Header = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -20,67 +35,121 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link to="/complaint-letter/refund" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Refund Letters
-            </Link>
-            <Link to="/complaint-letter/landlord-repairs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Landlord Letters
-            </Link>
-            <Link to="/complaint-letter/damaged-goods" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Damaged Goods
-            </Link>
+          {/* Desktop Navigation - Megamenu */}
+          <nav className="hidden lg:flex items-center">
+            <MegaMenu />
           </nav>
 
-          {/* CTA */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop CTAs */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/login">
+                <User className="h-4 w-4 mr-2" />
+                Login
+              </Link>
+            </Button>
             <Button variant="accent" size="sm" asChild>
               <Link to="/#letters">Create Letter</Link>
             </Button>
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
-            <nav className="flex flex-col gap-4">
-              <Link 
-                to="/complaint-letter/refund" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Refund Letters
-              </Link>
-              <Link 
-                to="/complaint-letter/landlord-repairs" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Landlord Letters
-              </Link>
-              <Link 
-                to="/complaint-letter/damaged-goods" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Damaged Goods
-              </Link>
-              <Button variant="accent" size="sm" className="w-full mt-2" asChild>
-                <Link to="/#letters" onClick={() => setMobileMenuOpen(false)}>Create Letter</Link>
+          {/* Mobile menu */}
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild className="lg:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
               </Button>
-            </nav>
-          </div>
-        )}
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[350px]">
+              <SheetHeader>
+                <SheetTitle className="text-left">Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-4 mt-6">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="templates">
+                    <AccordionTrigger className="text-base font-medium">
+                      Letter Templates
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col gap-2 pl-2">
+                        {templateCategories.map((category) => (
+                          <Link
+                            key={category.id}
+                            to={`/category/${category.id}`}
+                            className="text-sm text-muted-foreground hover:text-foreground py-2"
+                            onClick={() => setOpen(false)}
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="resources">
+                    <AccordionTrigger className="text-base font-medium">
+                      Resources
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col gap-2 pl-2">
+                        <Link 
+                          to="/articles" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Blog
+                        </Link>
+                        <Link 
+                          to="/#how-it-works" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          How It Works
+                        </Link>
+                        <Link 
+                          to="/about" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          About Us
+                        </Link>
+                        <Link 
+                          to="/contact" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Contact
+                        </Link>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                <Link 
+                  to="/pricing" 
+                  className="text-base font-medium py-2"
+                  onClick={() => setOpen(false)}
+                >
+                  Pricing
+                </Link>
+
+                <div className="border-t border-border pt-4 mt-2 flex flex-col gap-3">
+                  <Button variant="outline" size="sm" className="w-full" asChild>
+                    <Link to="/login" onClick={() => setOpen(false)}>
+                      <User className="h-4 w-4 mr-2" />
+                      Login
+                    </Link>
+                  </Button>
+                  <Button variant="accent" size="sm" className="w-full" asChild>
+                    <Link to="/#letters" onClick={() => setOpen(false)}>
+                      Create Letter
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

@@ -1,30 +1,20 @@
-import { AlertTriangle, ShieldCheck, Lock, Target, Repeat, FileWarning } from 'lucide-react';
+import { Target, ShieldCheck, Clock } from 'lucide-react';
 
-const problems = [
-  {
-    icon: AlertTriangle,
-    problem: 'Wrong legal tone, mixed jurisdictions',
-    solution: 'Pre-validated templates for specific dispute types',
-  },
-  {
-    icon: FileWarning,
-    problem: 'Omits required elements (references, deadlines)',
-    solution: 'Controlled structure with all critical fields',
-  },
-  {
-    icon: Repeat,
-    problem: 'Inconsistent results, varies prompt to prompt',
-    solution: 'Predictable, repeatable output every time',
-  },
-  {
-    icon: Lock,
-    problem: 'Privacy risks with personal data',
-    solution: 'Data used only for generation, not stored',
-  },
+const proofPoints = [
   {
     icon: Target,
-    problem: 'Sounds professional but weakens claims',
-    solution: 'Appropriate escalation wording, legally safe',
+    title: 'Certainty',
+    description: 'Pre-validated templates for your exact dispute type. No guesswork, no trial and error.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Correctness',
+    description: 'Legal-safe language that won\'t weaken your claim. Every word is purposeful.',
+  },
+  {
+    icon: Clock,
+    title: 'Time Saved',
+    description: '5 minutes instead of hours. Skip the prompt engineering and get straight to results.',
   },
 ];
 
@@ -38,49 +28,36 @@ const WhyNotChatGPT = () => {
             Why Not Just Use ChatGPT?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Generic AI tools are powerful, but they're not built for formal dispute letters. 
-            Here's why purpose-built templates deliver better results.
+            Generic AI tools produce inconsistent results. Purpose-built templates deliver 
+            predictable, professional letters every time.
           </p>
         </div>
 
-        {/* Comparison Grid */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {/* Headers */}
-            <div className="hidden md:block p-4 bg-destructive/10 rounded-t-lg">
-              <h3 className="font-semibold text-destructive text-center">
-                Generic AI Problems
-              </h3>
-            </div>
-            <div className="hidden md:block p-4 bg-success/10 rounded-t-lg">
-              <h3 className="font-semibold text-success text-center">
-                Our Solution
-              </h3>
-            </div>
-          </div>
-
-          {/* Rows */}
-          <div className="space-y-4">
-            {problems.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Problem */}
-                <div className="flex items-start gap-3 p-4 bg-destructive/5 rounded-lg border border-destructive/20">
-                  <item.icon className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                  <span className="text-foreground">{item.problem}</span>
+        {/* 3-Column Proof Points */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+          {proofPoints.map((point, index) => (
+            <div 
+              key={index} 
+              className="group relative p-8 bg-card rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-5 p-4 rounded-xl bg-primary/5 group-hover:bg-primary/10 transition-colors">
+                  <point.icon className="h-8 w-8 text-primary" />
                 </div>
-                {/* Solution */}
-                <div className="flex items-start gap-3 p-4 bg-success/5 rounded-lg border border-success/20">
-                  <ShieldCheck className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-                  <span className="text-foreground">{item.solution}</span>
-                </div>
+                <h3 className="font-serif text-xl font-semibold text-foreground mb-3">
+                  {point.title}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {point.description}
+                </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* Bottom Statement */}
-        <div className="mt-12 text-center">
-          <div className="inline-block px-6 py-4 bg-accent/10 rounded-xl border border-accent/30">
+        <div className="text-center">
+          <div className="inline-block px-8 py-5 bg-accent/10 rounded-2xl border border-accent/20">
             <p className="text-lg md:text-xl font-medium text-foreground">
               You're not paying for AI. You're paying for{' '}
               <span className="text-accent font-semibold">certainty</span>,{' '}
