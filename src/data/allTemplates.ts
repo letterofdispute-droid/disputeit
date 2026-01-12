@@ -28,6 +28,15 @@ const categoryIdToName: Record<string, string> = {
   'hoa': 'HOA & Property',
 };
 
+// Reverse mapping: display name to category ID
+const categoryNameToId: Record<string, string> = Object.fromEntries(
+  Object.entries(categoryIdToName).map(([id, name]) => [name, id])
+);
+
+export function getCategoryIdFromName(categoryName: string): string {
+  return categoryNameToId[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
+}
+
 export const allTemplates: LetterTemplate[] = [
   ...refundsTemplates,
   ...housingTemplates,
