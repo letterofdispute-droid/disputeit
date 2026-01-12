@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ interface BlogPost {
 }
 
 const AdminBlog = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +105,7 @@ const AdminBlog = () => {
           <h1 className="font-serif text-3xl font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground">Manage your blog content</p>
         </div>
-        <Button variant="accent">
+        <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
           <Plus className="h-4 w-4 mr-2" />
           New Post
         </Button>
@@ -183,11 +185,11 @@ const AdminBlog = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category}/${post.id}`, '_blank')}>
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/blog/edit/${post.id}`)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -208,7 +210,7 @@ const AdminBlog = () => {
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">No blog posts yet</p>
-              <Button variant="accent">
+              <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Post
               </Button>
