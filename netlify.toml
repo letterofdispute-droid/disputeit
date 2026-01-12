@@ -1,0 +1,67 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# ============================================
+# Sitemap Redirects (serve directly)
+# ============================================
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/sitemaps/sitemap-index.xml"
+  status = 200
+
+[[redirects]]
+  from = "/sitemaps/*"
+  to = "/sitemaps/:splat"
+  status = 200
+
+# ============================================
+# Static HTML for Search Engine Bots
+# Bot detection rules MUST come before SPA rules
+# ============================================
+
+# Template pages - Serve static HTML to bots
+[[redirects]]
+  from = "/complaint-letter/*"
+  to = "/complaint-letter/:splat/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# Category pages - Serve static HTML to bots
+[[redirects]]
+  from = "/category/*"
+  to = "/category/:splat/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# ============================================
+# SPA Routing for Human Users
+# These rules apply AFTER bot detection rules
+# ============================================
+
+[[redirects]]
+  from = "/complaint-letter/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/category/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+# ============================================
+# SPA Fallback (MUST be last)
+# ============================================
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
