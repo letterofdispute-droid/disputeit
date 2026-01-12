@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
-import { FileText, Menu, X, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FileText, Menu, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
 import { templateCategories } from '@/data/templateCategories';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Sheet,
   SheetContent,
@@ -20,6 +21,13 @@ import {
 
 const Header = () => {
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -42,15 +50,32 @@ const Header = () => {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/login">
-                <User className="h-4 w-4 mr-2" />
-                Login
-              </Link>
-            </Button>
-            <Button variant="accent" size="sm" asChild>
-              <Link to="/#letters">Create Letter</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/dashboard">
+                    <User className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">
+                    <User className="h-4 w-4 mr-2" />
+                    Login
+                  </Link>
+                </Button>
+                <Button variant="accent" size="sm" asChild>
+                  <Link to="/#letters">Create Letter</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu */}
@@ -134,17 +159,42 @@ const Header = () => {
                 </Link>
 
                 <div className="border-t border-border pt-4 mt-2 flex flex-col gap-3">
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link to="/login" onClick={() => setOpen(false)}>
-                      <User className="h-4 w-4 mr-2" />
-                      Login
-                    </Link>
-                  </Button>
-                  <Button variant="accent" size="sm" className="w-full" asChild>
-                    <Link to="/#letters" onClick={() => setOpen(false)}>
-                      Create Letter
-                    </Link>
-                  </Button>
+                  {user ? (
+                    <>
+                      <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Link to="/dashboard" onClick={() => setOpen(false)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full" 
+                        onClick={() => {
+                          handleSignOut();
+                          setOpen(false);
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Link to="/login" onClick={() => setOpen(false)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Login
+                        </Link>
+                      </Button>
+                      <Button variant="accent" size="sm" className="w-full" asChild>
+                        <Link to="/#letters" onClick={() => setOpen(false)}>
+                          Create Letter
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>
