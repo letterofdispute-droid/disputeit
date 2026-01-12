@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, MoreHorizontal, Mail, Ban, 
-  UserCheck, Calendar 
+  UserCheck, Calendar, Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -22,66 +22,112 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const mockUsers = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    status: 'active',
-    plan: 'Pro',
-    letters: 12,
-    joinedAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    name: 'Sarah Smith',
-    email: 'sarah@example.com',
-    status: 'active',
-    plan: 'Free',
-    letters: 3,
-    joinedAt: '2024-01-10',
-  },
-  {
-    id: '3',
-    name: 'Michael Johnson',
-    email: 'michael@example.com',
-    status: 'active',
-    plan: 'Pro',
-    letters: 8,
-    joinedAt: '2024-01-08',
-  },
-  {
-    id: '4',
-    name: 'Emily Brown',
-    email: 'emily@example.com',
-    status: 'inactive',
-    plan: 'Free',
-    letters: 1,
-    joinedAt: '2024-01-05',
-  },
-  {
-    id: '5',
-    name: 'David Wilson',
-    email: 'david@example.com',
-    status: 'active',
-    plan: 'Unlimited',
-    letters: 45,
-    joinedAt: '2024-01-02',
-  },
-];
+interface UserProfile {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  status: string;
+  plan: string;
+  letters_count: number;
+  created_at: string;
+}
 
 const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    pro: 0,
+    unlimited: 0,
+  });
+  const { toast } = useToast();
 
-  const filteredUsers = mockUsers.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const fetchUsers = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast({
+        title: 'Error fetching users',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setUsers(data || []);
+      
+      // Calculate stats
+      const total = data?.length || 0;
+      const pro = data?.filter(u => u.plan === 'pro').length || 0;
+      const unlimited = data?.filter(u => u.plan === 'unlimited').length || 0;
+      setStats({ total, pro, unlimited });
+    }
+    setIsLoading(false);
   };
+
+  const updateUserStatus = async (userId: string, status: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status })
+      .eq('id', userId);
+
+    if (error) {
+      toast({
+        title: 'Error updating user',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'User updated',
+        description: `User status changed to ${status}`,
+      });
+      fetchUsers();
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return name.includes(query) || email.includes(query);
+  });
+
+  const getInitials = (firstName?: string | null, lastName?: string | null, email?: string | null) => {
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getDisplayName = (user: UserProfile) => {
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    return user.email || 'Anonymous User';
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">
@@ -95,19 +141,19 @@ const AdminUsers = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">892</div>
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
             <p className="text-sm text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">156</div>
+            <div className="text-2xl font-bold text-foreground">{stats.pro}</div>
             <p className="text-sm text-muted-foreground">Pro Subscribers</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">23</div>
+            <div className="text-2xl font-bold text-foreground">{stats.unlimited}</div>
             <p className="text-sm text-muted-foreground">Unlimited Subscribers</p>
           </CardContent>
         </Card>
@@ -138,80 +184,89 @@ const AdminUsers = () => {
       {/* Users Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Letters</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={user.status === 'active' ? 'default' : 'secondary'}
-                      className={user.status === 'active' ? 'bg-success' : ''}
-                    >
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{user.plan}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {user.letters}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(user.joinedAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email User
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Ban className="h-4 w-4 mr-2" />
-                          Suspend
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {filteredUsers.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Letters</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                            {getInitials(user.first_name, user.last_name, user.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-foreground">{getDisplayName(user)}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={user.status === 'active' ? 'default' : 'secondary'}
+                        className={user.status === 'active' ? 'bg-success' : ''}
+                      >
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{user.plan}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {user.letters_count}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Email User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => updateUserStatus(user.id, 'suspended')}
+                          >
+                            <Ban className="h-4 w-4 mr-2" />
+                            Suspend
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No users found</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
