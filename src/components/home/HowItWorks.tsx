@@ -4,25 +4,25 @@ const steps = [
   {
     icon: FileText,
     title: 'Choose Your Template',
-    description: 'Select from our library of professionally-crafted letter templates designed for specific situations.',
+    description: 'Select a template designed for your exact dispute type. No prompt engineering required.',
     step: '01',
   },
   {
     icon: Edit3,
     title: 'Fill in the Details',
-    description: 'Answer simple questions about your situation. We guide you through exactly what information is needed.',
+    description: 'Answer guided questions. No guessing what information is needed or how to phrase it.',
     step: '02',
   },
   {
     icon: Download,
     title: 'Generate Your Letter',
-    description: 'Our system creates a professionally formatted letter using your information and legal-safe language.',
+    description: 'Get a pre-validated letter with correct legal tone, proper structure, and appropriate deadlines.',
     step: '03',
   },
   {
     icon: Send,
     title: 'Send & Get Results',
-    description: 'Download your letter as a PDF or editable document. Send it and track your resolution.',
+    description: 'Ready to send immediately. No editing, proofreading, or second-guessing required.',
     step: '04',
   },
 ];

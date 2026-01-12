@@ -122,13 +122,22 @@ const LetterPage = () => {
       {/* Letter Generator Section */}
       <section className="py-12 md:py-16 bg-secondary/20">
         <div className="container-wide">
-          <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="text-center max-w-2xl mx-auto mb-6">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-3">
               Create Your {template.title}
             </h2>
             <p className="text-muted-foreground">
               Fill in your details below to generate a professionally structured letter.
             </p>
+          </div>
+          
+          {/* Template Validation Callout */}
+          <div className="max-w-2xl mx-auto mb-10">
+            <div className="p-4 bg-accent/10 border border-accent/30 rounded-lg text-center">
+              <p className="text-sm text-foreground">
+                <span className="font-medium">Why this template?</span> Pre-validated for {template.category.toLowerCase()} disputes with controlled language and proper escalation structure. No guessing required.
+              </p>
+            </div>
           </div>
           
           <LetterGenerator template={template} />
