@@ -84,10 +84,11 @@ export const templateCategories: TemplateCategory[] = [
   {
     id: 'healthcare',
     name: 'Healthcare & Medical Billing',
-    description: 'Dispute medical bills, coding errors, or surprise charges.',
+    description: 'Dispute medical bills, insurance denials, coding errors, debt collection, or provider complaints.',
     icon: Stethoscope,
-    templateCount: 6,
+    templateCount: 50,
     color: 'hsl(var(--chart-4))',
+    popular: true,
   },
   {
     id: 'employment',
