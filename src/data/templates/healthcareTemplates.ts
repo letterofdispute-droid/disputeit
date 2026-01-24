@@ -196,6 +196,115 @@ const hospitalBillingFields = [
   { id: 'amountDisputed', label: 'Amount Disputed', type: 'text' as const, required: true, placeholder: 'e.g., $1,200.00' },
 ];
 
+// ============================================================================
+// COMMUNICATION, DEADLINE & ATTACHMENT FIELD SETS
+// ============================================================================
+
+// Communication & Response Fields - for insurance templates
+const communicationFields = [
+  { id: 'insurerFaxNumber', label: 'Insurer Fax Number', type: 'text' as const, required: false, placeholder: 'Fax for claims/appeals', helpText: 'Fax is still commonly used in healthcare for formal communications' },
+  { id: 'insurerPhoneNumber', label: 'Insurer Phone Number', type: 'text' as const, required: false, placeholder: 'Claims department phone' },
+  { id: 'preferredResponseMethod', label: 'Preferred Response Method', type: 'select' as const, required: true, options: ['Mail', 'Email', 'Phone', 'Online Portal', 'Fax'] },
+  { id: 'dateNoticeReceived', label: 'Date You Received Notice', type: 'date' as const, required: true, helpText: 'IMPORTANT: Note this date. Appeal deadlines are often calculated from when you received the denial, not when it was issued. Most insurance appeals must be filed within 180 days.' },
+];
+
+// Appeal deadline awareness
+const deadlineAwarenessFields = [
+  { id: 'appealDeadlineAware', label: 'I Understand the Appeal Deadline', type: 'select' as const, required: true, options: ['Yes - I understand the deadline', 'No - Need to check deadline'], helpText: 'Typical deadlines: 30-180 days for insurance appeals. Missing the deadline may forfeit your rights.' },
+];
+
+// Attachment checklists - Insurance Appeals
+const insuranceAttachmentFields = [
+  { id: 'attachmentEob', label: 'Explanation of Benefits (EOB)', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'The EOB shows how your claim was processed - what was billed, allowed, paid, and denied.' },
+  { id: 'attachmentDenialLetter', label: 'Denial Letter', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'Attach the full denial letter documenting the reason for denial and your appeal rights.' },
+  { id: 'attachmentMedicalRecords', label: 'Medical Records', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Requesting from provider'], helpText: 'Include relevant records: office notes, test results, imaging, surgical reports.' },
+  { id: 'attachmentPhysicianLetter', label: 'Physician Support Letter', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Requested from doctor'], helpText: 'A letter of medical necessity from your doctor significantly strengthens appeals.' },
+  { id: 'attachmentOther', label: 'Other Documents Attached', type: 'textarea' as const, required: false, placeholder: 'List any other documents you are including' },
+];
+
+// Attachment checklists - Billing Disputes
+const billingAttachmentFields = [
+  { id: 'attachmentItemizedBill', label: 'Itemized Bill', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Requesting from provider'], helpText: 'An itemized bill shows each charge separately. Request one if you only have a summary bill.' },
+  { id: 'attachmentBillingEob', label: 'EOB (if insurance used)', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'Include copies of checks, bank statements, or payment confirmations.' },
+  { id: 'attachmentBillingOther', label: 'Other Documents', type: 'textarea' as const, required: false, placeholder: 'List other documents attached' },
+];
+
+// Attachment checklists - Debt Collection
+const debtAttachmentFields = [
+  { id: 'attachmentCollectionNotice', label: 'Collection Notice', type: 'select' as const, required: true, options: ['Attached', 'Will follow'], helpText: 'Attach the collection letter or notice you received.' },
+  { id: 'attachmentOriginalBill', label: 'Original Medical Bill', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Do not have'], helpText: 'If you have the original bill from the provider, include it.' },
+  { id: 'attachmentDebtProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentInsuranceEob', label: 'Insurance EOB', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Insurance was not used'] },
+  { id: 'certifiedMailUsed', label: 'Sending via Certified Mail?', type: 'select' as const, required: true, options: ['Yes', 'No'], helpText: 'Certified mail creates proof of delivery - strongly recommended for debt disputes under FDCPA.' },
+  { id: 'certifiedMailTrackingNumber', label: 'Certified Mail Tracking Number', type: 'text' as const, required: false, placeholder: 'Add after mailing' },
+  { id: 'dateCollectionNoticeReceived', label: 'Date Collection Notice Received', type: 'date' as const, required: true, helpText: 'CRITICAL: Under FDCPA, you have 30 days from receiving the first notice to request debt validation and preserve your dispute rights.' },
+];
+
+// Attachment checklists - Credit Report Disputes
+const creditAttachmentFields = [
+  { id: 'attachmentCreditReport', label: 'Credit Report Pages', type: 'select' as const, required: true, options: ['Attached', 'Will follow'], helpText: 'Include the pages showing the disputed entry. Circle or highlight the account in question.' },
+  { id: 'attachmentCreditProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentIdentification', label: 'Identification', type: 'select' as const, required: true, options: ['Attached'], helpText: 'Credit bureaus require a copy of ID (drivers license, passport) and proof of address.' },
+];
+
+// Provider/Hospital contact fields
+const providerContactFields = [
+  { id: 'providerFaxNumber', label: 'Provider Fax Number', type: 'text' as const, required: false, placeholder: 'Fax number' },
+  { id: 'providerPhoneNumber', label: 'Provider Phone Number', type: 'text' as const, required: false, placeholder: 'Main phone number' },
+  { id: 'billingDepartmentPhone', label: 'Billing Department Phone', type: 'text' as const, required: false, placeholder: 'Direct billing line' },
+];
+
+// Hospital-specific contact fields
+const hospitalContactFields = [
+  { id: 'hospitalFaxNumber', label: 'Hospital Fax Number', type: 'text' as const, required: false, placeholder: 'Main hospital fax' },
+  { id: 'hospitalPhoneNumber', label: 'Hospital Phone Number', type: 'text' as const, required: false, placeholder: 'Main hospital phone' },
+  { id: 'patientAdvocateContacted', label: 'Patient Advocate Contacted?', type: 'select' as const, required: false, options: ['Yes', 'No', 'Unknown if available'] },
+  { id: 'patientAdvocateName', label: 'Patient Advocate Name', type: 'text' as const, required: false, placeholder: 'Name of patient advocate if known' },
+  { id: 'dateIncidentReported', label: 'Date Incident First Reported', type: 'date' as const, required: false, helpText: 'When you first reported the issue to the hospital' },
+];
+
+// Provider attachments
+const providerAttachmentFields = [
+  { id: 'attachmentMedicalRecordsProvider', label: 'Medical Records', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Requesting from provider'] },
+  { id: 'attachmentIncidentReport', label: 'Incident Report', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not available', 'Requesting'] },
+  { id: 'attachmentPriorCommunication', label: 'Prior Communication', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'None'], helpText: 'Include copies of previous letters, emails, or notes from phone calls.' },
+];
+
+// Pharmacy contact fields
+const pharmacyContactFields = [
+  { id: 'pharmacyFaxNumber', label: 'Pharmacy Fax Number', type: 'text' as const, required: false, placeholder: 'Pharmacy fax' },
+  { id: 'pharmacyPhoneNumber', label: 'Pharmacy Phone Number', type: 'text' as const, required: false, placeholder: 'Pharmacy phone' },
+  { id: 'insurerPriorAuthPhone', label: 'Insurer Prior Auth Phone', type: 'text' as const, required: false, placeholder: 'PA department direct line' },
+];
+
+// Prescription attachments
+const prescriptionAttachmentFields = [
+  { id: 'attachmentPrescription', label: 'Prescription Copy', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Provider will submit'] },
+  { id: 'attachmentPriorDenial', label: 'Prior Denial Letter', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentPhysicianLetterRx', label: 'Physician Support Letter', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Requested from doctor'], helpText: 'A letter explaining medical necessity significantly strengthens appeals.' },
+];
+
+// Legal representation status - for specialized templates
+const legalStatusFields = [
+  { id: 'legalRepresentationStatus', label: 'Legal Representation Status', type: 'select' as const, required: false, options: ['None', 'Consulting with attorney', 'Have retained attorney'], helpText: 'You are not required to have an attorney, but it may help in complex cases.' },
+];
+
+// Billing-specific communication fields
+const billingCommunicationFields = [
+  { id: 'facilityFaxNumber', label: 'Facility Fax Number', type: 'text' as const, required: false, placeholder: 'Billing department fax' },
+  { id: 'facilityPhoneNumber', label: 'Facility Billing Phone', type: 'text' as const, required: false, placeholder: 'Billing department phone' },
+  { id: 'dateBillReceived', label: 'Date Bill Received', type: 'date' as const, required: true, helpText: 'When you received this bill in the mail' },
+  { id: 'itemizedBillRequested', label: 'Itemized Bill Requested?', type: 'select' as const, required: true, options: ['Yes - Attached', 'Yes - Pending', 'No - Requesting now', 'Already have summary bill'] },
+  { id: 'preferredBillingResponse', label: 'Preferred Response Method', type: 'select' as const, required: true, options: ['Mail', 'Email', 'Phone', 'Patient Portal'] },
+];
+
+// Collection agency communication fields
+const collectionCommunicationFields = [
+  { id: 'collectionAgencyFaxNumber', label: 'Collection Agency Fax', type: 'text' as const, required: false, placeholder: 'Agency fax number' },
+  { id: 'collectionAgencyPhoneNumber', label: 'Collection Agency Phone', type: 'text' as const, required: false, placeholder: 'Agency phone number' },
+];
+
 // Standard letter sections
 const standardSections = [
   { id: 'introduction', name: 'Introduction', template: 'I am writing to formally dispute the matter described below.', placeholders: [] },
@@ -226,10 +335,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...nhsPatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       ...codingFields,
       { id: 'diagnosisDescription', label: 'Diagnosis/Condition Description', type: 'textarea' as const, required: true, placeholder: 'Describe your medical condition in detail' },
       { id: 'treatmentDescription', label: 'Treatment/Service Denied', type: 'textarea' as const, required: true, placeholder: 'Describe the treatment or service that was denied' },
@@ -238,6 +349,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'physicianSupportLetter', label: 'Physician Support Letter Attached?', type: 'select' as const, required: true, options: ['Yes - Letter attached', 'Pending - Will follow', 'Not available'] },
       { id: 'clinicalGuidelinesReference', label: 'Clinical Guidelines Supporting Treatment', type: 'textarea' as const, required: false, placeholder: 'Reference any medical guidelines supporting this treatment' },
       { id: 'consequencesOfDenial', label: 'Health Consequences if Denied', type: 'textarea' as const, required: true, placeholder: 'Describe what will happen without this treatment' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of my insurance claim based on medical necessity.', placeholders: [] },
@@ -266,10 +378,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       { id: 'wasEmergency', label: 'Was This an Emergency?', type: 'select' as const, required: true, options: ['Yes - Emergency situation', 'No - Scheduled care'] },
       { id: 'emergencySymptoms', label: 'Emergency Symptoms/Situation', type: 'textarea' as const, required: false, placeholder: 'Describe the emergency symptoms if applicable' },
       { id: 'inNetworkProviderAvailable', label: 'Was an In-Network Provider Available?', type: 'select' as const, required: true, options: ['No - None available', 'No - Unreasonable distance', 'No - Excessive wait time', 'Unknown at time of service', 'Provider was listed as in-network'] },
@@ -277,6 +391,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'misledAboutNetwork', label: 'Were You Misled About Network Status?', type: 'textarea' as const, required: false, placeholder: 'Describe if you were given incorrect network information' },
       { id: 'inNetworkFacilityOutOfNetworkProvider', label: 'In-Network Facility with Out-of-Network Provider?', type: 'select' as const, required: true, options: ['Yes - Facility was in-network', 'No - Knew facility was out-of-network', 'Not applicable'] },
       { id: 'consentGiven', label: 'Did You Sign an Out-of-Network Consent Form?', type: 'select' as const, required: true, options: ['No - Never signed consent', 'No - Signed under duress/emergency', 'Yes - But was not properly informed', 'Yes - Knowingly signed', 'Unsure'] },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of my insurance claim based on out-of-network provider status.', placeholders: [] },
@@ -305,10 +420,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       ...codingFields,
       { id: 'authorizationNumber', label: 'Authorization Number (if obtained)', type: 'text' as const, required: false, placeholder: 'Prior auth number if you have one' },
       { id: 'authorizationAttempted', label: 'Was Authorization Attempted?', type: 'select' as const, required: true, options: ['Yes - By provider', 'Yes - By patient', 'No - Not aware it was needed', 'No - Emergency situation', 'Authorization was obtained but not on file'] },
@@ -318,6 +435,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'reasonAuthNotObtained', label: 'Reason Authorization Was Not Obtained', type: 'textarea' as const, required: true, placeholder: 'Explain why prior auth was not completed' },
       { id: 'emergencyCircumstances', label: 'Emergency Circumstances', type: 'textarea' as const, required: false, placeholder: 'Describe any emergency that prevented prior auth' },
       { id: 'providerResponsibility', label: 'Was Provider Responsible for Obtaining Auth?', type: 'select' as const, required: true, options: ['Yes - Provider should have obtained', 'No - Patient responsibility', 'Unclear/Unknown'] },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of my insurance claim based on lack of prior authorization.', placeholders: [] },
@@ -346,6 +464,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...codingFields,
@@ -358,6 +477,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'deductibleAmountApplied', label: 'Deductible Amount Applied to This Claim', type: 'text' as const, required: false, placeholder: 'e.g., $500.00' },
       { id: 'coinsuranceApplied', label: 'Coinsurance Applied', type: 'text' as const, required: false, placeholder: 'e.g., 20%' },
       { id: 'outOfPocketMaxStatus', label: 'Out-of-Pocket Maximum Status', type: 'select' as const, required: false, options: ['Not yet met', 'Already met', 'Met with this claim'] },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute the partial payment of my insurance claim, which was underpaid.', placeholders: [] },
@@ -386,10 +506,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       { id: 'exclusionCited', label: 'Exclusion Cited by Insurer', type: 'textarea' as const, required: true, placeholder: 'Copy the exclusion language from denial letter' },
       { id: 'policySectionReference', label: 'Policy Section Reference', type: 'text' as const, required: false, placeholder: 'e.g., Section 4.2, Page 23' },
       { id: 'whyExclusionDoesNotApply', label: 'Why This Exclusion Does Not Apply', type: 'textarea' as const, required: true, placeholder: 'Explain why the exclusion is not applicable' },
@@ -398,6 +520,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'summaryOfBenefitsReference', label: 'Summary of Benefits Reference', type: 'textarea' as const, required: false, placeholder: 'What does your SBC say about this coverage?' },
       { id: 'treatmentDescription', label: 'Treatment/Service Denied', type: 'textarea' as const, required: true, placeholder: 'Describe the treatment that was denied' },
       { id: 'medicalNecessityForTreatment', label: 'Medical Necessity for This Treatment', type: 'textarea' as const, required: true, placeholder: 'Explain why this treatment is needed' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally dispute the denial of my claim based on a policy exclusion.', placeholders: [] },
@@ -426,10 +549,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       { id: 'emergencyFacilityType', label: 'Type of Emergency Facility', type: 'select' as const, required: true, options: ['Hospital Emergency Room', 'Freestanding Emergency Center', 'Urgent Care', 'Walk-in Clinic', 'Ambulance Services'] },
       { id: 'dateTimeOfEmergency', label: 'Date and Time of Emergency', type: 'text' as const, required: true, placeholder: 'e.g., January 15, 2024 at 2:30 AM' },
       { id: 'symptomsAtPresentation', label: 'Symptoms at Time of Presentation', type: 'textarea' as const, required: true, placeholder: 'Describe exactly what symptoms you were experiencing' },
@@ -439,6 +564,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'ambulanceUsed', label: 'Was Ambulance Used?', type: 'select' as const, required: true, options: ['Yes', 'No'] },
       { id: 'ambulanceReason', label: 'Reason for Ambulance Use', type: 'textarea' as const, required: false, placeholder: 'If ambulance was used, explain why' },
       { id: 'timeOfDay', label: 'Time of Day Considerations', type: 'textarea' as const, required: false, placeholder: 'Was it night/weekend when regular doctors unavailable?' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of my emergency medical care claim.', placeholders: [] },
@@ -468,10 +594,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       { id: 'originalApprovalDate', label: 'Date of Original Approval', type: 'date' as const, required: true },
       { id: 'originalPaymentAmount', label: 'Original Payment Amount', type: 'text' as const, required: true, placeholder: 'e.g., $2,500.00' },
       { id: 'reversalDate', label: 'Date of Reversal', type: 'date' as const, required: true },
@@ -480,6 +608,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'actionsTakenInReliance', label: 'Actions Taken Based on Original Approval', type: 'textarea' as const, required: true, placeholder: 'What did you do believing the claim was approved?' },
       { id: 'financialHardship', label: 'Financial Hardship Caused', type: 'textarea' as const, required: false, placeholder: 'Describe financial impact of the reversal' },
       { id: 'stateRetrospectiveReviewLaws', label: 'State Retrospective Review Time Limits', type: 'textarea' as const, required: false, placeholder: 'Your state may limit how long insurers can reverse claims' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the retroactive denial of my previously approved insurance claim.', placeholders: [] },
@@ -508,9 +637,11 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...prescriptionFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       { id: 'conditionBeingTreated', label: 'Condition Being Treated', type: 'textarea' as const, required: true, placeholder: 'What medical condition requires this medication?' },
       { id: 'formularyAlternatives', label: 'Formulary Alternatives Tried', type: 'textarea' as const, required: false, placeholder: 'List covered alternatives you have already tried' },
       { id: 'whyAlternativesFailed', label: 'Why Alternatives Failed or Are Inappropriate', type: 'textarea' as const, required: false, placeholder: 'Why dont covered alternatives work for you?' },
@@ -518,6 +649,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'discontinuationRisks', label: 'Risks of Discontinuing This Medication', type: 'textarea' as const, required: true, placeholder: 'What happens if you cant take this medication?' },
       { id: 'physicianJustification', label: 'Physician Justification', type: 'textarea' as const, required: true, placeholder: 'Why does your doctor say you need this specific medication?' },
       { id: 'costWithoutCoverage', label: 'Cost Without Insurance Coverage', type: 'text' as const, required: false, placeholder: 'e.g., $500/month' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of coverage for my prescription medication.', placeholders: [] },
@@ -546,10 +678,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       ...codingFields,
       { id: 'testName', label: 'Name of Diagnostic Test', type: 'text' as const, required: true, placeholder: 'e.g., MRI of Lumbar Spine' },
       { id: 'testType', label: 'Type of Test', type: 'select' as const, required: true, options: ['MRI', 'CT Scan', 'X-Ray', 'Ultrasound', 'Blood Work/Lab', 'Biopsy', 'PET Scan', 'EKG/ECG', 'Colonoscopy/Endoscopy', 'Genetic Testing', 'Other Imaging', 'Other'] },
@@ -559,6 +693,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'whyTestIsNecessary', label: 'Why This Specific Test is Necessary', type: 'textarea' as const, required: true, placeholder: 'Explain medical necessity of this test' },
       { id: 'consequencesOfNotTesting', label: 'Consequences of Not Performing Test', type: 'textarea' as const, required: true, placeholder: 'What could happen if this test is not done?' },
       { id: 'orderingPhysicianRationale', label: 'Ordering Physician Rationale', type: 'textarea' as const, required: true, placeholder: 'Why has your doctor ordered this test?' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of coverage for a diagnostic test.', placeholders: [] },
@@ -587,10 +722,12 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...insurancePlanFields,
+      ...communicationFields,
       ...providerFields,
       ...claimFields,
       ...denialFields,
       ...appealFields,
+      ...deadlineAwarenessFields,
       ...codingFields,
       { id: 'procedureName', label: 'Name of Procedure/Surgery', type: 'text' as const, required: true, placeholder: 'e.g., Knee Replacement Surgery' },
       { id: 'procedureType', label: 'Type of Procedure', type: 'select' as const, required: true, options: ['Inpatient Surgery', 'Outpatient Surgery', 'Minimally Invasive Procedure', 'Diagnostic Procedure', 'Therapeutic Procedure', 'Reconstructive Surgery', 'Other'] },
@@ -603,6 +740,7 @@ const insuranceClaimTemplates: LetterTemplate[] = [
       { id: 'surgeonRecommendation', label: 'Surgeon Recommendation', type: 'textarea' as const, required: true, placeholder: 'What does your surgeon recommend and why?' },
       { id: 'riskOfDelaying', label: 'Risk of Delaying Procedure', type: 'textarea' as const, required: true, placeholder: 'What happens if this procedure is delayed?' },
       { id: 'preAuthorizationNumber', label: 'Pre-Authorization Number (if obtained)', type: 'text' as const, required: false, placeholder: 'Prior auth number if applicable' },
+      ...insuranceAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally appeal the denial of coverage for my medically necessary surgical procedure.', placeholders: [] },
@@ -638,7 +776,9 @@ const medicalBillingTemplates: LetterTemplate[] = [
       ...nhsPatientFields,
       ...usPatientFields,
       ...hospitalBillingFields,
+      ...billingCommunicationFields,
       ...providerFields,
+      ...providerContactFields,
       { id: 'insuranceUsed', label: 'Was Insurance Used?', type: 'select' as const, required: true, options: ['Yes', 'No', 'Pending'] },
       { id: 'insurerName', label: 'Insurance Company (if applicable)', type: 'text' as const, required: false, placeholder: 'Insurance company name' },
       { id: 'policyNumber', label: 'Policy Number', type: 'text' as const, required: false, placeholder: 'Insurance policy number' },
@@ -647,7 +787,7 @@ const medicalBillingTemplates: LetterTemplate[] = [
       { id: 'correctAmount', label: 'Correct Amount (if known)', type: 'text' as const, required: false, placeholder: 'e.g., $250.00' },
       { id: 'howErrorDiscovered', label: 'How Did You Discover the Error?', type: 'textarea' as const, required: true, placeholder: 'e.g., Compared to estimate, checked EOB, etc.' },
       { id: 'priorCommunication', label: 'Prior Communication About This Issue', type: 'textarea' as const, required: false, placeholder: 'Previous calls or letters about this error' },
-      { id: 'itemizedBillReceived', label: 'Have You Received an Itemized Bill?', type: 'select' as const, required: true, options: ['Yes', 'No - Requesting one', 'Requested but not received'] },
+      ...billingAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute an incorrect amount on my medical bill.', placeholders: [] },
@@ -677,7 +817,9 @@ const medicalBillingTemplates: LetterTemplate[] = [
       ...nhsPatientFields,
       ...usPatientFields,
       ...hospitalBillingFields,
+      ...billingCommunicationFields,
       ...providerFields,
+      ...providerContactFields,
       { id: 'duplicateServiceDescription', label: 'Description of Duplicated Service', type: 'textarea' as const, required: true, placeholder: 'What service was billed twice?' },
       { id: 'firstChargeDate', label: 'Date of First Charge', type: 'date' as const, required: true },
       { id: 'firstChargeAmount', label: 'First Charge Amount', type: 'text' as const, required: true, placeholder: 'e.g., $300.00' },
@@ -686,6 +828,7 @@ const medicalBillingTemplates: LetterTemplate[] = [
       { id: 'cptCodeDuplicated', label: 'CPT Code (if known)', type: 'text' as const, required: false, placeholder: 'CPT code for the duplicated service' },
       { id: 'lineItemNumbers', label: 'Line Item Numbers (from itemized bill)', type: 'text' as const, required: false, placeholder: 'e.g., Lines 5 and 12' },
       { id: 'serviceOnlyPerformedOnce', label: 'Was Service Only Performed Once?', type: 'select' as const, required: true, options: ['Yes - Only performed once', 'Service was performed but not twice', 'Unsure - Need records to confirm'] },
+      ...billingAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute duplicate charges on my medical bill.', placeholders: [] },
@@ -715,7 +858,9 @@ const medicalBillingTemplates: LetterTemplate[] = [
       ...nhsPatientFields,
       ...usPatientFields,
       ...hospitalBillingFields,
+      ...billingCommunicationFields,
       ...providerFields,
+      ...providerContactFields,
       { id: 'serviceNotReceivedDescription', label: 'Service Billed But Not Received', type: 'textarea' as const, required: true, placeholder: 'Describe the service you were billed for but never received' },
       { id: 'serviceAmount', label: 'Amount Charged for This Service', type: 'text' as const, required: true, placeholder: 'e.g., $450.00' },
       { id: 'cptCodeDisputed', label: 'CPT Code (if known)', type: 'text' as const, required: false, placeholder: 'CPT code for the service' },
@@ -723,6 +868,7 @@ const medicalBillingTemplates: LetterTemplate[] = [
       { id: 'servicesYouDidReceive', label: 'Services You Did Receive', type: 'textarea' as const, required: false, placeholder: 'List services that were actually provided' },
       { id: 'potentialExplanation', label: 'Potential Explanation for Error', type: 'textarea' as const, required: false, placeholder: 'e.g., Service cancelled, different patient, etc.' },
       { id: 'requestMedicalRecords', label: 'Request Medical Records to Verify?', type: 'select' as const, required: true, options: ['Yes - Include with this dispute', 'No - Already have them', 'Already requested'] },
+      ...billingAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute charges for medical services that I never received.', placeholders: [] },
@@ -751,7 +897,9 @@ const medicalBillingTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...hospitalBillingFields,
+      ...billingCommunicationFields,
       ...providerFields,
+      ...providerContactFields,
       ...codingFields,
       { id: 'serviceBilledAs', label: 'Service Billed As (Higher Level)', type: 'textarea' as const, required: true, placeholder: 'Describe what you were billed for' },
       { id: 'cptCodeBilled', label: 'CPT Code Billed', type: 'text' as const, required: true, placeholder: 'e.g., 99214' },
@@ -762,6 +910,7 @@ const medicalBillingTemplates: LetterTemplate[] = [
       { id: 'timeSpentWithProvider', label: 'Time Spent With Provider', type: 'text' as const, required: false, placeholder: 'e.g., 10 minutes' },
       { id: 'complexityOfVisit', label: 'Complexity of Visit', type: 'select' as const, required: true, options: ['Simple/Routine', 'Low Complexity', 'Moderate Complexity', 'High Complexity'] },
       { id: 'evidenceOfUpcoding', label: 'Evidence of Upcoding', type: 'textarea' as const, required: true, placeholder: 'Why do you believe this was upcoded?' },
+      ...billingAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute what I believe is upcoding - being billed for a higher level of service than what was provided.', placeholders: [] },
@@ -790,7 +939,9 @@ const medicalBillingTemplates: LetterTemplate[] = [
       ...corePatientFields,
       ...usPatientFields,
       ...hospitalBillingFields,
+      ...billingCommunicationFields,
       ...providerFields,
+      ...providerContactFields,
       ...codingFields,
       { id: 'servicesBilledSeparately', label: 'Services Billed Separately', type: 'textarea' as const, required: true, placeholder: 'List the services that were billed as separate line items' },
       { id: 'separateCptCodes', label: 'Separate CPT Codes Billed', type: 'text' as const, required: true, placeholder: 'e.g., 99213, 36415, 80053' },
@@ -799,6 +950,7 @@ const medicalBillingTemplates: LetterTemplate[] = [
       { id: 'correctBundledAmount', label: 'Correct Bundled Amount (if known)', type: 'text' as const, required: false, placeholder: 'e.g., $200.00' },
       { id: 'servicesPerformedTogether', label: 'Were Services Performed Together?', type: 'select' as const, required: true, options: ['Yes - Same visit/procedure', 'Yes - Same day', 'Unknown - Needs review'] },
       { id: 'unbundlingExplanation', label: 'Why These Should Be Bundled', type: 'textarea' as const, required: true, placeholder: 'Explain why these services should be billed together' },
+      ...billingAttachmentFields,
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute what I believe is improper unbundling of medical services.', placeholders: [] },
