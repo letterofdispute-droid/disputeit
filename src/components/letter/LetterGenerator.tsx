@@ -324,7 +324,6 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
 
       {showPricing && (
         <PricingModal
-          template={template}
           onClose={() => setShowPricing(false)}
         />
       )}
