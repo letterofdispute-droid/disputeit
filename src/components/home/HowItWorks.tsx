@@ -3,8 +3,8 @@ import { FileText, Edit3, Download, Send } from 'lucide-react';
 const steps = [
   {
     icon: FileText,
-    title: 'Choose Your Template',
-    description: 'Select a template designed for your exact dispute type. No prompt engineering required.',
+    title: 'Choose Your Letter Type',
+    description: 'Select a letter builder designed for your exact dispute type. No prompt engineering required.',
     step: '01',
   },
   {
