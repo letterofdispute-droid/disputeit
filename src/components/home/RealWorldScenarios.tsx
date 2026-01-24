@@ -119,7 +119,7 @@ const scenarios: Scenario[] = [
 ];
 
 const RealWorldScenarios = () => {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>('security-deposit');
 
   const toggleExpanded = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
