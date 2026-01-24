@@ -1,465 +1,218 @@
 
-
-# Healthcare Templates Expansion Plan
+# Healthcare Templates Enhancement Plan
 
 ## Overview
 
-This plan expands the healthcare templates from 2 templates to approximately 50 comprehensive templates, organized into 6 major categories based on real-world usage patterns and dispute types.
-
-## Current State
-
-- **Existing templates**: 2 (Medical Billing Error Dispute, Hospital Complaint)
-- **Template count in category config**: 6
-- **Structure**: Basic fields without granular addressing or regulatory-specific identifiers
-
-## Proposed Template Architecture
-
-### Category Organization
-
-The templates will be organized into these sub-categories:
-
-| Category | Template Count | Priority |
-|----------|---------------|----------|
-| A. Insurance Claim & Coverage Disputes | 10 | Highest |
-| B. Medical Billing Errors | 10 | Very High |
-| C. Debt Collection & Credit Reporting | 8 | High |
-| D. Provider & Hospital Disputes | 7 | Medium |
-| E. Prescription & Pharmacy Disputes | 6 | Medium |
-| F. Specialized/Advanced Disputes | 9 | Lower |
-
-**Total: 50 templates**
+This plan adds the missing fields and attachment/deadline guidance to make the 50 healthcare templates complete and production-ready.
 
 ---
 
-## Field Schema Design
+## Missing Elements to Add
 
-### Core Fields (Used in 90% of templates)
+### 1. Additional Reusable Field Sets
 
-**A. Patient/Consumer Identity**
-- `patientFullName` - Full legal name
-- `patientDob` - Date of birth
-- `patientAddressLine1`, `patientCity`, `patientPostcode`
-- `patientPhone`, `patientEmail`
-- `relationshipToPatient` - Select: Self, Parent/Guardian, Spouse, Other Representative
-- `patientId` - Patient/Member ID
-- `nhsNumber` - NHS Number (UK only)
-- `medicareNumber` - Medicare Beneficiary ID (US)
-- `medicaidId` - Medicaid ID (US)
+**Communication & Response Fields** (new field set)
+- `insurerFaxNumber` - Fax number (still widely used in healthcare)
+- `insurerPhoneNumber` - Claims department phone
+- `providerFaxNumber` - Provider fax number
+- `preferredResponseMethod` - Select: Mail, Phone, Portal, Email, Fax
+- `appealDeadlineAware` - Checkbox: "I understand the appeal deadline"
+- `dateNoticeReceived` - When you received the denial/bill/collection notice
 
-**B. Provider/Insurer/Collector Details**
-- `organizationName`
-- `organizationAddressLine1`, `organizationCity`, `organizationPostcode`
-- `departmentName` - Claims, Billing, Appeals, Collections
-- `faxNumber` - Still widely used in healthcare
-- `claimNumber`, `accountNumber`, `referenceId`
-- `dateOfService`
+**Attachment Tracking Fields** (new field set)
+- `attachmentEob` - Select: Attached, Will follow, Not applicable
+- `attachmentDenialLetter` - Select: Attached, Will follow, Not applicable
+- `attachmentMedicalRecords` - Select: Attached, Will follow, Not applicable
+- `attachmentPhysicianLetter` - Select: Attached, Will follow, Not applicable
+- `attachmentProofOfPayment` - Select: Attached, Will follow, Not applicable
+- `attachmentItemizedBill` - Select: Attached, Will follow, Not applicable
+- `attachmentCreditReport` - Select: Attached, Will follow, Not applicable
+- `attachmentOther` - Text: List other documents attached
 
-**C. Dispute Metadata**
-- `disputeType` - Locked per template
-- `disputeReason` - Structured + free text
-- `amountDisputed`
-- `dateBillReceived` / `dateDenialReceived`
-- `appealDeadlineAware` - Checkbox for deadline awareness
-- `preferredResponseMethod` - Select: Mail, Phone, Portal
+### 2. Field Additions by Category
 
----
+**A. Insurance Claim Templates (1-10)**
+Add to existing field sets:
+- `insurerFaxNumber` to insurance plan fields
+- `insurerPhoneNumber` to insurance plan fields
+- `preferredResponseMethod` 
+- `appealDeadlineAware` checkbox
+- `dateNoticeReceived` (date you received denial)
+- Attachment tracking for: EOB, Denial Letter, Medical Records, Physician Letter
 
-## Template Breakdown by Category
+**B. Medical Billing Templates (11-20)**
+Add:
+- `facilityFaxNumber` to hospital billing fields
+- `facilityPhoneNumber` - billing department contact
+- `dateNoticeReceived` - when you got the bill
+- `itemizedBillRequested` - Select: Yes/No/Already received
+- `preferredResponseMethod`
+- Attachment tracking for: Itemized Bill, EOB, Proof of Payment
 
-### A. Insurance Claim & Coverage Disputes (10 templates)
+**C. Debt Collection Templates (21-28)**
+Add:
+- `collectionAgencyFaxNumber`
+- `collectionAgencyPhoneNumber`
+- `dateNoticeReceived` - date of first collection notice (critical for 30-day validation window)
+- `certifiedMailUsed` - Select: Yes/No (important for FDCPA)
+- `certifiedMailTrackingNumber`
+- Attachment tracking for: Collection Notice, Original Bill, Proof of Payment, Credit Report
 
-1. **insurance-claim-denial-medical-necessity**
-   - Appeal for claims denied due to "not medically necessary"
-   - Fields: diagnosis codes, treatment description, physician statement
-   
-2. **insurance-claim-denial-out-of-network**
-   - Appeal out-of-network denials
-   - Fields: network status explanation, emergency flag
-   
-3. **insurance-claim-denial-prior-auth**
-   - Appeal denials due to missing prior authorization
-   - Fields: authorization number, retroactive auth request
-   
-4. **insurance-partial-payment-dispute**
-   - Dispute underpaid claims
-   - Fields: expected vs received amount, EOB analysis
-   
-5. **insurance-coverage-exclusion-dispute**
-   - Challenge policy exclusion decisions
-   - Fields: exclusion cited, policy section reference
-   
-6. **insurance-emergency-care-dispute**
-   - Dispute emergency care coverage denials (Prudent Layperson Standard)
-   - Fields: emergency indicator, symptoms at presentation
-   
-7. **insurance-retroactive-denial-appeal**
-   - Appeal claims initially approved then denied
-   - Fields: original approval date, reason for reversal
-   
-8. **insurance-prescription-denial-appeal**
-   - Appeal denied prescription drug coverage
-   - Fields: drug name, formulary tier, alternatives tried
-   
-9. **insurance-diagnostic-test-denial**
-   - Appeal denied diagnostic tests
-   - Fields: test type, CPT codes, medical justification
-   
-10. **insurance-procedure-denial-appeal**
-    - Appeal denied surgeries or procedures
-    - Fields: procedure codes, pre-authorization details
+**D. Provider & Hospital Templates (29-35)**
+Add:
+- `hospitalFaxNumber`
+- `hospitalPhoneNumber`
+- `patientAdvocateContacted` - Select: Yes/No/Unknown
+- `patientAdvocateName`
+- `dateIncidentReported` - when you first reported the issue
+- Attachment tracking for: Medical Records, Incident Report, Prior Communication
 
-### B. Medical Billing Errors (10 templates)
+**E. Prescription Templates (36-41)**
+Add:
+- `pharmacyFaxNumber`
+- `pharmacyPhoneNumber`
+- `insurerPriorAuthPhone` - PA department phone
+- `preferredResponseMethod`
+- Attachment tracking for: Prescription, Prior Denial, Physician Letter
 
-11. **medical-billing-incorrect-amount**
-    - Dispute incorrect billing amounts
-    - Fields: itemized charges, correct amounts
-    
-12. **medical-billing-duplicate-charge**
-    - Dispute duplicate billing
-    - Fields: duplicate line items, service dates
-    
-13. **medical-billing-services-not-received**
-    - Dispute charges for services not provided
-    - Fields: services claimed, actual services received
-    
-14. **medical-billing-upcoding**
-    - Dispute being charged for higher-level service
-    - Fields: billed code vs appropriate code
-    
-15. **medical-billing-unbundling**
-    - Dispute services billed separately
-    - Fields: bundled codes, correct coding
-    
-16. **medical-billing-balance-billing**
-    - Dispute balance billing (in-network provider)
-    - Fields: in-network confirmation, contracted rates
-    
-17. **medical-billing-surprise-billing**
-    - Dispute surprise medical bills (No Surprises Act)
-    - Fields: emergency indicator, consent documentation
-    
-18. **medical-billing-out-of-network-provider**
-    - Hospital-based provider dispute
-    - Fields: facility network status, provider disclosure
-    
-19. **medical-billing-incorrect-patient-info**
-    - Dispute billing with wrong patient information
-    - Fields: correct vs incorrect details
-    
-20. **medical-billing-post-insurance-dispute**
-    - Dispute billing after insurance payment
-    - Fields: EOB details, remaining balance explanation
+**F. Specialized Templates (42-50)**
+Add:
+- All relevant fax/phone fields per template type
+- `preferredResponseMethod`
+- `legalRepresentationStatus` - Select: None, Consulting attorney, Have attorney
+- Attachment tracking appropriate to each template
 
-### C. Debt Collection & Credit Reporting (8 templates)
+### 3. Deadline Warning Guidance
 
-21. **medical-debt-validation**
-    - Request debt validation letter
-    - Fields: collection agency details, original creditor, disputed amount
-    
-22. **medical-debt-collection-dispute**
-    - Dispute medical debt with collections agency
-    - Fields: dispute reason, FDCPA references
-    
-23. **medical-debt-cease-communication**
-    - Request cease communication
-    - Fields: preferred contact method, written-only flag
-    
-24. **medical-debt-credit-report-dispute**
-    - Dispute medical debt on credit report
-    - Fields: credit bureau, entry reference, dispute reason
-    
-25. **medical-debt-paid-removal-request**
-    - Request removal of paid medical debt
-    - Fields: payment confirmation, deletion request
-    
-26. **medical-debt-incorrect-balance**
-    - Dispute incorrect balance reported
-    - Fields: reported balance, actual balance, proof
-    
-27. **medical-debt-statute-limitations**
-    - Dispute debt past statute of limitations
-    - Fields: original debt date, state SOL
-    
-28. **medical-debt-insurance-pending**
-    - Dispute debt while insurance pending
-    - Fields: insurance claim status, EOB pending
+Add `helpText` to key fields with deadline warnings:
 
-### D. Provider & Hospital Disputes (7 templates)
+| Field | Help Text |
+|-------|-----------|
+| `dateNoticeReceived` | "IMPORTANT: Note when you received this notice. Most insurance appeals must be filed within 180 days of denial. Debt validation requests must be sent within 30 days of first contact to preserve rights." |
+| `appealDeadline` | "Check your denial letter for the exact deadline. Missing this deadline may forfeit your appeal rights." |
+| `appealDeadlineAware` | "Confirm you understand the time limit to submit this appeal. Typical deadlines: 30-180 days for insurance, 30 days for debt validation." |
+| `certifiedMailUsed` | "Sending via certified mail creates proof of delivery, which is important for legal disputes." |
 
-29. **hospital-negligent-care-complaint**
-    - Complain about negligent care (non-legal wording)
-    - Fields: incident details, impact, care standards
-    
-30. **medical-record-inaccuracy-dispute**
-    - Dispute inaccurate medical record
-    - Fields: specific record section, error description
-    
-31. **medical-record-diagnosis-correction**
-    - Request correction of diagnosis
-    - Fields: incorrect diagnosis, correct diagnosis, supporting info
-    
-32. **medical-record-amendment-hipaa**
-    - Request HIPAA amendment of medical record
-    - Fields: record section, requested change, reason
-    
-33. **hospital-discharge-dispute**
-    - Dispute premature discharge decision
-    - Fields: discharge date, condition at discharge
-    
-34. **hospital-informed-consent-complaint**
-    - Complain about lack of informed consent
-    - Fields: procedure, information not provided
-    
-35. **hospital-misconduct-complaint**
-    - Complain about staff misconduct
-    - Fields: staff involved, incident description
+### 4. Attachment Checklists (via helpText)
 
-### E. Prescription & Pharmacy Disputes (6 templates)
+Add descriptive `helpText` to attachment fields:
 
-36. **prescription-coverage-denial-appeal**
-    - Appeal prescription coverage denial
-    - Fields: drug name, tier, medical necessity
-    
-37. **prescription-step-therapy-exception**
-    - Request step therapy exception
-    - Fields: drugs already tried, medical justification
-    
-38. **prescription-prior-auth-appeal**
-    - Appeal prior authorization denial
-    - Fields: PA number, denial reason, clinical notes
-    
-39. **prescription-generic-substitution-dispute**
-    - Dispute generic substitution
-    - Fields: brand vs generic, adverse reactions
-    
-40. **pharmacy-incorrect-charge**
-    - Dispute incorrect pharmacy charge
-    - Fields: prescription details, charged vs expected
-    
-41. **prescription-not-covered-exception**
-    - Request exception for non-covered medication
-    - Fields: drug name, alternatives exhausted
+**For Insurance Appeals:**
+```
+attachmentEob helpText: "Attach the Explanation of Benefits (EOB) showing how your claim was processed. This is the document that shows what was billed, allowed, paid, and denied."
 
-### F. Specialized/Advanced Disputes (9 templates)
+attachmentDenialLetter helpText: "Attach the denial letter in full. This documents the reason for denial and your appeal rights."
 
-42. **insurance-medical-necessity-patient-letter**
-    - Patient-perspective medical necessity letter
-    - Fields: condition impact, treatment necessity
-    
-43. **insurance-experimental-treatment-appeal**
-    - Appeal experimental/investigational denial
-    - Fields: treatment details, clinical trial data
-    
-44. **insurance-second-level-appeal**
-    - Second-level/external appeal
-    - Fields: first appeal details, new evidence
-    
-45. **insurance-external-review-request**
-    - Request external/independent review
-    - Fields: appeal exhaustion, IRO request
-    
-46. **insurance-employer-plan-dispute**
-    - Dispute with employer-sponsored plan
-    - Fields: ERISA references, plan administrator
-    
-47. **medicaid-denial-appeal**
-    - Appeal Medicaid denial (US)
-    - Fields: state-specific fields, fair hearing request
-    
-48. **medicare-denial-appeal**
-    - Appeal Medicare denial (US)
-    - Fields: Medicare-specific references, QIC appeal
-    
-49. **workers-comp-medical-dispute**
-    - Workers' compensation medical dispute
-    - Fields: employer, carrier, claim number
-    
-50. **long-term-care-coverage-dispute**
-    - Dispute long-term care coverage
-    - Fields: LTC policy details, benefit trigger documentation
+attachmentMedicalRecords helpText: "Include relevant medical records that support your case. May include: office visit notes, test results, imaging reports, surgical reports."
 
----
+attachmentPhysicianLetter helpText: "A letter of medical necessity from your doctor significantly strengthens your appeal. Ask your physician to explain why this treatment is necessary."
+```
 
-## Jurisdiction Configuration
+**For Debt Collection:**
+```
+attachmentCreditReport helpText: "If disputing a credit report entry, include the relevant pages showing the disputed account. Circle or highlight the entry."
 
-### Updated Healthcare Jurisdictions
-
-```typescript
-const healthcareJurisdictions = [
-  {
-    code: 'UK',
-    name: 'United Kingdom',
-    legalReference: 'NHS Constitution / Consumer Rights Act 2015',
-    approvedPhrases: [
-      'Under the NHS Constitution',
-      'In accordance with patient rights',
-      'Under the Health and Social Care Act 2012'
-    ]
-  },
-  {
-    code: 'US',
-    name: 'United States',
-    legalReference: 'No Surprises Act / HIPAA / FCRA / FDCPA',
-    approvedPhrases: [
-      'Under the No Surprises Act',
-      'Under HIPAA regulations',
-      'Under the Fair Credit Reporting Act',
-      'Under the Fair Debt Collection Practices Act',
-      'Under the Employee Retirement Income Security Act (ERISA)',
-      'Under the Prudent Layperson Standard'
-    ]
-  },
-  {
-    code: 'EU',
-    name: 'European Union',
-    legalReference: 'Cross-Border Healthcare Directive / GDPR',
-    approvedPhrases: [
-      'Under EU patient rights',
-      'In accordance with GDPR data rights',
-      'Under the Cross-Border Healthcare Directive'
-    ]
-  },
-  {
-    code: 'INTL',
-    name: 'International / Other',
-    approvedPhrases: [
-      'In accordance with applicable healthcare standards'
-    ]
-  }
-];
+attachmentProofOfPayment helpText: "Include copies of canceled checks, bank statements, or payment confirmations showing previous payments."
 ```
 
 ---
 
-## Implementation Details
+## Technical Implementation
 
 ### File Changes
 
-1. **`src/data/templates/healthcareTemplates.ts`**
-   - Complete rewrite with 50 templates
-   - Organized into logical sections with comments
-   - Reusable field sets for common patterns
+**`src/data/templates/healthcareTemplates.ts`**
 
-2. **`src/data/templateCategories.ts`**
-   - Update `templateCount` from 6 to 50 for healthcare category
-   - Consider marking as `popular: true`
-
-3. **`src/data/allTemplates.ts`**
-   - No changes needed (already imports healthcareTemplates)
-
-### Template Structure Pattern
-
-Each template will follow this pattern:
+1. Add new reusable field sets after existing ones (around line 197):
 
 ```typescript
-{
-  id: 'category-specific-id',
-  slug: 'seo-friendly-slug',
-  category: 'Healthcare',
-  title: 'Clear Action-Oriented Title',
-  shortDescription: '< 100 chars describing when to use',
-  longDescription: 'Detailed description with use cases',
-  seoTitle: 'SEO-optimized title | Free Template',
-  seoDescription: '< 160 chars for search results',
-  tones: ['neutral', 'firm', 'final'],
-  fields: [...], // Granular, category-appropriate fields
-  sections: [...], // Introduction, Facts, Request, Deadline, Closing
-  jurisdictions: healthcareJurisdictions,
-  pricing: standardPricing
-}
+// Communication fields
+const communicationFields = [
+  { id: 'insurerFaxNumber', label: 'Insurer Fax Number', type: 'text' as const, required: false, placeholder: 'Fax for claims/appeals', helpText: 'Fax is still commonly used in healthcare for formal communications' },
+  { id: 'insurerPhoneNumber', label: 'Insurer Phone Number', type: 'text' as const, required: false, placeholder: 'Claims department phone' },
+  { id: 'preferredResponseMethod', label: 'Preferred Response Method', type: 'select' as const, required: true, options: ['Mail', 'Email', 'Phone', 'Online Portal', 'Fax'] },
+  { id: 'dateNoticeReceived', label: 'Date You Received Notice', type: 'date' as const, required: true, helpText: 'IMPORTANT: Note this date. Appeal deadlines are often calculated from when you received the denial, not when it was issued.' },
+];
+
+// Appeal deadline awareness
+const deadlineAwarenessFields = [
+  { id: 'appealDeadlineAware', label: 'I Understand the Appeal Deadline', type: 'select' as const, required: true, options: ['Yes - I understand the deadline', 'No - Need to check deadline'], helpText: 'Typical deadlines: 30-180 days for insurance appeals. Missing the deadline may forfeit your rights.' },
+];
+
+// Attachment checklists - Insurance
+const insuranceAttachmentFields = [
+  { id: 'attachmentEob', label: 'Explanation of Benefits (EOB)', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'The EOB shows how your claim was processed - what was billed, allowed, paid, and denied.' },
+  { id: 'attachmentDenialLetter', label: 'Denial Letter', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'Attach the full denial letter documenting the reason for denial and your appeal rights.' },
+  { id: 'attachmentMedicalRecords', label: 'Medical Records', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Requesting from provider'], helpText: 'Include relevant records: office notes, test results, imaging, surgical reports.' },
+  { id: 'attachmentPhysicianLetter', label: 'Physician Support Letter', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Requested from doctor'], helpText: 'A letter of medical necessity from your doctor significantly strengthens appeals.' },
+  { id: 'attachmentOther', label: 'Other Documents Attached', type: 'textarea' as const, required: false, placeholder: 'List any other documents you are including' },
+];
+
+// Attachment checklists - Billing
+const billingAttachmentFields = [
+  { id: 'attachmentItemizedBill', label: 'Itemized Bill', type: 'select' as const, required: true, options: ['Attached', 'Will follow', 'Requesting from provider'], helpText: 'An itemized bill shows each charge separately. Request one if you only have a summary bill.' },
+  { id: 'attachmentEob', label: 'EOB (if insurance used)', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'], helpText: 'Include copies of checks, bank statements, or payment confirmations.' },
+  { id: 'attachmentOther', label: 'Other Documents', type: 'textarea' as const, required: false, placeholder: 'List other documents attached' },
+];
+
+// Attachment checklists - Debt Collection
+const debtAttachmentFields = [
+  { id: 'attachmentCollectionNotice', label: 'Collection Notice', type: 'select' as const, required: true, options: ['Attached', 'Will follow'], helpText: 'Attach the collection letter or notice you received.' },
+  { id: 'attachmentOriginalBill', label: 'Original Medical Bill', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Do not have'], helpText: 'If you have the original bill from the provider, include it.' },
+  { id: 'attachmentProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentInsuranceEob', label: 'Insurance EOB', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable', 'Insurance was not used'] },
+  { id: 'certifiedMailUsed', label: 'Sending via Certified Mail?', type: 'select' as const, required: true, options: ['Yes', 'No'], helpText: 'Certified mail creates proof of delivery - strongly recommended for debt disputes.' },
+  { id: 'certifiedMailTrackingNumber', label: 'Certified Mail Tracking Number', type: 'text' as const, required: false, placeholder: 'Add after mailing' },
+];
+
+// Attachment checklists - Credit Report
+const creditAttachmentFields = [
+  { id: 'attachmentCreditReport', label: 'Credit Report Pages', type: 'select' as const, required: true, options: ['Attached', 'Will follow'], helpText: 'Include the pages showing the disputed entry. Circle or highlight the account in question.' },
+  { id: 'attachmentProofOfPayment', label: 'Proof of Payment', type: 'select' as const, required: false, options: ['Attached', 'Will follow', 'Not applicable'] },
+  { id: 'attachmentIdentification', label: 'Identification', type: 'select' as const, required: true, options: ['Attached'], helpText: 'Credit bureaus require a copy of ID (drivers license, passport) and proof of address.' },
+];
+
+// Provider fax/phone fields
+const providerContactFields = [
+  { id: 'providerFaxNumber', label: 'Provider Fax Number', type: 'text' as const, required: false, placeholder: 'Fax number' },
+  { id: 'providerPhoneNumber', label: 'Provider Phone Number', type: 'text' as const, required: false, placeholder: 'Main phone number' },
+  { id: 'billingDepartmentPhone', label: 'Billing Department Phone', type: 'text' as const, required: false, placeholder: 'Direct billing line' },
+];
 ```
 
-### Field Patterns by Template Type
-
-**Insurance Appeal Templates:**
-- Plan type selection (HMO, PPO, EPO, HDHP, Medicare, Medicaid)
-- Group number for employer plans
-- CPT/HCPCS codes (optional)
-- ICD-10 diagnosis codes (optional)
-- Provider NPI (optional)
-- Appeal level (first, second, external)
-- Urgency flag (standard vs expedited)
-
-**Medical Billing Templates:**
-- Billing account number
-- Facility name/location
-- Rendering provider
-- Itemized charges (structured repeatable concept)
-- Emergency vs non-emergency indicator
-- Consent acknowledgment
-
-**Debt Collection Templates:**
-- Collection agency name
-- Original creditor
-- Collection account number
-- Date of first delinquency
-- Credit bureau selection (Experian, Equifax, TransUnion)
-- FCRA/FDCPA compliance statements (locked text)
-
-**HIPAA Record Templates:**
-- Specific record section disputed
-- Amendment request type
-- HIPAA-compliant language (locked blocks)
+2. Update each of the 50 templates to include appropriate new field sets:
+   - Insurance templates (1-10): Add `communicationFields`, `deadlineAwarenessFields`, `insuranceAttachmentFields`
+   - Billing templates (11-20): Add `providerContactFields`, `billingAttachmentFields`
+   - Debt templates (21-28): Add `debtAttachmentFields`, `creditAttachmentFields` where relevant
+   - Provider templates (29-35): Add `providerContactFields`
+   - Prescription templates (36-41): Add `communicationFields`, `insuranceAttachmentFields`
+   - Specialized templates (42-50): Add appropriate combination based on template type
 
 ---
 
-## Security Considerations
+## Field Summary After Enhancement
 
-### Fields Never Requested
-- Full Social Security Number
-- Complete medical history
-- Legal admissions of fault
-- Malpractice accusations (wording risk)
+| Field Set | Fields Added |
+|-----------|--------------|
+| Communication | insurerFaxNumber, insurerPhoneNumber, preferredResponseMethod, dateNoticeReceived |
+| Deadline Awareness | appealDeadlineAware with warning helpText |
+| Insurance Attachments | attachmentEob, attachmentDenialLetter, attachmentMedicalRecords, attachmentPhysicianLetter, attachmentOther |
+| Billing Attachments | attachmentItemizedBill, attachmentEob, attachmentProofOfPayment, attachmentOther |
+| Debt Attachments | attachmentCollectionNotice, attachmentOriginalBill, attachmentProofOfPayment, attachmentInsuranceEob, certifiedMailUsed, certifiedMailTrackingNumber |
+| Credit Attachments | attachmentCreditReport, attachmentProofOfPayment, attachmentIdentification |
+| Provider Contact | providerFaxNumber, providerPhoneNumber, billingDepartmentPhone |
 
-### Required Warnings
-- Templates include deadline awareness prompts
-- Attachment reminders for EOBs, denial letters
-- Regulatory escalation paths mentioned
-
----
-
-## Technical Implementation Notes
-
-### Estimated File Size
-- Current file: ~85 lines
-- Expanded file: ~3,500-4,000 lines
-- Will organize with section comments for maintainability
-
-### Reusable Constants
-```typescript
-// Field sets to reduce duplication
-const corePatientFields = [...]
-const insuranceExtensionFields = [...]
-const billingExtensionFields = [...]
-const debtExtensionFields = [...]
-```
-
-### Template Count Update
-Update `templateCategories.ts`:
-```typescript
-{
-  id: 'healthcare',
-  name: 'Healthcare & Medical Billing',
-  description: 'Dispute medical bills, insurance denials, coding errors, or debt collection.',
-  icon: Stethoscope,
-  templateCount: 50,  // Updated from 6
-  color: 'hsl(var(--chart-4))',
-  popular: true,  // Mark as popular given high demand
-}
-```
+**Total new fields: ~25 additional reusable fields**
 
 ---
 
-## Summary
+## Benefits After Implementation
 
-This plan creates a comprehensive healthcare dispute template library covering:
+1. **Deadline Awareness**: Users are explicitly warned about time-sensitive requirements
+2. **Attachment Checklists**: Users know exactly what documents to include
+3. **Communication Channels**: Fax numbers captured (critical for healthcare)
+4. **Proof of Mailing**: Certified mail tracking for legal protection
+5. **Complete Contact Info**: All communication channels for follow-up
 
-- **Insurance disputes**: Appeals for denials, underpayments, coverage exclusions
-- **Billing errors**: Upcoding, unbundling, surprise billing, balance billing
-- **Debt collection**: Validation requests, credit report disputes, cease communication
-- **Provider complaints**: Care quality, medical records, HIPAA amendments
-- **Prescription issues**: Coverage appeals, step therapy exceptions, pharmacy disputes
-- **Specialized cases**: Medicare, Medicaid, workers' comp, experimental treatment
-
-All templates use granular, regulator-safe field sets following the established patterns from other template files in the codebase.
-
+This ensures users have everything they need to submit complete, timely disputes.
