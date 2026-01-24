@@ -2,10 +2,9 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { templateCategories, getTotalTemplateCount } from '@/data/templateCategories';
-import { getTemplatesByCategory } from '@/data/allTemplates';
 
 const LetterCategories = () => {
-  const totalTemplates = getTotalTemplateCount();
+  const totalLetterBuilders = getTotalTemplateCount();
 
   return (
     <section id="letters" className="py-16 md:py-24 bg-background">
@@ -16,8 +15,8 @@ const LetterCategories = () => {
             Choose Your Letter Type
           </h2>
           <p className="text-lg text-muted-foreground">
-            {totalTemplates} professional templates across {templateCategories.length} categories. 
-            Each template is structured for maximum impact.
+            {totalLetterBuilders} professional letter builders across {templateCategories.length} categories. 
+            Each one is structured for maximum impact.
           </p>
         </div>
 
@@ -53,13 +52,13 @@ const LetterCategories = () => {
                         {category.name}
                       </h3>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {category.templateCount} templates
+                        {category.templateCount} letter builders
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
                         {category.description}
                       </p>
                       <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                        Browse Templates
+                        Start Building
                         <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </span>
                     </div>

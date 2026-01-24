@@ -92,7 +92,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="bg-muted/50 rounded-lg p-4 mb-6">
             <p className="text-xs text-muted-foreground text-center">
-              <strong>Important Disclaimer:</strong> This service provides document templates and does not constitute legal advice. 
+              <strong>Important Disclaimer:</strong> This service provides letter builders and does not constitute legal advice. 
               The letters generated are not reviewed by legal professionals and do not guarantee any specific outcome. 
               For legal matters, please consult a qualified attorney in your jurisdiction.
             </p>

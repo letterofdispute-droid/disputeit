@@ -1,8 +1,12 @@
-import { ArrowRight, Target, ShieldCheck, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
 const Hero = () => {
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
   return (
     <section className="relative overflow-hidden bg-primary py-20 md:py-28">
       {/* Background Pattern */}
@@ -17,7 +21,7 @@ const Hero = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
             <ShieldCheck className="h-4 w-4" />
-            <span>Pre-Validated Legal Templates</span>
+            <span>Pre-Validated Letter Builders</span>
           </div>
 
           {/* Headline */}
@@ -28,21 +32,36 @@ const Hero = () => {
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Pre-validated templates with controlled language, consistent structure, and legal precision. 
+            Pre-validated letter builders with controlled language, consistent structure, and legal precision. 
             No trial and error. Just predictable, professional results.
           </p>
 
+          {/* AI Search Prompt */}
+          <div className="animate-fade-up" style={{ animationDelay: '0.15s' }}>
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              className="w-full max-w-xl mx-auto flex items-center gap-3 px-5 py-4 bg-primary-foreground/10 hover:bg-primary-foreground/15 border border-primary-foreground/20 rounded-xl text-left transition-all duration-300 group mb-6"
+            >
+              <Search className="h-5 w-5 text-primary-foreground/60 group-hover:text-accent transition-colors" />
+              <span className="flex-1 text-primary-foreground/60 group-hover:text-primary-foreground/80 transition-colors">
+                Describe your dispute and I'll find the right letter...
+              </span>
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-accent rounded-lg text-accent-foreground text-sm font-medium">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Help
+              </div>
+            </button>
+          </div>
+
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-            <Button variant="hero" size="xl" asChild>
-              <Link to="/#letters">
-                Create Your Letter
-                <ArrowRight className="h-5 w-5" />
-              </Link>
+            <Button variant="hero" size="xl" onClick={() => setIsAssistantOpen(true)}>
+              Start Your Dispute
+              <ArrowRight className="h-5 w-5" />
             </Button>
             <Button variant="heroOutline" size="xl" asChild>
-              <Link to="/#how-it-works">
-                See How It Works
+              <Link to="/#letters">
+                Browse Letter Builders
               </Link>
             </Button>
           </div>
@@ -55,7 +74,7 @@ const Hero = () => {
             </div>
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <ShieldCheck className="h-5 w-5 text-accent" />
-              <span className="text-sm">Pre-validated templates</span>
+              <span className="text-sm">Pre-validated letters</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <Clock className="h-5 w-5 text-accent" />
@@ -64,6 +83,12 @@ const Hero = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Assistant Modal */}
+      <DisputeAssistantModal 
+        isOpen={isAssistantOpen} 
+        onClose={() => setIsAssistantOpen(false)} 
+      />
     </section>
   );
 };

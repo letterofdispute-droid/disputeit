@@ -26,8 +26,8 @@ const CategoryPage = () => {
   const IconComponent = category.icon;
 
   // Generate smart SEO metadata
-  const seoTitle = `${category.name} Letter Templates - Free Professional Complaint Letters | Dispute Letters`;
-  const seoDescription = `Browse ${templates.length} professional ${category.name.toLowerCase()} letter templates. ${category.description} Generate legally-referenced complaint letters in minutes.`;
+  const seoTitle = `${category.name} Letter Builders - Free Professional Complaint Letters | Dispute Letters`;
+  const seoDescription = `Browse ${templates.length} professional ${category.name.toLowerCase()} letter builders. ${category.description} Generate legally-referenced complaint letters in minutes.`;
 
   // BreadcrumbList schema for SEO
   const breadcrumbSchema = {
@@ -53,7 +53,7 @@ const CategoryPage = () => {
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `${category.name} Letter Templates`,
+    name: `${category.name} Letter Builders`,
     description: seoDescription,
     numberOfItems: templates.length,
     itemListElement: templates.map((template, index) => ({
@@ -119,10 +119,10 @@ const CategoryPage = () => {
             </div>
             <div className="flex-1 max-w-3xl">
               <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-                {category.name} Letter Templates
+                {category.name} Letter Builders
               </h1>
               <p className="text-lg text-primary-foreground/80">
-                {category.description} Browse {templates.length} professionally crafted templates with legal references included.
+                {category.description} Browse {templates.length} professionally crafted letter builders with legal references included.
               </p>
             </div>
           </div>
@@ -135,13 +135,13 @@ const CategoryPage = () => {
           {/* Trust Message */}
           <div className="mb-8 p-4 bg-success/5 border border-success/20 rounded-lg">
             <p className="text-sm text-foreground">
-              <span className="font-medium">All templates in this category</span> use pre-validated language with proper legal references. No guessing, no prompt engineering—just predictable, professional results.
+              <span className="font-medium">All letter builders in this category</span> use pre-validated language with proper legal references. No guessing, no prompt engineering—just predictable, professional results.
             </p>
           </div>
 
           <div className="mb-6">
             <p className="text-muted-foreground">
-              {templates.length} templates available
+              {templates.length} letter builders available
             </p>
           </div>
 
@@ -160,7 +160,7 @@ const CategoryPage = () => {
                     {template.seoDescription}
                   </p>
                   <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                    Use Template
+                    Build Your Letter
                     <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </Card>
