@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   Stethoscope,
@@ -129,7 +130,13 @@ const RealWorldScenarios = () => {
     <section id="scenarios" className="py-16 md:py-24 bg-secondary/30">
       <div className="container-wide">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-3xl mx-auto mb-12"
+        >
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
             When Do You Need a Dispute Letter?
           </h2>
@@ -137,94 +144,134 @@ const RealWorldScenarios = () => {
             Real situations where a formal letter makes the difference. Click any scenario to see
             how a letter helps.
           </p>
-        </div>
+        </motion.div>
 
         {/* Scenario Cards */}
         <div className="space-y-4 max-w-4xl mx-auto">
-          {scenarios.map((scenario) => {
+          {scenarios.map((scenario, index) => {
             const isExpanded = expandedId === scenario.id;
             const Icon = scenario.icon;
 
             return (
-              <div
+              <motion.div
                 key={scenario.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                layout
                 className={cn(
-                  'bg-card rounded-xl shadow-soft overflow-hidden transition-all duration-300',
+                  'bg-card rounded-xl shadow-soft overflow-hidden',
                   isExpanded && 'shadow-elevated'
                 )}
               >
                 {/* Header - Always Visible */}
-                <button
+                <motion.button
                   onClick={() => toggleExpanded(scenario.id)}
                   className="w-full p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors"
+                  whileHover={{ backgroundColor: 'hsl(var(--muted) / 0.3)' }}
+                  whileTap={{ scale: 0.995 }}
                 >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                  <motion.div
+                    className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0"
+                    animate={{ 
+                      scale: isExpanded ? 1.05 : 1,
+                      backgroundColor: isExpanded ? 'hsl(var(--primary) / 0.15)' : 'hsl(var(--primary) / 0.1)'
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <Icon className="h-6 w-6" />
-                  </div>
+                  </motion.div>
                   <span className="font-medium text-foreground text-lg flex-1">
                     "{scenario.headline}"
                   </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-5 w-5 text-muted-foreground transition-transform duration-300',
-                      isExpanded && 'rotate-180'
-                    )}
-                  />
-                </button>
+                  <motion.div
+                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  >
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  </motion.div>
+                </motion.button>
 
                 {/* Expanded Content */}
-                <div
-                  className={cn(
-                    'grid transition-all duration-300',
-                    isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <div className="px-5 pb-5 pt-0 border-t border-border">
-                      <div className="pt-5 space-y-5">
-                        {/* The Situation */}
-                        <div>
-                          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                            The Situation
-                          </h4>
-                          <p className="text-foreground">{scenario.situation}</p>
-                        </div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 pt-0 border-t border-border">
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2, delay: 0.1 }}
+                          className="pt-5 space-y-5"
+                        >
+                          {/* The Situation */}
+                          <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              The Situation
+                            </h4>
+                            <p className="text-foreground">{scenario.situation}</p>
+                          </div>
 
-                        {/* Why a Letter Works */}
-                        <div>
-                          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                            Why a Letter Works
-                          </h4>
-                          <ul className="space-y-2">
-                            {scenario.whyLetterWorks.map((point, index) => (
-                              <li key={index} className="flex items-start gap-2 text-foreground">
-                                <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <span>{point}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                          {/* Why a Letter Works */}
+                          <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              Why a Letter Works
+                            </h4>
+                            <ul className="space-y-2">
+                              {scenario.whyLetterWorks.map((point, pointIndex) => (
+                                <motion.li
+                                  key={pointIndex}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ duration: 0.2, delay: 0.15 + pointIndex * 0.05 }}
+                                  className="flex items-start gap-2 text-foreground"
+                                >
+                                  <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                                  <span>{point}</span>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </div>
 
-                        {/* Typical Outcome */}
-                        <div className="bg-primary/5 rounded-lg p-4">
-                          <h4 className="text-sm font-semibold text-primary mb-1">
-                            What Usually Happens
-                          </h4>
-                          <p className="text-foreground text-sm">{scenario.typicalOutcome}</p>
-                        </div>
+                          {/* Typical Outcome */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2, delay: 0.3 }}
+                            className="bg-primary/5 rounded-lg p-4"
+                          >
+                            <h4 className="text-sm font-semibold text-primary mb-1">
+                              What Usually Happens
+                            </h4>
+                            <p className="text-foreground text-sm">{scenario.typicalOutcome}</p>
+                          </motion.div>
 
-                        {/* CTA */}
-                        <Button asChild className="w-full sm:w-auto">
-                          <Link to={scenario.letterSlug}>
-                            Build This Letter
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </Link>
-                        </Button>
+                          {/* CTA */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0.35 }}
+                          >
+                            <Button asChild className="w-full sm:w-auto">
+                              <Link to={scenario.letterSlug}>
+                                Build This Letter
+                                <ArrowRight className="h-4 w-4 ml-2" />
+                              </Link>
+                            </Button>
+                          </motion.div>
+                        </motion.div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
           })}
         </div>
