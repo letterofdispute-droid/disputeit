@@ -1,5 +1,7 @@
 import Layout from '@/components/layout/Layout';
 import Hero from '@/components/home/Hero';
+import WhatIsDisputeLetter from '@/components/home/WhatIsDisputeLetter';
+import RealWorldScenarios from '@/components/home/RealWorldScenarios';
 import WhyNotChatGPT from '@/components/home/WhyNotChatGPT';
 import LetterCategories from '@/components/home/LetterCategories';
 import HowItWorks from '@/components/home/HowItWorks';
@@ -11,6 +13,8 @@ const Index = () => {
   return (
     <Layout>
       <Hero />
+      <WhatIsDisputeLetter />
+      <RealWorldScenarios />
       <WhyNotChatGPT />
       <LetterCategories />
       <HowItWorks />
