@@ -1,1 +1,4 @@
 project_id = "koulmtfnkuapzigcplov"
+
+[functions.dispute-assistant]
+verify_jwt = false

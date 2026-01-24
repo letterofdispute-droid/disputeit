@@ -138,7 +138,7 @@ const ArticleCategoryPage = () => {
             Need Help With a Dispute?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Our pre-validated templates make it easy to create professional complaint letters.
+            Our pre-validated letter builders make it easy to create professional complaint letters.
           </p>
           <Button variant="accent" size="lg" asChild>
             <Link to="/#letters">
