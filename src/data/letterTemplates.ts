@@ -11,7 +11,7 @@ export interface LetterTemplate {
   fields: TemplateField[];
   sections: TemplateSection[];
   jurisdictions: JurisdictionConfig[];
-  pricing: PricingTier[];
+  pricing?: PricingTier[]; // Optional - pricing is now global
 }
 
 export interface TemplateField {

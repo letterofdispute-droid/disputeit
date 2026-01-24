@@ -17,10 +17,8 @@ interface Settings {
   support_email: string;
   welcome_email_enabled: boolean;
   letter_delivery_email_enabled: boolean;
-  single_letter_price: string;
-  letter_pack_price: string;
-  unlimited_monthly_price: string;
-  free_trial_enabled: boolean;
+  pdf_only_price: string;
+  pdf_editable_price: string;
 }
 
 const defaultSettings: Settings = {
@@ -31,10 +29,8 @@ const defaultSettings: Settings = {
   support_email: 'support@disputeletters.com',
   welcome_email_enabled: true,
   letter_delivery_email_enabled: true,
-  single_letter_price: '4.99',
-  letter_pack_price: '12.99',
-  unlimited_monthly_price: '29.99',
-  free_trial_enabled: true,
+  pdf_only_price: '5.99',
+  pdf_editable_price: '9.99',
 };
 
 const AdminSettings = () => {
@@ -69,10 +65,8 @@ const AdminSettings = () => {
           support_email: settingsMap.support_email || defaultSettings.support_email,
           welcome_email_enabled: settingsMap.welcome_email_enabled === 'true',
           letter_delivery_email_enabled: settingsMap.letter_delivery_email_enabled === 'true',
-          single_letter_price: settingsMap.single_letter_price || defaultSettings.single_letter_price,
-          letter_pack_price: settingsMap.letter_pack_price || defaultSettings.letter_pack_price,
-          unlimited_monthly_price: settingsMap.unlimited_monthly_price || defaultSettings.unlimited_monthly_price,
-          free_trial_enabled: settingsMap.free_trial_enabled === 'true',
+          pdf_only_price: settingsMap.pdf_only_price || defaultSettings.pdf_only_price,
+          pdf_editable_price: settingsMap.pdf_editable_price || defaultSettings.pdf_editable_price,
         });
       }
     } catch (error) {
@@ -98,17 +92,14 @@ const AdminSettings = () => {
         { key: 'support_email', value: settings.support_email },
         { key: 'welcome_email_enabled', value: String(settings.welcome_email_enabled) },
         { key: 'letter_delivery_email_enabled', value: String(settings.letter_delivery_email_enabled) },
-        { key: 'single_letter_price', value: settings.single_letter_price },
-        { key: 'letter_pack_price', value: settings.letter_pack_price },
-        { key: 'unlimited_monthly_price', value: settings.unlimited_monthly_price },
-        { key: 'free_trial_enabled', value: String(settings.free_trial_enabled) },
+        { key: 'pdf_only_price', value: settings.pdf_only_price },
+        { key: 'pdf_editable_price', value: settings.pdf_editable_price },
       ];
 
       for (const update of updates) {
         const { error } = await supabase
           .from('site_settings')
-          .update({ value: update.value })
-          .eq('key', update.key);
+          .upsert({ key: update.key, value: update.value }, { onConflict: 'key' });
 
         if (error) throw error;
       }
@@ -241,46 +232,30 @@ const AdminSettings = () => {
         <Card>
           <CardHeader>
             <CardTitle className="font-serif text-xl">Payment Settings</CardTitle>
-            <CardDescription>Configure pricing and payments</CardDescription>
+            <CardDescription>Configure per-letter pricing</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="singlePrice">Single Letter Price ($)</Label>
+                <Label htmlFor="pdfOnlyPrice">PDF Only Price ($)</Label>
                 <Input 
-                  id="singlePrice" 
-                  value={settings.single_letter_price}
-                  onChange={(e) => updateSetting('single_letter_price', e.target.value)}
+                  id="pdfOnlyPrice" 
+                  value={settings.pdf_only_price}
+                  onChange={(e) => updateSetting('pdf_only_price', e.target.value)}
+                  placeholder="5.99"
                 />
+                <p className="text-xs text-muted-foreground">Letter as PDF download</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="packPrice">Letter Pack Price (5) ($)</Label>
+                <Label htmlFor="pdfEditablePrice">PDF + Editable Price ($)</Label>
                 <Input 
-                  id="packPrice" 
-                  value={settings.letter_pack_price}
-                  onChange={(e) => updateSetting('letter_pack_price', e.target.value)}
+                  id="pdfEditablePrice" 
+                  value={settings.pdf_editable_price}
+                  onChange={(e) => updateSetting('pdf_editable_price', e.target.value)}
+                  placeholder="9.99"
                 />
+                <p className="text-xs text-muted-foreground">PDF + Word document</p>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="unlimitedPrice">Unlimited Monthly Price ($)</Label>
-              <Input 
-                id="unlimitedPrice" 
-                value={settings.unlimited_monthly_price}
-                onChange={(e) => updateSetting('unlimited_monthly_price', e.target.value)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Free Trial</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable 7-day free trial for new subscribers
-                </p>
-              </div>
-              <Switch 
-                checked={settings.free_trial_enabled}
-                onCheckedChange={(checked) => updateSetting('free_trial_enabled', checked)}
-              />
             </div>
           </CardContent>
         </Card>
