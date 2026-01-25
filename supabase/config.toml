@@ -2,3 +2,9 @@ project_id = "koulmtfnkuapzigcplov"
 
 [functions.dispute-assistant]
 verify_jwt = false
+
+[functions.create-letter-checkout]
+verify_jwt = false
+
+[functions.verify-letter-purchase]
+verify_jwt = false
