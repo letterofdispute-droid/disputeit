@@ -1,4 +1,10 @@
 import { LetterTemplate } from '../letterTemplates';
+import { autoInsuranceTemplates } from './insurance/autoInsuranceTemplates';
+import { homeInsuranceTemplates } from './insurance/homeInsuranceTemplates';
+import { healthInsuranceTemplates } from './insurance/healthInsuranceTemplates';
+import { lifeInsuranceTemplates } from './insurance/lifeInsuranceTemplates';
+import { travelInsuranceTemplates, petInsuranceTemplates, businessInsuranceTemplates } from './insurance/travelPetBusinessTemplates';
+import { additionalInsuranceTemplates } from './insurance/additionalInsuranceTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -12,6 +18,9 @@ const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable insurance standards'] },
 ];
+
+// Core insurance templates (4 base templates)
+const coreInsuranceTemplates: LetterTemplate[] = [
 
 export const insuranceTemplates: LetterTemplate[] = [
   {
@@ -200,4 +209,17 @@ export const insuranceTemplates: LetterTemplate[] = [
     jurisdictions: standardJurisdictions, 
     pricing: standardPricing,
   },
+];
+
+// Combine all insurance templates (50 total)
+export const insuranceTemplates: LetterTemplate[] = [
+  ...coreInsuranceTemplates,
+  ...autoInsuranceTemplates,
+  ...homeInsuranceTemplates,
+  ...healthInsuranceTemplates,
+  ...lifeInsuranceTemplates,
+  ...travelInsuranceTemplates,
+  ...petInsuranceTemplates,
+  ...businessInsuranceTemplates,
+  ...additionalInsuranceTemplates,
 ];
