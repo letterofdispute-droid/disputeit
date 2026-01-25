@@ -37,7 +37,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Travel & Transportation',
     description: 'Claim compensation for flight delays, lost baggage, or booking issues.',
     icon: Plane,
-    templateCount: 12,
+    templateCount: 20,
     color: 'hsl(var(--chart-3))',
     popular: true,
   },
