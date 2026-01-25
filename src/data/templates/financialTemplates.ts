@@ -1,4 +1,9 @@
 import { LetterTemplate } from '../letterTemplates';
+import { bankingDisputeTemplates } from './financial/bankingDisputeTemplates';
+import { creditDisputeTemplates } from './financial/creditDisputeTemplates';
+import { loanDisputeTemplates } from './financial/loanDisputeTemplates';
+import { investmentDisputeTemplates } from './financial/investmentDisputeTemplates';
+import { scamFraudTemplates } from './financial/scamFraudTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -13,7 +18,8 @@ const standardJurisdictions = [
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable financial regulations'] },
 ];
 
-export const financialTemplates: LetterTemplate[] = [
+// Core financial templates (existing)
+const coreFinancialTemplates: LetterTemplate[] = [
   {
     id: 'bank-fee-dispute', 
     slug: 'bank-fee-dispute', 
@@ -64,14 +70,12 @@ export const financialTemplates: LetterTemplate[] = [
       { id: 'accountNumber', label: 'Account Number', type: 'text', required: false, placeholder: 'Credit card account number' },
       { id: 'transactionDate', label: 'Transaction Date', type: 'date', required: true },
       { id: 'merchantName', label: 'Merchant Name', type: 'text', required: true, placeholder: 'Name shown on statement' },
-      { id: 'merchantLocation', label: 'Merchant Location', type: 'text', required: false, placeholder: 'City/Country if shown' },
       { id: 'transactionAmount', label: 'Transaction Amount', type: 'text', required: true, placeholder: 'e.g., £150' },
-      { id: 'transactionReference', label: 'Transaction Reference', type: 'text', required: false, placeholder: 'If shown on statement' },
       { id: 'disputeReason', label: 'Reason for Dispute', type: 'textarea', required: true, placeholder: 'Explain why you dispute this charge' },
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to formally dispute a charge on my credit card.', placeholders: [] },
-      { id: 'facts', name: 'Details', template: 'Cardholder: {cardHolderName}. Card ending in {cardLast4}. On {transactionDate}, a charge of {transactionAmount} from {merchantName} ({merchantLocation}) appeared. Transaction ref: {transactionReference}. I dispute this because: {disputeReason}', placeholders: ['cardHolderName', 'cardLast4', 'transactionDate', 'transactionAmount', 'merchantName', 'merchantLocation', 'transactionReference', 'disputeReason'] },
+      { id: 'facts', name: 'Details', template: 'Cardholder: {cardHolderName}. Card ending in {cardLast4}. On {transactionDate}, a charge of {transactionAmount} from {merchantName} appeared. I dispute this because: {disputeReason}', placeholders: ['cardHolderName', 'cardLast4', 'transactionDate', 'transactionAmount', 'merchantName', 'disputeReason'] },
       { id: 'request', name: 'Request', template: 'I request that you initiate a chargeback and credit {transactionAmount} to my account.', placeholders: ['transactionAmount'] },
       { id: 'deadline', name: 'Deadline', template: 'Please acknowledge this dispute within 10 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Please keep me informed of the investigation progress.', placeholders: [] },
@@ -95,13 +99,11 @@ export const financialTemplates: LetterTemplate[] = [
       { id: 'referenceNumber', label: 'Their Reference Number', type: 'text', required: true, placeholder: 'Their reference for this debt' },
       { id: 'originalCreditor', label: 'Original Creditor Name', type: 'text', required: false, placeholder: 'Who they claim the debt is from' },
       { id: 'claimedAmount', label: 'Amount Claimed', type: 'text', required: true, placeholder: 'e.g., £2,500' },
-      { id: 'accountNumberPartial', label: 'Account Number (last 4 digits)', type: 'text', required: false, placeholder: 'If referenced in letter' },
-      { id: 'allegedDebtDate', label: 'Alleged Debt Date', type: 'date', required: false },
       { id: 'disputeReason', label: 'Reason for Dispute', type: 'textarea', required: true, placeholder: 'Why you dispute this debt' },
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute the debt you are attempting to collect.', placeholders: [] },
-      { id: 'facts', name: 'Details', template: 'Your reference: {referenceNumber}. Original creditor: {originalCreditor}. You claim I owe {claimedAmount} for account ending in {accountNumberPartial}. Alleged debt date: {allegedDebtDate}. I dispute this because: {disputeReason}', placeholders: ['referenceNumber', 'originalCreditor', 'claimedAmount', 'accountNumberPartial', 'allegedDebtDate', 'disputeReason'] },
+      { id: 'facts', name: 'Details', template: 'Your reference: {referenceNumber}. Original creditor: {originalCreditor}. You claim I owe {claimedAmount}. I dispute this because: {disputeReason}', placeholders: ['referenceNumber', 'originalCreditor', 'claimedAmount', 'disputeReason'] },
       { id: 'request', name: 'Request', template: 'I request full validation of this debt including the original signed credit agreement.', placeholders: [] },
       { id: 'deadline', name: 'Deadline', template: 'Cease all collection activity until you provide this validation.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'This letter should not be construed as acknowledgment of any debt.', placeholders: [] },
@@ -124,16 +126,13 @@ export const financialTemplates: LetterTemplate[] = [
       { id: 'creditAgencyAddress', label: 'Agency Address', type: 'textarea', required: true, placeholder: 'Disputes department address' },
       { id: 'yourFullName', label: 'Your Full Name', type: 'text', required: true, placeholder: 'Name as it appears on report' },
       { id: 'yourAddress', label: 'Your Current Address', type: 'textarea', required: true, placeholder: 'Your full address' },
-      { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
       { id: 'creditorName', label: 'Creditor Name', type: 'text', required: true, placeholder: 'Company reporting the error' },
-      { id: 'accountType', label: 'Account Type', type: 'select', required: true, options: ['Credit Card', 'Loan', 'Mortgage', 'Store Card', 'Utility', 'Mobile Phone', 'Other'] },
-      { id: 'accountNumberPartial', label: 'Last 4 Digits of Account', type: 'text', required: false, placeholder: 'If known' },
       { id: 'errorDescription', label: 'Error Description', type: 'textarea', required: true, placeholder: 'Describe the incorrect information' },
       { id: 'correctInformation', label: 'Correct Information', type: 'textarea', required: true, placeholder: 'What the information should say' },
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute inaccurate information on my credit report.', placeholders: [] },
-      { id: 'facts', name: 'Details', template: 'The following information is incorrect: {errorDescription}. Related creditor: {creditorName}. Account type: {accountType}. Account ending: {accountNumberPartial}. Correct information: {correctInformation}', placeholders: ['errorDescription', 'creditorName', 'accountType', 'accountNumberPartial', 'correctInformation'] },
+      { id: 'facts', name: 'Details', template: 'The following information is incorrect: {errorDescription}. Related creditor: {creditorName}. Correct information: {correctInformation}', placeholders: ['errorDescription', 'creditorName', 'correctInformation'] },
       { id: 'request', name: 'Request', template: 'I request that you investigate and correct this error within 28 days.', placeholders: [] },
       { id: 'deadline', name: 'Deadline', template: 'Please provide written confirmation when corrected.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have attached supporting documentation.', placeholders: [] },
@@ -141,107 +140,14 @@ export const financialTemplates: LetterTemplate[] = [
     jurisdictions: standardJurisdictions, 
     pricing: standardPricing,
   },
-  {
-    id: 'identity-theft-fraud-alert',
-    slug: 'identity-theft-fraud-alert',
-    category: 'Financial',
-    title: 'Identity Theft Fraud Alert Letter',
-    shortDescription: 'Request fraud alerts and dispute fraudulent accounts after identity theft.',
-    longDescription: 'Use this template to notify credit agencies, banks, or creditors about identity theft and request fraud alerts, credit freezes, or dispute fraudulent accounts.',
-    seoTitle: 'Identity Theft Fraud Alert Letter | Dispute Fraudulent Accounts',
-    seoDescription: 'Report identity theft to credit agencies and request fraud alerts, credit freezes, or dispute fraudulent accounts opened in your name.',
-    tones: ['neutral', 'firm', 'final'],
-    fields: [
-      // Recipient
-      { id: 'recipientName', label: 'Credit Agency / Bank Name', type: 'text', required: true, placeholder: 'e.g., Experian, Equifax, Chase Bank' },
-      { id: 'recipientAddress', label: 'Recipient Address', type: 'textarea', required: true, placeholder: 'Full address of fraud department' },
-      // Victim Information
-      { id: 'fullLegalName', label: 'Your Full Legal Name', type: 'text', required: true, placeholder: 'Name as on official documents' },
-      { id: 'currentAddress', label: 'Current Address', type: 'textarea', required: true, placeholder: 'Your current full address' },
-      { id: 'previousAddresses', label: 'Previous Addresses (last 2 years)', type: 'textarea', required: false, placeholder: 'List any previous addresses' },
-      { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
-      { id: 'last4SSN', label: 'Last 4 Digits of SSN/National ID', type: 'text', required: true, placeholder: 'e.g., 1234' },
-      { id: 'phoneNumber', label: 'Phone Number', type: 'text', required: true, placeholder: 'Your contact number' },
-      { id: 'emailAddress', label: 'Email Address', type: 'text', required: true, placeholder: 'Your email address' },
-      // Fraud Details
-      { id: 'fraudType', label: 'Type of Fraud', type: 'select', required: true, options: ['New accounts opened', 'Account takeover', 'Tax fraud', 'Medical identity theft', 'Employment fraud', 'Other'] },
-      { id: 'fraudDiscoveryDate', label: 'Date Fraud Discovered', type: 'date', required: true },
-      { id: 'howDiscovered', label: 'How Fraud Was Discovered', type: 'textarea', required: true, placeholder: 'e.g., Credit report check, unexpected bill, declined credit' },
-      { id: 'fraudulentAccounts', label: 'Fraudulent Accounts/Transactions', type: 'textarea', required: true, placeholder: 'List each fraudulent account or transaction with creditor name and amount' },
-      { id: 'totalFraudAmount', label: 'Total Estimated Fraud Amount', type: 'text', required: true, placeholder: 'e.g., $15,000 or £12,000' },
-      // Reporting & Documentation
-      { id: 'policeReportFiled', label: 'Police Report Filed?', type: 'select', required: true, options: ['Yes', 'No', 'Pending'] },
-      { id: 'policeReportNumber', label: 'Police Report Number', type: 'text', required: false, placeholder: 'Report reference number' },
-      { id: 'ftcReportNumber', label: 'FTC Identity Theft Report Number (US)', type: 'text', required: false, placeholder: 'IdentityTheft.gov reference' },
-      { id: 'actionFraudReference', label: 'Action Fraud Reference (UK)', type: 'text', required: false, placeholder: 'Action Fraud case number' },
-      { id: 'agenciesContacted', label: 'Credit Agencies Already Contacted', type: 'textarea', required: false, placeholder: 'List agencies you have already notified' },
-      { id: 'accountsFrozen', label: 'Accounts Already Frozen', type: 'textarea', required: false, placeholder: 'List any accounts you have already frozen' },
-      // Request Type
-      { id: 'requestType', label: 'Action Requested', type: 'select', required: true, options: ['Place fraud alert', 'Credit freeze', 'Dispute fraudulent account', 'Block fraudulent information', 'Extended fraud alert (7 years)', 'All of the above'] },
-    ],
-    sections: [
-      { id: 'introduction', name: 'Introduction', template: 'I am writing to report that I am a victim of identity theft and to request immediate action to protect my credit and dispute fraudulent activity.', placeholders: [] },
-      { id: 'facts', name: 'Identity & Fraud Details', template: 'Victim: {fullLegalName}, DOB: {dateOfBirth}, SSN/ID last 4: {last4SSN}. Current address: {currentAddress}. Previous addresses: {previousAddresses}. Contact: {phoneNumber}, {emailAddress}. Fraud type: {fraudType}. Discovered: {fraudDiscoveryDate}. How discovered: {howDiscovered}. Fraudulent accounts/transactions: {fraudulentAccounts}. Total estimated fraud: {totalFraudAmount}. Police report: {policeReportFiled}, number: {policeReportNumber}. FTC report: {ftcReportNumber}. Action Fraud ref: {actionFraudReference}. Agencies already contacted: {agenciesContacted}. Accounts frozen: {accountsFrozen}.', placeholders: ['fullLegalName', 'dateOfBirth', 'last4SSN', 'currentAddress', 'previousAddresses', 'phoneNumber', 'emailAddress', 'fraudType', 'fraudDiscoveryDate', 'howDiscovered', 'fraudulentAccounts', 'totalFraudAmount', 'policeReportFiled', 'policeReportNumber', 'ftcReportNumber', 'actionFraudReference', 'agenciesContacted', 'accountsFrozen'] },
-      { id: 'legalBasis', name: 'Legal Basis', template: 'Under the Fair Credit Reporting Act (FCRA) Section 605A, I am entitled to place a fraud alert on my credit file. I also request that you block any information resulting from identity theft as required by FCRA Section 605B. Any accounts opened fraudulently must be investigated and removed.', placeholders: [] },
-      { id: 'request', name: 'Request', template: 'I request the following action: {requestType}. Please investigate and remove all fraudulent accounts and inquiries from my credit report. Provide written confirmation of actions taken.', placeholders: ['requestType'] },
-      { id: 'deadline', name: 'Deadline', template: 'Please acknowledge receipt within 5 business days and complete your investigation within 30 days as required by law. Failure to act may result in regulatory complaints and legal action.', placeholders: [] },
-      { id: 'closing', name: 'Closing', template: 'I have enclosed a copy of my police report, FTC Identity Theft Report, and government-issued ID for verification. Do not share my information with any third parties except as required to investigate this fraud.', placeholders: [] },
-    ],
-    jurisdictions: [
-      { code: 'US', name: 'United States', legalReference: 'Fair Credit Reporting Act (FCRA)', approvedPhrases: ['Under FCRA Section 605A, I am entitled to a 90-day initial fraud alert', 'Under FCRA Section 605A(b), as a victim with a police report, I request a 7-year extended fraud alert', 'Under FCRA Section 605B, block information resulting from identity theft'] },
-      { code: 'UK', name: 'United Kingdom', legalReference: 'Data Protection Act 2018 / CIFAS', approvedPhrases: ['Under the Data Protection Act 2018', 'I request CIFAS Protective Registration', 'Under UK GDPR Article 17, erase fraudulently obtained data'] },
-      { code: 'EU', name: 'European Union', legalReference: 'General Data Protection Regulation (GDPR)', approvedPhrases: ['Under GDPR Article 17, I request erasure of fraudulent data', 'Under GDPR Article 16, I request rectification of inaccurate data', 'Under GDPR Article 21, I object to processing of fraudulent data'] },
-      { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable data protection and consumer credit laws'] },
-    ],
-    pricing: standardPricing,
-  },
-  {
-    id: 'subject-access-request',
-    slug: 'subject-access-request',
-    category: 'Financial',
-    title: 'FOIA / Subject Access Request Letter',
-    shortDescription: 'Request access to your personal data held by any organization.',
-    longDescription: 'Use this template to submit a Subject Access Request (SAR) under GDPR/DPA or a Freedom of Information Act (FOIA) request to obtain copies of your personal data from organizations.',
-    seoTitle: 'Subject Access Request Letter | GDPR Data Access Template',
-    seoDescription: 'Request access to your personal data under GDPR, Data Protection Act, or Freedom of Information Act. Get copies of information organizations hold about you.',
-    tones: ['neutral', 'firm', 'final'],
-    fields: [
-      // Organization Details
-      { id: 'organizationName', label: 'Organization Name', type: 'text', required: true, placeholder: 'Company or government agency name' },
-      { id: 'organizationAddress', label: 'Organization Address', type: 'textarea', required: true, placeholder: 'Full address or Data Protection Officer address' },
-      { id: 'dpoEmail', label: 'DPO/Privacy Email (if known)', type: 'text', required: false, placeholder: 'e.g., dpo@company.com' },
-      // Requester Information
-      { id: 'fullLegalName', label: 'Your Full Legal Name', type: 'text', required: true, placeholder: 'Name as known to organization' },
-      { id: 'currentAddress', label: 'Current Address', type: 'textarea', required: true, placeholder: 'Your full current address' },
-      { id: 'emailAddress', label: 'Email Address', type: 'text', required: true, placeholder: 'Your email address' },
-      { id: 'phoneNumber', label: 'Phone Number', type: 'text', required: false, placeholder: 'Your contact number' },
-      { id: 'previousNames', label: 'Previous Names Used (if any)', type: 'text', required: false, placeholder: 'Maiden name, former name, etc.' },
-      { id: 'previousAddresses', label: 'Previous Addresses (if relevant)', type: 'textarea', required: false, placeholder: 'Addresses organization may have on file' },
-      // Request Details
-      { id: 'requestType', label: 'Request Type', type: 'select', required: true, options: ['Subject Access Request (SAR)', 'Freedom of Information Act (FOIA)', 'Data deletion (right to erasure)', 'Data portability', 'Rectification of inaccurate data'] },
-      { id: 'specificDataRequested', label: 'Specific Data Requested', type: 'textarea', required: true, placeholder: 'Describe the data you want to access' },
-      { id: 'timePeriod', label: 'Time Period for Data', type: 'text', required: false, placeholder: 'e.g., January 2020 to present' },
-      { id: 'accountReferences', label: 'Account/Reference Numbers', type: 'text', required: false, placeholder: 'Customer ID, account number, policy number' },
-      { id: 'relationshipType', label: 'Your Relationship to Organization', type: 'select', required: true, options: ['Customer/Client', 'Former customer', 'Employee', 'Former employee', 'Applicant', 'Member of public', 'Other'] },
-      // Verification
-      { id: 'verificationMethod', label: 'Identity Verification Method', type: 'select', required: true, options: ['Copy of government ID', 'Utility bill', 'Bank statement', 'Other official document'] },
-      { id: 'formatPreference', label: 'Preferred Response Format', type: 'select', required: true, options: ['Electronic (email/download)', 'Paper copies', 'No preference'] },
-    ],
-    sections: [
-      { id: 'introduction', name: 'Introduction', template: 'I am writing to make a {requestType} for personal data you hold about me. This request is made pursuant to applicable data protection legislation.', placeholders: ['requestType'] },
-      { id: 'facts', name: 'Requester Details', template: 'Name: {fullLegalName}. Current address: {currentAddress}. Email: {emailAddress}. Phone: {phoneNumber}. Previous names: {previousNames}. Previous addresses: {previousAddresses}. Relationship: {relationshipType}. Account/reference numbers: {accountReferences}.', placeholders: ['fullLegalName', 'currentAddress', 'emailAddress', 'phoneNumber', 'previousNames', 'previousAddresses', 'relationshipType', 'accountReferences'] },
-      { id: 'dataRequest', name: 'Data Requested', template: 'I request access to the following personal data: {specificDataRequested}. Time period: {timePeriod}. Please provide this data in {formatPreference} format.', placeholders: ['specificDataRequested', 'timePeriod', 'formatPreference'] },
-      { id: 'legalBasis', name: 'Legal Basis', template: 'This request is made under my statutory right of access. You are required to respond within the legally mandated timeframe. No fee is payable for this request.', placeholders: [] },
-      { id: 'request', name: 'Requirements', template: 'Please provide: (1) Confirmation of whether you process my personal data; (2) A copy of all personal data held; (3) Information about the purposes of processing; (4) Categories of data processed; (5) Recipients or categories of recipients; (6) Retention periods; (7) Source of data if not collected from me directly.', placeholders: [] },
-      { id: 'deadline', name: 'Deadline', template: 'Please respond within the statutory deadline (30 calendar days under GDPR/UK DPA, 20 business days under FOIA). For identity verification, I am willing to provide: {verificationMethod}.', placeholders: ['verificationMethod'] },
-      { id: 'closing', name: 'Closing', template: 'If you require any clarification, please contact me promptly. Failure to respond within the legal deadline may result in a complaint to the relevant supervisory authority.', placeholders: [] },
-    ],
-    jurisdictions: [
-      { code: 'US', name: 'United States', legalReference: 'Freedom of Information Act (5 U.S.C. § 552)', approvedPhrases: ['Under the Freedom of Information Act, 5 U.S.C. § 552', 'You are required to respond within 20 business days', 'I request a fee waiver as this request is in the public interest'] },
-      { code: 'UK', name: 'United Kingdom', legalReference: 'UK GDPR / Data Protection Act 2018', approvedPhrases: ['Under UK GDPR Article 15 and the Data Protection Act 2018', 'You must respond within one calendar month', 'No fee is payable for this subject access request'] },
-      { code: 'EU', name: 'European Union', legalReference: 'General Data Protection Regulation (GDPR)', approvedPhrases: ['Under GDPR Article 15, I have the right of access to my personal data', 'Under GDPR Article 20, I request data portability', 'You must respond within one month, extendable to three months for complex requests'] },
-      { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable data protection and privacy legislation'] },
-    ],
-    pricing: standardPricing,
-  },
+];
+
+// Combine all financial templates
+export const financialTemplates: LetterTemplate[] = [
+  ...coreFinancialTemplates,
+  ...bankingDisputeTemplates,
+  ...creditDisputeTemplates,
+  ...loanDisputeTemplates,
+  ...investmentDisputeTemplates,
+  ...scamFraudTemplates,
 ];
