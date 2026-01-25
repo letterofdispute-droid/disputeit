@@ -1,4 +1,9 @@
 import { LetterTemplate } from '../letterTemplates';
+import { wagesPayTemplates } from './employment/wagesPayTemplates';
+import { terminationTemplates } from './employment/terminationTemplates';
+import { workplaceConditionsTemplates } from './employment/workplaceConditionsTemplates';
+import { benefitsDocumentationTemplates } from './employment/benefitsDocumentationTemplates';
+import { additionalEmploymentTemplates } from './employment/additionalEmploymentTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -13,7 +18,8 @@ const standardJurisdictions = [
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable employment standards'] },
 ];
 
-export const employmentTemplates: LetterTemplate[] = [
+// Core employment templates (3 base templates)
+const coreEmploymentTemplates: LetterTemplate[] = [
   {
     id: 'final-paycheck-demand', 
     slug: 'final-paycheck-demand', 
@@ -141,4 +147,14 @@ export const employmentTemplates: LetterTemplate[] = [
     ],
     pricing: standardPricing,
   },
+];
+
+// Combine all employment templates (50+ total)
+export const employmentTemplates: LetterTemplate[] = [
+  ...coreEmploymentTemplates,
+  ...wagesPayTemplates,
+  ...terminationTemplates,
+  ...workplaceConditionsTemplates,
+  ...benefitsDocumentationTemplates,
+  ...additionalEmploymentTemplates,
 ];
