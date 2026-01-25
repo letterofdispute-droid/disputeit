@@ -96,8 +96,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Employment & Workplace',
     description: 'Address wage issues, workplace discrimination, or termination disputes.',
     icon: Briefcase,
-    templateCount: 6,
+    templateCount: 50,
     color: 'hsl(var(--chart-5))',
+    popular: true,
   },
   {
     id: 'ecommerce',
