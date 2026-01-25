@@ -19,7 +19,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Refunds & Purchases',
     description: 'Get your money back for products or services that did not meet expectations.',
     icon: Receipt,
-    templateCount: 15,
+    templateCount: 50,
     color: 'hsl(var(--chart-1))',
     popular: true,
   },

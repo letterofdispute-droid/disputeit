@@ -1,4 +1,9 @@
 import { LetterTemplate } from '../letterTemplates';
+import { retailComplaintTemplates } from './refunds/retailComplaintTemplates';
+import { digitalPurchaseTemplates } from './refunds/digitalPurchaseTemplates';
+import { serviceRefundTemplates } from './refunds/serviceRefundTemplates';
+import { billingDisputeTemplates } from './refunds/billingDisputeTemplates';
+import { specialPurchaseTemplates } from './refunds/specialPurchaseTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -31,7 +36,7 @@ const standardJurisdictions = [
   },
 ];
 
-export const refundsTemplates: LetterTemplate[] = [
+const coreRefundsTemplates: LetterTemplate[] = [
   {
     id: 'refund-general',
     slug: 'refund-general',
@@ -650,4 +655,14 @@ Document any attempts to cancel before the trial ended.`,
     jurisdictions: standardJurisdictions,
     pricing: standardPricing,
   },
+];
+
+// Combine all refunds templates
+export const refundsTemplates: LetterTemplate[] = [
+  ...coreRefundsTemplates,
+  ...retailComplaintTemplates,
+  ...digitalPurchaseTemplates,
+  ...serviceRefundTemplates,
+  ...billingDisputeTemplates,
+  ...specialPurchaseTemplates,
 ];
