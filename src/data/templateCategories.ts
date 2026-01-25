@@ -60,7 +60,7 @@ export const templateCategories: TemplateCategory[] = [
   {
     id: 'financial',
     name: 'Financial Services',
-    description: 'Challenge bank fees, credit report errors, or debt collection issues.',
+    description: 'Challenge bank fees, credit report errors, identity theft, debt collection, or data access requests.',
     icon: CreditCard,
     templateCount: 10,
     color: 'hsl(var(--chart-1))',
@@ -76,7 +76,7 @@ export const templateCategories: TemplateCategory[] = [
   {
     id: 'vehicle',
     name: 'Vehicle & Auto',
-    description: 'Address dealer complaints, warranty disputes, or repair issues.',
+    description: 'Address dealer complaints, warranty disputes, lemon law claims, or repair issues.',
     icon: Car,
     templateCount: 8,
     color: 'hsl(var(--chart-3))',
@@ -93,7 +93,7 @@ export const templateCategories: TemplateCategory[] = [
   {
     id: 'employment',
     name: 'Employment & Workplace',
-    description: 'Address wage issues, workplace problems, or termination disputes.',
+    description: 'Address wage issues, workplace discrimination, or termination disputes.',
     icon: Briefcase,
     templateCount: 6,
     color: 'hsl(var(--chart-5))',
