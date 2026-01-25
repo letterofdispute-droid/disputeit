@@ -46,8 +46,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Damaged & Defective Goods',
     description: 'File complaints for items that arrived broken, defective, or not as described.',
     icon: Package,
-    templateCount: 8,
+    templateCount: 50,
     color: 'hsl(var(--chart-4))',
+    popular: true,
   },
   {
     id: 'utilities',
