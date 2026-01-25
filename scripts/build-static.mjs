@@ -6,12 +6,14 @@
  * while users get the React SPA experience.
  * 
  * Output:
- * - /dist/complaint-letter/:slug/index.html (105 templates)
- * - /dist/category/:id/index.html (12 categories)
+ * - /dist/complaint-letter/:slug/index.html (100+ templates)
+ * - /dist/category/:id/index.html (13 categories)
+ * - /dist/articles/:category/:slug/index.html (blog posts)
  * - /dist/sitemaps/sitemap-index.xml
  * - /dist/sitemaps/templates.xml
  * - /dist/sitemaps/categories.xml
  * - /dist/sitemaps/static.xml
+ * - /dist/sitemaps/blog.xml
  */
 
 import fs from 'fs';
@@ -43,6 +45,16 @@ const categories = [
   { id: 'employment', name: 'Employment & Workplace', description: 'Address wage issues, workplace problems, or termination disputes.' },
   { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Report seller issues, account problems, or data privacy requests.' },
   { id: 'hoa', name: 'Neighbor & HOA Disputes', description: 'Address community issues, fee disputes, or neighbor conflicts.' },
+  { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Dispute poor workmanship, project abandonment, or cost overruns.' },
+];
+
+// Blog categories
+const blogCategories = [
+  { slug: 'consumer-rights', name: 'Consumer Rights' },
+  { slug: 'landlord-tenant', name: 'Landlord & Tenant' },
+  { slug: 'travel-disputes', name: 'Travel Disputes' },
+  { slug: 'financial-tips', name: 'Financial Tips' },
+  { slug: 'legal-guides', name: 'Legal Guides' },
 ];
 
 // We'll dynamically import all template files
@@ -60,6 +72,7 @@ async function loadAllTemplates() {
     '../src/data/templates/employmentTemplates.ts',
     '../src/data/templates/ecommerceTemplates.ts',
     '../src/data/templates/hoaTemplates.ts',
+    '../src/data/templates/contractorsTemplates.ts',
   ];
   
   // Read TypeScript files and extract template data
@@ -67,6 +80,10 @@ async function loadAllTemplates() {
   
   for (const file of templateFiles) {
     const filePath = path.join(__dirname, file);
+    if (!fs.existsSync(filePath)) {
+      console.log(`   ⚠️ Template file not found: ${file}`);
+      continue;
+    }
     const content = fs.readFileSync(filePath, 'utf-8');
     
     // Extract template objects using regex (simpler than parsing TS)
@@ -87,6 +104,36 @@ async function loadAllTemplates() {
   }
   
   return templates;
+}
+
+// Load blog posts from static data file
+function loadBlogPosts() {
+  const blogPostsPath = path.join(__dirname, '../src/data/blogPosts.ts');
+  if (!fs.existsSync(blogPostsPath)) {
+    console.log('   ⚠️ Blog posts file not found');
+    return [];
+  }
+  
+  const content = fs.readFileSync(blogPostsPath, 'utf-8');
+  const posts = [];
+  
+  // Extract blog post objects
+  const postMatches = content.matchAll(/{\s*slug:\s*['"]([^'"]+)['"],\s*title:\s*['"]([^'"]+)['"],\s*excerpt:\s*['"]([^'"]+)['"],[\s\S]*?category:\s*['"]([^'"]+)['"],\s*categorySlug:\s*['"]([^'"]+)['"],\s*author:\s*['"]([^'"]+)['"],\s*publishedAt:\s*['"]([^'"]+)['"],\s*readTime:\s*['"]([^'"]+)['"]/g);
+  
+  for (const match of postMatches) {
+    posts.push({
+      slug: match[1],
+      title: match[2],
+      excerpt: match[3],
+      category: match[4],
+      categorySlug: match[5],
+      author: match[6],
+      publishedAt: match[7],
+      readTime: match[8],
+    });
+  }
+  
+  return posts;
 }
 
 // ============================================
@@ -117,6 +164,7 @@ function getCategoryIdFromName(categoryName) {
     'Employment': 'employment',
     'E-commerce': 'ecommerce',
     'HOA & Property': 'hoa',
+    'Contractors': 'contractors',
   };
   return mapping[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
 }
@@ -299,6 +347,92 @@ function generateCategoryHTML(category, templates) {
 </html>`;
 }
 
+function generateBlogPostHTML(post) {
+  const canonicalUrl = `${SITE_URL}/articles/${post.categorySlug}/${post.slug}`;
+  
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${SITE_URL}/articles` },
+      { "@type": "ListItem", "position": 3, "name": post.category, "item": `${SITE_URL}/articles/${post.categorySlug}` },
+      { "@type": "ListItem", "position": 4, "name": post.title, "item": canonicalUrl }
+    ]
+  };
+  
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "description": post.excerpt,
+    "author": { "@type": "Person", "name": post.author },
+    "publisher": { "@type": "Organization", "name": "DisputeLetters", "url": SITE_URL },
+    "datePublished": post.publishedAt,
+    "dateModified": post.publishedAt,
+    "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
+  };
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(post.title)} | DisputeLetters Blog</title>
+  <meta name="description" content="${escapeHtml(post.excerpt)}">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="${escapeHtml(post.title)}">
+  <meta property="og:description" content="${escapeHtml(post.excerpt)}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:site_name" content="DisputeLetters">
+  <meta property="article:published_time" content="${post.publishedAt}">
+  <meta property="article:author" content="${escapeHtml(post.author)}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(post.title)}">
+  <meta name="twitter:description" content="${escapeHtml(post.excerpt)}">
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(articleSchema)}</script>
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 1rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .meta { color: #666; margin-bottom: 2rem; display: flex; gap: 1.5rem; }
+    .excerpt { font-size: 1.25rem; color: #444; margin-bottom: 2rem; border-left: 4px solid #2563eb; padding-left: 1rem; }
+    .cta { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → <a href="/articles">Blog</a> → <a href="/articles/${post.categorySlug}">${escapeHtml(post.category)}</a> → ${escapeHtml(post.title)}
+  </nav>
+  
+  <main>
+    <article>
+      <h1>${escapeHtml(post.title)}</h1>
+      <div class="meta">
+        <span>By ${escapeHtml(post.author)}</span>
+        <span>${post.publishedAt}</span>
+        <span>${post.readTime}</span>
+      </div>
+      <p class="excerpt">${escapeHtml(post.excerpt)}</p>
+      <p>Read the full article on our website for expert guidance on consumer rights and dispute resolution.</p>
+    </article>
+    
+    <a href="/articles/${post.categorySlug}/${post.slug}" class="cta">Read Full Article</a>
+  </main>
+</body>
+</html>`;
+}
+
 // ============================================
 // Sitemap Generators
 // ============================================
@@ -318,6 +452,10 @@ function generateSitemapIndex() {
     <loc>${SITE_URL}/sitemaps/templates.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>${SITE_URL}/sitemaps/blog.xml</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+  </sitemap>
 </sitemapindex>`;
 }
 
@@ -330,6 +468,30 @@ function generateStaticSitemap() {
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>${SITE_URL}/articles</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/pricing</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/about</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/contact</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>`;
 }
 
@@ -341,9 +503,18 @@ function generateCategoriesSitemap() {
     <priority>0.8</priority>
   </url>`).join('\n');
   
+  // Add blog category pages
+  const blogCategoryUrls = blogCategories.map(cat => `  <url>
+    <loc>${SITE_URL}/articles/${cat.slug}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
+${blogCategoryUrls}
 </urlset>`;
 }
 
@@ -353,6 +524,20 @@ function generateTemplatesSitemap(templates) {
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>`).join('\n');
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>`;
+}
+
+function generateBlogSitemap(posts) {
+  const urls = posts.map(p => `  <url>
+    <loc>${SITE_URL}/articles/${p.categorySlug}/${p.slug}</loc>
+    <lastmod>${p.publishedAt || BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>`).join('\n');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -371,7 +556,11 @@ async function build() {
   // Load templates
   const templates = await loadAllTemplates();
   console.log(`📄 Found ${templates.length} templates`);
-  console.log(`📁 Found ${categories.length} categories\n`);
+  console.log(`📁 Found ${categories.length} categories`);
+  
+  // Load blog posts
+  const blogPosts = loadBlogPosts();
+  console.log(`📝 Found ${blogPosts.length} blog posts\n`);
   
   // Ensure dist directory exists
   if (!fs.existsSync(distDir)) {
@@ -404,16 +593,28 @@ async function build() {
   }
   console.log(`   ✅ Generated ${categories.length} category pages`);
   
+  // Generate blog post HTML files
+  console.log('📝 Generating blog post HTML files...');
+  for (const post of blogPosts) {
+    const postDir = path.join(distDir, 'articles', post.categorySlug, post.slug);
+    fs.mkdirSync(postDir, { recursive: true });
+    
+    const html = generateBlogPostHTML(post);
+    fs.writeFileSync(path.join(postDir, 'index.html'), html);
+  }
+  console.log(`   ✅ Generated ${blogPosts.length} blog post pages`);
+  
   // Generate sitemaps
   console.log('🗺️  Generating sitemaps...');
   fs.writeFileSync(path.join(sitemapsDir, 'sitemap-index.xml'), generateSitemapIndex());
   fs.writeFileSync(path.join(sitemapsDir, 'static.xml'), generateStaticSitemap());
   fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap());
   fs.writeFileSync(path.join(sitemapsDir, 'templates.xml'), generateTemplatesSitemap(templates));
-  console.log('   ✅ Generated 4 sitemap files');
+  fs.writeFileSync(path.join(sitemapsDir, 'blog.xml'), generateBlogSitemap(blogPosts));
+  console.log('   ✅ Generated 5 sitemap files');
   
   console.log('\n✅ Static HTML generation complete!');
-  console.log(`   📊 Total: ${templates.length + categories.length + 1} HTML pages + 4 sitemaps`);
+  console.log(`   📊 Total: ${templates.length + categories.length + blogPosts.length + 1} HTML pages + 5 sitemaps`);
 }
 
 // Run the build

@@ -1,15 +1,89 @@
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
-import { blogPosts, blogCategories, getFeaturedPosts } from '@/data/blogPosts';
+import { blogPosts as staticBlogPosts, blogCategories, getFeaturedPosts as getStaticFeaturedPosts } from '@/data/blogPosts';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ArrowRight, BookOpen } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, BookOpen, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  category: string;
+  category_slug: string;
+  author: string;
+  published_at: string | null;
+  read_time: string | null;
+  featured_image_url: string | null;
+  featured: boolean;
+  views: number;
+}
 
 const ArticlesPage = () => {
-  const featuredPosts = getFeaturedPosts();
-  const regularPosts = blogPosts.filter(post => !post.featured);
+  // Fetch blog posts from database
+  const { data: dbPosts, isLoading } = useQuery({
+    queryKey: ['blog-posts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as BlogPost[];
+    },
+  });
+
+  // Fetch categories from database
+  const { data: dbCategories } = useQuery({
+    queryKey: ['blog-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use database posts if available, otherwise fall back to static
+  const posts = dbPosts && dbPosts.length > 0 
+    ? dbPosts 
+    : staticBlogPosts.map(p => ({
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt,
+        content: p.content,
+        category: p.category,
+        category_slug: p.categorySlug,
+        author: p.author,
+        published_at: p.publishedAt,
+        read_time: p.readTime,
+        featured_image_url: p.image || null,
+        featured: p.featured || false,
+        views: 0,
+      }));
+
+  const categories = dbCategories && dbCategories.length > 0 ? dbCategories : blogCategories;
+  const featuredPosts = posts.filter(post => post.featured);
+  const regularPosts = posts.filter(post => !post.featured);
+
+  // Calculate reading time if not provided
+  const getReadTime = (post: BlogPost) => {
+    if (post.read_time) return post.read_time;
+    const words = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+    const minutes = Math.ceil(words / 200);
+    return `${minutes} min read`;
+  };
 
   return (
     <Layout>
@@ -47,7 +121,7 @@ const ArticlesPage = () => {
                 All Articles
               </Badge>
             </Link>
-            {blogCategories.map((category) => (
+            {categories.map((category) => (
               <Link key={category.slug} to={`/articles/${category.slug}`}>
                 <Badge variant="outline" className="cursor-pointer hover:bg-muted">
                   {category.name}
@@ -58,8 +132,28 @@ const ArticlesPage = () => {
         </div>
       </section>
 
+      {/* Loading State */}
+      {isLoading && (
+        <section className="py-12 md:py-16 bg-background">
+          <div className="container-wide">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2].map((i) => (
+                <Card key={i}>
+                  <Skeleton className="aspect-video w-full" />
+                  <CardHeader>
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Featured Posts */}
-      {featuredPosts.length > 0 && (
+      {!isLoading && featuredPosts.length > 0 && (
         <section className="py-12 md:py-16 bg-background">
           <div className="container-wide">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
@@ -67,7 +161,17 @@ const ArticlesPage = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {featuredPosts.map((post) => (
-                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
+                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  {post.featured_image_url && (
+                    <div className="aspect-video overflow-hidden">
+                      <img 
+                        src={post.featured_image_url} 
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                   <CardHeader>
                     <div className="flex items-center gap-2 mb-2">
                       <Badge variant="secondary">{post.category}</Badge>
@@ -76,7 +180,7 @@ const ArticlesPage = () => {
                       </Badge>
                     </div>
                     <CardTitle className="font-serif text-xl group-hover:text-primary transition-colors">
-                      <Link to={`/articles/${post.categorySlug}/${post.slug}`}>
+                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>
                         {post.title}
                       </Link>
                     </CardTitle>
@@ -89,7 +193,7 @@ const ArticlesPage = () => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {new Date(post.publishedAt).toLocaleDateString('en-US', { 
+                          {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
@@ -97,11 +201,17 @@ const ArticlesPage = () => {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {post.readTime}
+                          {getReadTime(post)}
                         </span>
+                        {post.views > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-4 w-4" />
+                            {post.views.toLocaleString()}
+                          </span>
+                        )}
                       </div>
                       <Link 
-                        to={`/articles/${post.categorySlug}/${post.slug}`}
+                        to={`/articles/${post.category_slug}/${post.slug}`}
                         className="text-primary font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all"
                       >
                         Read more <ArrowRight className="h-4 w-4" />
@@ -116,47 +226,71 @@ const ArticlesPage = () => {
       )}
 
       {/* All Posts */}
-      <section className="py-12 md:py-16 bg-muted/30">
-        <div className="container-wide">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
-            Latest Articles
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {regularPosts.map((post) => (
-              <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <Badge variant="secondary" className="w-fit mb-2">
-                    {post.category}
-                  </Badge>
-                  <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
-                    <Link to={`/articles/${post.categorySlug}/${post.slug}`}>
-                      {post.title}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {post.excerpt}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(post.publishedAt).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {post.readTime}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      {!isLoading && (
+        <section className="py-12 md:py-16 bg-muted/30">
+          <div className="container-wide">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
+              Latest Articles
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {regularPosts.map((post) => (
+                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  {post.featured_image_url && (
+                    <div className="aspect-video overflow-hidden">
+                      <img 
+                        src={post.featured_image_url} 
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <CardHeader>
+                    <Badge variant="secondary" className="w-fit mb-2">
+                      {post.category}
+                    </Badge>
+                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
+                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>
+                        {post.title}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {post.excerpt}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {getReadTime(post)}
+                      </span>
+                      {post.views > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          {post.views.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {regularPosts.length === 0 && featuredPosts.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No articles published yet. Check back soon!</p>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-12 md:py-16 bg-primary">
