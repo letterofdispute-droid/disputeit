@@ -81,8 +81,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Vehicle & Auto',
     description: 'Address dealer complaints, warranty disputes, lemon law claims, or repair issues.',
     icon: Car,
-    templateCount: 8,
+    templateCount: 50,
     color: 'hsl(var(--chart-3))',
+    popular: true,
   },
   {
     id: 'healthcare',
