@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.generate-letter-documents]
 verify_jwt = false
+
+[functions.regenerate-letter-urls]
+verify_jwt = false
