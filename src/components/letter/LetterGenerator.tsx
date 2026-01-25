@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronRight, ChevronLeft, Eye, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LetterTemplate, TemplateField } from '@/data/letterTemplates';
+import { generateFullLetter } from '@/lib/letterGeneration';
 import LetterPreview from './LetterPreview';
 import PricingModal from './PricingModal';
 
@@ -24,6 +25,12 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
   const [showPricing, setShowPricing] = useState(false);
 
   const totalSteps = 3;
+
+  // Generate letter content for checkout
+  const generatedLetterContent = useMemo(() => {
+    const result = generateFullLetter(template, formData, selectedJurisdiction, selectedTone);
+    return result.fullContent;
+  }, [template, formData, selectedJurisdiction, selectedTone]);
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
@@ -324,6 +331,9 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
 
       {showPricing && (
         <PricingModal
+          templateSlug={template.slug}
+          templateName={template.title}
+          letterContent={generatedLetterContent}
           onClose={() => setShowPricing(false)}
         />
       )}

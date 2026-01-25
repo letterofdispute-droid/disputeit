@@ -1,8 +1,14 @@
-import { X, Check, CreditCard, FileText, FileEdit } from 'lucide-react';
+import { useState } from 'react';
+import { X, Check, CreditCard, FileText, FileEdit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PricingModalProps {
+  templateSlug: string;
+  templateName: string;
+  letterContent: string;
   onClose: () => void;
 }
 
@@ -33,11 +39,42 @@ const pricingOptions = [
   },
 ];
 
-const PricingModal = ({ onClose }: PricingModalProps) => {
-  const handlePurchase = (optionId: string) => {
-    // In a real implementation, this would integrate with Stripe
-    console.log('Purchase:', optionId);
-    alert(`Payment integration coming soon! Selected: ${optionId}`);
+const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: PricingModalProps) => {
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handlePurchase = async (optionId: string) => {
+    setIsLoading(optionId);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('create-letter-checkout', {
+        body: {
+          purchaseType: optionId,
+          templateSlug,
+          templateName,
+          letterContent,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Open Stripe checkout in new tab
+        window.open(data.url, '_blank');
+        onClose();
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start checkout. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(null);
+    }
   };
 
   return (
@@ -59,6 +96,7 @@ const PricingModal = ({ onClose }: PricingModalProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pricingOptions.map((option) => {
               const Icon = option.icon;
+              const loading = isLoading === option.id;
               return (
                 <Card
                   key={option.id}
@@ -98,9 +136,14 @@ const PricingModal = ({ onClose }: PricingModalProps) => {
                     variant={option.popular ? 'accent' : 'outline'}
                     className="w-full"
                     onClick={() => handlePurchase(option.id)}
+                    disabled={isLoading !== null}
                   >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {option.popular ? 'Get PDF + Editable' : 'Get PDF'}
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    {loading ? 'Processing...' : option.popular ? 'Get PDF + Editable' : 'Get PDF'}
                   </Button>
                 </Card>
               );

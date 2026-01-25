@@ -169,6 +169,60 @@ export type Database = {
         }
         Relationships: []
       }
+      letter_purchases: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          docx_url: string | null
+          email: string
+          id: string
+          letter_content: string
+          pdf_url: string | null
+          purchase_type: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          template_name: string
+          template_slug: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          docx_url?: string | null
+          email: string
+          id?: string
+          letter_content: string
+          pdf_url?: string | null
+          purchase_type: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          template_name: string
+          template_slug: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          docx_url?: string | null
+          email?: string
+          id?: string
+          letter_content?: string
+          pdf_url?: string | null
+          purchase_type?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          template_name?: string
+          template_slug?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       pages: {
         Row: {
           author: string | null

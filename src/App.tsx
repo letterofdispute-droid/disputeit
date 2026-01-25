@@ -19,6 +19,7 @@ import SignupPage from "./pages/SignupPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 import PricingPage from "./pages/PricingPage";
+import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBlog from "./pages/admin/AdminBlog";
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
           
           {/* Auth & Dashboard */}
           <Route path="/login" element={<LoginPage />} />
