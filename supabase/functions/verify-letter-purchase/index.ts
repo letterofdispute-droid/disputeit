@@ -54,8 +54,8 @@ serve(async (req) => {
       throw new Error("Purchase not found");
     }
 
-    // If already completed, return the existing data
-    if (purchase.status === "completed") {
+    // If already completed with documents, return the existing data
+    if (purchase.status === "completed" && purchase.pdf_url) {
       return new Response(JSON.stringify({
         success: true,
         purchase: {
@@ -89,13 +89,49 @@ serve(async (req) => {
       throw new Error("Failed to update purchase");
     }
 
-    // Return purchase details for download
+    // Generate documents using the generate-letter-documents function
+    const generateDocx = purchase.purchase_type === "pdf-editable";
+    
+    console.log(`Calling generate-letter-documents for purchase ${purchaseId}`);
+    
+    const generateResponse = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-letter-documents`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          purchaseId: purchase.id,
+          letterContent: purchase.letter_content,
+          templateName: purchase.template_name,
+          generateDocx,
+        }),
+      }
+    );
+
+    if (!generateResponse.ok) {
+      const errorText = await generateResponse.text();
+      console.error("Document generation failed:", errorText);
+      throw new Error("Failed to generate documents");
+    }
+
+    const generateResult = await generateResponse.json();
+
+    if (!generateResult.success) {
+      throw new Error(generateResult.error || "Document generation failed");
+    }
+
+    // Return purchase details with document URLs
     return new Response(JSON.stringify({
       success: true,
       purchase: {
         id: purchase.id,
         templateName: purchase.template_name,
         purchaseType: purchase.purchase_type,
+        pdfUrl: generateResult.pdfUrl,
+        docxUrl: generateResult.docxUrl,
         letterContent: purchase.letter_content,
       },
     }), {
