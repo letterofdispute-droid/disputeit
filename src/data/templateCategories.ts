@@ -70,8 +70,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Insurance Claims',
     description: 'Appeal denied claims, dispute settlements, or challenge cancellations.',
     icon: Shield,
-    templateCount: 8,
+    templateCount: 50,
     color: 'hsl(var(--chart-2))',
+    popular: true,
   },
   {
     id: 'vehicle',
