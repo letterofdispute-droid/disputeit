@@ -55,8 +55,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Utilities & Telecommunications',
     description: 'Dispute billing errors, service quality issues, or contract problems.',
     icon: Wifi,
-    templateCount: 10,
+    templateCount: 50,
     color: 'hsl(var(--chart-5))',
+    popular: true,
   },
   {
     id: 'financial',
