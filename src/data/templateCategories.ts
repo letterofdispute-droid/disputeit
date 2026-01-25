@@ -28,7 +28,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Landlord & Housing',
     description: 'Request repairs, address deposit disputes, or document housing issues.',
     icon: Home,
-    templateCount: 14,
+    templateCount: 50,
     color: 'hsl(var(--chart-2))',
     popular: true,
   },
