@@ -11,6 +11,7 @@ import { healthcareTemplates } from './templates/healthcareTemplates';
 import { employmentTemplates } from './templates/employmentTemplates';
 import { ecommerceTemplates } from './templates/ecommerceTemplates';
 import { hoaTemplates } from './templates/hoaTemplates';
+import { contractorsTemplates } from './templates/contractorsTemplates';
 
 // Map category IDs to display names used in templates
 const categoryIdToName: Record<string, string> = {
@@ -26,6 +27,7 @@ const categoryIdToName: Record<string, string> = {
   'employment': 'Employment',
   'ecommerce': 'E-commerce',
   'hoa': 'HOA & Property',
+  'contractors': 'Contractors',
 };
 
 // Reverse mapping: display name to category ID
@@ -50,6 +52,7 @@ export const allTemplates: LetterTemplate[] = [
   ...employmentTemplates,
   ...ecommerceTemplates,
   ...hoaTemplates,
+  ...contractorsTemplates,
 ];
 
 export function getTemplateBySlug(slug: string): LetterTemplate | undefined {
