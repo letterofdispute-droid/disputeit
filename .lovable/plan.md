@@ -1,322 +1,326 @@
 
-# Comprehensive Audit: Templates, FAQ, SEO & Blog
 
-## Executive Summary
+# Travel Templates Expansion - Regulator-Aware Field System
 
-After a thorough review of the codebase, I've identified findings across four areas: template quality, FAQ configuration, SEO/crawling status, and blog best practices. This plan outlines the current state and recommended improvements.
+## Overview
 
----
-
-## 1. Template Field Analysis
-
-### Current State: Strong Foundation
-
-The templates are well-designed with realistic, granular fields that match real-world scenarios. Key strengths:
-
-| Category | Templates | Field Quality |
-|----------|-----------|---------------|
-| Healthcare | 50+ | Excellent - includes NPI, CPT/ICD-10 codes, Medicare/Medicaid IDs |
-| Travel | 12 | Excellent - IATA codes, PNR, e-ticket numbers, EU261 specifics |
-| Housing | 14 | Good - separate address fields, tenancy dates, repair types |
-| Insurance | 8 | Good - policy numbers, claim references, denial codes |
-| Financial | 10 | Good - account numbers, sort codes, transaction references |
-| Employment | 2 | Basic - could use expansion |
-
-### Fillability Assessment
-
-**Strengths:**
-- Separate fields for addresses (Line 1, Line 2, City, Postcode) - follows your preference
-- Dropdown selects for common options (airline names, payment methods, issue types)
-- Optional fields marked correctly (required: false)
-- Helpful placeholders with realistic examples
-
-**Areas for Improvement:**
-- Some templates have many fields (Travel delay has 37 fields) - consider progressive disclosure
-- Missing "attachment checklist" guidance (e.g., "Do you have photos?" could suggest what to attach)
-- Some date fields could use better help text explaining format expectations
-
-### Missing High-Demand Templates
-
-Based on 2024-2025 consumer complaint data, these categories/templates are missing:
-
-**New Categories to Add:**
-1. **Contractors & Home Improvement** - Top 10 complaint category
-   - Poor workmanship complaint
-   - Contractor no-show/abandonment
-   - Solar panel installation dispute
-   - Renovation cost overrun
-
-2. **Professional & Household Services** 
-   - Moving company damage/overcharge
-   - Storage facility dispute
-   - Dry cleaning damage
-
-3. **Education & Student Services**
-   - Tuition refund request
-   - Financial aid dispute
-   - Academic record correction
-
-4. **Government & Public Agencies**
-   - FOIA/Subject Access Request
-   - Local council service complaint
-   - Parking ticket appeal
-
-**Missing Templates in Existing Categories:**
-
-| Category | Missing Templates |
-|----------|-------------------|
-| Housing | Tenant harassment complaint, Illegal eviction response |
-| Financial | Mortgage servicing dispute, Identity theft fraud alert, Payday loan complaint |
-| Vehicle | Lemon law formal demand, Lease buyout dispute |
-| Employment | Discrimination complaint, Unpaid overtime claim, Hostile work environment |
-| E-commerce | Account takeover recovery, Fake review removal |
+Based on your detailed specification, I'll expand the travel templates from the current 12 to 20+ templates with enhanced regulatory compliance and real-case fields. The current templates already have a strong foundation with granular fields (IATA codes, PNR, PIR references), but I'll enhance them and add new high-demand templates.
 
 ---
 
-## 2. FAQ Page Analysis
+## Current State Analysis
 
-### Current State: Well Structured
-
-**Location:** `src/components/home/FAQ.tsx`
-
-**Current FAQs (11 total):**
-1. What is a dispute letter?
-2. When do I need a dispute letter?
-3. What happens after I send a dispute letter?
-4. Can't I just call or email instead?
-5. Why should I use this instead of ChatGPT?
-6. Is this legal advice?
-7. How quickly can I create a letter?
-8. What formats do I receive?
-9. Will my letter guarantee results?
-10. Can I use this for any country?
-11. Is my information secure?
-
-### Missing FAQs to Add
-
-Based on common user questions for similar services:
-
-| FAQ | Importance |
-|-----|------------|
-| "How much does it cost?" | High - pricing clarity |
-| "Can I edit the letter after generating?" | High - UX expectation |
-| "Do I need to print and mail the letter?" | Medium - process clarification |
-| "What if the company ignores my letter?" | High - sets realistic expectations |
-| "How do I know which template to use?" | High - helps users find right letter |
-| "Can I use this for court/legal proceedings?" | Medium - liability clarity |
-| "Are the templates updated for current laws?" | Medium - credibility |
-
-### Technical Improvements
-
-The FAQ uses `Accordion` from Radix UI correctly. For SEO, consider:
-- Adding `<script type="application/ld+json">` FAQ schema markup
-- Adding an `id` to each FAQ item for deep linking
-
----
-
-## 3. SEO & Search Engine Crawling Status
-
-### Current Architecture: Hybrid Static/SPA (Well Implemented)
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│                    NETLIFY HOSTING                       │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│   Bot Request (Googlebot, Bingbot, etc.)                 │
-│   └─→ netlify.toml User-Agent detection                  │
-│       └─→ Serve /complaint-letter/:slug/index.html       │
-│           (Full static HTML with structured data)        │
-│                                                          │
-│   Human Request                                          │
-│   └─→ Serve /index.html (React SPA)                      │
-│       └─→ Client-side routing                            │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Static HTML Generation
-
-**Script:** `scripts/build-static.mjs`
-- Generates static HTML for all templates and categories at build time
-- Includes proper meta tags, Open Graph, Twitter Cards
-- Adds JSON-LD structured data (BreadcrumbList, Article schemas)
-
-**Output:**
-- `/dist/complaint-letter/:slug/index.html` (~100+ pages)
-- `/dist/category/:id/index.html` (12 pages)
-- `/dist/sitemaps/sitemap-index.xml`
-- `/dist/sitemaps/templates.xml`
-- `/dist/sitemaps/categories.xml`
-- `/dist/sitemaps/static.xml`
-
-### Sitemap Configuration
-
-**robots.txt** correctly points to:
-```
-Sitemap: https://disputeletters.com/sitemap.xml
-```
-
-**netlify.toml** redirects:
-```
-/sitemap.xml → /sitemaps/sitemap-index.xml
-```
-
-### Issues Found
-
-| Issue | Severity | Solution |
-|-------|----------|----------|
-| No live sitemaps in public/ | Low | Generated at build time in dist/ - this is correct |
-| Blog posts not in sitemap | Medium | Add `/sitemaps/blog.xml` to sitemap index |
-| No articles/ routes in static generation | High | Blog pages are not pre-rendered for bots |
-| No FAQ schema markup | Low | Add FAQPage structured data |
-
-### Crawling Status
-
-**Positive:**
-- robots.txt allows all pages
-- Sitemap structure is correct
-- Canonical URLs properly set
-- Static HTML has all meta tags
-
-**Needs Attention:**
-- Blog/articles pages are SPA-only (not in static build script)
-- Need to verify actual crawl coverage in Google Search Console
-- Consider adding blog sitemap with database-driven posts
-
----
-
-## 4. Blog Design Best Practices Audit
-
-### Current State
-
-**Data Source:** Currently using static data from `src/data/blogPosts.ts` (5 hardcoded posts)
-**Database:** `blog_posts` table exists but is empty
-**Admin Panel:** Blog editor exists at `/admin/blog`
-
-### Current Blog Pages
-
-| Page | Location | Features |
-|------|----------|----------|
-| Articles List | `src/pages/ArticlesPage.tsx` | Categories, featured posts, regular posts |
-| Article Detail | `src/pages/ArticlePage.tsx` | Breadcrumbs, related posts, CTA |
-| Category Filter | `src/pages/ArticleCategoryPage.tsx` | Category-filtered view |
-
-### Issues & Improvements Needed
-
-**Critical Issues:**
-
-1. **Content Rendering is Unsafe**
-   ```typescript
-   // ArticlePage.tsx line 83
-   <div dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br>')... }} />
-   ```
-   This is a security risk and produces poor HTML. Blog posts with actual HTML from the editor will render incorrectly.
-
-2. **Using Static Data Instead of Database**
-   - `ArticlesPage.tsx` imports from `src/data/blogPosts.ts`
-   - Should fetch from `blog_posts` table for admin-managed content
-
-3. **No Featured Images Displayed**
-   - Posts have `featured_image_url` in database but not rendered on cards
-
-**Best Practice Improvements:**
-
-| Best Practice | Current | Recommended |
-|---------------|---------|-------------|
-| Featured images | Not displayed | Show on cards and article header |
-| Reading time | Static string | Calculate from content length |
-| Author avatars | None | Add author info with avatar |
-| Social sharing | None | Add share buttons (Twitter, LinkedIn, Copy link) |
-| Table of contents | None | Generate from H2/H3 headings for long posts |
-| Previous/Next navigation | None | Add navigation between articles |
-| View count | Exists in DB | Display "X views" on articles |
-| Comments | None | Consider adding or defer |
-| Related posts | Exists | Good - works by category |
-
-**SEO Improvements:**
-
-| Element | Current | Recommended |
-|---------|---------|-------------|
-| Structured data | None | Add Article, BlogPosting schemas |
-| Meta descriptions | Uses excerpt | Good |
-| Open Graph images | None set | Use featured image |
-| Last modified date | None | Add lastmod for freshness signals |
+**Existing Travel Templates (12 total):**
+1. Flight Delay Compensation - 37 fields (excellent)
+2. Flight Cancellation Compensation - 26 fields (good)
+3. Lost Baggage Claim - 26 fields (good)
+4. Damaged Baggage Claim - 27 fields (good)
+5. Denied Boarding Compensation - 31 fields (good)
+6. Hotel Complaint - 26 fields (good)
+7. Hotel Refund Request - 18 fields (needs enhancement)
+8. Car Rental Complaint - 24 fields (needs enhancement)
+9. Cruise Complaint - 26 fields (good)
+10. Train Delay Compensation - 18 fields (UK-focused)
+11. Travel Agency Complaint - 27 fields (good)
+12. Package Holiday Complaint - 27 fields (good)
 
 ---
 
 ## Implementation Plan
 
-### Priority 1: Critical Fixes
+### Phase 1: New High-Demand Templates (8 templates)
 
-1. **Fix blog content rendering**
-   - Replace `dangerouslySetInnerHTML` with proper HTML sanitization using DOMPurify
-   - Or use a markdown renderer if content is markdown
+| Template | Priority | Field Count | Key Features |
+|----------|----------|-------------|--------------|
+| Delayed Baggage Claim | High | ~25 | PIR, delay duration, essential purchases |
+| OTA Refund Dispute | High | ~22 | OTA vs supplier responsibility |
+| Travel Chargeback Request | High | ~20 | Card issuer, reason codes, evidence |
+| Missed Connection Compensation | High | ~28 | Connection flight details, re-routing |
+| Bus/Coach Delay Complaint | Medium | ~18 | PRE Regulation fields |
+| Ferry Delay/Cancellation | Medium | ~20 | Maritime passenger rights |
+| Airport Lounge Complaint | Medium | ~15 | Lounge access, service issues |
+| Travel Insurance Claim Rejection | High | ~22 | Policy details, rejection reasons |
 
-2. **Connect blog to database**
-   - Update ArticlesPage/ArticlePage to fetch from Supabase
-   - Fall back to static data if database is empty
+### Phase 2: Enhanced Fields for Existing Templates
 
-3. **Add blog to static generation**
-   - Extend `build-static.mjs` to generate article pages for bots
+**Enhancements to add:**
 
-### Priority 2: SEO Enhancements
-
-1. **Add FAQ schema markup** to homepage
-2. **Add Article schema** to blog post pages
-3. **Add blog sitemap** generation
-4. **Verify Google Search Console** coverage
-
-### Priority 3: Template Expansion
-
-1. **Add Contractors & Home Improvement category** (4 templates)
-2. **Add missing housing templates** (2 templates)
-3. **Add missing financial templates** (3 templates)
-4. **Add employment expansion** (3 templates)
-
-### Priority 4: Blog UX Improvements
-
-1. Display featured images on cards
-2. Add social sharing buttons
-3. Add table of contents for long articles
-4. Add previous/next navigation
-5. Display view counts
-
-### Priority 5: FAQ Improvements
-
-1. Add 5-7 new frequently asked questions
-2. Add FAQ schema markup
-3. Add deep-link anchors
+1. **Extraordinary Circumstances** - Add yes/no field with follow-up
+2. **Meals/Care Provided** - Standardize across airline templates
+3. **Document Checklist** - Add attachment guidance fields
+4. **Eligibility Indicators** - Delay duration, distance (for auto-calculation potential)
 
 ---
 
-## Files to Modify
+## Technical Implementation
 
-| File | Changes |
-|------|---------|
-| `src/pages/ArticlePage.tsx` | Fix content rendering, add structured data, featured images |
-| `src/pages/ArticlesPage.tsx` | Connect to database, add featured images |
-| `src/components/home/FAQ.tsx` | Add new FAQs, add schema markup |
-| `scripts/build-static.mjs` | Add blog post generation |
-| `src/data/templateCategories.ts` | Add new categories |
-| New template files | Create contractorsTemplates.ts, etc. |
+### New Template Structure
+
+Each template follows the Core + Extension architecture:
+
+```text
+Template Schema
+├── Core Fields (16-20)
+│   ├── Traveler Identity
+│   │   ├── fullLegalName
+│   │   ├── passengerAddress (textarea)
+│   │   ├── passengerEmail
+│   │   ├── passengerPhone
+│   │   ├── countryOfResidence
+│   │   └── passengerRole (select)
+│   ├── Booking Details
+│   │   ├── bookingReference
+│   │   ├── bookingDate
+│   │   ├── travelDate
+│   │   ├── serviceProviderName
+│   │   ├── bookingChannel (select)
+│   │   ├── paymentMethod (select)
+│   │   ├── transactionId
+│   │   └── totalAmountPaid
+│   └── Dispute Metadata
+│       ├── dateIssueOccurred
+│       ├── dateComplaintSubmitted
+│       ├── resolutionRequested (select)
+│       └── preferredResponseMethod
+├── Extension Fields (6-15)
+│   └── Category-specific fields
+└── Jurisdiction Blocks
+    ├── UK261 (retained EU 261/2004)
+    ├── EU261 (Regulation 261/2004)
+    ├── US DOT Rules
+    └── Montreal Convention (baggage)
+```
 
 ---
 
-## Summary
+## New Templates - Detailed Specifications
 
-**What's Working Well:**
-- Template fields are realistic and granular
-- SEO static generation architecture is solid
-- FAQ content is comprehensive
-- Sitemap structure is correct
+### 1. Delayed Baggage Claim (High Priority)
 
-**Needs Immediate Attention:**
-- Blog content rendering is unsafe
-- Blog not connected to database
-- Blog pages not in static build for SEO
+**Fields (25):**
+- Core flight fields (airline, flight number, dates, airports)
+- PIR reference number
+- PIR filing date and location
+- Baggage tag number(s)
+- Baggage type (checked/cabin)
+- Delay duration (hours/days)
+- Date baggage returned (if applicable)
+- Essential purchases itemized list
+- Receipt availability (select)
+- Total essential expenses claim
 
-**Expansion Opportunities:**
-- 4+ new template categories based on complaint data
-- 10+ high-demand missing templates
-- Blog best practices (images, sharing, navigation)
+**Regulatory:** Montreal Convention 21-day delay liability text
+
+---
+
+### 2. OTA Refund Dispute (High Priority)
+
+**Fields (22):**
+- OTA name (select: Booking.com, Expedia, Kayak, etc.)
+- Supplier name (actual service provider)
+- OTA booking reference
+- Supplier booking reference (if different)
+- Responsibility disputed (OTA vs Supplier)
+- Policy version shown at booking
+- Screenshot availability
+- Original booking terms
+- Changes made by provider
+- Refund already offered
+- Refund amount sought
+
+**Key Feature:** Fields to establish OTA vs supplier responsibility
+
+---
+
+### 3. Travel Chargeback Request (High Priority)
+
+**Fields (20):**
+- Card issuer name (select: Visa, Mastercard, Amex)
+- Card type (credit/debit)
+- Last 4 digits of card
+- Transaction date
+- Transaction amount
+- Merchant name
+- Merchant category
+- Chargeback reason (select with common codes)
+- Date first disputed with merchant
+- Merchant response received
+- Previous resolution attempts documented
+- Evidence available (checklist)
+
+**Regulatory:** Aligned with Visa/Mastercard/Amex reason codes
+
+---
+
+### 4. Missed Connection Compensation (High Priority)
+
+**Fields (28):**
+- First flight details (number, airline, route)
+- Connection airport
+- Minimum connection time (advertised)
+- Actual arrival time at connection
+- Second flight details
+- Reason for missing connection
+- Single booking or separate tickets
+- Re-routing provided
+- Alternative flight details
+- Final arrival delay
+- Accommodation/meals provided
+- Expenses incurred
+
+**Key Feature:** Single vs separate booking (affects liability)
+
+---
+
+### 5. Bus/Coach Delay Complaint (Medium)
+
+**Fields (18):**
+- Bus/coach operator
+- Route/service number
+- Departure and arrival points
+- Scheduled vs actual times
+- Delay duration
+- Ticket type and cost
+- Ticket reference
+- Reason given
+- Assistance provided
+- Compensation sought
+
+**Regulatory:** PRE Regulation (EU bus/coach rights)
+
+---
+
+### 6. Ferry Delay/Cancellation (Medium)
+
+**Fields (20):**
+- Ferry operator
+- Route
+- Vessel name
+- Sailing date
+- Scheduled departure/arrival
+- Actual departure/arrival
+- Delay duration
+- Cancellation notice timing
+- Re-routing offered
+- Vehicle included (yes/no + registration)
+- Cabin booked (yes/no + type)
+- Ticket cost
+- Accommodation/meals provided
+
+**Regulatory:** EU Maritime Passenger Rights Regulation 1177/2010
+
+---
+
+### 7. Airport Lounge Complaint (Medium)
+
+**Fields (15):**
+- Lounge name
+- Lounge operator
+- Airport
+- Access date and time
+- Access method (Priority Pass, airline card, paid entry)
+- Access reference/booking
+- Issues encountered (multi-select)
+- Expected service level
+- Actual service received
+- Staff response
+- Compensation sought
+
+---
+
+### 8. Travel Insurance Claim Rejection Appeal (High)
+
+**Fields (22):**
+- Insurance provider
+- Policy number
+- Policyholder name
+- Trip dates
+- Destination
+- Claim type (medical, cancellation, baggage, etc.)
+- Claim reference number
+- Claim amount
+- Date claim submitted
+- Date claim rejected
+- Rejection reasons given
+- Why rejection is disputed
+- Supporting evidence list
+- Appeal amount sought
+
+**Key Feature:** Structured rejection reasons for strong appeals
+
+---
+
+## Jurisdiction-Specific Regulatory Blocks
+
+I'll embed locked legal language blocks for each template:
+
+```text
+UK261 Block:
+"Under UK Regulation 261/2004 (as retained), passengers departing 
+from a UK airport or arriving in the UK on a UK/EU carrier are 
+entitled to compensation for delays over 3 hours..."
+
+EU261 Block:
+"Under Regulation (EC) No 261/2004, passengers departing from an 
+EU airport or arriving in the EU on an EU carrier are entitled to 
+fixed compensation amounts..."
+
+Montreal Convention Block:
+"Under the Montreal Convention 1999, airlines are liable for 
+baggage delays up to 1,288 SDR (approximately £1,400) unless 
+caused by the passenger's own negligence..."
+
+US DOT Block:
+"Under US Department of Transportation regulations, airlines 
+operating flights to/from the United States must provide 
+compensation for involuntary denied boarding..."
+```
+
+---
+
+## Files to Create/Modify
+
+### Files to Modify:
+1. **`src/data/templates/travelTemplates.ts`** - Add 8 new templates
+2. **`src/data/templateCategories.ts`** - Update template count (12 → 20)
+
+### Existing Enhancements:
+- Add `extraordinaryCircumstances` field to airline templates
+- Add `careProvided` standardized select to all airline templates
+- Add attachment checklist guidance fields
+
+---
+
+## Field Count Summary
+
+| Template Category | Current | After Enhancement |
+|-------------------|---------|-------------------|
+| Airline Disputes | 5 templates | 6 templates (+missed connection) |
+| Baggage Disputes | 2 templates | 3 templates (+delayed baggage) |
+| Accommodation | 2 templates | 2 templates (enhanced fields) |
+| Ground Transport | 2 templates | 4 templates (+bus, ferry) |
+| Travel Agencies/OTAs | 2 templates | 3 templates (+OTA dispute) |
+| Payment/Insurance | 0 templates | 2 templates (new) |
+| **Total** | **12 templates** | **20 templates** |
+
+---
+
+## Security & Data Handling
+
+**Fields I Will NOT Add (per your specification):**
+- Full passport number (only ID type + last 4 digits optional)
+- Full card number or CVV
+- Copies of government IDs
+- Immigration or visa status
+- Any fields requesting legal admissions
+
+---
+
+## Implementation Order
+
+1. Create 8 new templates in `travelTemplates.ts`
+2. Update template count in `templateCategories.ts`
+3. Enhance existing templates with standardized care/extraordinary circumstances fields
+4. Verify all templates follow the Core + Extension pattern
+5. Test field validation and placeholder rendering
+
