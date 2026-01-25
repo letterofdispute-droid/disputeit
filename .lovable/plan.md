@@ -1,223 +1,173 @@
 
-# Add High-Demand Missing Templates
+# Insurance Claims Category Expansion to 50 Templates
 
-## Overview
+## Current State
+- **Existing templates**: 8
+- **Target**: 50
+- **Templates to add**: 42
 
-I'll add 4 critical high-demand templates that cover major consumer protection scenarios currently missing from the platform:
-
-| Template | Category | Priority | Key Regulations |
-|----------|----------|----------|-----------------|
-| Lemon Law Formal Demand | Vehicle | High | State Lemon Laws (US), Consumer Rights Act (UK) |
-| Identity Theft Fraud Alert | Financial | High | FCRA, Data Protection Act, GDPR |
-| FOIA/Subject Access Request | Financial/Privacy | High | FOIA (US), GDPR Article 15, UK DPA 2018 |
-| Employment Discrimination | Employment | High | Title VII (US), Equality Act 2010 (UK) |
-
----
-
-## Template 1: Lemon Law Formal Demand Letter
-
-**Category:** Vehicle  
-**Slug:** `lemon-law-demand`  
-**Target:** Manufacturers refusing to replace/refund defective vehicles
-
-### Fields (~28 total)
-
-**Vehicle Identification:**
-- Vehicle make, model, year, variant
-- VIN (17-character)
-- Registration/License plate
-- Vehicle color
-- Purchase date
-- Purchase price
-- Dealer name and address
-- Finance company (if applicable)
-
-**Defect Documentation:**
-- Primary defect description
-- Secondary defects (if any)
-- Date defect first noticed
-- Number of repair attempts
-- Repair dates (textarea for list)
-- Days out of service (total)
-- Current mileage
-- Mileage at first defect
-
-**Lemon Law Specifics:**
-- State/jurisdiction (for US lemon law applicability)
-- Manufacturer case number (if opened)
-- Arbitration attempted (yes/no)
-- Desired resolution (refund/replacement dropdown)
-
-**Regulatory Anchors:**
-- US: State-specific lemon law + Magnuson-Moss Warranty Act
-- UK: Consumer Rights Act 2015 (right to reject within 30 days, or after multiple failed repairs)
-- EU: Consumer Sales Directive
+## Existing Insurance Templates
+1. Insurance Claim Denial Appeal
+2. Insurance Underpayment Dispute
+3. Insurance Claim Delay Complaint
+4. Insurance Cancellation Refund
+5. Insurance Premium Dispute
+6. Insurance Policy Dispute
+7. Third Party Claim
+8. Bad Faith Complaint
 
 ---
 
-## Template 2: Identity Theft Fraud Alert Letter
+## New Templates to Add (42 Total)
 
-**Category:** Financial  
-**Slug:** `identity-theft-fraud-alert`  
-**Target:** Credit agencies, banks, creditors
+### Auto/Motor Insurance (8 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 1 | Total Loss Valuation Dispute | `auto-total-loss-dispute` | Vehicle details, market value evidence, insurer offer, fair market comparables |
+| 2 | Gap Insurance Claim | `gap-insurance-claim` | Outstanding finance, settlement amount, gap coverage details |
+| 3 | Windshield/Glass Claim Dispute | `auto-glass-claim-dispute` | Damage type, repair vs replacement, coverage tier |
+| 4 | Rental Car Coverage Denial | `rental-car-coverage-denial` | Policy coverage, rental agreement, dates, denial reason |
+| 5 | Diminished Value Claim | `diminished-value-claim` | Accident details, repair costs, pre/post-accident value |
+| 6 | Uninsured Motorist Claim | `uninsured-motorist-claim` | Accident details, other driver info, coverage limits |
+| 7 | Hit and Run Claim | `hit-and-run-claim` | Incident details, police report, witness info |
+| 8 | Storage Fee Dispute | `auto-storage-fee-dispute` | Tow company, daily rate, days stored, insurer delay |
 
-### Fields (~25 total)
+### Home/Property Insurance (10 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 9 | Water Damage Claim Denial | `water-damage-claim-denial` | Damage source, date discovered, mitigation steps |
+| 10 | Fire Damage Claim Dispute | `fire-damage-claim-dispute` | Fire origin, investigation report, coverage dispute |
+| 11 | Theft Claim Denial | `theft-claim-denial` | Items stolen, police report, security measures |
+| 12 | Storm/Weather Damage Claim | `storm-damage-claim` | Weather event, date, damage description, adjuster findings |
+| 13 | Roof Damage Dispute | `roof-damage-dispute` | Age of roof, cause of damage, repair estimates |
+| 14 | Contents Coverage Dispute | `contents-coverage-dispute` | Inventory list, replacement values, coverage limit |
+| 15 | Additional Living Expenses Claim | `additional-living-expenses-claim` | Displacement period, temporary housing costs |
+| 16 | Flood Insurance Claim Dispute | `flood-insurance-claim` | NFIP policy, flood zone, water levels, damage extent |
+| 17 | Subsidence/Ground Movement Claim | `subsidence-claim` | Structural survey, cause, repair quotes |
+| 18 | Landlord Insurance Claim | `landlord-insurance-claim` | Property address, tenant damage, loss of rent |
 
-**Victim Information:**
-- Full legal name
-- Current address
-- Previous addresses (last 2 years)
-- Date of birth
-- Last 4 digits of SSN/National ID
-- Phone number
-- Email
+### Health/Medical Insurance (8 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 19 | Prior Authorization Denial Appeal | `prior-auth-denial-appeal` | Treatment type, medical necessity, physician letter |
+| 20 | Out-of-Network Denial Appeal | `out-of-network-denial-appeal` | Provider details, network adequacy, emergency clause |
+| 21 | Prescription Coverage Denial | `prescription-coverage-denial` | Medication name, formulary status, step therapy |
+| 22 | Mental Health Parity Complaint | `mental-health-parity-complaint` | Treatment type, parity law violation |
+| 23 | Ambulance Charge Dispute | `ambulance-charge-dispute` | Transport date, provider, emergency status |
+| 24 | Balance Billing Dispute | `balance-billing-dispute` | Provider, billed amount, in-network rate |
+| 25 | Coordination of Benefits Dispute | `coordination-of-benefits` | Primary/secondary insurer, COB rules |
+| 26 | Annual/Lifetime Limit Dispute | `coverage-limit-dispute` | Treatment type, limit reached, essential benefit |
 
-**Fraud Details:**
-- Type of fraud (select: New accounts, Account takeover, Tax fraud, Medical, Other)
-- Date fraud discovered
-- How fraud was discovered
-- Fraudulent accounts/transactions itemized
-- Total estimated fraud amount
+### Life Insurance (5 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 27 | Life Insurance Claim Denial | `life-insurance-claim-denial` | Policy number, death certificate, denial reason |
+| 28 | Beneficiary Dispute | `life-insurance-beneficiary-dispute` | Claimant relationship, designation evidence |
+| 29 | Contestability Period Dispute | `life-contestability-dispute` | Policy start date, misrepresentation claim |
+| 30 | Accidental Death Benefit Denial | `accidental-death-benefit-denial` | Cause of death, AD&D policy terms |
+| 31 | Suicide Clause Dispute | `suicide-clause-dispute` | Policy issue date, contestability period, death circumstances |
 
-**Reporting & Documentation:**
-- Police report filed (yes/no)
-- Police report number
-- FTC Identity Theft Report number (US)
-- Action Fraud reference (UK)
-- Credit agencies already contacted
-- Accounts already frozen
+### Travel Insurance (5 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 32 | Trip Cancellation Claim | `travel-trip-cancellation-claim` | Trip dates, cancellation reason, covered reasons |
+| 33 | Medical Emergency Abroad Claim | `travel-medical-emergency-claim` | Treatment location, bills, currency conversion |
+| 34 | Trip Interruption Claim | `travel-trip-interruption-claim` | Reason for interruption, unused portions |
+| 35 | Delayed Departure Compensation | `travel-delay-insurance-claim` | Delay duration, expenses incurred |
+| 36 | Missed Connection Insurance Claim | `missed-connection-insurance-claim` | Connection details, rebooking costs |
 
-**Request Type:**
-- Request type (Fraud alert placement, Credit freeze, Dispute fraudulent account, Block information)
+### Pet Insurance (4 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 37 | Pet Insurance Claim Denial | `pet-insurance-claim-denial` | Pet details, condition, vet bills, denial reason |
+| 38 | Pre-existing Condition Dispute | `pet-preexisting-condition-dispute` | Pet history, condition onset date, medical records |
+| 39 | Hereditary Condition Coverage | `pet-hereditary-condition-claim` | Breed, condition type, policy exclusions |
+| 40 | Pet Dental Coverage Dispute | `pet-dental-coverage-dispute` | Dental procedure, coverage tier |
 
-**Regulatory Anchors:**
-- US: FCRA Section 605A (90-day fraud alert), 7-year extended alert for victims
-- UK: Data Protection Act 2018, CIFAS protective registration
-- EU: GDPR Article 17 (right to erasure of fraudulent data)
-
----
-
-## Template 3: FOIA / Subject Access Request Letter
-
-**Category:** Financial (fits data privacy scope)  
-**Slug:** `subject-access-request`  
-**Target:** Government agencies, companies holding personal data
-
-### Fields (~20 total)
-
-**Requester Information:**
-- Full legal name
-- Current address
-- Email
-- Phone number
-- Previous names used (optional)
-- Previous addresses (optional)
-
-**Request Details:**
-- Organization name
-- Organization address
-- Request type (select: FOIA request, Subject Access Request, Data deletion, Data portability)
-- Specific data requested (textarea)
-- Time period for data
-- Account/reference numbers (if any)
-- Relationship to organization (customer, employee, other)
-
-**Verification Willingness:**
-- Identity verification method (select: Copy of ID, Utility bill, Other)
-- Format preference (electronic, paper)
-
-**Regulatory Anchors:**
-- US: Freedom of Information Act (20 business days response)
-- UK: GDPR Article 15 / UK DPA 2018 (30 calendar days, extendable to 90)
-- EU: GDPR Article 15-20 (access, rectification, erasure, portability)
+### Business/Commercial Insurance (2 templates)
+| # | Template Name | Slug | Key Fields |
+|---|---------------|------|------------|
+| 41 | Business Interruption Claim | `business-interruption-claim` | Business type, loss period, revenue documentation |
+| 42 | Professional Indemnity Claim | `professional-indemnity-claim` | Allegation details, policy coverage, legal costs |
 
 ---
 
-## Template 4: Employment Discrimination Complaint Letter
+## Field Design Principles (Applied to All Templates)
 
-**Category:** Employment  
-**Slug:** `employment-discrimination-complaint`  
-**Target:** Employers, HR departments
+Each template will follow the regulator-aware field system with:
 
-### Fields (~30 total)
+### Universal Insurance Core Fields
+- Insurer name and claims address
+- Policy number and type
+- Policy start/end dates
+- Policyholder name and contact details
+- Claim reference number
+- Claim submission date
+- Denial/settlement date
+- Denial letter reference
 
-**Employee Information:**
-- Full name
-- Employee ID/staff number
-- Job title
-- Department
-- Start date
-- Current employment status (employed, terminated, resigned)
-- Manager name
-- HR contact name
+### Claim-Specific Extension Fields
+- Incident date, time, location
+- Damage/loss description
+- Evidence documentation
+- Amount claimed vs amount offered
+- Appeal reason (structured)
 
-**Employer Information:**
-- Company name
-- Company address
-- Company size (select: <15, 15-100, 100-500, 500+)
-
-**Discrimination Details:**
-- Protected characteristic (select: Race, Sex, Age, Disability, Religion, Pregnancy, National origin, Sexual orientation, Gender identity, Other)
-- Type of discrimination (select: Disparate treatment, Harassment, Hostile work environment, Retaliation, Failure to accommodate, Pay discrimination)
-- Date(s) of discriminatory incidents
-- Description of incidents (textarea)
-- Witnesses (names if any)
-- Prior complaints made (yes/no)
-- Prior complaint dates/details
-
-**Impact & Resolution:**
-- Impact on employment (demotion, termination, denied promotion, pay cut)
-- Emotional/financial impact
-- Resolution sought (reinstatement, compensation, policy change, apology)
-
-**Regulatory Anchors:**
-- US: Title VII, ADA, ADEA, PDA (EEOC filing deadline 180-300 days)
-- UK: Equality Act 2010 (3-month filing deadline for tribunal)
-- EU: Equal Treatment Directive
+### Regulatory Anchors by Jurisdiction
+- **UK**: FCA rules, Financial Ombudsman Service escalation
+- **US**: State insurance commissioner, bad faith law references
+- **EU**: Insurance Distribution Directive, EIOPA
+- **International**: Policy terms enforcement
 
 ---
 
-## Files to Modify
+## File Modifications
 
 | File | Changes |
 |------|---------|
-| `src/data/templates/vehicleTemplates.ts` | Add Lemon Law template (+1 template) |
-| `src/data/templates/financialTemplates.ts` | Add Identity Theft and FOIA/SAR templates (+2 templates) |
-| `src/data/templates/employmentTemplates.ts` | Add Discrimination Complaint template (+1 template) |
-| `src/data/templateCategories.ts` | Update template counts for vehicle (4→5), financial (4→6), employment (2→3) |
+| `src/data/templates/insuranceTemplates.ts` | Add 42 new template objects |
+| `src/data/templateCategories.ts` | Update `templateCount` from 8 to 50 |
 
 ---
 
-## Template Count Summary
+## Implementation Notes
 
-| Category | Current | After | Change |
-|----------|---------|-------|--------|
-| Vehicle | 4 | 5 | +1 (Lemon Law) |
-| Financial | 4 | 6 | +2 (Identity Theft, FOIA/SAR) |
-| Employment | 2 | 3 | +1 (Discrimination) |
-| **Total** | **10** | **14** | **+4** |
+### Regulatory Text Blocks (Embedded per Jurisdiction)
+Templates will include non-editable legal reference blocks that switch based on jurisdiction:
 
----
+**UK Insurance Appeals:**
+- Financial Ombudsman Service (FOS) 8-week rule
+- FCA ICOBS conduct standards
+- Insurance Act 2015 reasonable expectations
 
-## Security Considerations
-
-**Fields NOT included (per best practices):**
-- Full SSN/National Insurance number (only last 4)
-- Full credit card numbers
-- Government ID copies
-- Immigration status
-- Medical records (except as relevant to discrimination)
+**US Insurance Appeals:**
+- State insurance commissioner complaint process
+- Bad faith claim elements
+- NAIC Market Conduct standards
 
 ---
 
-## Jurisdiction Handling
+## Template Complexity Estimate
 
-Each template will include locked legal text blocks that change based on jurisdiction selection:
+| Template Type | Fields | Sections |
+|---------------|--------|----------|
+| Standard claim dispute | 20-25 | 5 |
+| Complex denial appeal | 28-35 | 5 |
+| Multi-party claims | 30-40 | 6 |
 
-```text
-US Jurisdiction → Cite specific federal statutes + note state law variations
-UK Jurisdiction → Cite UK statutes (Consumer Rights Act, Equality Act, DPA)
-EU Jurisdiction → Cite EU Directives and GDPR articles
-International → Generic consumer protection language
-```
+---
 
+## Next Categories (After Insurance)
+
+Once Insurance is complete, we can proceed with:
+1. **Employment & Workplace** (6 → 50, +44 templates)
+2. **E-commerce & Online Services** (5 → 50, +45 templates)
+3. **HOA & Property** (3 → 50, +47 templates)
+4. **Damaged Goods** (8 → 50, +42 templates)
+5. **Financial Services** (10 → 50, +40 templates)
+6. **Utilities & Telecommunications** (10 → 50, +40 templates)
+7. **Vehicle & Auto** (8 → 50, +42 templates)
+8. **Landlord & Housing** (14 → 50, +36 templates)
+9. **Refunds & Purchases** (15 → 50, +35 templates)
+10. **Travel & Transportation** (20 → 50, +30 templates)
+11. **Contractors & Home Improvement** (7 → 50, +43 templates)
