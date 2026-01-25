@@ -21,8 +21,6 @@ const standardJurisdictions = [
 
 // Core insurance templates (4 base templates)
 const coreInsuranceTemplates: LetterTemplate[] = [
-
-export const insuranceTemplates: LetterTemplate[] = [
   {
     id: 'insurance-claim-denial', 
     slug: 'insurance-claim-denial-appeal', 
