@@ -1,173 +1,147 @@
 
-# Insurance Claims Category Expansion to 50 Templates
+# Insurance Templates Expansion: 4 → 50 Templates
 
 ## Current State
-- **Existing templates**: 8
-- **Target**: 50
-- **Templates to add**: 42
-
-## Existing Insurance Templates
-1. Insurance Claim Denial Appeal
-2. Insurance Underpayment Dispute
-3. Insurance Claim Delay Complaint
-4. Insurance Cancellation Refund
-5. Insurance Premium Dispute
-6. Insurance Policy Dispute
-7. Third Party Claim
-8. Bad Faith Complaint
+- **Existing templates in file**: 4 (Claim Denial, Underpayment, Delay, Cancellation)
+- **Target**: 50 templates
+- **Templates to add**: 46
 
 ---
 
-## New Templates to Add (42 Total)
+## Implementation Approach
 
-### Auto/Motor Insurance (8 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 1 | Total Loss Valuation Dispute | `auto-total-loss-dispute` | Vehicle details, market value evidence, insurer offer, fair market comparables |
-| 2 | Gap Insurance Claim | `gap-insurance-claim` | Outstanding finance, settlement amount, gap coverage details |
-| 3 | Windshield/Glass Claim Dispute | `auto-glass-claim-dispute` | Damage type, repair vs replacement, coverage tier |
-| 4 | Rental Car Coverage Denial | `rental-car-coverage-denial` | Policy coverage, rental agreement, dates, denial reason |
-| 5 | Diminished Value Claim | `diminished-value-claim` | Accident details, repair costs, pre/post-accident value |
-| 6 | Uninsured Motorist Claim | `uninsured-motorist-claim` | Accident details, other driver info, coverage limits |
-| 7 | Hit and Run Claim | `hit-and-run-claim` | Incident details, police report, witness info |
-| 8 | Storage Fee Dispute | `auto-storage-fee-dispute` | Tow company, daily rate, days stored, insurer delay |
+Due to the large number of templates, I'll implement them in logical subcategories:
 
-### Home/Property Insurance (10 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 9 | Water Damage Claim Denial | `water-damage-claim-denial` | Damage source, date discovered, mitigation steps |
-| 10 | Fire Damage Claim Dispute | `fire-damage-claim-dispute` | Fire origin, investigation report, coverage dispute |
-| 11 | Theft Claim Denial | `theft-claim-denial` | Items stolen, police report, security measures |
-| 12 | Storm/Weather Damage Claim | `storm-damage-claim` | Weather event, date, damage description, adjuster findings |
-| 13 | Roof Damage Dispute | `roof-damage-dispute` | Age of roof, cause of damage, repair estimates |
-| 14 | Contents Coverage Dispute | `contents-coverage-dispute` | Inventory list, replacement values, coverage limit |
-| 15 | Additional Living Expenses Claim | `additional-living-expenses-claim` | Displacement period, temporary housing costs |
-| 16 | Flood Insurance Claim Dispute | `flood-insurance-claim` | NFIP policy, flood zone, water levels, damage extent |
-| 17 | Subsidence/Ground Movement Claim | `subsidence-claim` | Structural survey, cause, repair quotes |
-| 18 | Landlord Insurance Claim | `landlord-insurance-claim` | Property address, tenant damage, loss of rent |
+### Phase 1: Auto/Motor Insurance (+8 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 1 | `auto-total-loss-dispute` | Total Loss Valuation Dispute | VIN, market value evidence, comparables |
+| 2 | `gap-insurance-claim` | Gap Insurance Claim | Finance balance, settlement gap |
+| 3 | `auto-glass-claim-dispute` | Windshield/Glass Claim Dispute | Damage type, repair vs replace |
+| 4 | `rental-car-coverage-denial` | Rental Car Coverage Denial | Rental agreement, coverage tier |
+| 5 | `diminished-value-claim` | Diminished Value Claim | Pre/post accident value |
+| 6 | `uninsured-motorist-claim` | Uninsured Motorist Claim | Other driver info, coverage limits |
+| 7 | `hit-and-run-claim` | Hit and Run Claim | Police report, witness info |
+| 8 | `auto-storage-fee-dispute` | Storage Fee Dispute | Tow company, daily rate, delay |
 
-### Health/Medical Insurance (8 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 19 | Prior Authorization Denial Appeal | `prior-auth-denial-appeal` | Treatment type, medical necessity, physician letter |
-| 20 | Out-of-Network Denial Appeal | `out-of-network-denial-appeal` | Provider details, network adequacy, emergency clause |
-| 21 | Prescription Coverage Denial | `prescription-coverage-denial` | Medication name, formulary status, step therapy |
-| 22 | Mental Health Parity Complaint | `mental-health-parity-complaint` | Treatment type, parity law violation |
-| 23 | Ambulance Charge Dispute | `ambulance-charge-dispute` | Transport date, provider, emergency status |
-| 24 | Balance Billing Dispute | `balance-billing-dispute` | Provider, billed amount, in-network rate |
-| 25 | Coordination of Benefits Dispute | `coordination-of-benefits` | Primary/secondary insurer, COB rules |
-| 26 | Annual/Lifetime Limit Dispute | `coverage-limit-dispute` | Treatment type, limit reached, essential benefit |
+### Phase 2: Home/Property Insurance (+10 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 9 | `water-damage-claim-denial` | Water Damage Claim Denial | Damage source, mitigation steps |
+| 10 | `fire-damage-claim-dispute` | Fire Damage Claim Dispute | Fire origin, investigation report |
+| 11 | `theft-claim-denial` | Theft Claim Denial | Items stolen, police report |
+| 12 | `storm-damage-claim` | Storm/Weather Damage Claim | Weather event, adjuster findings |
+| 13 | `roof-damage-dispute` | Roof Damage Dispute | Roof age, cause, repair estimates |
+| 14 | `contents-coverage-dispute` | Contents Coverage Dispute | Inventory list, replacement values |
+| 15 | `additional-living-expenses-claim` | Additional Living Expenses Claim | Displacement period, costs |
+| 16 | `flood-insurance-claim` | Flood Insurance Claim Dispute | NFIP policy, flood zone, water levels |
+| 17 | `subsidence-claim` | Subsidence/Ground Movement Claim | Structural survey, repair quotes |
+| 18 | `landlord-insurance-claim` | Landlord Insurance Claim | Tenant damage, loss of rent |
 
-### Life Insurance (5 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 27 | Life Insurance Claim Denial | `life-insurance-claim-denial` | Policy number, death certificate, denial reason |
-| 28 | Beneficiary Dispute | `life-insurance-beneficiary-dispute` | Claimant relationship, designation evidence |
-| 29 | Contestability Period Dispute | `life-contestability-dispute` | Policy start date, misrepresentation claim |
-| 30 | Accidental Death Benefit Denial | `accidental-death-benefit-denial` | Cause of death, AD&D policy terms |
-| 31 | Suicide Clause Dispute | `suicide-clause-dispute` | Policy issue date, contestability period, death circumstances |
+### Phase 3: Health/Medical Insurance (+8 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 19 | `prior-auth-denial-appeal` | Prior Authorization Denial Appeal | Treatment type, medical necessity |
+| 20 | `out-of-network-denial-appeal` | Out-of-Network Denial Appeal | Provider details, emergency clause |
+| 21 | `prescription-coverage-denial` | Prescription Coverage Denial | Medication, formulary status |
+| 22 | `mental-health-parity-complaint` | Mental Health Parity Complaint | Parity law violation |
+| 23 | `ambulance-charge-dispute` | Ambulance Charge Dispute | Transport date, emergency status |
+| 24 | `balance-billing-dispute` | Balance Billing Dispute | Provider, in-network rate |
+| 25 | `coordination-of-benefits` | Coordination of Benefits Dispute | Primary/secondary insurer |
+| 26 | `coverage-limit-dispute` | Annual/Lifetime Limit Dispute | Treatment type, essential benefit |
 
-### Travel Insurance (5 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 32 | Trip Cancellation Claim | `travel-trip-cancellation-claim` | Trip dates, cancellation reason, covered reasons |
-| 33 | Medical Emergency Abroad Claim | `travel-medical-emergency-claim` | Treatment location, bills, currency conversion |
-| 34 | Trip Interruption Claim | `travel-trip-interruption-claim` | Reason for interruption, unused portions |
-| 35 | Delayed Departure Compensation | `travel-delay-insurance-claim` | Delay duration, expenses incurred |
-| 36 | Missed Connection Insurance Claim | `missed-connection-insurance-claim` | Connection details, rebooking costs |
+### Phase 4: Life Insurance (+5 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 27 | `life-insurance-claim-denial` | Life Insurance Claim Denial | Death certificate, denial reason |
+| 28 | `life-insurance-beneficiary-dispute` | Beneficiary Dispute | Claimant relationship, designation |
+| 29 | `life-contestability-dispute` | Contestability Period Dispute | Policy start, misrepresentation claim |
+| 30 | `accidental-death-benefit-denial` | Accidental Death Benefit Denial | Cause of death, AD&D terms |
+| 31 | `suicide-clause-dispute` | Suicide Clause Dispute | Contestability period, circumstances |
 
-### Pet Insurance (4 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 37 | Pet Insurance Claim Denial | `pet-insurance-claim-denial` | Pet details, condition, vet bills, denial reason |
-| 38 | Pre-existing Condition Dispute | `pet-preexisting-condition-dispute` | Pet history, condition onset date, medical records |
-| 39 | Hereditary Condition Coverage | `pet-hereditary-condition-claim` | Breed, condition type, policy exclusions |
-| 40 | Pet Dental Coverage Dispute | `pet-dental-coverage-dispute` | Dental procedure, coverage tier |
+### Phase 5: Travel Insurance (+5 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 32 | `travel-trip-cancellation-claim` | Trip Cancellation Claim | Trip dates, covered reasons |
+| 33 | `travel-medical-emergency-claim` | Medical Emergency Abroad Claim | Treatment location, currency |
+| 34 | `travel-trip-interruption-claim` | Trip Interruption Claim | Reason, unused portions |
+| 35 | `travel-delay-insurance-claim` | Delayed Departure Compensation | Delay duration, expenses |
+| 36 | `missed-connection-insurance-claim` | Missed Connection Insurance Claim | Connection details, rebooking costs |
 
-### Business/Commercial Insurance (2 templates)
-| # | Template Name | Slug | Key Fields |
-|---|---------------|------|------------|
-| 41 | Business Interruption Claim | `business-interruption-claim` | Business type, loss period, revenue documentation |
-| 42 | Professional Indemnity Claim | `professional-indemnity-claim` | Allegation details, policy coverage, legal costs |
+### Phase 6: Pet Insurance (+4 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 37 | `pet-insurance-claim-denial` | Pet Insurance Claim Denial | Pet details, vet bills |
+| 38 | `pet-preexisting-condition-dispute` | Pre-existing Condition Dispute | Pet history, condition onset |
+| 39 | `pet-hereditary-condition-claim` | Hereditary Condition Coverage | Breed, exclusions |
+| 40 | `pet-dental-coverage-dispute` | Pet Dental Coverage Dispute | Dental procedure, coverage tier |
+
+### Phase 7: Business/Commercial Insurance (+6 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 41 | `business-interruption-claim` | Business Interruption Claim | Loss period, revenue docs |
+| 42 | `professional-indemnity-claim` | Professional Indemnity Claim | Allegation, legal costs |
+| 43 | `public-liability-claim` | Public Liability Claim Dispute | Incident, third party details |
+| 44 | `employers-liability-claim` | Employers Liability Claim | Employee injury, HSE report |
+| 45 | `cyber-insurance-claim` | Cyber Insurance Claim | Breach details, forensics |
+| 46 | `directors-officers-claim` | Directors & Officers Claim | Allegation, D&O coverage |
+
+### Phase 8: Additional Common Templates (+4 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 47 | `insurance-premium-dispute` | Insurance Premium Dispute | Premium history, increase reason |
+| 48 | `insurance-policy-dispute` | Insurance Policy Dispute | Policy terms, mis-selling |
+| 49 | `third-party-claim` | Third Party Claim | At-fault party details |
+| 50 | `insurance-bad-faith-complaint` | Bad Faith Complaint | Bad faith elements, damages |
 
 ---
 
-## Field Design Principles (Applied to All Templates)
-
-Each template will follow the regulator-aware field system with:
+## Field Structure (Applied to All Templates)
 
 ### Universal Insurance Core Fields
-- Insurer name and claims address
-- Policy number and type
-- Policy start/end dates
-- Policyholder name and contact details
-- Claim reference number
-- Claim submission date
-- Denial/settlement date
-- Denial letter reference
-
-### Claim-Specific Extension Fields
-- Incident date, time, location
-- Damage/loss description
-- Evidence documentation
-- Amount claimed vs amount offered
-- Appeal reason (structured)
+```text
+- insurerName, insurerAddressLine1, insurerCity, insurerPostcode
+- insuranceType (select)
+- policyholderName, policyholderAddress, policyholderPhone, policyholderEmail
+- policyNumber, policyStartDate, policyEndDate
+- claimReference, claimSubmissionDate, claimAmount
+- incidentDate, incidentDescription
+```
 
 ### Regulatory Anchors by Jurisdiction
-- **UK**: FCA rules, Financial Ombudsman Service escalation
-- **US**: State insurance commissioner, bad faith law references
-- **EU**: Insurance Distribution Directive, EIOPA
-- **International**: Policy terms enforcement
+```text
+UK: FCA rules, Financial Ombudsman Service, Insurance Act 2015
+US: State insurance commissioner, bad faith law, NAIC standards
+EU: Insurance Distribution Directive, EIOPA
+International: Policy terms enforcement
+```
 
 ---
 
-## File Modifications
+## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/data/templates/insuranceTemplates.ts` | Add 42 new template objects |
+| File | Action |
+|------|--------|
+| `src/data/templates/insuranceTemplates.ts` | Add 46 new template objects |
 | `src/data/templateCategories.ts` | Update `templateCount` from 8 to 50 |
 
 ---
 
-## Implementation Notes
+## Technical Notes
 
-### Regulatory Text Blocks (Embedded per Jurisdiction)
-Templates will include non-editable legal reference blocks that switch based on jurisdiction:
+1. **Template Structure**: Each template follows the existing `LetterTemplate` interface with full field definitions, 5 sections, and jurisdiction-specific legal anchors
 
-**UK Insurance Appeals:**
-- Financial Ombudsman Service (FOS) 8-week rule
-- FCA ICOBS conduct standards
-- Insurance Act 2015 reasonable expectations
+2. **Category Consistency**: All templates use `category: 'Insurance'` to match existing templates
 
-**US Insurance Appeals:**
-- State insurance commissioner complaint process
-- Bad faith claim elements
-- NAIC Market Conduct standards
+3. **Slug Uniqueness**: All slugs are unique and follow kebab-case convention
+
+4. **Field Reuse**: Common fields (insurer details, policy info, claim reference) are reused across templates for consistency
 
 ---
 
-## Template Complexity Estimate
+## Next Steps After Insurance
 
-| Template Type | Fields | Sections |
-|---------------|--------|----------|
-| Standard claim dispute | 20-25 | 5 |
-| Complex denial appeal | 28-35 | 5 |
-| Multi-party claims | 30-40 | 6 |
-
----
-
-## Next Categories (After Insurance)
-
-Once Insurance is complete, we can proceed with:
-1. **Employment & Workplace** (6 → 50, +44 templates)
-2. **E-commerce & Online Services** (5 → 50, +45 templates)
-3. **HOA & Property** (3 → 50, +47 templates)
-4. **Damaged Goods** (8 → 50, +42 templates)
-5. **Financial Services** (10 → 50, +40 templates)
-6. **Utilities & Telecommunications** (10 → 50, +40 templates)
-7. **Vehicle & Auto** (8 → 50, +42 templates)
-8. **Landlord & Housing** (14 → 50, +36 templates)
-9. **Refunds & Purchases** (15 → 50, +35 templates)
-10. **Travel & Transportation** (20 → 50, +30 templates)
-11. **Contractors & Home Improvement** (7 → 50, +43 templates)
+Once Insurance is complete (50 templates), proceed with:
+1. Employment & Workplace (6 → 50, +44 templates)
+2. E-commerce & Online Services (5 → 50, +45 templates)
+3. And remaining categories...
