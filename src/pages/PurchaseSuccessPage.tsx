@@ -56,36 +56,30 @@ const PurchaseSuccessPage = () => {
     verifyPurchase();
   }, [sessionId, purchaseId]);
 
-  const downloadAsPdf = () => {
-    if (!purchase?.letterContent) return;
+  const downloadPdf = () => {
+    if (!purchase?.pdfUrl) return;
     
-    // Create a simple text-based download for now
-    // In production, you'd generate a proper PDF
-    const blob = new Blob([purchase.letterContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${purchase.templateName.replace(/\s+/g, '-').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Open the signed URL in a new tab to download
+    const link = document.createElement('a');
+    link.href = purchase.pdfUrl;
+    link.download = `${purchase.templateName.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const downloadAsDocx = () => {
-    if (!purchase?.letterContent) return;
+  const downloadDocx = () => {
+    if (!purchase?.docxUrl) return;
     
-    // Create a simple text download
-    // In production, you'd generate a proper DOCX
-    const blob = new Blob([purchase.letterContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${purchase.templateName.replace(/\s+/g, '-').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Open the signed URL in a new tab to download
+    const link = document.createElement('a');
+    link.href = purchase.docxUrl;
+    link.download = `${purchase.templateName.replace(/\s+/g, '-').toLowerCase()}.docx`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -153,7 +147,8 @@ const PurchaseSuccessPage = () => {
                 <Button 
                   className="w-full" 
                   variant="accent"
-                  onClick={downloadAsPdf}
+                  onClick={downloadPdf}
+                  disabled={!purchase.pdfUrl}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Download PDF
@@ -163,7 +158,8 @@ const PurchaseSuccessPage = () => {
                   <Button 
                     className="w-full" 
                     variant="outline"
-                    onClick={downloadAsDocx}
+                    onClick={downloadDocx}
+                    disabled={!purchase.docxUrl}
                   >
                     <FileEdit className="h-4 w-4 mr-2" />
                     Download Editable Document

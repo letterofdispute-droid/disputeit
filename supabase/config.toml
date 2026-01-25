@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.verify-letter-purchase]
 verify_jwt = false
+
+[functions.generate-letter-documents]
+verify_jwt = false
