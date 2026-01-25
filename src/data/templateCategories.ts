@@ -114,8 +114,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Neighbor & HOA Disputes',
     description: 'Address community issues, fee disputes, or neighbor conflicts.',
     icon: Building2,
-    templateCount: 3,
+    templateCount: 50,
     color: 'hsl(var(--chart-2))',
+    popular: true,
   },
   {
     id: 'contractors',
