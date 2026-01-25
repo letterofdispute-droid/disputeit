@@ -1,6 +1,6 @@
 import { 
   Receipt, Home, Package, Plane, Wifi, CreditCard, Shield, Car, 
-  Stethoscope, Briefcase, ShoppingCart, Building2
+  Stethoscope, Briefcase, ShoppingCart, Building2, Hammer
 } from 'lucide-react';
 
 export interface TemplateCategory {
@@ -113,6 +113,15 @@ export const templateCategories: TemplateCategory[] = [
     icon: Building2,
     templateCount: 3,
     color: 'hsl(var(--chart-2))',
+  },
+  {
+    id: 'contractors',
+    name: 'Contractors & Home Improvement',
+    description: 'Dispute poor workmanship, project abandonment, cost overruns, or service issues.',
+    icon: Hammer,
+    templateCount: 7,
+    color: 'hsl(var(--chart-3))',
+    popular: true,
   },
 ];
 
