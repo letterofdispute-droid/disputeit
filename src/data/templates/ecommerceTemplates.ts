@@ -1,4 +1,9 @@
 import { LetterTemplate } from '../letterTemplates';
+import { marketplaceTemplates } from './ecommerce/marketplaceTemplates';
+import { subscriptionTemplates } from './ecommerce/subscriptionTemplates';
+import { privacyDataTemplates } from './ecommerce/privacyDataTemplates';
+import { deliveryShippingTemplates } from './ecommerce/deliveryShippingTemplates';
+import { paymentRefundTemplates } from './ecommerce/paymentRefundTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -13,7 +18,8 @@ const standardJurisdictions = [
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 
-export const ecommerceTemplates: LetterTemplate[] = [
+// Core e-commerce templates
+const coreEcommerceTemplates: LetterTemplate[] = [
   {
     id: 'marketplace-seller-complaint', slug: 'marketplace-seller-complaint', category: 'E-commerce', title: 'Marketplace Seller Complaint Letter',
     shortDescription: 'Complain about a seller on an online marketplace.',
@@ -22,28 +28,20 @@ export const ecommerceTemplates: LetterTemplate[] = [
     tones: ['neutral', 'firm', 'final'],
     fields: [
       { id: 'marketplaceName', label: 'Marketplace Name', type: 'select', required: true, options: ['Amazon', 'eBay', 'Etsy', 'Walmart Marketplace', 'AliExpress', 'Wish', 'Other'] },
-      { id: 'marketplaceOther', label: 'Other Marketplace Name', type: 'text', required: false, placeholder: 'If Other, specify marketplace name' },
       { id: 'sellerName', label: 'Seller Name/Store Name', type: 'text', required: true, placeholder: 'Name of the seller or store' },
-      { id: 'sellerId', label: 'Seller ID (if known)', type: 'text', required: false, placeholder: 'e.g., seller username or ID' },
       { id: 'orderNumber', label: 'Order Number', type: 'text', required: true, placeholder: 'Enter order reference' },
       { id: 'orderDate', label: 'Order Date', type: 'date', required: true },
-      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', required: false, placeholder: 'Delivery tracking number if provided' },
-      { id: 'deliveryStatus', label: 'Delivery Status', type: 'select', required: true, options: ['Not shipped', 'In transit', 'Delivered', 'Lost in transit', 'Returned to sender'] },
       { id: 'productName', label: 'Product Name', type: 'text', required: true, placeholder: 'Name of the product ordered' },
-      { id: 'productSku', label: 'Product SKU/ID', type: 'text', required: false, placeholder: 'Product SKU or listing ID' },
-      { id: 'productCondition', label: 'Condition Ordered', type: 'select', required: true, options: ['New', 'Used - Like New', 'Used - Good', 'Used - Acceptable', 'Refurbished'] },
       { id: 'complaintType', label: 'Complaint Type', type: 'select', required: true, options: ['Item not received', 'Item not as described', 'Counterfeit/fake item', 'Damaged item', 'Wrong item sent', 'Seller not responding', 'Refund not processed'] },
       { id: 'complaintDetails', label: 'Complaint Details', type: 'textarea', required: true, placeholder: 'Describe the problem in detail' },
       { id: 'amountPaid', label: 'Amount Paid', type: 'text', required: true, placeholder: 'e.g., £50.00' },
-      { id: 'paymentMethod', label: 'Payment Method', type: 'select', required: true, options: ['Credit Card', 'Debit Card', 'PayPal', 'Marketplace Gift Card', 'Bank Transfer', 'Other'] },
-      { id: 'previousContact', label: 'Previous Contact with Seller', type: 'textarea', required: false, placeholder: 'Dates and summary of previous contact attempts' },
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to file a formal complaint about a seller on {marketplaceName} marketplace.', placeholders: ['marketplaceName'] },
-      { id: 'facts', name: 'Details', template: 'Order number: {orderNumber}, placed on {orderDate}. Seller: {sellerName} (ID: {sellerId}). Product: {productName} (SKU: {productSku}), condition: {productCondition}. Tracking: {trackingNumber}. Delivery status: {deliveryStatus}. Amount paid: {amountPaid} via {paymentMethod}. Issue type: {complaintType}. Details: {complaintDetails}. Previous contact: {previousContact}', placeholders: ['orderNumber', 'orderDate', 'sellerName', 'sellerId', 'productName', 'productSku', 'productCondition', 'trackingNumber', 'deliveryStatus', 'amountPaid', 'paymentMethod', 'complaintType', 'complaintDetails', 'previousContact'] },
-      { id: 'request', name: 'Request', template: 'I request a full refund of {amountPaid} and appropriate action against this seller under your buyer protection policy.', placeholders: ['amountPaid'] },
-      { id: 'deadline', name: 'Deadline', template: 'Please resolve this within 14 days in accordance with your buyer protection policy.', placeholders: [] },
-      { id: 'closing', name: 'Closing', template: 'I expect this seller to be held accountable and removed from your platform if violations are confirmed.', placeholders: [] },
+      { id: 'facts', name: 'Details', template: 'Order number: {orderNumber}, placed on {orderDate}. Seller: {sellerName}. Product: {productName}. Amount paid: {amountPaid}. Issue type: {complaintType}. Details: {complaintDetails}', placeholders: ['orderNumber', 'orderDate', 'sellerName', 'productName', 'amountPaid', 'complaintType', 'complaintDetails'] },
+      { id: 'request', name: 'Request', template: 'I request a full refund of {amountPaid} and appropriate action against this seller.', placeholders: ['amountPaid'] },
+      { id: 'deadline', name: 'Deadline', template: 'Please resolve this within 14 days.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'I expect this seller to be held accountable under your buyer protection policy.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, pricing: standardPricing,
   },
@@ -55,56 +53,27 @@ export const ecommerceTemplates: LetterTemplate[] = [
     tones: ['neutral', 'firm', 'final'],
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, placeholder: 'Enter company name' },
-      { id: 'companyAddressLine1', label: 'Company Address Line 1', type: 'text', required: false, placeholder: 'Street address' },
-      { id: 'companyCity', label: 'Company City', type: 'text', required: false, placeholder: 'City' },
-      { id: 'companyCountry', label: 'Company Country', type: 'text', required: false, placeholder: 'Country' },
       { id: 'requestType', label: 'Type of Request', type: 'select', required: true, options: ['Access (copy of my data)', 'Deletion (right to be forgotten)', 'Both access and deletion', 'Correction of inaccurate data', 'Data portability', 'Opt-out of sale/sharing'] },
       { id: 'regulation', label: 'Applicable Regulation', type: 'select', required: true, options: ['GDPR (EU/UK)', 'CCPA/CPRA (California)', 'Other state privacy law', 'Not sure'] },
       { id: 'accountEmail', label: 'Account Email', type: 'text', required: true, placeholder: 'Email associated with your account' },
-      { id: 'accountUsername', label: 'Account Username (if different)', type: 'text', required: false, placeholder: 'Your username on the platform' },
-      { id: 'customerId', label: 'Customer ID (if known)', type: 'text', required: false, placeholder: 'Your customer or member ID' },
-      { id: 'phoneNumber', label: 'Phone Number on Account', type: 'text', required: false, placeholder: 'Phone number linked to account' },
-      { id: 'additionalInfo', label: 'Additional Identifying Information', type: 'textarea', required: false, placeholder: 'Other info to help locate your data (e.g., previous addresses, order numbers)' },
-      { id: 'dataCategories', label: 'Specific Data Categories (optional)', type: 'textarea', required: false, placeholder: 'e.g., purchase history, browsing data, marketing preferences' },
     ],
     sections: [
       { id: 'introduction', name: 'Introduction', template: 'I am writing to exercise my data protection rights under {regulation}.', placeholders: ['regulation'] },
-      { id: 'facts', name: 'Details', template: 'I am making a {requestType} request regarding data associated with: Email: {accountEmail}, Username: {accountUsername}, Customer ID: {customerId}, Phone: {phoneNumber}. Additional identifying information: {additionalInfo}. Specific data categories of interest: {dataCategories}', placeholders: ['requestType', 'accountEmail', 'accountUsername', 'customerId', 'phoneNumber', 'additionalInfo', 'dataCategories'] },
-      { id: 'request', name: 'Request', template: 'Please provide/delete/correct all personal data you hold about me as specified in this {requestType} request.', placeholders: ['requestType'] },
-      { id: 'deadline', name: 'Deadline', template: 'Under {regulation}, you must respond within 30 days (GDPR) or 45 days (CCPA/CPRA). Failure to comply may result in a complaint to the relevant supervisory authority.', placeholders: ['regulation'] },
+      { id: 'facts', name: 'Details', template: 'I am making a {requestType} request regarding data associated with email: {accountEmail}', placeholders: ['requestType', 'accountEmail'] },
+      { id: 'request', name: 'Request', template: 'Please provide/delete/correct all personal data you hold about me as specified.', placeholders: [] },
+      { id: 'deadline', name: 'Deadline', template: 'Under {regulation}, you must respond within the statutory timeframe.', placeholders: ['regulation'] },
       { id: 'closing', name: 'Closing', template: 'Please confirm completion of this request in writing to {accountEmail}.', placeholders: ['accountEmail'] },
     ],
     jurisdictions: standardJurisdictions, pricing: standardPricing,
   },
-  {
-    id: 'dropship-quality-complaint', slug: 'dropship-quality-complaint', category: 'E-commerce', title: 'Dropshipping Quality Complaint Letter',
-    shortDescription: 'Complain about poor quality items from dropshipping retailers.',
-    longDescription: 'Use this template to complain about items received from dropshipping or direct-from-manufacturer retailers.',
-    seoTitle: 'Dropshipping Quality Complaint Letter | Free Template', seoDescription: 'Complain about dropshipping quality issues.',
-    tones: ['neutral', 'firm', 'final'],
-    fields: [
-      { id: 'retailerName', label: 'Retailer/Website Name', type: 'text', required: true, placeholder: 'Name of the online store' },
-      { id: 'retailerWebsite', label: 'Retailer Website URL', type: 'text', required: true, placeholder: 'e.g., www.example.com' },
-      { id: 'orderNumber', label: 'Order Number', type: 'text', required: true, placeholder: 'Your order reference' },
-      { id: 'orderDate', label: 'Order Date', type: 'date', required: true },
-      { id: 'deliveryDate', label: 'Delivery Date', type: 'date', required: false },
-      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', required: false, placeholder: 'Shipping tracking number' },
-      { id: 'originCountry', label: 'Shipped From', type: 'text', required: false, placeholder: 'e.g., China, Hong Kong' },
-      { id: 'productName', label: 'Product Name', type: 'text', required: true, placeholder: 'Name of the product' },
-      { id: 'productAsAdvertised', label: 'Product as Advertised', type: 'textarea', required: true, placeholder: 'What was shown/described on the website' },
-      { id: 'productAsReceived', label: 'Product as Received', type: 'textarea', required: true, placeholder: 'What you actually received' },
-      { id: 'qualityIssues', label: 'Quality Issues', type: 'select', required: true, options: ['Poor materials', 'Wrong size/dimensions', 'Missing parts', 'Broken/damaged', 'Counterfeit', 'Completely different item', 'Multiple issues'] },
-      { id: 'amountPaid', label: 'Amount Paid', type: 'text', required: true, placeholder: 'e.g., £25.00' },
-      { id: 'paymentMethod', label: 'Payment Method', type: 'select', required: true, options: ['Credit Card', 'Debit Card', 'PayPal', 'Apple Pay', 'Google Pay', 'Klarna/Afterpay', 'Other'] },
-      { id: 'refundAttempts', label: 'Refund Attempts Made', type: 'textarea', required: false, placeholder: 'Describe any previous refund requests' },
-    ],
-    sections: [
-      { id: 'introduction', name: 'Introduction', template: 'I am writing to formally complain about a product purchased from {retailerName} ({retailerWebsite}) that does not match its description.', placeholders: ['retailerName', 'retailerWebsite'] },
-      { id: 'facts', name: 'Details', template: 'Order: {orderNumber}, dated {orderDate}. Delivered: {deliveryDate}. Tracking: {trackingNumber}. Shipped from: {originCountry}. Product: {productName}. As advertised: {productAsAdvertised}. As received: {productAsReceived}. Quality issues: {qualityIssues}. Amount paid: {amountPaid} via {paymentMethod}. Previous refund attempts: {refundAttempts}', placeholders: ['orderNumber', 'orderDate', 'deliveryDate', 'trackingNumber', 'originCountry', 'productName', 'productAsAdvertised', 'productAsReceived', 'qualityIssues', 'amountPaid', 'paymentMethod', 'refundAttempts'] },
-      { id: 'request', name: 'Request', template: 'I request a full refund of {amountPaid}. I should not be required to return the item at my own expense given it was misrepresented.', placeholders: ['amountPaid'] },
-      { id: 'deadline', name: 'Deadline', template: 'Please process the refund within 14 days. If unresolved, I will pursue a chargeback through {paymentMethod} and report this to trading standards.', placeholders: ['paymentMethod'] },
-      { id: 'closing', name: 'Closing', template: 'I have documented the condition of the item with photographs which I can provide upon request.', placeholders: [] },
-    ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
-  },
+];
+
+// Combine all e-commerce templates
+export const ecommerceTemplates: LetterTemplate[] = [
+  ...coreEcommerceTemplates,
+  ...marketplaceTemplates,
+  ...subscriptionTemplates,
+  ...privacyDataTemplates,
+  ...deliveryShippingTemplates,
+  ...paymentRefundTemplates,
 ];

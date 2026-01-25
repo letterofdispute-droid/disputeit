@@ -105,8 +105,9 @@ export const templateCategories: TemplateCategory[] = [
     name: 'E-commerce & Online Services',
     description: 'Report seller issues, account problems, or data privacy requests.',
     icon: ShoppingCart,
-    templateCount: 5,
+    templateCount: 50,
     color: 'hsl(var(--chart-1))',
+    popular: true,
   },
   {
     id: 'hoa',
