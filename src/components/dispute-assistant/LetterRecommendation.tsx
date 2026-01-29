@@ -48,13 +48,13 @@ const LetterRecommendation = ({ recommendation, onClose }: LetterRecommendationP
           
           <div className="flex gap-2">
             <Button size="sm" variant="accent" asChild onClick={onClose}>
-              <Link to={`/category/${recommendation.category}`}>
+              <Link to={`/templates/${recommendation.category}`}>
                 View Letter Template
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Link>
             </Button>
             <Button size="sm" variant="outline" asChild onClick={onClose}>
-              <Link to={`/category/${recommendation.category}`}>
+              <Link to={`/templates/${recommendation.category}`}>
                 Browse {category?.name || 'Category'}
               </Link>
             </Button>

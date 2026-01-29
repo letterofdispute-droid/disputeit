@@ -4,17 +4,35 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LetterTemplate } from '@/data/letterTemplates';
 import { SubcategoryInfo } from '@/data/subcategoryMappings';
+import { getCategoryIdFromName } from '@/data/allTemplates';
+import { inferSubcategory } from '@/data/subcategoryMappings';
 
 interface TemplateCardProps {
   template: LetterTemplate;
   subcategoryInfo?: SubcategoryInfo | null;
   showSubcategory?: boolean;
+  // Optional overrides for URL construction (used when already on category/subcategory pages)
+  categoryId?: string;
+  subcategorySlug?: string;
 }
 
-const TemplateCard = ({ template, subcategoryInfo, showSubcategory = true }: TemplateCardProps) => {
+const TemplateCard = ({ 
+  template, 
+  subcategoryInfo, 
+  showSubcategory = true,
+  categoryId,
+  subcategorySlug 
+}: TemplateCardProps) => {
+  // Build the hierarchical URL
+  const buildTemplateUrl = () => {
+    const catId = categoryId || getCategoryIdFromName(template.category);
+    const subSlug = subcategorySlug || subcategoryInfo?.slug || inferSubcategory(template.id, template.category)?.slug || 'general';
+    return `/templates/${catId}/${subSlug}/${template.slug}`;
+  };
+
   return (
     <Link
-      to={`/complaint-letter/${template.slug}`}
+      to={buildTemplateUrl()}
       className="group block h-full"
     >
       <Card className="h-full p-5 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1 flex flex-col">

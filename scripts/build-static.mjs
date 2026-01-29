@@ -6,8 +6,10 @@
  * while users get the React SPA experience.
  * 
  * Output:
- * - /dist/complaint-letter/:slug/index.html (100+ templates)
- * - /dist/category/:id/index.html (13 categories)
+ * - /dist/templates/index.html (all templates landing)
+ * - /dist/templates/:categoryId/index.html (13 categories)
+ * - /dist/templates/:categoryId/:subcategorySlug/index.html (subcategories)
+ * - /dist/templates/:categoryId/:subcategorySlug/:templateSlug/index.html (400+ templates)
  * - /dist/articles/:category/:slug/index.html (blog posts)
  * - /dist/sitemaps/sitemap-index.xml
  * - /dist/sitemaps/templates.xml
@@ -57,6 +59,128 @@ const blogCategories = [
   { slug: 'legal-guides', name: 'Legal Guides' },
 ];
 
+// Subcategory patterns for inferring subcategory from template ID
+const subcategoryPatterns = {
+  'Contractors': [
+    { pattern: /^general-|project-delay|cost-overrun|abandoned-|unfinished-|permit-|lien-|contract-dispute/, subcategory: { name: 'General Contractor', slug: 'general' } },
+    { pattern: /plumb|leak|pipe|water-heater|drain|sewage|toilet|faucet/, subcategory: { name: 'Plumbing', slug: 'plumbing' } },
+    { pattern: /electri|wiring|outlet|panel|circuit|breaker|electrical/, subcategory: { name: 'Electrical', slug: 'electrical' } },
+    { pattern: /roof|gutter|shingle|flashing|skylight/, subcategory: { name: 'Roofing', slug: 'roofing' } },
+    { pattern: /hvac|heating|cooling|air-conditioning|furnace|ac-|heat-pump|ductwork|thermostat/, subcategory: { name: 'HVAC', slug: 'hvac' } },
+    { pattern: /landscap|lawn|irrigation|sprinkler|tree|garden|hardscape|patio|deck/, subcategory: { name: 'Landscaping', slug: 'landscaping' } },
+    { pattern: /floor|paint|carpet|tile|hardwood|laminate|wallpaper|stain/, subcategory: { name: 'Flooring & Painting', slug: 'flooring-painting' } },
+    { pattern: /kitchen|bath|cabinet|countertop|remodel/, subcategory: { name: 'Kitchen & Bath', slug: 'kitchen-bath' } },
+    { pattern: /window|door|siding|glass/, subcategory: { name: 'Windows & Doors', slug: 'windows-doors' } },
+    { pattern: /pool|fence|garage|foundation|basement|concrete|masonry|solar|home-security|pest|mold|asbestos|demolition/, subcategory: { name: 'Specialty Services', slug: 'specialty' } },
+  ],
+  'Healthcare': [
+    { pattern: /insurance-|claim-denial|prior-auth|pre-auth|coverage/, subcategory: { name: 'Insurance Claims', slug: 'insurance-claims' } },
+    { pattern: /billing-|overcharge|invoice|charge-dispute|itemized/, subcategory: { name: 'Medical Billing', slug: 'billing' } },
+    { pattern: /debt-|collection|collector/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
+    { pattern: /hospital|provider|doctor|physician|nurse|staff|facility/, subcategory: { name: 'Provider Complaints', slug: 'provider' } },
+    { pattern: /prescription|pharmacy|medication|rx|drug/, subcategory: { name: 'Pharmacy Issues', slug: 'pharmacy' } },
+    { pattern: /hipaa|privacy|records|medical-record/, subcategory: { name: 'Privacy & Records', slug: 'privacy-records' } },
+  ],
+  'Insurance': [
+    { pattern: /auto-|car-|vehicle-|accident-claim|collision/, subcategory: { name: 'Auto Insurance', slug: 'auto' } },
+    { pattern: /home-|property-|homeowner|damage-claim|storm|fire|water-damage|theft-claim/, subcategory: { name: 'Home Insurance', slug: 'home' } },
+    { pattern: /health-|medical-insurance|claim-denial|pre-existing|out-of-network/, subcategory: { name: 'Health Insurance', slug: 'health' } },
+    { pattern: /life-|beneficiary|death-benefit/, subcategory: { name: 'Life Insurance', slug: 'life' } },
+    { pattern: /travel-|trip-|flight-insurance|luggage-insurance/, subcategory: { name: 'Travel Insurance', slug: 'travel' } },
+    { pattern: /pet-|veterinary/, subcategory: { name: 'Pet Insurance', slug: 'pet' } },
+    { pattern: /business-|liability|professional/, subcategory: { name: 'Business Insurance', slug: 'business' } },
+  ],
+  'Housing': [
+    { pattern: /repair|maintenance|fix|broken|mold|pest|heating|plumbing-issue/, subcategory: { name: 'Repair & Maintenance', slug: 'repairs' } },
+    { pattern: /deposit|security|move-out|deduction/, subcategory: { name: 'Deposits & Move-Out', slug: 'deposits' } },
+    { pattern: /rent-|lease|eviction|tenancy|notice-to-quit/, subcategory: { name: 'Tenancy Disputes', slug: 'tenancy' } },
+    { pattern: /neighbor|noise|nuisance/, subcategory: { name: 'Neighbor Issues', slug: 'neighbor' } },
+    { pattern: /letting-agent|property-manager|estate-agent|management-company/, subcategory: { name: 'Letting Agents', slug: 'letting-agents' } },
+    { pattern: /safety|fire-safety|gas-safety|electrical-safety|habitability/, subcategory: { name: 'Safety & Compliance', slug: 'safety' } },
+  ],
+  'Travel': [
+    { pattern: /flight|airline|delay|cancellation|eu261|baggage|luggage|boarding|overbooking/, subcategory: { name: 'Flights', slug: 'flights' } },
+    { pattern: /hotel|accommodation|booking|reservation|room/, subcategory: { name: 'Hotels', slug: 'hotels' } },
+    { pattern: /cruise|ship|cabin|onboard/, subcategory: { name: 'Cruises', slug: 'cruises' } },
+    { pattern: /car-rental|rental-car|hire-car|vehicle-rental/, subcategory: { name: 'Car Rentals', slug: 'car-rentals' } },
+    { pattern: /tour|package|travel-agent|vacation|holiday/, subcategory: { name: 'Tours & Packages', slug: 'tours' } },
+    { pattern: /rail|train|bus|coach/, subcategory: { name: 'Rail & Bus', slug: 'rail-bus' } },
+  ],
+  'Employment': [
+    { pattern: /wage|pay|salary|overtime|commission|bonus|paycheck/, subcategory: { name: 'Wages & Pay', slug: 'wages' } },
+    { pattern: /terminat|fired|dismissal|wrongful|severance/, subcategory: { name: 'Termination', slug: 'termination' } },
+    { pattern: /discriminat|harassment|hostile|retaliation|whistleblower/, subcategory: { name: 'Discrimination', slug: 'discrimination' } },
+    { pattern: /benefit|401k|health-insurance|pto|vacation|leave/, subcategory: { name: 'Benefits', slug: 'benefits' } },
+    { pattern: /workplace|safety|osha|condition|ergonomic/, subcategory: { name: 'Workplace Conditions', slug: 'workplace' } },
+  ],
+  'Utilities & Telecom': [
+    { pattern: /energy|gas|electric|power|utility-bill/, subcategory: { name: 'Energy', slug: 'energy' } },
+    { pattern: /water|sewage|sewer/, subcategory: { name: 'Water', slug: 'water' } },
+    { pattern: /internet|broadband|wifi|isp|fiber/, subcategory: { name: 'Internet', slug: 'internet' } },
+    { pattern: /phone|mobile|cell|carrier|telecom|sms|call/, subcategory: { name: 'Phone & Mobile', slug: 'phone' } },
+    { pattern: /cable|tv|streaming|satellite/, subcategory: { name: 'TV & Cable', slug: 'tv-cable' } },
+  ],
+  'Financial': [
+    { pattern: /bank|account|checking|savings|atm|branch/, subcategory: { name: 'Banking', slug: 'banking' } },
+    { pattern: /credit-card|charge|statement|interest|apr/, subcategory: { name: 'Credit Cards', slug: 'credit-cards' } },
+    { pattern: /loan|mortgage|lending|interest-rate/, subcategory: { name: 'Loans', slug: 'loans' } },
+    { pattern: /credit-report|credit-score|bureau|equifax|experian|transunion/, subcategory: { name: 'Credit Reports', slug: 'credit-reports' } },
+    { pattern: /debt|collection|collector/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
+    { pattern: /investment|broker|advisor|retirement|401k/, subcategory: { name: 'Investments', slug: 'investments' } },
+    { pattern: /scam|fraud|unauthorized|identity/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
+  ],
+  'Refunds & Purchases': [
+    { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },
+    { pattern: /warranty|guarantee|defect/, subcategory: { name: 'Warranty', slug: 'warranty' } },
+    { pattern: /subscription|recurring|cancel|auto-renew/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
+    { pattern: /delivery|shipping|late|missing|lost-package/, subcategory: { name: 'Delivery Issues', slug: 'delivery' } },
+    { pattern: /service|poor-service|unsatisfactory/, subcategory: { name: 'Service Complaints', slug: 'service' } },
+  ],
+  'Damaged Goods': [
+    { pattern: /delivery|shipping|transit|carrier/, subcategory: { name: 'Delivery Damage', slug: 'delivery-damage' } },
+    { pattern: /defect|faulty|malfunction|broken/, subcategory: { name: 'Defective Products', slug: 'defective' } },
+    { pattern: /misrepresent|description|advertised|fake|counterfeit/, subcategory: { name: 'Misrepresentation', slug: 'misrepresentation' } },
+    { pattern: /warranty|repair/, subcategory: { name: 'Warranty & Repair', slug: 'warranty-repair' } },
+  ],
+  'Vehicle': [
+    { pattern: /dealer|dealership|sales|purchase/, subcategory: { name: 'Dealer Disputes', slug: 'dealer' } },
+    { pattern: /repair|mechanic|garage|service-center/, subcategory: { name: 'Repair & Service', slug: 'repair' } },
+    { pattern: /warranty|lemon|defect/, subcategory: { name: 'Warranty & Lemon Law', slug: 'warranty-lemon' } },
+    { pattern: /finance|loan|lease|payment/, subcategory: { name: 'Finance & Lease', slug: 'finance' } },
+    { pattern: /parking|ticket|tow|traffic/, subcategory: { name: 'Parking & Traffic', slug: 'parking' } },
+  ],
+  'E-commerce': [
+    { pattern: /refund|return|chargeback/, subcategory: { name: 'Refunds & Returns', slug: 'refunds' } },
+    { pattern: /delivery|shipping|late|missing/, subcategory: { name: 'Delivery Issues', slug: 'delivery' } },
+    { pattern: /seller|marketplace|amazon|ebay/, subcategory: { name: 'Marketplace Disputes', slug: 'marketplace' } },
+    { pattern: /subscription|recurring|trial/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
+    { pattern: /privacy|data|account|gdpr|ccpa/, subcategory: { name: 'Privacy & Data', slug: 'privacy' } },
+  ],
+  'HOA & Property': [
+    { pattern: /fee|assessment|dues|charge/, subcategory: { name: 'Fees & Assessments', slug: 'fees' } },
+    { pattern: /violation|fine|rule|architectural|enforcement/, subcategory: { name: 'Violations & Fines', slug: 'violations' } },
+    { pattern: /maintenance|common-area|amenity|repair/, subcategory: { name: 'Maintenance', slug: 'maintenance' } },
+    { pattern: /neighbor|dispute|noise|parking/, subcategory: { name: 'Neighbor Disputes', slug: 'neighbor' } },
+    { pattern: /governance|board|meeting|election/, subcategory: { name: 'Governance', slug: 'governance' } },
+  ],
+};
+
+// Infer subcategory from template ID
+function inferSubcategory(templateId, category) {
+  const patterns = subcategoryPatterns[category];
+  if (!patterns) return { name: 'General', slug: 'general' };
+  
+  const idLower = templateId.toLowerCase();
+  
+  for (const { pattern, subcategory } of patterns) {
+    if (pattern.test(idLower)) {
+      return subcategory;
+    }
+  }
+  
+  return { name: 'General', slug: 'general' };
+}
+
 // We'll dynamically import all template files
 async function loadAllTemplates() {
   const templateFiles = [
@@ -90,7 +214,7 @@ async function loadAllTemplates() {
     const templateMatches = content.matchAll(/{\s*id:\s*['"]([^'"]+)['"],\s*slug:\s*['"]([^'"]+)['"],\s*category:\s*['"]([^'"]+)['"],\s*title:\s*['"]([^'"]+)['"],[\s\S]*?shortDescription:\s*['"]([^'"]+)['"],[\s\S]*?longDescription:\s*['"]([^'"]+)['"],[\s\S]*?seoTitle:\s*['"]([^'"]+)['"],\s*seoDescription:\s*['"]([^'"]+)['"]/g);
     
     for (const match of templateMatches) {
-      templates.push({
+      const template = {
         id: match[1],
         slug: match[2],
         category: match[3],
@@ -99,7 +223,14 @@ async function loadAllTemplates() {
         longDescription: match[6],
         seoTitle: match[7],
         seoDescription: match[8],
-      });
+      };
+      
+      // Infer subcategory
+      const subcategoryInfo = inferSubcategory(template.id, template.category);
+      template.subcategory = subcategoryInfo.name;
+      template.subcategorySlug = subcategoryInfo.slug;
+      
+      templates.push(template);
     }
   }
   
@@ -171,15 +302,18 @@ function getCategoryIdFromName(categoryName) {
 
 function generateTemplateHTML(template) {
   const categoryId = getCategoryIdFromName(template.category);
-  const canonicalUrl = `${SITE_URL}/complaint-letter/${template.slug}`;
+  const subcategorySlug = template.subcategorySlug || 'general';
+  const canonicalUrl = `${SITE_URL}/templates/${categoryId}/${subcategorySlug}/${template.slug}`;
   
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": template.category, "item": `${SITE_URL}/category/${categoryId}` },
-      { "@type": "ListItem", "position": 3, "name": template.title, "item": canonicalUrl }
+      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
+      { "@type": "ListItem", "position": 3, "name": template.category, "item": `${SITE_URL}/templates/${categoryId}` },
+      { "@type": "ListItem", "position": 4, "name": template.subcategory, "item": `${SITE_URL}/templates/${categoryId}/${subcategorySlug}` },
+      { "@type": "ListItem", "position": 5, "name": template.title, "item": canonicalUrl }
     ]
   };
   
@@ -193,6 +327,19 @@ function generateTemplateHTML(template) {
     "datePublished": BUILD_DATE,
     "dateModified": BUILD_DATE,
     "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
+  };
+  
+  const howToSchema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": `How to Write a ${template.title}`,
+    "description": template.seoDescription,
+    "step": [
+      { "@type": "HowToStep", "position": 1, "name": "Gather Information", "text": "Collect relevant dates, reference numbers, and documentation for your dispute." },
+      { "@type": "HowToStep", "position": 2, "name": "Fill Out the Template", "text": "Enter your specific details into our guided form." },
+      { "@type": "HowToStep", "position": 3, "name": "Choose Your Tone", "text": "Select the appropriate tone (neutral, firm, or final notice) for your situation." },
+      { "@type": "HowToStep", "position": 4, "name": "Download Your Letter", "text": "Get your professionally formatted letter in PDF or DOCX format." }
+    ]
   };
   
   return `<!DOCTYPE html>
@@ -219,6 +366,7 @@ function generateTemplateHTML(template) {
   <!-- Structured Data -->
   <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
   <script type="application/ld+json">${JSON.stringify(articleSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(howToSchema)}</script>
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
@@ -232,7 +380,7 @@ function generateTemplateHTML(template) {
 </head>
 <body>
   <nav class="breadcrumb">
-    <a href="/">Home</a> → <a href="/category/${categoryId}">${escapeHtml(template.category)}</a> → ${escapeHtml(template.title)}
+    <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${categoryId}">${escapeHtml(template.category)}</a> → <a href="/templates/${categoryId}/${subcategorySlug}">${escapeHtml(template.subcategory)}</a> → ${escapeHtml(template.title)}
   </nav>
   
   <main>
@@ -252,22 +400,37 @@ function generateTemplateHTML(template) {
       </ul>
     </div>
     
-    <a href="/complaint-letter/${template.slug}" class="cta">Generate Your Letter Now</a>
+    <a href="/templates/${categoryId}/${subcategorySlug}/${template.slug}" class="cta">Generate Your Letter Now</a>
   </main>
 </body>
 </html>`;
 }
 
 function generateCategoryHTML(category, templates) {
-  const canonicalUrl = `${SITE_URL}/category/${category.id}`;
+  const canonicalUrl = `${SITE_URL}/templates/${category.id}`;
   const categoryTemplates = templates.filter(t => getCategoryIdFromName(t.category) === category.id);
+  
+  // Group by subcategory
+  const subcategoryGroups = {};
+  categoryTemplates.forEach(t => {
+    const subSlug = t.subcategorySlug || 'general';
+    if (!subcategoryGroups[subSlug]) {
+      subcategoryGroups[subSlug] = {
+        name: t.subcategory || 'General',
+        slug: subSlug,
+        templates: []
+      };
+    }
+    subcategoryGroups[subSlug].templates.push(t);
+  });
   
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": category.name, "item": canonicalUrl }
+      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
+      { "@type": "ListItem", "position": 3, "name": category.name, "item": canonicalUrl }
     ]
   };
   
@@ -281,15 +444,24 @@ function generateCategoryHTML(category, templates) {
       "@type": "ListItem",
       "position": i + 1,
       "name": t.title,
-      "url": `${SITE_URL}/complaint-letter/${t.slug}`
+      "url": `${SITE_URL}/templates/${category.id}/${t.subcategorySlug || 'general'}/${t.slug}`
     }))
   };
   
-  const templateListHtml = categoryTemplates.map(t => `
-    <li>
-      <a href="/complaint-letter/${t.slug}">${escapeHtml(t.title)}</a>
-      <p>${escapeHtml(t.shortDescription)}</p>
-    </li>
+  // Generate subcategory sections
+  const subcategoryHtml = Object.values(subcategoryGroups).map(group => `
+    <div class="subcategory">
+      <h3><a href="/templates/${category.id}/${group.slug}">${escapeHtml(group.name)}</a> (${group.templates.length} templates)</h3>
+      <ul class="templates">
+        ${group.templates.slice(0, 5).map(t => `
+          <li>
+            <a href="/templates/${category.id}/${group.slug}/${t.slug}">${escapeHtml(t.title)}</a>
+            <p>${escapeHtml(t.shortDescription)}</p>
+          </li>
+        `).join('')}
+        ${group.templates.length > 5 ? `<li class="more"><a href="/templates/${category.id}/${group.slug}">View all ${group.templates.length} templates →</a></li>` : ''}
+      </ul>
+    </div>
   `).join('');
   
   return `<!DOCTYPE html>
@@ -318,6 +490,95 @@ function generateCategoryHTML(category, templates) {
   <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
   
   <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    h3 { margin-top: 2rem; margin-bottom: 1rem; }
+    h3 a { color: #1a1a1a; text-decoration: none; }
+    h3 a:hover { color: #2563eb; }
+    .description { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .templates { list-style: none; padding: 0; }
+    .templates li { padding: 1rem; margin-bottom: 0.5rem; background: #f9fafb; border-radius: 8px; }
+    .templates a { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .templates p { margin: 0.25rem 0 0; color: #666; font-size: 0.875rem; }
+    .more { font-style: italic; }
+    .subcategory { border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → <a href="/templates">Templates</a> → ${escapeHtml(category.name)}
+  </nav>
+  
+  <main>
+    <h1>${escapeHtml(category.name)} Letter Templates</h1>
+    <p class="description">${escapeHtml(category.description)}</p>
+    
+    <p><strong>${categoryTemplates.length} templates available</strong> across ${Object.keys(subcategoryGroups).length} subcategories.</p>
+    
+    ${subcategoryHtml}
+  </main>
+</body>
+</html>`;
+}
+
+function generateSubcategoryHTML(category, subcategory, templates) {
+  const canonicalUrl = `${SITE_URL}/templates/${category.id}/${subcategory.slug}`;
+  
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
+      { "@type": "ListItem", "position": 3, "name": category.name, "item": `${SITE_URL}/templates/${category.id}` },
+      { "@type": "ListItem", "position": 4, "name": subcategory.name, "item": canonicalUrl }
+    ]
+  };
+  
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": `${subcategory.name} Letter Templates`,
+    "description": `Professional ${subcategory.name.toLowerCase()} letter templates for ${category.name.toLowerCase()} disputes.`,
+    "numberOfItems": templates.length,
+    "itemListElement": templates.map((t, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": t.title,
+      "url": `${SITE_URL}/templates/${category.id}/${subcategory.slug}/${t.slug}`
+    }))
+  };
+  
+  const templateListHtml = templates.map(t => `
+    <li>
+      <a href="/templates/${category.id}/${subcategory.slug}/${t.slug}">${escapeHtml(t.title)}</a>
+      <p>${escapeHtml(t.shortDescription)}</p>
+    </li>
+  `).join('');
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(subcategory.name)} Letter Templates | ${escapeHtml(category.name)} | DisputeLetters</title>
+  <meta name="description" content="Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(subcategory.name)} Letter Templates">
+  <meta property="og:description" content="Professional ${subcategory.name.toLowerCase()} letter templates">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:site_name" content="DisputeLetters">
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
+  
+  <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
     h1 { font-size: 2rem; margin-bottom: 0.5rem; }
     .description { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
@@ -331,16 +592,103 @@ function generateCategoryHTML(category, templates) {
 </head>
 <body>
   <nav class="breadcrumb">
-    <a href="/">Home</a> → ${escapeHtml(category.name)}
+    <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${category.id}">${escapeHtml(category.name)}</a> → ${escapeHtml(subcategory.name)}
   </nav>
   
   <main>
-    <h1>${escapeHtml(category.name)} Letter Templates</h1>
-    <p class="description">${escapeHtml(category.description)}</p>
+    <h1>${escapeHtml(subcategory.name)} Letter Templates</h1>
+    <p class="description">Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates in our ${category.name.toLowerCase()} collection.</p>
     
-    <h2>${categoryTemplates.length} Available Templates</h2>
     <ul class="templates">
       ${templateListHtml}
+    </ul>
+  </main>
+</body>
+</html>`;
+}
+
+function generateAllTemplatesHTML(categories, templates) {
+  const canonicalUrl = `${SITE_URL}/templates`;
+  
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Templates", "item": canonicalUrl }
+    ]
+  };
+  
+  const collectionSchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Letter Template Library",
+    "description": `Browse ${templates.length}+ professional letter templates across ${categories.length} categories.`,
+    "numberOfItems": templates.length,
+    "hasPart": categories.map(cat => ({
+      "@type": "ItemList",
+      "name": cat.name,
+      "numberOfItems": templates.filter(t => getCategoryIdFromName(t.category) === cat.id).length,
+      "url": `${SITE_URL}/templates/${cat.id}`
+    }))
+  };
+  
+  const categoryListHtml = categories.map(cat => {
+    const count = templates.filter(t => getCategoryIdFromName(t.category) === cat.id).length;
+    return `
+      <li>
+        <a href="/templates/${cat.id}">${escapeHtml(cat.name)}</a>
+        <span class="count">${count} templates</span>
+        <p>${escapeHtml(cat.description)}</p>
+      </li>
+    `;
+  }).join('');
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Letter Templates - ${templates.length}+ Free Professional Complaint Letters | DisputeLetters</title>
+  <meta name="description" content="Browse our complete library of ${templates.length}+ professional letter templates across ${categories.length} categories. Generate legally-referenced complaint letters for any situation.">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Professional Letter Template Library">
+  <meta property="og:description" content="Browse ${templates.length}+ professional letter templates">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:site_name" content="DisputeLetters">
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(collectionSchema)}</script>
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .intro { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .categories { list-style: none; padding: 0; }
+    .categories li { padding: 1.5rem; margin-bottom: 1rem; background: #f9fafb; border-radius: 8px; }
+    .categories a { color: #2563eb; text-decoration: none; font-weight: 600; font-size: 1.25rem; }
+    .categories p { margin: 0.5rem 0 0; color: #666; }
+    .count { color: #666; font-size: 0.875rem; margin-left: 0.5rem; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → Templates
+  </nav>
+  
+  <main>
+    <h1>Professional Letter Template Library</h1>
+    <p class="intro">Browse our complete collection of ${templates.length}+ pre-validated letter templates. Every template includes proper legal references and controlled language for professional dispute resolution.</p>
+    
+    <h2>Browse by Category</h2>
+    <ul class="categories">
+      ${categoryListHtml}
     </ul>
   </main>
 </body>
@@ -465,13 +813,19 @@ function generateStaticSitemap() {
   <url>
     <loc>${SITE_URL}/</loc>
     <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/templates</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>${SITE_URL}/articles</loc>
     <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -495,15 +849,31 @@ function generateStaticSitemap() {
 </urlset>`;
 }
 
-function generateCategoriesSitemap() {
-  const urls = categories.map(cat => `  <url>
-    <loc>${SITE_URL}/category/${cat.id}</loc>
+function generateCategoriesSitemap(templates) {
+  // Category URLs
+  const categoryUrls = categories.map(cat => `  <url>
+    <loc>${SITE_URL}/templates/${cat.id}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`).join('\n');
   
-  // Add blog category pages
+  // Subcategory URLs - derive from templates
+  const subcategorySet = new Set();
+  templates.forEach(t => {
+    const catId = getCategoryIdFromName(t.category);
+    const subSlug = t.subcategorySlug || 'general';
+    subcategorySet.add(`${catId}/${subSlug}`);
+  });
+  
+  const subcategoryUrls = Array.from(subcategorySet).map(path => `  <url>
+    <loc>${SITE_URL}/templates/${path}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>`).join('\n');
+  
+  // Blog category URLs
   const blogCategoryUrls = blogCategories.map(cat => `  <url>
     <loc>${SITE_URL}/articles/${cat.slug}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
@@ -513,18 +883,23 @@ function generateCategoriesSitemap() {
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+${categoryUrls}
+${subcategoryUrls}
 ${blogCategoryUrls}
 </urlset>`;
 }
 
 function generateTemplatesSitemap(templates) {
-  const urls = templates.map(t => `  <url>
-    <loc>${SITE_URL}/complaint-letter/${t.slug}</loc>
+  const urls = templates.map(t => {
+    const catId = getCategoryIdFromName(t.category);
+    const subSlug = t.subcategorySlug || 'general';
+    return `  <url>
+    <loc>${SITE_URL}/templates/${catId}/${subSlug}/${t.slug}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>`).join('\n');
+  </url>`;
+  }).join('\n');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -571,27 +946,62 @@ async function build() {
   const sitemapsDir = path.join(distDir, 'sitemaps');
   fs.mkdirSync(sitemapsDir, { recursive: true });
   
-  // Generate template HTML files
-  console.log('📝 Generating template HTML files...');
-  for (const template of templates) {
-    const templateDir = path.join(distDir, 'complaint-letter', template.slug);
-    fs.mkdirSync(templateDir, { recursive: true });
-    
-    const html = generateTemplateHTML(template);
-    fs.writeFileSync(path.join(templateDir, 'index.html'), html);
-  }
-  console.log(`   ✅ Generated ${templates.length} template pages`);
+  // Generate /templates landing page
+  console.log('📝 Generating templates landing page...');
+  const templatesDir = path.join(distDir, 'templates');
+  fs.mkdirSync(templatesDir, { recursive: true });
+  fs.writeFileSync(path.join(templatesDir, 'index.html'), generateAllTemplatesHTML(categories, templates));
+  console.log('   ✅ Generated templates landing page');
   
   // Generate category HTML files
   console.log('📝 Generating category HTML files...');
   for (const category of categories) {
-    const categoryDir = path.join(distDir, 'category', category.id);
+    const categoryDir = path.join(distDir, 'templates', category.id);
     fs.mkdirSync(categoryDir, { recursive: true });
     
     const html = generateCategoryHTML(category, templates);
     fs.writeFileSync(path.join(categoryDir, 'index.html'), html);
   }
   console.log(`   ✅ Generated ${categories.length} category pages`);
+  
+  // Generate subcategory HTML files
+  console.log('📝 Generating subcategory HTML files...');
+  const subcategorySet = new Map();
+  templates.forEach(t => {
+    const catId = getCategoryIdFromName(t.category);
+    const subSlug = t.subcategorySlug || 'general';
+    const key = `${catId}/${subSlug}`;
+    if (!subcategorySet.has(key)) {
+      subcategorySet.set(key, {
+        category: categories.find(c => c.id === catId),
+        subcategory: { name: t.subcategory || 'General', slug: subSlug },
+        templates: []
+      });
+    }
+    subcategorySet.get(key).templates.push(t);
+  });
+  
+  for (const [key, data] of subcategorySet) {
+    const subcategoryDir = path.join(distDir, 'templates', key);
+    fs.mkdirSync(subcategoryDir, { recursive: true });
+    
+    const html = generateSubcategoryHTML(data.category, data.subcategory, data.templates);
+    fs.writeFileSync(path.join(subcategoryDir, 'index.html'), html);
+  }
+  console.log(`   ✅ Generated ${subcategorySet.size} subcategory pages`);
+  
+  // Generate template HTML files
+  console.log('📝 Generating template HTML files...');
+  for (const template of templates) {
+    const catId = getCategoryIdFromName(template.category);
+    const subSlug = template.subcategorySlug || 'general';
+    const templateDir = path.join(distDir, 'templates', catId, subSlug, template.slug);
+    fs.mkdirSync(templateDir, { recursive: true });
+    
+    const html = generateTemplateHTML(template);
+    fs.writeFileSync(path.join(templateDir, 'index.html'), html);
+  }
+  console.log(`   ✅ Generated ${templates.length} template pages`);
   
   // Generate blog post HTML files
   console.log('📝 Generating blog post HTML files...');
@@ -608,13 +1018,14 @@ async function build() {
   console.log('🗺️  Generating sitemaps...');
   fs.writeFileSync(path.join(sitemapsDir, 'sitemap-index.xml'), generateSitemapIndex());
   fs.writeFileSync(path.join(sitemapsDir, 'static.xml'), generateStaticSitemap());
-  fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap());
+  fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap(templates));
   fs.writeFileSync(path.join(sitemapsDir, 'templates.xml'), generateTemplatesSitemap(templates));
   fs.writeFileSync(path.join(sitemapsDir, 'blog.xml'), generateBlogSitemap(blogPosts));
   console.log('   ✅ Generated 5 sitemap files');
   
+  const totalPages = 1 + categories.length + subcategorySet.size + templates.length + blogPosts.length;
   console.log('\n✅ Static HTML generation complete!');
-  console.log(`   📊 Total: ${templates.length + categories.length + blogPosts.length + 1} HTML pages + 5 sitemaps`);
+  console.log(`   📊 Total: ${totalPages} HTML pages + 5 sitemaps`);
 }
 
 // Run the build

@@ -20,22 +20,42 @@
   status = 200
 
 # ============================================
+# Legacy URL Redirects (301 for SEO)
+# ============================================
+
+# Redirect old category URLs to new templates URLs
+[[redirects]]
+  from = "/category/:categoryId"
+  to = "/templates/:categoryId"
+  status = 301
+  force = true
+
+# Redirect old complaint-letter URLs to new hierarchical URLs
+# Note: The actual redirect logic is handled by React Router in LegacyTemplateRedirect
+# This just ensures SPA routing works for legacy URLs
+[[redirects]]
+  from = "/complaint-letter/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+# ============================================
 # Static HTML for Search Engine Bots
 # Bot detection rules MUST come before SPA rules
 # ============================================
 
-# Template pages - Serve static HTML to bots
+# Templates landing page - Serve static HTML to bots
 [[redirects]]
-  from = "/complaint-letter/*"
-  to = "/complaint-letter/:splat/index.html"
+  from = "/templates"
+  to = "/templates/index.html"
   status = 200
   force = true
   conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
 
-# Category pages - Serve static HTML to bots
+# Template pages (hierarchical) - Serve static HTML to bots
 [[redirects]]
-  from = "/category/*"
-  to = "/category/:splat/index.html"
+  from = "/templates/*"
+  to = "/templates/:splat/index.html"
   status = 200
   force = true
   conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
@@ -46,13 +66,7 @@
 # ============================================
 
 [[redirects]]
-  from = "/complaint-letter/*"
-  to = "/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/category/*"
+  from = "/templates/*"
   to = "/index.html"
   status = 200
   force = true

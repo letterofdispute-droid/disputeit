@@ -109,7 +109,7 @@ const Header = () => {
                         {templateCategories.map((category) => (
                           <Link
                             key={category.id}
-                            to={`/category/${category.id}`}
+                            to={`/templates/${category.id}`}
                             className="text-sm text-muted-foreground hover:text-foreground py-2"
                             onClick={() => setOpen(false)}
                           >

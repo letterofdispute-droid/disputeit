@@ -98,7 +98,7 @@ const MegaMenu = () => {
                       <ListItem
                         key={category.id}
                         title={category.name}
-                        href={`/category/${category.id}`}
+                        href={`/templates/${category.id}`}
                         icon={Icon}
                       >
                         {category.templateCount} templates
@@ -123,7 +123,7 @@ const MegaMenu = () => {
                       <ListItem
                         key={category.id}
                         title={category.name}
-                        href={`/category/${category.id}`}
+                        href={`/templates/${category.id}`}
                         icon={Icon}
                       >
                         {category.templateCount} templates

@@ -10,6 +10,10 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import LetterPage from "./pages/LetterPage";
+import AllTemplatesPage from "./pages/AllTemplatesPage";
+import SubcategoryPage from "./pages/SubcategoryPage";
+import LegacyTemplateRedirect from "./components/LegacyTemplateRedirect";
+import LegacyCategoryRedirect from "./components/LegacyCategoryRedirect";
 import NotFound from "./pages/NotFound";
 import ArticlesPage from "./pages/ArticlesPage";
 import ArticleCategoryPage from "./pages/ArticleCategoryPage";
@@ -44,8 +48,16 @@ const App = () => (
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/category/:categoryId" element={<CategoryPage />} />
-          <Route path="/complaint-letter/:slug" element={<LetterPage />} />
+          
+          {/* New hierarchical template routes */}
+          <Route path="/templates" element={<AllTemplatesPage />} />
+          <Route path="/templates/:categoryId" element={<CategoryPage />} />
+          <Route path="/templates/:categoryId/:subcategorySlug" element={<SubcategoryPage />} />
+          <Route path="/templates/:categoryId/:subcategorySlug/:templateSlug" element={<LetterPage />} />
+          
+          {/* Legacy routes with redirects for SEO */}
+          <Route path="/category/:categoryId" element={<LegacyCategoryRedirect />} />
+          <Route path="/complaint-letter/:slug" element={<LegacyTemplateRedirect />} />
           
           {/* Blog Routes */}
           <Route path="/articles" element={<ArticlesPage />} />

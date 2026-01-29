@@ -26,7 +26,7 @@ const LetterCategories = () => {
             return (
               <Link
                 key={category.id}
-                to={`/category/${category.id}`}
+                to={`/templates/${category.id}`}
                 className="group"
               >
                 <Card className="relative h-full p-6 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">

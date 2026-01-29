@@ -1,6 +1,8 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { getTemplateBySlug, getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
+import { getCategoryById } from '@/data/templateCategories';
+import { inferSubcategory } from '@/data/subcategoryMappings';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
 import SEOHead from '@/components/SEOHead';
@@ -16,14 +18,25 @@ import {
 } from '@/components/ui/breadcrumb';
 
 const LetterPage = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const template = slug ? getTemplateBySlug(slug) : undefined;
+  const { categoryId, subcategorySlug, templateSlug } = useParams<{ 
+    categoryId: string; 
+    subcategorySlug: string; 
+    templateSlug: string; 
+  }>();
+  
+  const template = templateSlug ? getTemplateBySlug(templateSlug) : undefined;
+  const category = categoryId ? getCategoryById(categoryId) : undefined;
 
-  if (!template) {
+  if (!template || !category) {
     return <Navigate to="/404" replace />;
   }
 
-  const categoryId = getCategoryIdFromName(template.category);
+  // Get subcategory info
+  const subcategoryInfo = inferSubcategory(template.id, template.category);
+  const subcategoryName = subcategoryInfo?.name || 'General';
+
+  // Canonical URL with hierarchical structure
+  const canonicalPath = `/templates/${categoryId}/${subcategorySlug}/${template.slug}`;
 
   // BreadcrumbList schema for SEO
   const breadcrumbSchema = {
@@ -39,14 +52,60 @@ const LetterPage = () => {
       {
         '@type': 'ListItem',
         position: 2,
-        name: template.category,
-        item: `https://disputeletters.com/category/${categoryId}`,
+        name: 'Templates',
+        item: 'https://disputeletters.com/templates',
       },
       {
         '@type': 'ListItem',
         position: 3,
+        name: category.name,
+        item: `https://disputeletters.com/templates/${categoryId}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 4,
+        name: subcategoryName,
+        item: `https://disputeletters.com/templates/${categoryId}/${subcategorySlug}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 5,
         name: template.title,
-        item: `https://disputeletters.com/complaint-letter/${template.slug}`,
+        item: `https://disputeletters.com${canonicalPath}`,
+      },
+    ],
+  };
+
+  // HowTo schema for template usage
+  const howToSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: `How to Write a ${template.title}`,
+    description: template.seoDescription,
+    step: [
+      {
+        '@type': 'HowToStep',
+        position: 1,
+        name: 'Gather Information',
+        text: 'Collect relevant dates, reference numbers, and documentation for your dispute.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 2,
+        name: 'Fill Out the Template',
+        text: 'Enter your specific details into our guided form below.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 3,
+        name: 'Choose Your Tone',
+        text: 'Select the appropriate tone (neutral, firm, or final notice) for your situation.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 4,
+        name: 'Download Your Letter',
+        text: 'Get your professionally formatted letter in PDF or DOCX format.',
       },
     ],
   };
@@ -56,13 +115,17 @@ const LetterPage = () => {
       <SEOHead 
         title={template.seoTitle}
         description={template.seoDescription}
-        canonicalPath={`/complaint-letter/${template.slug}`}
+        canonicalPath={canonicalPath}
       />
 
       {/* Inject structured data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
 
       {/* SEO-Optimized Header */}
@@ -83,8 +146,28 @@ const LetterPage = () => {
               </BreadcrumbSeparator>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={`/category/${categoryId}`} className="text-primary-foreground/70 hover:text-primary-foreground">
-                    {template.category}
+                  <Link to="/templates" className="text-primary-foreground/70 hover:text-primary-foreground">
+                    Templates
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4 text-primary-foreground/50" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={`/templates/${categoryId}`} className="text-primary-foreground/70 hover:text-primary-foreground">
+                    {category.name}
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4 text-primary-foreground/50" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={`/templates/${categoryId}/${subcategorySlug}`} className="text-primary-foreground/70 hover:text-primary-foreground">
+                    {subcategoryName}
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -135,7 +218,7 @@ const LetterPage = () => {
           <div className="max-w-2xl mx-auto mb-10">
             <div className="p-4 bg-accent/10 border border-accent/30 rounded-lg text-center">
               <p className="text-sm text-foreground">
-                <span className="font-medium">Why this template?</span> Pre-validated for {template.category.toLowerCase()} disputes with controlled language and proper escalation structure. No guessing required.
+                <span className="font-medium">Why this template?</span> Pre-validated for {category.name.toLowerCase()} disputes with controlled language and proper escalation structure. No guessing required.
               </p>
             </div>
           </div>
@@ -151,18 +234,22 @@ const LetterPage = () => {
             Other Letter Types You Might Need
           </h2>
           <div className="flex flex-wrap justify-center gap-4">
-            {getTemplatesByCategory(categoryId)
-              .filter(t => t.slug !== slug)
+            {getTemplatesByCategory(categoryId!)
+              .filter(t => t.slug !== templateSlug)
               .slice(0, 5)
-              .map(t => (
-                <Link
-                  key={t.slug}
-                  to={`/complaint-letter/${t.slug}`}
-                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-                >
-                  {t.title}
-                </Link>
-              ))}
+              .map(t => {
+                const tSubcategory = inferSubcategory(t.id, t.category);
+                const tSubcategorySlug = tSubcategory?.slug || 'general';
+                return (
+                  <Link
+                    key={t.slug}
+                    to={`/templates/${categoryId}/${tSubcategorySlug}/${t.slug}`}
+                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    {t.title}
+                  </Link>
+                );
+              })}
           </div>
         </div>
       </section>
