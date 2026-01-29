@@ -1,10 +1,11 @@
+import { useState, useMemo } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { getCategoryById, templateCategories } from '@/data/templateCategories';
-import { getTemplatesByCategory, allTemplates } from '@/data/allTemplates';
+import { getTemplatesByCategory } from '@/data/allTemplates';
+import { inferSubcategory, getSubcategoriesForCategory, SubcategoryInfo } from '@/data/subcategoryMappings';
 import SEOHead from '@/components/SEOHead';
-import { Card } from '@/components/ui/card';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,17 +14,69 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import CategorySearch from '@/components/category/CategorySearch';
+import SubcategoryFilter from '@/components/category/SubcategoryFilter';
+import TemplateCard from '@/components/category/TemplateCard';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const category = categoryId ? getCategoryById(categoryId) : undefined;
   const templates = categoryId ? getTemplatesByCategory(categoryId) : [];
 
+  // State for filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+
   if (!category) {
     return <Navigate to="/404" replace />;
   }
 
   const IconComponent = category.icon;
+
+  // Get subcategories for this category
+  const subcategories = useMemo(() => 
+    getSubcategoriesForCategory(category.name), 
+    [category.name]
+  );
+
+  // Compute template subcategory info and counts
+  const { templatesWithSubcategory, subcategoryCounts } = useMemo(() => {
+    const withSubcategory = templates.map(template => ({
+      template,
+      subcategoryInfo: inferSubcategory(template.id, category.name)
+    }));
+
+    const counts: Record<string, number> = {};
+    withSubcategory.forEach(({ subcategoryInfo }) => {
+      if (subcategoryInfo) {
+        counts[subcategoryInfo.slug] = (counts[subcategoryInfo.slug] || 0) + 1;
+      }
+    });
+
+    return { templatesWithSubcategory: withSubcategory, subcategoryCounts: counts };
+  }, [templates, category.name]);
+
+  // Filter templates based on search and subcategory
+  const filteredTemplates = useMemo(() => {
+    return templatesWithSubcategory.filter(({ template, subcategoryInfo }) => {
+      // Filter by subcategory
+      if (activeSubcategory && subcategoryInfo?.slug !== activeSubcategory) {
+        return false;
+      }
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return (
+          template.title.toLowerCase().includes(query) ||
+          template.shortDescription.toLowerCase().includes(query) ||
+          template.seoDescription.toLowerCase().includes(query)
+        );
+      }
+
+      return true;
+    });
+  }, [templatesWithSubcategory, searchQuery, activeSubcategory]);
 
   // Generate smart SEO metadata
   const seoTitle = `${category.name} Letter Templates - Free Professional Complaint Letters | Dispute Letters`;
@@ -63,6 +116,8 @@ const CategoryPage = () => {
       url: `https://disputeletters.com/complaint-letter/${template.slug}`,
     })),
   };
+
+  const showSubcategoryInCards = !activeSubcategory && subcategories.length > 0;
 
   return (
     <Layout>
@@ -129,8 +184,38 @@ const CategoryPage = () => {
         </div>
       </section>
 
+      {/* Search and Filters */}
+      <section className="py-6 border-b border-border bg-card sticky top-16 z-40">
+        <div className="container-wide">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            {/* Search */}
+            <div className="lg:w-80">
+              <CategorySearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={`Search ${category.name.toLowerCase()} templates...`}
+                resultCount={filteredTemplates.length}
+                totalCount={templates.length}
+              />
+            </div>
+
+            {/* Subcategory Filter */}
+            {subcategories.length > 0 && (
+              <div className="flex-1 overflow-x-auto">
+                <SubcategoryFilter
+                  subcategories={subcategories}
+                  activeSubcategory={activeSubcategory}
+                  onSubcategoryChange={setActiveSubcategory}
+                  templateCounts={subcategoryCounts}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Templates Grid */}
-      <section className="py-12 md:py-16 bg-background">
+      <section className="py-10 md:py-14 bg-background">
         <div className="container-wide">
           {/* Trust Message */}
           <div className="mb-8 p-4 bg-success/5 border border-success/20 rounded-lg">
@@ -139,34 +224,33 @@ const CategoryPage = () => {
             </p>
           </div>
 
-          <div className="mb-6">
-            <p className="text-muted-foreground">
-              {templates.length} letter templates available
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <Link
-                key={template.slug}
-                to={`/complaint-letter/${template.slug}`}
-                className="group"
+          {filteredTemplates.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredTemplates.map(({ template, subcategoryInfo }) => (
+                <TemplateCard
+                  key={template.slug}
+                  template={template}
+                  subcategoryInfo={subcategoryInfo}
+                  showSubcategory={showSubcategoryInCards}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">
+                No templates found matching your search.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveSubcategory(null);
+                }}
+                className="text-primary hover:underline"
               >
-                <Card className="h-full p-6 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">
-                  <h2 className="font-serif text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                    {template.title}
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {template.seoDescription}
-                  </p>
-                  <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                    Build Your Letter
-                    <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                Clear filters
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
