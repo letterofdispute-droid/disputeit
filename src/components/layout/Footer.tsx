@@ -26,17 +26,17 @@ const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Letter Types</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/complaint-letter/refund" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/templates/refunds" className="text-muted-foreground hover:text-foreground transition-colors">
                   Refund Request Letters
                 </Link>
               </li>
               <li>
-                <Link to="/complaint-letter/landlord-repairs" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/templates/housing" className="text-muted-foreground hover:text-foreground transition-colors">
                   Landlord Repair Letters
                 </Link>
               </li>
               <li>
-                <Link to="/complaint-letter/damaged-goods" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/templates/damaged-goods" className="text-muted-foreground hover:text-foreground transition-colors">
                   Damaged Goods Complaints
                 </Link>
               </li>

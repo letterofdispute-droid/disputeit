@@ -96,8 +96,14 @@ const CategoryPage = () => {
       {
         '@type': 'ListItem',
         position: 2,
+        name: 'Templates',
+        item: 'https://disputeletters.com/templates',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
         name: category.name,
-        item: `https://disputeletters.com/category/${category.id}`,
+        item: `https://disputeletters.com/templates/${category.id}`,
       },
     ],
   };
@@ -109,12 +115,16 @@ const CategoryPage = () => {
     name: `${category.name} Letter Templates`,
     description: seoDescription,
     numberOfItems: templates.length,
-    itemListElement: templates.map((template, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: template.title,
-      url: `https://disputeletters.com/complaint-letter/${template.slug}`,
-    })),
+    itemListElement: templates.map((template, index) => {
+      const subInfo = inferSubcategory(template.id, category.name);
+      const subSlug = subInfo?.slug || 'general';
+      return {
+        '@type': 'ListItem',
+        position: index + 1,
+        name: template.title,
+        url: `https://disputeletters.com/templates/${category.id}/${subSlug}/${template.slug}`,
+      };
+    }),
   };
 
   const showSubcategoryInCards = !activeSubcategory && subcategories.length > 0;
@@ -124,7 +134,7 @@ const CategoryPage = () => {
       <SEOHead
         title={seoTitle}
         description={seoDescription}
-        canonicalPath={`/category/${category.id}`}
+        canonicalPath={`/templates/${category.id}`}
         type="website"
       />
 
@@ -148,6 +158,16 @@ const CategoryPage = () => {
                 <BreadcrumbLink asChild>
                   <Link to="/" className="text-primary-foreground/70 hover:text-primary-foreground">
                     Home
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4 text-primary-foreground/50" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/templates" className="text-primary-foreground/70 hover:text-primary-foreground">
+                    Templates
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -183,6 +203,26 @@ const CategoryPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Subcategory Quick Links */}
+      {subcategories.length > 0 && (
+        <section className="py-4 bg-secondary/30 border-b border-border">
+          <div className="container-wide">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-2">Browse by type:</span>
+              {subcategories.map(sub => (
+                <Link
+                  key={sub.slug}
+                  to={`/templates/${category.id}/${sub.slug}`}
+                  className="text-sm px-3 py-1 bg-background border border-border rounded-full hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                >
+                  {sub.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Search and Filters */}
       <section className="py-6 border-b border-border bg-card sticky top-16 z-40">
@@ -232,6 +272,7 @@ const CategoryPage = () => {
                   template={template}
                   subcategoryInfo={subcategoryInfo}
                   showSubcategory={showSubcategoryInCards}
+                  categoryId={category.id}
                 />
               ))}
             </div>
@@ -266,7 +307,7 @@ const CategoryPage = () => {
               .map((c) => (
                 <Link
                   key={c.id}
-                  to={`/category/${c.id}`}
+                  to={`/templates/${c.id}`}
                   className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
                 >
                   {c.name}
