@@ -3,7 +3,7 @@ import { repairMaintenanceTemplates } from './housing/repairMaintenanceTemplates
 import { tenancyDisputeTemplates } from './housing/tenancyDisputeTemplates';
 import { safetyComplianceTemplates } from './housing/safetyComplianceTemplates';
 import { lettingAgentTemplates } from './housing/lettingAgentTemplates';
-import { neighborDisputeTemplates } from './housing/neighborDisputeTemplates';
+import { neighborHousingDisputeTemplates } from './housing/neighborDisputeTemplates';
 
 const standardPricing = [
   { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
@@ -179,5 +179,5 @@ export const housingTemplates: LetterTemplate[] = [
   ...tenancyDisputeTemplates,
   ...safetyComplianceTemplates,
   ...lettingAgentTemplates,
-  ...neighborDisputeTemplates,
+  ...neighborHousingDisputeTemplates,
 ];
