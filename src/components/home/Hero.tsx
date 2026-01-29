@@ -21,7 +21,7 @@ const Hero = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
             <ShieldCheck className="h-4 w-4" />
-            <span>Pre-Validated Letter Builders</span>
+            <span>Pre-Validated Letter Templates</span>
           </div>
 
           {/* Headline */}
@@ -32,7 +32,7 @@ const Hero = () => {
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Pre-validated letter builders with controlled language, consistent structure, and legal precision. 
+            Pre-validated letter templates with controlled language, consistent structure, and legal precision. 
             No trial and error. Just predictable, professional results.
           </p>
 
@@ -61,13 +61,13 @@ const Hero = () => {
             </Button>
             <Button variant="heroOutline" size="xl" asChild>
               <Link to="/#letters">
-                Browse Letter Builders
+                Browse Letter Templates
               </Link>
             </Button>
           </div>
 
           {/* Trust Indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <Target className="h-5 w-5 text-accent" />
               <span className="text-sm">Certainty, not guesswork</span>
@@ -79,6 +79,10 @@ const Hero = () => {
             <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
               <Clock className="h-5 w-5 text-accent" />
               <span className="text-sm">Legal-safe language</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
+              <span className="text-base">🇺🇸</span>
+              <span className="text-sm">US-Based Service</span>
             </div>
           </div>
         </div>

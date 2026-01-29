@@ -44,7 +44,7 @@ const Pricing = () => {
           </p>
           <div className="inline-block px-4 py-3 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">What you're paying for:</span> Pre-validated letter builders, legal-safe phrasing, and the certainty that your letter won't hurt your case.
+              <span className="font-medium text-foreground">What you're paying for:</span> Pre-validated letter templates, legal-safe phrasing, and the certainty that your letter won't hurt your case.
             </p>
           </div>
         </div>

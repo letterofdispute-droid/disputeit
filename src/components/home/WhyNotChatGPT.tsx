@@ -4,7 +4,7 @@ const proofPoints = [
   {
     icon: Target,
     title: 'Certainty',
-    description: 'Pre-validated letter builders for your exact dispute type. No guesswork, no trial and error.',
+    description: 'Pre-validated letter templates for your exact dispute type. No guesswork, no trial and error.',
   },
   {
     icon: ShieldCheck,
@@ -28,7 +28,7 @@ const WhyNotChatGPT = () => {
             Why Not Just Use ChatGPT?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Generic AI tools produce inconsistent results. Purpose-built letter builders deliver 
+            Generic AI tools produce inconsistent results. Purpose-built letter templates deliver 
             predictable, professional letters every time.
           </p>
         </div>

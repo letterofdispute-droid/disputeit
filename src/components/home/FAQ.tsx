@@ -19,7 +19,7 @@ const faqs = [
     answer: 'Our letters start at €9.99 for the basic version with professional formatting. For €19.99, you get jurisdiction-specific legal references that strengthen your case. The €29.99 Final Notice option includes escalation language and deadline enforcement. Each letter includes both PDF and editable DOCX formats.',
   },
   {
-    question: 'How do I know which template to use?',
+    question: 'How do I know which letter template to use?',
     answer: 'Browse our categories to find your situation. We have templates for housing disputes, travel compensation, refunds, medical billing, insurance claims, and more. Each template includes a description of when to use it. If you\'re unsure, our AI assistant can recommend the right template based on your situation.',
   },
   {
@@ -44,7 +44,7 @@ const faqs = [
   },
   {
     question: 'Why should I use this instead of ChatGPT?',
-    answer: "Generic AI tools are powerful but not built for formal disputes. They often use the wrong legal tone, mix jurisdictions, omit required elements like reference numbers or deadlines, and can generate misleading statements that weaken your claim. Results are inconsistent and require trial and error. Our letter builders remove those risks: each letter is pre-validated for a specific dispute type with controlled language, consistent structure, and appropriate escalation wording. You get predictable, professional results every time.",
+    answer: "Generic AI tools are powerful but not built for formal disputes. They often use the wrong legal tone, mix jurisdictions, omit required elements like reference numbers or deadlines, and can generate misleading statements that weaken your claim. Results are inconsistent and require trial and error. Our letter templates remove those risks: each letter is pre-validated for a specific dispute type with controlled language, consistent structure, and appropriate escalation wording. You get predictable, professional results every time.",
   },
   {
     question: 'Is this legal advice?',
