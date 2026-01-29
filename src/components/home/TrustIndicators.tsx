@@ -6,7 +6,7 @@ const pillars = [
     icon: Target,
     title: 'Certainty',
     subtitle: 'Know exactly what you will get',
-    description: 'Pre-validated letter builders with tested structure. No guessing, no prompt engineering, no trial and error.',
+    description: 'Pre-validated letter templates with tested structure. No guessing, no prompt engineering, no trial and error.',
   },
   {
     icon: ShieldCheck,

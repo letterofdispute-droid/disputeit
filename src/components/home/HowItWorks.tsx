@@ -4,7 +4,7 @@ const steps = [
   {
     icon: FileText,
     title: 'Choose Your Letter Type',
-    description: 'Select a letter builder designed for your exact dispute type. No prompt engineering required.',
+    description: 'Select a letter template designed for your exact dispute type. No prompt engineering required.',
     step: '01',
   },
   {
@@ -16,7 +16,7 @@ const steps = [
   {
     icon: Download,
     title: 'Generate Your Letter',
-    description: 'Get a pre-validated letter with correct legal tone, proper structure, and appropriate deadlines.',
+    description: 'Get a pre-validated letter template with correct legal tone, proper structure, and appropriate deadlines.',
     step: '03',
   },
   {
