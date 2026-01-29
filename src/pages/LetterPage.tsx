@@ -5,6 +5,7 @@ import { getCategoryById } from '@/data/templateCategories';
 import { inferSubcategory } from '@/data/subcategoryMappings';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
+import RelatedTemplates from '@/components/letter/RelatedTemplates';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
 import { ChevronRight } from 'lucide-react';
@@ -116,6 +117,9 @@ const LetterPage = () => {
         title={template.seoTitle}
         description={template.seoDescription}
         canonicalPath={canonicalPath}
+        type="website"
+        templateName={template.title}
+        templateCategory={category.name}
       />
 
       {/* Inject structured data */}
@@ -227,32 +231,13 @@ const LetterPage = () => {
         </div>
       </section>
 
-      {/* Related Letters */}
-      <section className="py-12 md:py-16 bg-background border-t border-border">
-        <div className="container-wide">
-          <h2 className="font-serif text-xl font-semibold text-foreground mb-6 text-center">
-            Other Letter Types You Might Need
-          </h2>
-          <div className="flex flex-wrap justify-center gap-4">
-            {getTemplatesByCategory(categoryId!)
-              .filter(t => t.slug !== templateSlug)
-              .slice(0, 5)
-              .map(t => {
-                const tSubcategory = inferSubcategory(t.id, t.category);
-                const tSubcategorySlug = tSubcategory?.slug || 'general';
-                return (
-                  <Link
-                    key={t.slug}
-                    to={`/templates/${categoryId}/${tSubcategorySlug}/${t.slug}`}
-                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    {t.title}
-                  </Link>
-                );
-              })}
-          </div>
-        </div>
-      </section>
+      {/* Related Templates - Enhanced Component */}
+      <RelatedTemplates
+        currentTemplate={template}
+        categoryId={categoryId!}
+        subcategorySlug={subcategorySlug!}
+        maxItems={6}
+      />
     </Layout>
   );
 };

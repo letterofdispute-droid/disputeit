@@ -1,48 +1,128 @@
 import { LetterTemplate } from '@/data/letterTemplates';
+import { CheckCircle2, Clock, FileText, AlertCircle, Lightbulb } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface SEOContentProps {
   template: LetterTemplate;
 }
 
 const SEOContent = ({ template }: SEOContentProps) => {
-  // Static, crawlable content for SEO purposes
-  const seoSections = getSEOSections(template.slug);
+  const sections = getSEOSections(template);
 
   return (
     <article className="prose prose-slate max-w-none">
       {/* Main Description */}
-      <div className="mb-8">
+      <div className="mb-10">
         <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-line">
           {template.longDescription}
         </p>
       </div>
 
-      {/* Additional SEO Content */}
-      {seoSections.map((section, index) => (
-        <section key={index} className="mb-8">
-          <h2 className="font-serif text-2xl font-semibold text-foreground mb-4">
-            {section.heading}
-          </h2>
-          <div className="text-muted-foreground space-y-4">
-            {section.paragraphs.map((para, pIndex) => (
-              <p key={pIndex}>{para}</p>
-            ))}
-          </div>
-          {section.list && (
-            <ul className="mt-4 space-y-2">
-              {section.list.map((item, lIndex) => (
-                <li key={lIndex} className="flex items-start gap-2 text-muted-foreground">
-                  <span className="text-accent font-bold">•</span>
-                  {item}
+      {/* Three-Column Feature Cards */}
+      <div className="grid md:grid-cols-3 gap-6 mb-12 not-prose">
+        {/* When to Use */}
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Lightbulb className="h-5 w-5 text-accent" />
+              When to Use This Letter
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {sections.whenToUse.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
-          )}
-        </section>
-      ))}
+          </CardContent>
+        </Card>
 
-      {/* Disclaimer */}
-      <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
+        {/* What You'll Need */}
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <FileText className="h-5 w-5 text-accent" />
+              What You'll Need
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {sections.whatYouNeed.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <span className="text-accent font-bold">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* What Happens After */}
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Clock className="h-5 w-5 text-accent" />
+              What Happens Next
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {sections.whatHappensAfter.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <span className="text-accent font-bold">{idx + 1}.</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* How It Works Steps */}
+      <section className="mb-10">
+        <h2 className="font-serif text-2xl font-semibold text-foreground mb-6">
+          How to Create Your Letter
+        </h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 not-prose">
+          {[
+            { step: '1', title: 'Gather Info', desc: 'Collect dates, reference numbers, and documentation' },
+            { step: '2', title: 'Fill the Form', desc: 'Enter your specific details in our guided template' },
+            { step: '3', title: 'Choose Tone', desc: 'Select neutral, firm, or final notice as needed' },
+            { step: '4', title: 'Download', desc: 'Get your letter in PDF or Word format' },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-3 p-4 bg-secondary/50 rounded-lg">
+              <span className="flex items-center justify-center w-8 h-8 bg-accent text-accent-foreground rounded-full text-sm font-bold shrink-0">
+                {item.step}
+              </span>
+              <div>
+                <h3 className="font-medium text-foreground text-sm">{item.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Additional Guidance */}
+      {sections.additionalGuidance.length > 0 && (
+        <section className="mb-10">
+          <h2 className="font-serif text-2xl font-semibold text-foreground mb-4">
+            Tips for Success
+          </h2>
+          <div className="space-y-4 text-muted-foreground">
+            {sections.additionalGuidance.map((para, idx) => (
+              <p key={idx}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Important Notice */}
+      <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border flex gap-3 not-prose">
+        <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
           <strong>Important:</strong> This service provides document templates and does not constitute legal advice. 
           The letters generated are professionally structured but are not reviewed by legal professionals. 
@@ -53,116 +133,465 @@ const SEOContent = ({ template }: SEOContentProps) => {
   );
 };
 
-// SEO content for each template type
-function getSEOSections(slug: string): Array<{
-  heading: string;
-  paragraphs: string[];
-  list?: string[];
-}> {
-  switch (slug) {
-    case 'refund':
-      return [
-        {
-          heading: 'What Information Do You Need?',
-          paragraphs: [
-            'To create an effective refund request letter, you\'ll need to gather some key information before you begin. Having these details ready will make the process faster and ensure your letter is complete.',
-          ],
-          list: [
-            'Order number or receipt reference',
-            'Date of purchase',
-            'Description of the product or service',
-            'Amount paid',
-            'Clear description of the problem',
-            'Any previous communication with the seller',
-          ],
-        },
-        {
-          heading: 'What Happens After You Send Your Letter?',
-          paragraphs: [
-            'After sending your refund request letter, most businesses will respond within 14 days. The response may include an offer to refund, a request for more information, or an explanation of why they cannot process your refund.',
-            'If you don\'t receive a response within a reasonable time, you may need to follow up with a firmer letter or consider alternative dispute resolution methods such as contacting your credit card company or a consumer protection agency.',
-          ],
-        },
-        {
-          heading: 'Tips for a Successful Refund Request',
-          paragraphs: [
-            'A well-structured letter significantly increases your chances of getting a positive response. Here are some tips to maximize your success:',
-          ],
-          list: [
-            'Be clear and concise — stick to the facts',
-            'Include all relevant documentation',
-            'Set a reasonable deadline for response',
-            'Keep a copy of everything you send',
-            'Send via trackable mail when possible',
-            'Follow up if you don\'t hear back',
-          ],
-        },
-      ];
-    case 'landlord-repairs':
-      return [
-        {
-          heading: 'Your Rights as a Tenant',
-          paragraphs: [
-            'As a tenant, you have the right to live in a property that meets basic health and safety standards. Landlords are generally responsible for maintaining the structure and exterior of the property, as well as keeping installations for water, gas, electricity, and heating in working order.',
-            'Documenting repair requests in writing creates an important paper trail that protects your rights and may be necessary if the situation escalates.',
-          ],
-        },
-        {
-          heading: 'What Information to Include',
-          paragraphs: [
-            'When requesting repairs from your landlord, it\'s important to be specific and thorough. Your letter should clearly describe the issue and its impact on your living conditions.',
-          ],
-          list: [
-            'Your rental property address',
-            'Specific description of the repair needed',
-            'When the problem first started',
-            'How the issue affects your daily life',
-            'Any previous reports of this issue',
-            'Photographs or evidence of the problem',
-          ],
-        },
-        {
-          heading: 'Timeline for Landlord Repairs',
-          paragraphs: [
-            'The urgency of the repair often determines how quickly your landlord should respond. Emergency repairs such as heating failures in winter or water leaks typically require immediate attention within 24-48 hours.',
-            'For non-urgent repairs, landlords usually have a reasonable time to respond, typically 14-30 days depending on your jurisdiction and the nature of the repair.',
-          ],
-        },
-      ];
-    case 'damaged-goods':
-      return [
-        {
-          heading: 'Documenting Damaged Deliveries',
-          paragraphs: [
-            'When you receive a damaged package, proper documentation is crucial for a successful complaint. Before contacting the seller, take clear photographs of the damage from multiple angles, including the packaging.',
-            'If possible, photograph the package before opening it to show any visible damage during transit. Keep all packaging materials as evidence.',
-          ],
-        },
-        {
-          heading: 'What to Include in Your Complaint',
-          paragraphs: [
-            'A successful damaged goods complaint should be factual, clear, and include all relevant details that help the company understand and resolve your issue.',
-          ],
-          list: [
-            'Order number and date of purchase',
-            'Date the package was received',
-            'Description of the items ordered',
-            'Detailed description of the damage',
-            'Photographs attached as evidence',
-            'Your preferred resolution (refund or replacement)',
-          ],
-        },
-        {
-          heading: 'Understanding Your Options',
-          paragraphs: [
-            'When goods arrive damaged, you typically have several options for resolution. You may request a full refund, a replacement item, or in some cases, a partial refund if the damage is minor and you wish to keep the item.',
-            'Consider which option best suits your situation when completing your complaint letter. If the item was a gift or time-sensitive, a refund might be preferable to waiting for a replacement.',
-          ],
-        },
-      ];
+// Dynamic SEO content based on template category and type
+interface SEOSections {
+  whenToUse: string[];
+  whatYouNeed: string[];
+  whatHappensAfter: string[];
+  additionalGuidance: string[];
+}
+
+function getSEOSections(template: LetterTemplate): SEOSections {
+  const category = template.category.toLowerCase();
+  const slug = template.slug.toLowerCase();
+  const id = template.id.toLowerCase();
+
+  // Category-specific content with template-level customization
+  const categoryContent = getCategoryContent(category);
+  const templateSpecificContent = getTemplateSpecificContent(slug, id, category);
+
+  return {
+    whenToUse: templateSpecificContent.whenToUse || categoryContent.whenToUse,
+    whatYouNeed: mergeUnique(categoryContent.whatYouNeed, templateSpecificContent.whatYouNeed || []),
+    whatHappensAfter: categoryContent.whatHappensAfter,
+    additionalGuidance: templateSpecificContent.additionalGuidance || categoryContent.additionalGuidance,
+  };
+}
+
+function mergeUnique(base: string[], additional: string[]): string[] {
+  const result = [...base];
+  additional.forEach(item => {
+    if (!result.includes(item)) {
+      result.push(item);
+    }
+  });
+  return result.slice(0, 6); // Limit to 6 items
+}
+
+function getCategoryContent(category: string): SEOSections {
+  switch (category) {
+    case 'refunds & purchases':
+      return {
+        whenToUse: [
+          'Product or service did not meet expectations',
+          'Business refuses to honor their refund policy',
+          'You received a faulty or defective item',
+          'Service was not delivered as promised',
+        ],
+        whatYouNeed: [
+          'Order number or receipt',
+          'Date of purchase',
+          'Description of the issue',
+          'Any previous communication records',
+        ],
+        whatHappensAfter: [
+          'Send your letter via email or post',
+          'Business typically responds within 14 days',
+          'Follow up if no response received',
+          'Escalate to consumer protection if needed',
+        ],
+        additionalGuidance: [
+          'Keep copies of all correspondence and documentation. A well-documented dispute is more likely to result in a favorable outcome.',
+          'If you paid by credit card, you may also have chargeback rights through your card issuer as an additional recourse.',
+        ],
+      };
+
+    case 'housing':
+      return {
+        whenToUse: [
+          'Landlord has not completed necessary repairs',
+          'Issues affecting your health or safety',
+          'Breach of tenancy agreement terms',
+          'Problems with property management',
+        ],
+        whatYouNeed: [
+          'Your tenancy agreement reference',
+          'Property address and landlord details',
+          'Dates when issues were first reported',
+          'Photos or evidence of the problem',
+        ],
+        whatHappensAfter: [
+          'Landlord must respond within reasonable time',
+          'Keep records of all communications',
+          'Document any repairs or lack thereof',
+          'Contact housing authority if unresolved',
+        ],
+        additionalGuidance: [
+          'Many jurisdictions require landlords to maintain habitable conditions. Know your local tenant rights before sending your letter.',
+          'Consider sending via certified mail to create a legal record of your communication.',
+        ],
+      };
+
+    case 'travel':
+      return {
+        whenToUse: [
+          'Flight was cancelled or significantly delayed',
+          'Baggage was lost, damaged, or delayed',
+          'Hotel did not match description or booking',
+          'Tour or service was not as advertised',
+        ],
+        whatYouNeed: [
+          'Booking confirmation and reference numbers',
+          'Flight or reservation details',
+          'Receipts for additional expenses incurred',
+          'Photos documenting any issues',
+        ],
+        whatHappensAfter: [
+          'Airline or provider reviews your claim',
+          'Response typically within 30-60 days',
+          'May receive compensation or vouchers',
+          'Escalate to aviation authority if needed',
+        ],
+        additionalGuidance: [
+          'Under many regulations, you may be entitled to compensation for delays over 3 hours or cancellations with short notice.',
+          'Keep all boarding passes, receipts, and documentation until your claim is fully resolved.',
+        ],
+      };
+
+    case 'contractors':
+      return {
+        whenToUse: [
+          'Work was not completed as agreed',
+          'Quality of work is substandard',
+          'Contractor has abandoned the project',
+          'Damage occurred during the work',
+        ],
+        whatYouNeed: [
+          'Contract or written agreement',
+          'Invoices and payment records',
+          'Photos of the work (before and after)',
+          'Written timeline of events',
+        ],
+        whatHappensAfter: [
+          'Contractor should respond to your concerns',
+          'May offer to remediate the issues',
+          'Negotiate resolution or next steps',
+          'Consider small claims court if needed',
+        ],
+        additionalGuidance: [
+          'Document everything with dated photos and keep all written communications. This creates a clear timeline for any dispute.',
+          'Check if the contractor is licensed and bonded - this may provide additional avenues for compensation.',
+        ],
+      };
+
+    case 'insurance':
+      return {
+        whenToUse: [
+          'Claim was denied or underpaid',
+          'Unreasonable delays in claim processing',
+          'Policy terms are being misinterpreted',
+          'Need to appeal a coverage decision',
+        ],
+        whatYouNeed: [
+          'Policy number and claim reference',
+          'Denial letter or correspondence',
+          'Supporting documentation for your claim',
+          'Copy of your insurance policy',
+        ],
+        whatHappensAfter: [
+          'Insurer reviews your appeal',
+          'May request additional documentation',
+          'Decision typically within 30-45 days',
+          'Contact insurance commissioner if denied',
+        ],
+        additionalGuidance: [
+          'Always request denials in writing and ask for specific policy language supporting their decision.',
+          'Insurance companies must act in good faith - document any unreasonable delays or communication issues.',
+        ],
+      };
+
+    case 'utilities & telecom':
+      return {
+        whenToUse: [
+          'Billing errors or overcharges',
+          'Service not meeting advertised standards',
+          'Contract terms not being honored',
+          'Issues with service cancellation',
+        ],
+        whatYouNeed: [
+          'Account number and billing statements',
+          'Contract or service agreement',
+          'Records of service issues',
+          'Previous complaint references',
+        ],
+        whatHappensAfter: [
+          'Provider investigates your complaint',
+          'Response typically within 10-14 days',
+          'May receive credits or adjustments',
+          'Escalate to regulator if unresolved',
+        ],
+        additionalGuidance: [
+          'Utility companies are often regulated - check if there is an ombudsman or regulatory body you can escalate to.',
+          'Keep detailed records of service outages or quality issues with dates and times.',
+        ],
+      };
+
+    case 'financial':
+      return {
+        whenToUse: [
+          'Unauthorized charges or transactions',
+          'Errors on your credit report',
+          'Unfair fees or interest charges',
+          'Problems with loan servicing',
+        ],
+        whatYouNeed: [
+          'Account numbers and statements',
+          'Transaction details and dates',
+          'Supporting documentation',
+          'Any previous correspondence',
+        ],
+        whatHappensAfter: [
+          'Institution investigates your dispute',
+          'Response required within 30-60 days',
+          'May receive refunds or corrections',
+          'File with CFPB if unresolved',
+        ],
+        additionalGuidance: [
+          'Financial institutions are heavily regulated. Know your rights under consumer protection laws.',
+          'For credit report errors, you have the right to a free investigation within 30 days under the FCRA.',
+        ],
+      };
+
+    case 'vehicle':
+      return {
+        whenToUse: [
+          'Repair was inadequate or caused damage',
+          'Dealer misrepresented vehicle condition',
+          'Warranty claim was wrongly denied',
+          'Unfair charges or billing disputes',
+        ],
+        whatYouNeed: [
+          'Vehicle details (make, model, VIN)',
+          'Repair orders and invoices',
+          'Warranty documentation',
+          'Photos of any damage or issues',
+        ],
+        whatHappensAfter: [
+          'Dealer or garage reviews your complaint',
+          'May offer remediation or refund',
+          'Document all responses received',
+          'Contact automotive authority if needed',
+        ],
+        additionalGuidance: [
+          'Lemon laws may apply if you have recurring issues with a new vehicle. Check your state\'s specific requirements.',
+          'Always get repair estimates in writing and approve work before it begins.',
+        ],
+      };
+
+    case 'employment':
+      return {
+        whenToUse: [
+          'Wages or overtime not properly paid',
+          'Discrimination or harassment issues',
+          'Wrongful termination concerns',
+          'Benefits not provided as promised',
+        ],
+        whatYouNeed: [
+          'Employment contract or offer letter',
+          'Pay stubs and time records',
+          'Written policies and handbooks',
+          'Documentation of incidents',
+        ],
+        whatHappensAfter: [
+          'Employer reviews your concerns',
+          'May trigger internal investigation',
+          'Document all responses and actions',
+          'File with labor board if unresolved',
+        ],
+        additionalGuidance: [
+          'Employment disputes often have strict time limits for filing complaints. Act promptly to preserve your rights.',
+          'Consider consulting with an employment attorney for complex discrimination or wrongful termination matters.',
+        ],
+      };
+
+    case 'healthcare':
+      return {
+        whenToUse: [
+          'Medical billing errors or disputes',
+          'Insurance coverage was wrongly denied',
+          'Quality of care concerns',
+          'Patient rights violations',
+        ],
+        whatYouNeed: [
+          'Medical records and bills',
+          'Insurance policy details',
+          'Explanation of Benefits (EOB)',
+          'Timeline of treatments',
+        ],
+        whatHappensAfter: [
+          'Provider or insurer reviews complaint',
+          'May receive billing adjustments',
+          'Appeal rights if claim denied',
+          'File with health department if needed',
+        ],
+        additionalGuidance: [
+          'Request itemized bills and compare with your EOB. Billing errors are common and often resolved when documented.',
+          'You have the right to access your medical records and dispute inaccurate information.',
+        ],
+      };
+
+    case 'hoa & property':
+      return {
+        whenToUse: [
+          'HOA fees or assessments in dispute',
+          'Enforcement actions seem unfair',
+          'Common area maintenance issues',
+          'Violation notices you disagree with',
+        ],
+        whatYouNeed: [
+          'HOA governing documents (CC&Rs)',
+          'Your member ID or lot number',
+          'Correspondence with HOA',
+          'Photos or documentation of issues',
+        ],
+        whatHappensAfter: [
+          'Board reviews your complaint',
+          'May request hearing or meeting',
+          'Decision communicated in writing',
+          'Mediation available in many states',
+        ],
+        additionalGuidance: [
+          'Review your CC&Rs and bylaws carefully - they govern what the HOA can and cannot do.',
+          'Many states have HOA dispute resolution programs or ombudsmen to help mediate conflicts.',
+        ],
+      };
+
+    case 'damaged goods':
+      return {
+        whenToUse: [
+          'Product arrived damaged in shipping',
+          'Item is defective or not as described',
+          'Seller refuses refund or replacement',
+          'Warranty claim was denied',
+        ],
+        whatYouNeed: [
+          'Order confirmation and receipts',
+          'Photos of damage or defects',
+          'Shipping and delivery records',
+          'Previous communication with seller',
+        ],
+        whatHappensAfter: [
+          'Seller investigates your claim',
+          'May offer refund or replacement',
+          'Keep damaged items as evidence',
+          'Dispute with payment provider if needed',
+        ],
+        additionalGuidance: [
+          'Photograph damaged packaging before opening and keep all materials until your claim is resolved.',
+          'Credit card chargebacks are often available if the seller refuses to cooperate.',
+        ],
+      };
+
+    case 'e-commerce':
+      return {
+        whenToUse: [
+          'Order never arrived or was lost',
+          'Product significantly different from listing',
+          'Subscription charges you did not authorize',
+          'Seller not responding to messages',
+        ],
+        whatYouNeed: [
+          'Order number and confirmation',
+          'Screenshots of product listing',
+          'Tracking information if available',
+          'Payment records',
+        ],
+        whatHappensAfter: [
+          'Platform or seller reviews dispute',
+          'May offer refund or resolution',
+          'Platform buyer protection may apply',
+          'Credit card dispute as last resort',
+        ],
+        additionalGuidance: [
+          'Most e-commerce platforms have buyer protection programs with time limits - file disputes promptly.',
+          'Keep screenshots of product listings as sellers may change them after purchase.',
+        ],
+      };
+
     default:
-      return [];
+      return {
+        whenToUse: [
+          'You have a legitimate dispute or complaint',
+          'Verbal communication has not resolved the issue',
+          'You need a formal record of your complaint',
+          'You want to escalate the matter professionally',
+        ],
+        whatYouNeed: [
+          'Relevant account or reference numbers',
+          'Dates and timeline of events',
+          'Supporting documentation',
+          'Previous correspondence',
+        ],
+        whatHappensAfter: [
+          'Recipient reviews your complaint',
+          'Response typically within 14-30 days',
+          'May resolve or request more information',
+          'Escalate to relevant authority if needed',
+        ],
+        additionalGuidance: [
+          'A well-structured letter with clear facts and reasonable requests is more likely to get a positive response.',
+          'Always keep copies of everything you send and receive.',
+        ],
+      };
   }
+}
+
+function getTemplateSpecificContent(slug: string, id: string, category: string): Partial<SEOSections> {
+  // Refund-specific
+  if (slug.includes('refund') || id.includes('refund')) {
+    return {
+      whatYouNeed: ['Original payment method details', 'Store return policy reference'],
+    };
+  }
+
+  // Repair-specific
+  if (slug.includes('repair') || id.includes('repair')) {
+    return {
+      whenToUse: [
+        'Repair work was not completed properly',
+        'Same issue keeps recurring after repairs',
+        'Repair caused additional damage',
+        'Work does not match the quoted price',
+      ],
+    };
+  }
+
+  // Cancellation-specific
+  if (slug.includes('cancel') || id.includes('cancel')) {
+    return {
+      whatYouNeed: ['Cancellation policy details', 'Notice period requirements'],
+      additionalGuidance: [
+        'Check your contract for specific cancellation terms and any notice periods required.',
+        'Send cancellation notices via trackable methods to prove delivery.',
+      ],
+    };
+  }
+
+  // Complaint-specific
+  if (slug.includes('complaint') || id.includes('complaint')) {
+    return {
+      additionalGuidance: [
+        'Be factual and avoid emotional language. Focus on what happened, when, and what resolution you want.',
+        'Include a reasonable deadline for response to encourage prompt action.',
+      ],
+    };
+  }
+
+  // Insurance claim-specific
+  if (slug.includes('claim') || id.includes('claim')) {
+    return {
+      whatYouNeed: ['Claim number and date submitted', 'Denial letter if applicable', 'Policy declarations page'],
+    };
+  }
+
+  // Billing-specific
+  if (slug.includes('billing') || slug.includes('bill') || id.includes('billing')) {
+    return {
+      whatYouNeed: ['Copies of disputed bills', 'Correct billing information', 'Payment history'],
+    };
+  }
+
+  return {};
 }
 
 export default SEOContent;

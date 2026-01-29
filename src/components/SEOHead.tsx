@@ -7,6 +7,11 @@ interface SEOHeadProps {
   type?: 'website' | 'article';
   publishedTime?: string;
   modifiedTime?: string;
+  // For template pages
+  templateName?: string;
+  templateCategory?: string;
+  price?: number;
+  currency?: string;
 }
 
 const SEOHead = ({ 
@@ -15,30 +20,49 @@ const SEOHead = ({
   canonicalPath,
   type = 'article',
   publishedTime,
-  modifiedTime
+  modifiedTime,
+  templateName,
+  templateCategory,
+  price = 9.99,
+  currency = 'EUR',
 }: SEOHeadProps) => {
-  const siteUrl = 'https://disputeletters.com'; // Update with actual domain
+  const siteUrl = 'https://disputeletters.com';
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
   
-  // Schema.org structured data
-  const schemaData = {
+  // WebApplication schema for template pages
+  const webAppSchema = templateName ? {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: title,
+    name: `${templateName} Generator`,
     description: description,
     url: canonicalUrl,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
+    browserRequirements: 'Requires JavaScript',
     offers: {
       '@type': 'Offer',
-      price: '9.99',
-      priceCurrency: 'EUR'
+      price: price.toString(),
+      priceCurrency: currency,
+      availability: 'https://schema.org/InStock',
     },
     provider: {
       '@type': 'Organization',
-      name: 'Dispute Letters'
-    }
-  };
+      name: 'Dispute Letters',
+      url: siteUrl,
+    },
+    ...(templateCategory && {
+      applicationSubCategory: templateCategory,
+    }),
+  } : null;
+
+  // Generic Organization schema for non-template pages
+  const organizationSchema = !templateName ? {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Dispute Letters',
+    url: siteUrl,
+    description: 'Professional dispute letter templates for consumers',
+  } : null;
 
   const articleSchema = type === 'article' ? {
     '@context': 'https://schema.org',
@@ -78,9 +102,17 @@ const SEOHead = ({
       <meta name="twitter:description" content={description} />
       
       {/* Schema.org structured data */}
-      <script type="application/ld+json">
-        {JSON.stringify(schemaData)}
-      </script>
+      {webAppSchema && (
+        <script type="application/ld+json">
+          {JSON.stringify(webAppSchema)}
+        </script>
+      )}
+      
+      {organizationSchema && (
+        <script type="application/ld+json">
+          {JSON.stringify(organizationSchema)}
+        </script>
+      )}
       
       {articleSchema && (
         <script type="application/ld+json">
