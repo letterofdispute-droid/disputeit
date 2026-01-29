@@ -127,7 +127,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Contractors & Home Improvement',
     description: 'Dispute poor workmanship, project abandonment, cost overruns, or service issues.',
     icon: Hammer,
-    templateCount: 42,
+    templateCount: 61,
     color: 'hsl(var(--chart-3))',
     popular: true,
   },
