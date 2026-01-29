@@ -2,6 +2,8 @@ export interface LetterTemplate {
   id: string;
   slug: string;
   category: string;
+  subcategory?: string;        // Human-readable: "Plumbing", "Electrical"
+  subcategorySlug?: string;    // URL-friendly: "plumbing", "electrical"
   title: string;
   shortDescription: string;
   longDescription: string;
