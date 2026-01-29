@@ -1,119 +1,177 @@
 
-# Insurance Templates Expansion: 4 → 50 Templates
+# Travel Templates Expansion: 20 → 50+ Templates
 
 ## Current State
-- **Existing templates in file**: 4 (Claim Denial, Underpayment, Delay, Cancellation)
-- **Target**: 50 templates
-- **Templates to add**: 46
+- **Existing templates**: ~20 (Flight delay, cancellation, lost/delayed/damaged baggage, denied boarding, downgrade, overbooking, package holiday, tour operator, train delay, cruise)
+- **Target**: 50+ templates
+- **Templates to add**: ~30+
 
 ---
 
 ## Implementation Approach
 
-Due to the large number of templates, I'll implement them in logical subcategories:
+Organize templates into modular subcategory files for maintainability:
 
-### Phase 1: Auto/Motor Insurance (+8 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 1 | `auto-total-loss-dispute` | Total Loss Valuation Dispute | VIN, market value evidence, comparables |
-| 2 | `gap-insurance-claim` | Gap Insurance Claim | Finance balance, settlement gap |
-| 3 | `auto-glass-claim-dispute` | Windshield/Glass Claim Dispute | Damage type, repair vs replace |
-| 4 | `rental-car-coverage-denial` | Rental Car Coverage Denial | Rental agreement, coverage tier |
-| 5 | `diminished-value-claim` | Diminished Value Claim | Pre/post accident value |
-| 6 | `uninsured-motorist-claim` | Uninsured Motorist Claim | Other driver info, coverage limits |
-| 7 | `hit-and-run-claim` | Hit and Run Claim | Police report, witness info |
-| 8 | `auto-storage-fee-dispute` | Storage Fee Dispute | Tow company, daily rate, delay |
-
-### Phase 2: Home/Property Insurance (+10 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 9 | `water-damage-claim-denial` | Water Damage Claim Denial | Damage source, mitigation steps |
-| 10 | `fire-damage-claim-dispute` | Fire Damage Claim Dispute | Fire origin, investigation report |
-| 11 | `theft-claim-denial` | Theft Claim Denial | Items stolen, police report |
-| 12 | `storm-damage-claim` | Storm/Weather Damage Claim | Weather event, adjuster findings |
-| 13 | `roof-damage-dispute` | Roof Damage Dispute | Roof age, cause, repair estimates |
-| 14 | `contents-coverage-dispute` | Contents Coverage Dispute | Inventory list, replacement values |
-| 15 | `additional-living-expenses-claim` | Additional Living Expenses Claim | Displacement period, costs |
-| 16 | `flood-insurance-claim` | Flood Insurance Claim Dispute | NFIP policy, flood zone, water levels |
-| 17 | `subsidence-claim` | Subsidence/Ground Movement Claim | Structural survey, repair quotes |
-| 18 | `landlord-insurance-claim` | Landlord Insurance Claim | Tenant damage, loss of rent |
-
-### Phase 3: Health/Medical Insurance (+8 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 19 | `prior-auth-denial-appeal` | Prior Authorization Denial Appeal | Treatment type, medical necessity |
-| 20 | `out-of-network-denial-appeal` | Out-of-Network Denial Appeal | Provider details, emergency clause |
-| 21 | `prescription-coverage-denial` | Prescription Coverage Denial | Medication, formulary status |
-| 22 | `mental-health-parity-complaint` | Mental Health Parity Complaint | Parity law violation |
-| 23 | `ambulance-charge-dispute` | Ambulance Charge Dispute | Transport date, emergency status |
-| 24 | `balance-billing-dispute` | Balance Billing Dispute | Provider, in-network rate |
-| 25 | `coordination-of-benefits` | Coordination of Benefits Dispute | Primary/secondary insurer |
-| 26 | `coverage-limit-dispute` | Annual/Lifetime Limit Dispute | Treatment type, essential benefit |
-
-### Phase 4: Life Insurance (+5 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 27 | `life-insurance-claim-denial` | Life Insurance Claim Denial | Death certificate, denial reason |
-| 28 | `life-insurance-beneficiary-dispute` | Beneficiary Dispute | Claimant relationship, designation |
-| 29 | `life-contestability-dispute` | Contestability Period Dispute | Policy start, misrepresentation claim |
-| 30 | `accidental-death-benefit-denial` | Accidental Death Benefit Denial | Cause of death, AD&D terms |
-| 31 | `suicide-clause-dispute` | Suicide Clause Dispute | Contestability period, circumstances |
-
-### Phase 5: Travel Insurance (+5 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 32 | `travel-trip-cancellation-claim` | Trip Cancellation Claim | Trip dates, covered reasons |
-| 33 | `travel-medical-emergency-claim` | Medical Emergency Abroad Claim | Treatment location, currency |
-| 34 | `travel-trip-interruption-claim` | Trip Interruption Claim | Reason, unused portions |
-| 35 | `travel-delay-insurance-claim` | Delayed Departure Compensation | Delay duration, expenses |
-| 36 | `missed-connection-insurance-claim` | Missed Connection Insurance Claim | Connection details, rebooking costs |
-
-### Phase 6: Pet Insurance (+4 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 37 | `pet-insurance-claim-denial` | Pet Insurance Claim Denial | Pet details, vet bills |
-| 38 | `pet-preexisting-condition-dispute` | Pre-existing Condition Dispute | Pet history, condition onset |
-| 39 | `pet-hereditary-condition-claim` | Hereditary Condition Coverage | Breed, exclusions |
-| 40 | `pet-dental-coverage-dispute` | Pet Dental Coverage Dispute | Dental procedure, coverage tier |
-
-### Phase 7: Business/Commercial Insurance (+6 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 41 | `business-interruption-claim` | Business Interruption Claim | Loss period, revenue docs |
-| 42 | `professional-indemnity-claim` | Professional Indemnity Claim | Allegation, legal costs |
-| 43 | `public-liability-claim` | Public Liability Claim Dispute | Incident, third party details |
-| 44 | `employers-liability-claim` | Employers Liability Claim | Employee injury, HSE report |
-| 45 | `cyber-insurance-claim` | Cyber Insurance Claim | Breach details, forensics |
-| 46 | `directors-officers-claim` | Directors & Officers Claim | Allegation, D&O coverage |
-
-### Phase 8: Additional Common Templates (+4 templates)
-| # | Slug | Title | Key Fields |
-|---|------|-------|------------|
-| 47 | `insurance-premium-dispute` | Insurance Premium Dispute | Premium history, increase reason |
-| 48 | `insurance-policy-dispute` | Insurance Policy Dispute | Policy terms, mis-selling |
-| 49 | `third-party-claim` | Third Party Claim | At-fault party details |
-| 50 | `insurance-bad-faith-complaint` | Bad Faith Complaint | Bad faith elements, damages |
+```
+src/data/templates/travel/
+├── flightTemplates.ts          (existing + new flight templates)
+├── baggageTemplates.ts         (all baggage-related templates)
+├── hotelTemplates.ts           (NEW - hotel/accommodation disputes)
+├── cruiseTemplates.ts          (NEW - cruise-specific disputes)
+├── carRentalTemplates.ts       (NEW - rental car disputes)
+├── tourPackageTemplates.ts     (NEW - tours/packages/OTAs)
+├── railBusTemplates.ts         (NEW - train/bus/coach disputes)
+└── index.ts                    (barrel export)
+```
 
 ---
 
-## Field Structure (Applied to All Templates)
+## Phase 1: Flight Disputes (+6 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 1 | `flight-schedule-change` | Flight Schedule Change Complaint | Original/new times, acceptability |
+| 2 | `flight-missed-connection` | Missed Connection Compensation | Connecting flight details, rebooking |
+| 3 | `airline-strike-disruption` | Airline Strike Disruption Claim | Strike type, alternative arrangements |
+| 4 | `denied-boarding-volunteers` | Denied Boarding (Volunteered) Compensation | Volunteer benefits, fulfillment |
+| 5 | `airline-refund-delay` | Airline Refund Delay Complaint | Refund request date, payment status |
+| 6 | `airline-voucher-refund` | Airline Voucher to Cash Refund | Voucher details, cash conversion |
 
-### Universal Insurance Core Fields
+---
+
+## Phase 2: Hotel & Accommodation (+10 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 7 | `hotel-booking-cancellation` | Hotel Booking Cancellation Refund | Cancellation date, policy terms |
+| 8 | `hotel-overbooking` | Hotel Overbooking Compensation | Alternative accommodation, costs |
+| 9 | `hotel-room-not-as-described` | Hotel Room Not As Described | Room type booked vs provided |
+| 10 | `hotel-cleanliness-complaint` | Hotel Cleanliness/Hygiene Complaint | Issues found, photos, health concerns |
+| 11 | `hotel-facilities-unavailable` | Hotel Facilities Unavailable | Advertised vs actual amenities |
+| 12 | `hotel-hidden-fees` | Hotel Hidden Fees Dispute | Unexpected charges, resort fees |
+| 13 | `hotel-noise-complaint` | Hotel Noise/Disturbance Complaint | Type of disturbance, room change |
+| 14 | `hotel-safety-concern` | Hotel Safety/Security Issue | Safety issue details, incident report |
+| 15 | `hotel-early-checkout-refund` | Hotel Early Checkout Refund | Reason for early departure, nights unused |
+| 16 | `airbnb-vrbo-dispute` | Vacation Rental Dispute | Platform, host communication, issue |
+
+---
+
+## Phase 3: Cruise Disputes (+8 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 17 | `cruise-itinerary-change` | Cruise Itinerary Change Complaint | Original/revised ports, notice period |
+| 18 | `cruise-cabin-downgrade` | Cruise Cabin Downgrade Compensation | Cabin type booked vs assigned |
+| 19 | `cruise-missed-port` | Cruise Missed Port Compensation | Port missed, excursions lost |
+| 20 | `cruise-onboard-service` | Cruise Onboard Service Complaint | Service issue, crew response |
+| 21 | `cruise-medical-emergency` | Cruise Medical Emergency Claim | Medical services, shore evacuation |
+| 22 | `cruise-excursion-dispute` | Shore Excursion Dispute | Excursion booked, issues encountered |
+| 23 | `cruise-cancellation-refund` | Cruise Cancellation Refund | Cancellation date, deposit/payment |
+| 24 | `cruise-illness-outbreak` | Cruise Illness/Outbreak Compensation | Illness type, quarantine, medical care |
+
+---
+
+## Phase 4: Car Rental Disputes (+8 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 25 | `car-rental-damage-dispute` | Car Rental Damage Dispute | Damage claimed, pre-rental inspection |
+| 26 | `car-rental-overcharge` | Car Rental Overcharge Complaint | Quoted vs charged, breakdown |
+| 27 | `car-rental-vehicle-swap` | Car Rental Vehicle Substitution | Vehicle class booked vs provided |
+| 28 | `car-rental-breakdown` | Car Rental Breakdown Complaint | Breakdown details, roadside assistance |
+| 29 | `car-rental-insurance-dispute` | Car Rental Insurance Dispute | Coverage claimed, denial reason |
+| 30 | `car-rental-fuel-charge` | Car Rental Fuel Charge Dispute | Fuel policy, actual vs charged |
+| 31 | `car-rental-deposit-refund` | Car Rental Deposit Not Refunded | Deposit amount, return date, delays |
+| 32 | `car-rental-toll-fee-dispute` | Car Rental Toll Fee Dispute | Toll charges, admin fees, transponder |
+
+---
+
+## Phase 5: Tours & Package Holidays (+6 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 33 | `tour-operator-misrepresentation` | Tour Misrepresentation Complaint | Advertised vs actual experience |
+| 34 | `package-holiday-insolvency` | Package Holiday Company Insolvency | ATOL/ABTA protection, refund claim |
+| 35 | `tour-guide-complaint` | Tour Guide/Service Complaint | Guide behavior, service quality |
+| 36 | `activity-tour-cancellation` | Activity/Tour Cancellation Refund | Activity booked, cancellation reason |
+| 37 | `ota-booking-error` | OTA Booking Error Complaint | Platform (Expedia, Booking.com), error type |
+| 38 | `transfer-service-failure` | Airport/Hotel Transfer Failure | Transfer booked, no-show, alternative costs |
+
+---
+
+## Phase 6: Rail & Bus (+6 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 39 | `train-delay-compensation` | Train Delay Compensation (UK) | Train operator, delay duration, Delay Repay |
+| 40 | `eurostar-thalys-delay` | International Train Delay Claim | Eurostar/Thalys, EU rail rights |
+| 41 | `train-cancellation` | Train Cancellation Refund | Cancellation notice, alternative travel |
+| 42 | `train-overcrowding` | Train Overcrowding Complaint | Reservation vs standing, discomfort |
+| 43 | `coach-bus-delay` | Coach/Bus Delay Compensation | EU bus regulation, delay length |
+| 44 | `rail-pass-issue` | Rail Pass/Ticket Issue | Pass type, validity dispute |
+
+---
+
+## Phase 7: Additional Travel Disputes (+6 templates)
+| # | Slug | Title | Key Fields |
+|---|------|-------|------------|
+| 45 | `travel-agent-complaint` | Travel Agent Complaint | Agent name, booking issue, misadvice |
+| 46 | `travel-insurance-claim` | Travel Insurance Claim Dispute | Insurer, claim type, denial reason |
+| 47 | `airline-loyalty-dispute` | Airline Miles/Points Dispute | Loyalty program, points issue |
+| 48 | `airport-lounge-complaint` | Airport Lounge Access Denial | Lounge name, entry policy, refund |
+| 49 | `visa-service-complaint` | Visa Processing Service Complaint | Service provider, application issue |
+| 50 | `pet-travel-issue` | Pet Travel/Cargo Complaint | Pet details, transport issue |
+
+---
+
+## Universal Travel Core Fields
+
+### Passenger Information
 ```text
-- insurerName, insurerAddressLine1, insurerCity, insurerPostcode
-- insuranceType (select)
-- policyholderName, policyholderAddress, policyholderPhone, policyholderEmail
-- policyNumber, policyStartDate, policyEndDate
-- claimReference, claimSubmissionDate, claimAmount
-- incidentDate, incidentDescription
+- passengerName, passengerEmail, passengerPhone, passengerAddress
+- passportNumber (optional), nationality
+- additionalPassengers, passengerCount
 ```
 
-### Regulatory Anchors by Jurisdiction
+### Booking Information
 ```text
-UK: FCA rules, Financial Ombudsman Service, Insurance Act 2015
-US: State insurance commissioner, bad faith law, NAIC standards
-EU: Insurance Distribution Directive, EIOPA
-International: Policy terms enforcement
+- bookingReference, confirmationNumber
+- bookingDate, bookingSource (direct, OTA, agent)
+- paymentMethod, amountPaid, currency
+```
+
+### Provider Information
+```text
+- providerName, providerAddress, providerEmail, providerPhone
+- providerType (airline, hotel, cruise line, car rental, tour operator)
+```
+
+### Dispute Information
+```text
+- issueDate, issueDescription
+- previousContact, responseReceived
+- compensationSought, refundAmount
+```
+
+---
+
+## Regulatory Anchors by Jurisdiction
+
+| Region | Flights | Rail | Hotels | Cruises | Package |
+|--------|---------|------|--------|---------|---------|
+| **UK** | CAA, UK261 | Delay Repay, CRA 2015 | CRA 2015 | CRA 2015 | PTR 2018 |
+| **EU** | EU261/2004 | EU1371/2007 | Package Travel Directive | Athens Convention | PTD 2015 |
+| **US** | DOT Rules | Amtrak Policy | State Consumer Law | Maritime Law | State Law |
+| **INTL** | Montreal Convention | Carrier T&Cs | Consumer Standards | Athens Convention | IATA |
+
+---
+
+## File Structure
+
+```
+src/data/templates/travel/
+├── flightTemplates.ts      # 12 templates (existing 6 + new 6)
+├── baggageTemplates.ts     # 4 templates (existing)
+├── hotelTemplates.ts       # 10 templates (NEW)
+├── cruiseTemplates.ts      # 8 templates (NEW)
+├── carRentalTemplates.ts   # 8 templates (NEW)
+├── tourPackageTemplates.ts # 6 templates (NEW)
+├── railBusTemplates.ts     # 6 templates (NEW)
+└── index.ts                # Barrel export combining all
 ```
 
 ---
@@ -122,26 +180,15 @@ International: Policy terms enforcement
 
 | File | Action |
 |------|--------|
-| `src/data/templates/insuranceTemplates.ts` | Add 46 new template objects |
-| `src/data/templateCategories.ts` | Update `templateCount` from 8 to 50 |
+| `src/data/templates/travel/` | Create directory with subcategory files |
+| `src/data/templates/travelTemplates.ts` | Refactor to import from subdirectory |
+| `src/data/templateCategories.ts` | Update `templateCount` from 20 to 50 |
+| `src/data/allTemplates.ts` | Import updated travel templates |
 
 ---
 
-## Technical Notes
+## Next Steps After Travel
 
-1. **Template Structure**: Each template follows the existing `LetterTemplate` interface with full field definitions, 5 sections, and jurisdiction-specific legal anchors
-
-2. **Category Consistency**: All templates use `category: 'Insurance'` to match existing templates
-
-3. **Slug Uniqueness**: All slugs are unique and follow kebab-case convention
-
-4. **Field Reuse**: Common fields (insurer details, policy info, claim reference) are reused across templates for consistency
-
----
-
-## Next Steps After Insurance
-
-Once Insurance is complete (50 templates), proceed with:
-1. Employment & Workplace (6 → 50, +44 templates)
-2. E-commerce & Online Services (5 → 50, +45 templates)
-3. And remaining categories...
+Once Travel is complete (50+ templates), proceed with:
+1. **Contractors & Home Improvement** (7 → 50, +43 templates)
+   - Subcategories: General contractors, Plumbers, Electricians, Roofers, HVAC, Landscapers, Painters, etc.
