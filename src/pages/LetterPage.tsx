@@ -6,6 +6,7 @@ import { inferSubcategory } from '@/data/subcategoryMappings';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
 import RelatedTemplates from '@/components/letter/RelatedTemplates';
+import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
 import { ChevronRight } from 'lucide-react';
@@ -230,6 +231,9 @@ const LetterPage = () => {
           <LetterGenerator template={template} />
         </div>
       </section>
+
+      {/* Category-Specific FAQ Section with FAQPage Schema */}
+      <TemplateFAQ template={template} categoryName={category.name} />
 
       {/* Related Templates - Enhanced Component */}
       <RelatedTemplates
