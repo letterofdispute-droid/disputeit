@@ -185,7 +185,7 @@ const SubcategoryPage = () => {
                 {subcategoryInfo.name} Letter Templates
               </h1>
               <p className="text-lg text-primary-foreground/80">
-                Browse {subcategoryTemplates.length} professional {subcategoryInfo.name.toLowerCase()} letter templates 
+                Professional {subcategoryInfo.name.toLowerCase()} letter templates 
                 in our {category.name.toLowerCase()} collection.
               </p>
             </div>

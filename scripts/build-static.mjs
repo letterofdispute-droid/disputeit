@@ -451,7 +451,7 @@ function generateCategoryHTML(category, templates) {
   // Generate subcategory sections
   const subcategoryHtml = Object.values(subcategoryGroups).map(group => `
     <div class="subcategory">
-      <h3><a href="/templates/${category.id}/${group.slug}">${escapeHtml(group.name)}</a> (${group.templates.length} templates)</h3>
+      <h3><a href="/templates/${category.id}/${group.slug}">${escapeHtml(group.name)}</a></h3>
       <ul class="templates">
         ${group.templates.slice(0, 5).map(t => `
           <li>
@@ -459,7 +459,7 @@ function generateCategoryHTML(category, templates) {
             <p>${escapeHtml(t.shortDescription)}</p>
           </li>
         `).join('')}
-        ${group.templates.length > 5 ? `<li class="more"><a href="/templates/${category.id}/${group.slug}">View all ${group.templates.length} templates →</a></li>` : ''}
+        ${group.templates.length > 5 ? `<li class="more"><a href="/templates/${category.id}/${group.slug}">View all templates →</a></li>` : ''}
       </ul>
     </div>
   `).join('');
@@ -515,7 +515,7 @@ function generateCategoryHTML(category, templates) {
     <h1>${escapeHtml(category.name)} Letter Templates</h1>
     <p class="description">${escapeHtml(category.description)}</p>
     
-    <p><strong>${categoryTemplates.length} templates available</strong> across ${Object.keys(subcategoryGroups).length} subcategories.</p>
+    <p><strong>Templates available</strong> across ${Object.keys(subcategoryGroups).length} subcategories.</p>
     
     ${subcategoryHtml}
   </main>

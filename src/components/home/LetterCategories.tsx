@@ -15,7 +15,7 @@ const LetterCategories = () => {
             Choose Your Letter Type
           </h2>
           <p className="text-lg text-muted-foreground">
-            {totalLetterBuilders} professional letter templates across {templateCategories.length} categories. 
+            Professional letter templates across {templateCategories.length} categories. 
             Each one is structured for maximum impact.
           </p>
         </div>
@@ -51,9 +51,6 @@ const LetterCategories = () => {
                       <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
                         {category.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {category.templateCount} letter templates
-                      </p>
                       <p className="text-sm text-muted-foreground mb-4">
                         {category.description}
                       </p>

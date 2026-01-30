@@ -136,14 +136,9 @@ const AllTemplatesPage = () => {
                       <IconComponent className="h-6 w-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h2 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {category.name}
-                        </h2>
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {category.templateCount}
-                        </Badge>
-                      </div>
+                      <h2 className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
+                        {category.name}
+                      </h2>
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {category.description}
                       </p>

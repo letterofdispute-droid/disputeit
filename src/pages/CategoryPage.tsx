@@ -197,7 +197,7 @@ const CategoryPage = () => {
                 {category.name} Letter Templates
               </h1>
               <p className="text-lg text-primary-foreground/80">
-                {category.description} Browse {templates.length} professionally crafted letter templates with legal references included.
+                {category.description} Professionally crafted letter templates with legal references included.
               </p>
             </div>
           </div>
