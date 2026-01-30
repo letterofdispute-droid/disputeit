@@ -334,7 +334,7 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
         </div>
 
         {/* Sidebar - Evidence Checklist & Tips */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-24 lg:self-start">
           {/* Evidence Checklist Toggle */}
           <Button
             variant="outline"

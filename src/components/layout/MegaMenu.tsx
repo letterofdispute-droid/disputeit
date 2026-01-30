@@ -95,14 +95,13 @@ const MegaMenu = () => {
                   {popularCategories.map((category) => {
                     const Icon = category.icon;
                     return (
-                      <ListItem
+                    <ListItem
                         key={category.id}
                         title={category.name}
                         href={`/templates/${category.id}`}
                         icon={Icon}
-                      >
-                        {category.templateCount} templates
-                      </ListItem>
+                      />
+                    
                     );
                   })}
                 </ul>
@@ -120,14 +119,13 @@ const MegaMenu = () => {
                   {allCategories.map((category) => {
                     const Icon = category.icon;
                     return (
-                      <ListItem
+                    <ListItem
                         key={category.id}
                         title={category.name}
                         href={`/templates/${category.id}`}
                         icon={Icon}
-                      >
-                        {category.templateCount} templates
-                      </ListItem>
+                      />
+                    
                     );
                   })}
                 </ul>

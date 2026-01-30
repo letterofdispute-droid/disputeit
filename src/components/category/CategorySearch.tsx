@@ -42,11 +42,6 @@ const CategorySearch = ({
           </Button>
         )}
       </div>
-      {isFiltered && (
-        <p className="text-sm text-muted-foreground mt-2">
-          Showing {resultCount} of {totalCount} templates
-        </p>
-      )}
     </div>
   );
 };

@@ -30,7 +30,7 @@ const SubcategoryFilter = ({
             : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
         )}
       >
-        All ({totalCount})
+        All
       </button>
 
       {/* Subcategory chips */}
@@ -49,7 +49,7 @@ const SubcategoryFilter = ({
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             )}
           >
-            {sub.name} ({count})
+            {sub.name}
           </button>
         );
       })}
