@@ -10,6 +10,7 @@ import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
 import { ChevronRight } from 'lucide-react';
+import { MethodologyBadge } from '@/components/letter/MethodologyBadge';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -221,11 +222,11 @@ const LetterPage = () => {
           
           {/* Template Validation Callout */}
           <div className="max-w-2xl mx-auto mb-10">
-            <div className="p-4 bg-accent/10 border border-accent/30 rounded-lg text-center">
-              <p className="text-sm text-foreground">
-                <span className="font-medium">Why this template?</span> Pre-validated for {category.name.toLowerCase()} disputes with controlled language and proper escalation structure. No guessing required.
-              </p>
-            </div>
+            <MethodologyBadge 
+              category={template.category}
+              subcategory={subcategoryInfo?.name}
+              jurisdiction="US"
+            />
           </div>
           
           <LetterGenerator template={template} />
