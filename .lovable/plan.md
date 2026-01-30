@@ -1,362 +1,549 @@
 
-# Comprehensive UX and SEO Enhancement Plan
+# AI-Powered Template Enhancement Plan
 
-This plan addresses five key areas: naming reversion, scroll behavior, category UX enhancement, SEO-friendly hierarchical URLs with breadcrumbs, and US trust indicator.
+## Executive Summary
 
----
-
-## 1. Revert "Letter Builders" to "Letter Templates"
-
-### Scope
-Change all user-facing text from "letter builders" back to "letter templates" across approximately 15 files.
-
-### Files to Update
-- `src/components/home/Hero.tsx` - Badge and CTA button
-- `src/components/home/LetterCategories.tsx` - Counts and descriptions
-- `src/components/home/HowItWorks.tsx` - Step descriptions
-- `src/components/home/WhyNotChatGPT.tsx` - Descriptions
-- `src/components/home/TrustIndicators.tsx` - Descriptions
-- `src/components/home/FAQ.tsx` - Answer text
-- `src/components/home/Pricing.tsx` - Descriptions
-- `src/pages/CategoryPage.tsx` - SEO titles, headings, counts
-- `src/pages/PricingPage.tsx` - Descriptions
-- `src/components/layout/Footer.tsx` - Disclaimer
-- `src/components/layout/MegaMenu.tsx` - Menu text (already says "templates")
-- `src/components/layout/Header.tsx` - Menu accordion (already says "templates")
-- `src/components/dispute-assistant/LetterRecommendation.tsx` - Button text
-- `src/pages/ArticleCategoryPage.tsx` - Description text
-- `supabase/functions/dispute-assistant/index.ts` - AI prompt
-
-### Text Replacements
-| Current | New |
-|---------|-----|
-| "letter builders" | "letter templates" |
-| "Letter Builders" | "Letter Templates" |
-| "letter builder" | "letter template" |
-| "Letter Builder" | "Letter Template" |
-| "Pre-Validated Letter Builders" | "Pre-Validated Letter Templates" |
-| "Browse Letter Builders" | "Browse Letter Templates" |
-| "View Letter Builder" | "View Letter Template" |
+This plan transforms all 450+ static letter templates into intelligent, adaptive forms powered by AI. Each template will have:
+- Dynamic field validation with real-time feedback
+- Smart suggestions based on the user's specific situation  
+- Evidence requirement checklists tailored to their case
+- Real-time completeness scoring
+- Credibility messaging throughout the experience
 
 ---
 
-## 2. Fix Scroll Position on Navigation
+## Current State Analysis
 
-### Problem
-When navigating to category or template pages, users start at the bottom of the page instead of the top.
+### What Exists Now
+- 450+ templates with static fields defined in TypeScript files
+- Fields include basic validation (required/optional) but no smart logic
+- Letter generation uses simple placeholder substitution
+- No AI integration in the form-filling process itself
+- Dispute Assistant exists but only for template discovery, not form enhancement
 
-### Solution
-Create a `ScrollToTop` component that uses React Router's navigation events to reset scroll position.
+### Key Gaps
+1. **Static fields** - Same questions for everyone regardless of their specific situation
+2. **No validation intelligence** - Missing industry-specific format validation (PIR numbers, IATA codes)
+3. **No guidance** - Users don't know what evidence to gather or how to describe their issue effectively
+4. **No completeness feedback** - No indication of letter strength before purchase
 
-### Implementation
+---
 
-**New file: `src/components/ScrollToTop.tsx`**
+## Architecture Overview
+
+```text
++------------------+      +----------------------+      +-------------------+
+|  Template Page   | ---> |  Smart Form Engine   | ---> |  Letter Generator |
+|  (LetterPage)    |      |  (AI-Enhanced)       |      |  (Existing)       |
++------------------+      +----------------------+      +-------------------+
+        |                         |                            |
+        v                         v                            v
++------------------+      +----------------------+      +-------------------+
+|  Field Renderer  |      |  Edge Function:      |      |  Generated Letter |
+|  with AI Hints   |      |  form-assistant      |      |  (PDF/DOCX)       |
++------------------+      +----------------------+      +-------------------+
+```
+
+---
+
+## Phase 1: Smart Field Enhancement System
+
+### 1.1 Enhanced Field Interface
+
+**File: `src/data/letterTemplates.ts`**
+
+Add new optional properties to `TemplateField`:
+
 ```typescript
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+export interface TemplateField {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'date' | 'select' | 'number';
+  placeholder?: string;
+  required: boolean;
+  helpText?: string;
+  options?: string[];
+  
+  // NEW: Smart enhancement properties
+  validation?: FieldValidation;
+  aiEnhanced?: boolean;           // Enable AI suggestions for this field
+  evidenceHint?: string;          // "Have your boarding pass handy"
+  formatHint?: string;            // "Format: ABC123 (6 characters)"
+  commonMistakes?: string[];      // ["Don't include spaces", "Use capitals"]
+  impactLevel?: 'critical' | 'important' | 'helpful';
+}
 
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
+export interface FieldValidation {
+  pattern?: string;               // Regex pattern
+  patternMessage?: string;        // "Must be 6 letters/numbers"
+  minLength?: number;
+  maxLength?: number;
+  format?: 'email' | 'phone' | 'date' | 'currency' | 'pir' | 'pnr' | 'iata';
+  customValidator?: string;       // Named validator function
+}
+```
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+### 1.2 Field Validation Library
 
-  return null;
+**File: `src/lib/fieldValidators.ts`**
+
+```typescript
+// Industry-specific validation patterns
+export const validationPatterns = {
+  // Travel
+  pnr: /^[A-Z0-9]{6}$/,           // Booking reference
+  iata: /^[A-Z]{3}$/,             // Airport code
+  flightNumber: /^[A-Z]{2}\d{1,4}$/, // e.g., BA123
+  pirReference: /^[A-Z]{5}\d{5}$/, // Property Irregularity Report
+  worldTracer: /^[A-Z]{3}\d{5}$/,  // WorldTracer number
+  bagTag: /^\d{10}$/,              // 10-digit bag tag
+  
+  // Insurance
+  policyNumber: /^[A-Z]{2,4}\d{6,10}$/,
+  claimNumber: /^CLM-?\d{6,12}$/,
+  
+  // Vehicle
+  vin: /^[A-HJ-NPR-Z0-9]{17}$/,
+  licensePlate: /^[A-Z0-9]{2,8}$/,
+  
+  // Financial
+  accountLast4: /^\d{4}$/,
+  sortCode: /^\d{2}-?\d{2}-?\d{2}$/,
+  
+  // Housing
+  tenancyRef: /^[A-Z0-9]{4,12}$/,
+  
+  // Healthcare
+  npiNumber: /^\d{10}$/,           // Provider NPI
+  rxNumber: /^RX\d{6,10}$/,        // Prescription number
+  
+  // Contractors
+  licenseNumber: /^[A-Z]{2,3}\d{6,10}$/,
+  permitNumber: /^[A-Z0-9]{8,15}$/,
 };
 
-export default ScrollToTop;
-```
-
-**Update `src/App.tsx`**
-- Import and add `<ScrollToTop />` immediately inside `<BrowserRouter>`
-
----
-
-## 3. Enhance Category Listings UX
-
-### Problem
-Categories with 50+ templates result in excessive scrolling with no way to filter, search, or preview templates.
-
-### Solution
-Add search/filter functionality, subcategory grouping, and template preview cards.
-
-### Features
-
-1. **Search Bar** - Filter templates by title/description within the category
-2. **Subcategory Tabs/Chips** - Group templates by subcategory (General, Plumbing, Electrical, etc.)
-3. **Template Preview Cards** - Show more information on hover/click
-4. **Count Badge** - Show "X of Y templates" when filtered
-
-### Data Model Enhancement
-Add optional `subcategory` field to `LetterTemplate` interface:
-```typescript
-export interface LetterTemplate {
-  id: string;
-  slug: string;
-  category: string;
-  subcategory?: string;  // NEW - e.g., "Plumbing", "Electrical"
-  // ... rest unchanged
+export function validateField(value: string, validation: FieldValidation): ValidationResult {
+  // Implementation for each validation type
 }
 ```
 
-### UI Components
+### 1.3 Template Field Updates
 
-**New file: `src/components/category/CategorySearch.tsx`**
-- Search input with debounce
-- Clear button
+Update all 450+ templates with enhanced field metadata. Example for Lost Baggage:
 
-**New file: `src/components/category/SubcategoryFilter.tsx`**
-- Horizontal scrollable chip list
-- "All" option + extracted subcategories
-
-**Update `src/pages/CategoryPage.tsx`**
-- Add state for search query and active subcategory
-- Filter templates based on both
-- Show result count
-
----
-
-## 4. SEO-Friendly Hierarchical URLs with Breadcrumbs
-
-### Current Structure
-```
-/category/contractors
-/complaint-letter/plumber-leak-repair-failure
-```
-
-### New Structure
-```
-/templates                                    (All templates landing)
-/templates/contractors                         (Category)
-/templates/contractors/plumbing                (Subcategory)
-/templates/contractors/plumbing/leak-repair    (Template)
-```
-
-### Implementation
-
-**4.1 Data Model Updates**
-
-Update `LetterTemplate` interface in `src/data/letterTemplates.ts`:
 ```typescript
-export interface LetterTemplate {
-  // ... existing fields
-  subcategory?: string;           // Human-readable: "Plumbing"
-  subcategorySlug?: string;       // URL-friendly: "plumbing"
-}
-```
-
-Update all template files to include subcategory data. Example in `plumbingTemplates.ts`:
-```typescript
-{
-  id: 'plumber-leak-repair-failure',
-  slug: 'leak-repair-failure',  // Shortened - category/subcategory provide context
-  category: 'Contractors',
-  subcategory: 'Plumbing',
-  subcategorySlug: 'plumbing',
-  // ...
-}
-```
-
-**4.2 New Routes**
-
-Update `src/App.tsx`:
-```typescript
-<Route path="/templates" element={<AllTemplatesPage />} />
-<Route path="/templates/:categoryId" element={<CategoryPage />} />
-<Route path="/templates/:categoryId/:subcategorySlug" element={<SubcategoryPage />} />
-<Route path="/templates/:categoryId/:subcategorySlug/:templateSlug" element={<LetterPage />} />
-
-{/* Maintain old routes with 301 redirects for SEO */}
-<Route path="/category/:categoryId" element={<Navigate to="/templates/:categoryId" replace />} />
-<Route path="/complaint-letter/:slug" element={<LegacyTemplateRedirect />} />
-```
-
-**4.3 New Pages**
-
-**`src/pages/AllTemplatesPage.tsx`**
-- Landing page for `/templates`
-- Shows all categories with counts
-- SEO-optimized with full category listing
-
-**`src/pages/SubcategoryPage.tsx`**
-- Lists templates within a subcategory
-- Breadcrumbs: Home > Category > Subcategory
-- SEO title: "Plumbing Complaint Letters | Contractors Templates"
-
-**`src/components/LegacyTemplateRedirect.tsx`**
-- Handles old `/complaint-letter/:slug` URLs
-- Looks up template, redirects to new hierarchical URL
-
-**4.4 Breadcrumb Enhancement**
-
-All pages will have full breadcrumb hierarchy with JSON-LD schema:
-
-**Template Page Breadcrumb:**
-```
-Home > Contractors > Plumbing > Leak Repair Failure Letter
-```
-
-**Schema.org BreadcrumbList:**
-```json
-{
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://disputeletters.com/"},
-    {"@type": "ListItem", "position": 2, "name": "Templates", "item": "https://disputeletters.com/templates"},
-    {"@type": "ListItem", "position": 3, "name": "Contractors", "item": "https://disputeletters.com/templates/contractors"},
-    {"@type": "ListItem", "position": 4, "name": "Plumbing", "item": "https://disputeletters.com/templates/contractors/plumbing"},
-    {"@type": "ListItem", "position": 5, "name": "Leak Repair Failure Letter"}
-  ]
-}
-```
-
-**4.5 Static Route Generation Update**
-
-Update `src/routes.ts` for SSG:
-```typescript
-export const routes = [
-  '/',
-  '/templates',
-  ...templateCategories.map(c => `/templates/${c.id}`),
-  ...allSubcategories.map(s => `/templates/${s.categoryId}/${s.slug}`),
-  ...allTemplates.map(t => `/templates/${getCategoryId(t)}/${t.subcategorySlug}/${t.slug}`),
-];
+fields: [
+  {
+    id: 'pirReference',
+    label: 'PIR Reference Number',
+    type: 'text',
+    required: true,
+    placeholder: 'e.g., LHRBA12345',
+    helpText: 'From the report you filed at the airport',
+    validation: {
+      format: 'pir',
+      patternMessage: 'PIR format: 5 letters + 5 numbers (e.g., LHRBA12345)'
+    },
+    evidenceHint: 'Find this on the Property Irregularity Report from the airport',
+    formatHint: 'First 3 letters are airport code, next 2 are airline code',
+    impactLevel: 'critical',
+    aiEnhanced: true
+  },
+  {
+    id: 'bagTag',
+    label: 'Bag Tag Number',
+    type: 'text',
+    required: true,
+    placeholder: 'e.g., 1234567890',
+    validation: {
+      format: 'bagTag',
+      patternMessage: 'Bag tag should be 10 digits'
+    },
+    evidenceHint: 'Usually on the sticky label attached to your boarding pass stub',
+    impactLevel: 'critical'
+  },
+  {
+    id: 'contentsDescription',
+    label: 'Bag Contents',
+    type: 'textarea',
+    required: true,
+    aiEnhanced: true,  // AI will help structure this
+    evidenceHint: 'List each item with approximate value. Keep receipts/photos if available.',
+    impactLevel: 'critical'
+  }
+]
 ```
 
 ---
 
-## 5. Enhanced On-Page SEO for Template Pages
+## Phase 2: Real-Time AI Form Assistant
 
-Each template page is a landing page optimized for its specific dispute type.
+### 2.1 Edge Function: Form Assistant
 
-### SEO Elements
+**File: `supabase/functions/form-assistant/index.ts`**
 
-**5.1 Dynamic Meta Tags (via SEOHead)**
-- Title: `{Template Title} | Free Complaint Letter Template | Dispute Letters`
-- Description: 150-160 chars, action-oriented
-- Canonical URL with full hierarchy
+A new edge function that provides real-time AI assistance during form filling:
 
-**5.2 Schema.org Structured Data**
+```typescript
+// Capabilities:
+// 1. Validate user input contextually
+// 2. Suggest better descriptions
+// 3. Identify missing critical information
+// 4. Score letter strength
 
-Add to each template page:
+const systemPrompt = `You are a form assistant helping users fill out dispute letters.
 
-**HowTo Schema:**
-```json
-{
-  "@type": "HowTo",
-  "name": "How to Write a Plumber Leak Repair Failure Complaint Letter",
-  "step": [
-    {"@type": "HowToStep", "name": "Gather Information", "text": "Collect repair dates, invoices, and photos"},
-    {"@type": "HowToStep", "name": "Fill Out Template", "text": "Enter your details in our guided form"},
-    {"@type": "HowToStep", "name": "Download Letter", "text": "Get your professional letter in PDF/DOCX"}
-  ]
+Your job is to:
+1. VALIDATE: Check if the user's input is appropriate for a formal complaint letter
+2. SUGGEST: Offer specific improvements to make their case stronger
+3. IDENTIFY: Point out missing information that could weaken their claim
+4. SCORE: Rate the completeness and strength of their letter (1-100)
+
+CATEGORY EXPERTISE:
+You understand the requirements for each dispute type:
+- TRAVEL: EU261 compensation tiers, Montreal Convention limits, airline procedures
+- INSURANCE: Documentation requirements, policy terms, claims processes
+- CONTRACTORS: Building codes, licensing requirements, warranty terms
+- HOUSING: Landlord obligations, habitability standards, notice requirements
+- FINANCIAL: FCRA, FDCPA, banking regulations
+- HEALTHCARE: HIPAA, billing regulations, insurance mandates
+
+IMPORTANT CONSTRAINTS:
+- Never provide legal advice
+- Focus on practical improvements
+- Be encouraging while being specific
+- Suggest evidence they should gather
+`;
+```
+
+### 2.2 Frontend Component: Smart Field
+
+**File: `src/components/letter/SmartField.tsx`**
+
+A new field component that provides:
+- Real-time format validation with helpful messages
+- AI suggestions on blur/after typing
+- Evidence requirement hints
+- Visual feedback on field importance
+
+```typescript
+interface SmartFieldProps {
+  field: TemplateField;
+  value: string;
+  onChange: (value: string) => void;
+  aiSuggestion?: string;
+  isValidating?: boolean;
+  validationError?: string;
+  strength?: 'weak' | 'moderate' | 'strong';
 }
 ```
 
-**WebApplication Schema:**
-```json
-{
-  "@type": "WebApplication",
-  "name": "Plumber Leak Repair Failure Letter Generator",
-  "applicationCategory": "BusinessApplication",
-  "offers": {"@type": "Offer", "price": "9.99", "priceCurrency": "EUR"}
-}
-```
+Features:
+- Shows validation state (green check, yellow warning, red error)
+- Displays AI suggestions in a tooltip/popover
+- Highlights critical vs optional fields
+- Shows "Tip" badges for evidence hints
 
-**5.3 Content Sections**
+### 2.3 Letter Strength Meter
 
-Expand `src/components/letter/SEOContent.tsx`:
-- "When to Use This Letter" section
-- "What Information You'll Need" checklist
-- "What Happens After Sending" section
-- "Related Templates" internal links
-- FAQ accordion (if template-specific FAQs exist)
+**File: `src/components/letter/LetterStrengthMeter.tsx`**
 
-**5.4 Internal Linking**
-- Related templates within same subcategory
-- Cross-links to parent category and sibling subcategories
-- "You might also need" section
+Visual indicator showing:
+- Overall letter completeness (%)
+- Field-by-field strength analysis
+- Missing critical information warnings
+- "Your letter could be stronger" suggestions
 
 ---
 
-## 6. Subtle US Trust Indicator
+## Phase 3: Category-Specific Intelligence
 
-### Design
-Add a small, professional US flag indicator in the header and/or footer.
+### 3.1 Knowledge Base Structure
 
-### Implementation Options
+**File: `src/data/categoryKnowledge.ts`**
 
-**Option A: Header (Recommended)**
-Add to `src/components/layout/Header.tsx`, next to the logo:
+Centralized intelligence for each category:
+
+```typescript
+export const categoryKnowledge = {
+  travel: {
+    flights: {
+      regulations: {
+        EU261: {
+          description: 'EU Regulation 261/2004 for flight delays/cancellations',
+          compensationTiers: {
+            short: { distance: 'Under 1,500km', amount: 250 },
+            medium: { distance: '1,500-3,500km', amount: 400 },
+            long: { distance: 'Over 3,500km', amount: 600 }
+          },
+          eligibility: [
+            'Flight departed from EU airport (any airline)',
+            'Flight to EU on EU-based airline',
+            'Delay of 3+ hours at final destination',
+            'Not caused by extraordinary circumstances'
+          ],
+          extraordinaryCircumstances: [
+            'Severe weather', 'Political instability', 'Security threats',
+            'Air traffic control strikes', 'Hidden manufacturing defects'
+          ],
+          notExtraordinary: [
+            'Technical faults (most)', 'Crew illness', 'Operational decisions',
+            'Bird strikes', 'Refueling issues'
+          ]
+        },
+        montrealConvention: {
+          baggageLiability: 1288,  // SDR limit
+          delayLiability: 5346,
+          description: 'International air carriage liability limits'
+        }
+      },
+      requiredEvidence: {
+        delay: ['Boarding pass', 'Booking confirmation', 'Delay notification', 'Expense receipts'],
+        cancellation: ['Booking confirmation', 'Cancellation notification', 'Alternative flight details'],
+        baggage: ['PIR report', 'Bag tags', 'Contents list with values', 'Receipts for essentials purchased']
+      }
+    }
+  },
+  
+  insurance: {
+    claims: {
+      requiredDocuments: {
+        auto: ['Policy document', 'Police report', 'Photos of damage', 'Repair estimates'],
+        home: ['Policy document', 'Photos', 'Contractor estimates', 'Inventory list'],
+        health: ['EOB statement', 'Medical records', 'Itemized bills', 'Prescription records']
+      },
+      commonDenialReasons: {
+        auto: ['Pre-existing damage', 'Excluded driver', 'Lapsed coverage', 'Fraud suspicion'],
+        health: ['Not medically necessary', 'Out of network', 'Prior authorization required']
+      }
+    }
+  },
+  
+  contractors: {
+    licensing: {
+      checkPoints: [
+        'Verify license with state/local board',
+        'Confirm insurance coverage',
+        'Check for complaints/disciplinary actions'
+      ],
+      commonViolations: [
+        'Work without permits', 'Unlicensed work', 'Code violations',
+        'Abandonment', 'Failure to complete'
+      ]
+    },
+    documentation: {
+      required: ['Written contract', 'Change orders', 'Payment receipts', 'Photos of defects'],
+      helpful: ['Text/email communications', 'Witness statements', 'Expert assessments']
+    }
+  }
+  // ... more categories
+};
+```
+
+### 3.2 Dynamic Help Content
+
+For each template, show contextual help based on the category knowledge:
+- "What you'll need" checklist
+- "Common pitfalls to avoid"
+- "This letter typically works because..."
+
+---
+
+## Phase 4: Enhanced User Experience
+
+### 4.1 Updated LetterGenerator Component
+
+**File: `src/components/letter/LetterGenerator.tsx`**
+
+Enhance the existing 3-step flow:
+
+**Step 1 (Enhanced):**
+- Smart fields with real-time validation
+- AI suggestions in sidebar
+- Evidence checklist toggle
+- "Tip" badges on critical fields
+
+**Step 2 (Enhanced):**  
+- Letter strength meter
+- AI analysis of case strength
+- Missing information warnings
+- Suggested improvements panel
+
+**Step 3 (Enhanced):**
+- Preview with highlighted improvements
+- Comparison of weak vs strong version
+- Final AI review summary
+
+### 4.2 Credibility Messaging
+
+Add trust indicators throughout the form experience:
+
+**Header Badge:**
 ```tsx
-<div className="flex items-center gap-1 text-xs text-muted-foreground">
-  <span className="text-[10px]">🇺🇸</span>
-  <span className="hidden sm:inline">US-Based</span>
+<div className="flex items-center gap-2 text-sm">
+  <Sparkles className="h-4 w-4 text-accent" />
+  <span>AI-Enhanced Template</span>
 </div>
 ```
 
-**Option B: Footer Trust Bar**
-Add to footer above copyright:
+**Field-level:**
 ```tsx
-<div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-4">
-  <span>🇺🇸</span>
-  <span>US-Based Service</span>
-</div>
+{field.aiEnhanced && (
+  <Badge variant="outline" className="text-xs">
+    <Sparkles className="h-3 w-3 mr-1" />
+    AI-Assisted
+  </Badge>
+)}
 ```
 
-**Option C: Hero Trust Indicators**
-Add to the existing trust indicators row in `src/components/home/Hero.tsx`:
+**Methodology section (footer of each template):**
 ```tsx
-<div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-  <span>🇺🇸</span>
-  <span className="text-sm">US-Based Service</span>
-</div>
+<Card className="mt-8 p-4 bg-muted/50">
+  <h4 className="font-medium flex items-center gap-2">
+    <Shield className="h-4 w-4" />
+    How This Template Was Built
+  </h4>
+  <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+    <li>✓ Based on {regulation} requirements</li>
+    <li>✓ Validated against industry standards</li>
+    <li>✓ Enhanced with AI-powered field validation</li>
+    <li>✓ Tested for real-world effectiveness</li>
+  </ul>
+</Card>
 ```
 
-I recommend **Option C** (Hero) + **Option B** (Footer) for maximum visibility without being intrusive.
+---
+
+## Phase 5: Template Data Migration
+
+### 5.1 Migration Script
+
+Create a script to systematically enhance all 450+ templates:
+
+**File: `scripts/enhance-templates.ts`**
+
+The script will:
+1. Read each template file
+2. Apply category-specific field enhancements
+3. Add validation patterns based on field ID patterns
+4. Insert evidence hints from categoryKnowledge
+5. Set impactLevel based on required status
+
+### 5.2 Category-Specific Field Mappings
+
+Define which fields get which enhancements:
+
+```typescript
+const fieldEnhancements = {
+  // Travel fields
+  pirReference: { format: 'pir', impactLevel: 'critical', evidenceHint: '...' },
+  bookingReference: { format: 'pnr', impactLevel: 'critical', evidenceHint: '...' },
+  flightNumber: { format: 'flightNumber', impactLevel: 'critical' },
+  
+  // Insurance fields
+  policyNumber: { format: 'policyNumber', impactLevel: 'critical' },
+  claimNumber: { format: 'claimNumber', impactLevel: 'critical' },
+  
+  // Vehicle fields
+  vin: { format: 'vin', impactLevel: 'important' },
+  licensePlate: { format: 'licensePlate', impactLevel: 'important' },
+  
+  // Common across categories
+  amountPaid: { format: 'currency', impactLevel: 'critical' },
+  email: { format: 'email', impactLevel: 'important' },
+  phone: { format: 'phone', impactLevel: 'helpful' }
+};
+```
+
+---
+
+## Implementation Order
+
+### Week 1: Foundation
+1. Extend `TemplateField` interface with new properties
+2. Create `fieldValidators.ts` with validation patterns
+3. Create `categoryKnowledge.ts` with domain expertise
+4. Build `SmartField.tsx` component
+
+### Week 2: AI Integration
+5. Create `form-assistant` edge function
+6. Build `LetterStrengthMeter.tsx` component
+7. Update `LetterGenerator.tsx` to use new components
+8. Add credibility messaging UI
+
+### Week 3: Template Migration (Batch 1)
+9. Enhance Travel templates (12 templates)
+10. Enhance Insurance templates (8 templates)
+11. Enhance Healthcare templates (50 templates)
+
+### Week 4: Template Migration (Batch 2)
+12. Enhance Contractors templates (~50 templates)
+13. Enhance Housing templates (14 templates)
+14. Enhance Vehicle templates (8 templates)
+
+### Week 5: Template Migration (Batch 3)
+15. Enhance Financial templates (10 templates)
+16. Enhance Utilities templates (10 templates)
+17. Enhance E-commerce templates (5 templates)
+18. Enhance remaining categories
+
+### Week 6: Polish
+19. End-to-end testing
+20. Performance optimization
+21. A/B testing framework
+22. Analytics for AI suggestions
 
 ---
 
 ## Technical Details
 
-### File Changes Summary
+### Files to Create
+| File | Purpose |
+|------|---------|
+| `src/lib/fieldValidators.ts` | Validation patterns and functions |
+| `src/data/categoryKnowledge.ts` | Domain expertise by category |
+| `src/components/letter/SmartField.tsx` | AI-enhanced form field |
+| `src/components/letter/LetterStrengthMeter.tsx` | Visual strength indicator |
+| `src/components/letter/EvidenceChecklist.tsx` | Required documents checklist |
+| `src/components/letter/MethodologyBadge.tsx` | Credibility messaging |
+| `src/hooks/useFormAssistant.ts` | Hook for AI form assistance |
+| `supabase/functions/form-assistant/index.ts` | AI form assistance API |
+| `scripts/enhance-templates.ts` | Template migration script |
 
-| Category | Files to Create | Files to Modify |
-|----------|----------------|-----------------|
-| Naming Reversion | 0 | ~15 files |
-| Scroll Fix | 1 | 1 (App.tsx) |
-| Category UX | 2 | 1 (CategoryPage.tsx) |
-| Hierarchical URLs | 3 | 8+ (routes, pages, templates) |
-| SEO Enhancement | 0 | 2 (SEOHead, SEOContent) |
-| US Trust Indicator | 0 | 2 (Header, Footer) |
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `src/data/letterTemplates.ts` | Extended TemplateField interface |
+| `src/components/letter/LetterGenerator.tsx` | Use SmartField, add strength meter |
+| All template files in `src/data/templates/` | Add field enhancements |
+| `src/pages/LetterPage.tsx` | Add methodology section |
+| `supabase/config.toml` | Add form-assistant function |
 
-### Migration Strategy for URLs
-
-1. Implement new routes alongside old ones
-2. Add automatic 301 redirects from old URLs to new
-3. Update sitemap and robots.txt
-4. Submit updated sitemap to search engines
-5. Monitor for 404s and add redirects as needed
-
-### Template Data Migration
-
-All 400+ templates need the following fields added:
-- `subcategory`: Human-readable name
-- `subcategorySlug`: URL-friendly slug
-
-This can be done programmatically based on the file they're in:
-- Templates in `plumbingTemplates.ts` get `subcategory: "Plumbing", subcategorySlug: "plumbing"`
-- Templates in `generalContractorTemplates.ts` get `subcategory: "General", subcategorySlug: "general"`
+### Performance Considerations
+- AI suggestions are debounced (500ms after typing stops)
+- Validation runs client-side first, AI only for complex fields
+- Strength meter updates on blur, not keystroke
+- Edge function responses cached for identical inputs
 
 ---
 
-## Implementation Priority
+## Success Metrics
 
-1. **Phase 1**: Scroll fix (quick win, immediate UX improvement)
-2. **Phase 2**: Naming reversion (text changes only)
-3. **Phase 3**: US trust indicator (simple addition)
-4. **Phase 4**: Category UX enhancements (search, filtering)
-5. **Phase 5**: Hierarchical URL structure (most complex, requires data migration)
-6. **Phase 6**: Enhanced SEO content per template
+1. **Completion Rate**: % of users who complete all required fields
+2. **AI Suggestion Acceptance**: % of AI suggestions users apply
+3. **Letter Strength**: Average strength score at submission
+4. **Time to Complete**: Average form completion time
+5. **Conversion Rate**: % of form completions that convert to purchase
 
+---
+
+## User Experience Flow
+
+1. User lands on template page
+2. Sees "AI-Enhanced Template" badge and methodology section
+3. Starts filling form with smart validation feedback
+4. Gets AI suggestions for description fields
+5. Sees evidence checklist for their case type
+6. Watches strength meter improve as they add details
+7. Reviews AI analysis before purchase
+8. Feels confident their letter will be effective
