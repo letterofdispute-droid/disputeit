@@ -1,3 +1,33 @@
+// ============= Field Validation Types =============
+
+export type ValidationFormat = 
+  | 'email' | 'phone' | 'date' | 'currency' 
+  // Travel
+  | 'pir' | 'pnr' | 'iata' | 'flightNumber' | 'bagTag' | 'worldTracer'
+  // Insurance
+  | 'policyNumber' | 'claimNumber'
+  // Vehicle
+  | 'vin' | 'licensePlate'
+  // Financial
+  | 'accountLast4' | 'sortCode' | 'iban'
+  // Housing
+  | 'tenancyRef'
+  // Healthcare
+  | 'npiNumber' | 'rxNumber'
+  // Contractors
+  | 'licenseNumber' | 'permitNumber';
+
+export interface FieldValidation {
+  pattern?: string;               // Regex pattern as string
+  patternMessage?: string;        // "Must be 6 letters/numbers"
+  minLength?: number;
+  maxLength?: number;
+  format?: ValidationFormat;      // Named format for pre-built validators
+  customValidator?: string;       // Named validator function
+}
+
+// ============= Template Interfaces =============
+
 export interface LetterTemplate {
   id: string;
   slug: string;
@@ -24,6 +54,14 @@ export interface TemplateField {
   required: boolean;
   helpText?: string;
   options?: string[];
+  
+  // Smart enhancement properties
+  validation?: FieldValidation;
+  aiEnhanced?: boolean;           // Enable AI suggestions for this field
+  evidenceHint?: string;          // "Have your boarding pass handy"
+  formatHint?: string;            // "Format: ABC123 (6 characters)"
+  commonMistakes?: string[];      // ["Don't include spaces", "Use capitals"]
+  impactLevel?: 'critical' | 'important' | 'helpful';
 }
 
 export interface TemplateSection {
@@ -71,14 +109,14 @@ This template helps you communicate professionally and increases your chances of
     seoDescription: 'Create a professional refund request letter in minutes. Free template with customizable options for damaged goods, wrong items, or unsatisfactory services.',
     tones: ['neutral', 'firm', 'final'],
     fields: [
-      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'e.g., ABC Electronics Ltd', required: true },
-      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address of the company', required: true },
-      { id: 'orderNumber', label: 'Order/Reference Number', type: 'text', placeholder: 'e.g., ORD-123456', required: false, helpText: 'If applicable' },
-      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
-      { id: 'productDescription', label: 'Product/Service Description', type: 'textarea', placeholder: 'Describe the item or service purchased', required: true },
-      { id: 'amountPaid', label: 'Amount Paid', type: 'text', placeholder: 'e.g., €99.99', required: true },
-      { id: 'issueDescription', label: 'Describe the Issue', type: 'textarea', placeholder: 'Explain what went wrong with the product or service', required: true },
-      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'Any previous emails, calls, or visits', required: false },
+      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'e.g., ABC Electronics Ltd', required: true, impactLevel: 'critical' },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address of the company', required: true, impactLevel: 'important' },
+      { id: 'orderNumber', label: 'Order/Reference Number', type: 'text', placeholder: 'e.g., ORD-123456', required: false, helpText: 'If applicable', evidenceHint: 'Check your order confirmation email or receipt', impactLevel: 'important' },
+      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true, impactLevel: 'critical' },
+      { id: 'productDescription', label: 'Product/Service Description', type: 'textarea', placeholder: 'Describe the item or service purchased', required: true, aiEnhanced: true, evidenceHint: 'Include model numbers, sizes, or specific details for stronger identification', impactLevel: 'critical' },
+      { id: 'amountPaid', label: 'Amount Paid', type: 'text', placeholder: 'e.g., €99.99', required: true, validation: { format: 'currency' }, evidenceHint: 'Check your bank statement or receipt for exact amount', impactLevel: 'critical' },
+      { id: 'issueDescription', label: 'Describe the Issue', type: 'textarea', placeholder: 'Explain what went wrong with the product or service', required: true, aiEnhanced: true, evidenceHint: 'Be specific and factual. Include dates, observations, and impact on you.', impactLevel: 'critical' },
+      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'Any previous emails, calls, or visits', required: false, aiEnhanced: true, evidenceHint: 'Include dates and names of representatives you spoke with', impactLevel: 'helpful' },
     ],
     sections: [
       {
@@ -163,14 +201,14 @@ Documenting your repair requests in writing is essential for protecting your rig
     seoDescription: 'Create a professional letter requesting repairs from your landlord. Free template for heating, plumbing, mold, and maintenance issues.',
     tones: ['neutral', 'firm', 'final'],
     fields: [
-      { id: 'landlordName', label: 'Landlord/Agent Name', type: 'text', placeholder: 'e.g., Mr. John Smith', required: true },
-      { id: 'landlordAddress', label: 'Landlord Address', type: 'textarea', placeholder: 'Full address', required: true },
-      { id: 'propertyAddress', label: 'Your Rental Property Address', type: 'textarea', placeholder: 'The property requiring repairs', required: true },
-      { id: 'tenancyStart', label: 'Tenancy Start Date', type: 'date', required: false },
-      { id: 'repairDescription', label: 'Describe the Repair Needed', type: 'textarea', placeholder: 'Be specific about what needs to be fixed', required: true },
-      { id: 'issueDate', label: 'When Did the Issue Start?', type: 'date', required: true },
-      { id: 'impact', label: 'How Does This Affect You?', type: 'textarea', placeholder: 'e.g., Unable to use heating, health concerns', required: true },
-      { id: 'previousReports', label: 'Previous Reports of This Issue', type: 'textarea', placeholder: 'Any previous notifications', required: false },
+      { id: 'landlordName', label: 'Landlord/Agent Name', type: 'text', placeholder: 'e.g., Mr. John Smith', required: true, impactLevel: 'critical' },
+      { id: 'landlordAddress', label: 'Landlord Address', type: 'textarea', placeholder: 'Full address', required: true, impactLevel: 'important' },
+      { id: 'propertyAddress', label: 'Your Rental Property Address', type: 'textarea', placeholder: 'The property requiring repairs', required: true, impactLevel: 'critical' },
+      { id: 'tenancyStart', label: 'Tenancy Start Date', type: 'date', required: false, impactLevel: 'helpful' },
+      { id: 'repairDescription', label: 'Describe the Repair Needed', type: 'textarea', placeholder: 'Be specific about what needs to be fixed', required: true, aiEnhanced: true, evidenceHint: 'Take photos/videos of the issue. Note any safety hazards.', impactLevel: 'critical' },
+      { id: 'issueDate', label: 'When Did the Issue Start?', type: 'date', required: true, impactLevel: 'critical' },
+      { id: 'impact', label: 'How Does This Affect You?', type: 'textarea', placeholder: 'e.g., Unable to use heating, health concerns', required: true, aiEnhanced: true, evidenceHint: 'Mention health impacts, safety risks, or inability to use parts of your home', impactLevel: 'critical' },
+      { id: 'previousReports', label: 'Previous Reports of This Issue', type: 'textarea', placeholder: 'Any previous notifications', required: false, aiEnhanced: true, evidenceHint: 'Include dates and methods of previous reports (emails, calls, texts)', impactLevel: 'important' },
     ],
     sections: [
       {
@@ -253,14 +291,14 @@ Always document damage with photographs before contacting the seller.`,
     seoDescription: 'Create a professional complaint letter for damaged deliveries. Free template for broken, defective, or improperly shipped items.',
     tones: ['neutral', 'firm', 'final'],
     fields: [
-      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'Retailer or shipping company', required: true },
-      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
-      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'e.g., ORD-123456', required: true },
-      { id: 'deliveryDate', label: 'Delivery Date', type: 'date', required: true },
-      { id: 'productDescription', label: 'Product Description', type: 'textarea', placeholder: 'What items were ordered', required: true },
-      { id: 'damageDescription', label: 'Describe the Damage', type: 'textarea', placeholder: 'Be specific about the damage observed', required: true },
-      { id: 'hasPhotos', label: 'Do you have photos of the damage?', type: 'select', options: ['Yes', 'No'], required: true },
-      { id: 'resolution', label: 'Preferred Resolution', type: 'select', options: ['Full refund', 'Replacement item', 'Partial refund'], required: true },
+      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'Retailer or shipping company', required: true, impactLevel: 'critical' },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true, impactLevel: 'important' },
+      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'e.g., ORD-123456', required: true, evidenceHint: 'Find in your order confirmation email', impactLevel: 'critical' },
+      { id: 'deliveryDate', label: 'Delivery Date', type: 'date', required: true, impactLevel: 'critical' },
+      { id: 'productDescription', label: 'Product Description', type: 'textarea', placeholder: 'What items were ordered', required: true, aiEnhanced: true, evidenceHint: 'Include product names, SKUs, and quantities', impactLevel: 'critical' },
+      { id: 'damageDescription', label: 'Describe the Damage', type: 'textarea', placeholder: 'Be specific about the damage observed', required: true, aiEnhanced: true, evidenceHint: 'Photograph damage immediately upon delivery, before moving items', impactLevel: 'critical' },
+      { id: 'hasPhotos', label: 'Do you have photos of the damage?', type: 'select', options: ['Yes', 'No'], required: true, impactLevel: 'important' },
+      { id: 'resolution', label: 'Preferred Resolution', type: 'select', options: ['Full refund', 'Replacement item', 'Partial refund'], required: true, impactLevel: 'critical' },
     ],
     sections: [
       {
