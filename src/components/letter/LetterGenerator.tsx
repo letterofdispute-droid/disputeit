@@ -15,12 +15,12 @@ import SmartField from './SmartField';
 import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
-
 interface LetterGeneratorProps {
   template: LetterTemplate;
 }
-
-const LetterGenerator = ({ template }: LetterGeneratorProps) => {
+const LetterGenerator = ({
+  template
+}: LetterGeneratorProps) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [selectedTone, setSelectedTone] = useState<'neutral' | 'firm' | 'final'>('neutral');
@@ -29,13 +29,11 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
   const [showPricing, setShowPricing] = useState(false);
   const [showEvidenceChecklist, setShowEvidenceChecklist] = useState(false);
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
-
-  const { 
-    suggestions, 
-    isLoading, 
-    requestSuggestionDebounced 
+  const {
+    suggestions,
+    isLoading,
+    requestSuggestionDebounced
   } = useFormAssistant();
-
   const totalSteps = 3;
 
   // Generate letter content for checkout
@@ -48,60 +46,58 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
   const letterStrength = useMemo(() => {
     return assessLetterStrength(formData, template.fields);
   }, [formData, template.fields]);
-
   const handleInputChange = useCallback((fieldId: string, value: string) => {
-    setFormData(prev => ({ ...prev, [fieldId]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
   }, []);
 
   // Handle AI suggestion request
   const handleRequestAiSuggestion = useCallback((fieldId: string, fieldValue: string) => {
     const field = template.fields.find(f => f.id === fieldId);
     if (!field) return;
-
     requestSuggestionDebounced({
       fieldId,
       fieldLabel: field.label,
       fieldValue,
       category: template.category,
       templateTitle: template.title,
-      allFieldValues: formData,
+      allFieldValues: formData
     });
   }, [template.fields, template.category, template.title, formData, requestSuggestionDebounced]);
 
   // Handle evidence checklist toggle
   const handleEvidenceToggle = useCallback((item: string) => {
-    setEvidenceChecked(prev => ({ ...prev, [item]: !prev[item] }));
+    setEvidenceChecked(prev => ({
+      ...prev,
+      [item]: !prev[item]
+    }));
   }, []);
-
   const requiredFields = template.fields.filter(f => f.required);
   const optionalFields = template.fields.filter(f => !f.required);
 
   // Check if any field has AI enhancement
   const hasAiEnhancedFields = template.fields.some(f => f.aiEnhanced);
-
-  return (
-    <div className="max-w-3xl mx-auto">
+  return <div className="max-w-4xl mx-auto">
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-muted-foreground">Step {step} of {totalSteps}</span>
           <div className="flex items-center gap-3">
-            {hasAiEnhancedFields && (
-              <Badge variant="outline" className="text-xs gap-1">
+            {hasAiEnhancedFields && <Badge variant="outline" className="text-xs gap-1">
                 <Sparkles className="h-3 w-3" />
                 AI-Enhanced
-              </Badge>
-            )}
+              </Badge>}
             <span className="text-sm text-muted-foreground">
               {step === 1 ? 'Basic Information' : step === 2 ? 'Customize' : 'Review & Generate'}
             </span>
           </div>
         </div>
         <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-accent transition-all duration-300"
-            style={{ width: `${(step / totalSteps) * 100}%` }}
-          />
+          <div className="h-full bg-accent transition-all duration-300" style={{
+          width: `${step / totalSteps * 100}%`
+        }} />
         </div>
       </div>
 
@@ -110,8 +106,7 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
         <div className="lg:col-span-2">
           <Card className="p-6 md:p-8">
             {/* Step 1: Basic Information */}
-            {step === 1 && (
-              <div className="space-y-6 animate-fade-in">
+            {step === 1 && <div className="space-y-6 animate-fade-in">
                 <div>
                   <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
                     Tell us about your situation
@@ -122,45 +117,21 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                 </div>
 
                 <div className="space-y-5">
-                  {requiredFields.map((field) => (
-                    <SmartField
-                      key={field.id}
-                      field={field}
-                      value={formData[field.id] || ''}
-                      onChange={(value) => handleInputChange(field.id, value)}
-                      aiSuggestion={suggestions[field.id]}
-                      isValidating={isLoading[field.id]}
-                      onRequestAiSuggestion={handleRequestAiSuggestion}
-                    />
-                  ))}
+                  {requiredFields.map(field => <SmartField key={field.id} field={field} value={formData[field.id] || ''} onChange={value => handleInputChange(field.id, value)} aiSuggestion={suggestions[field.id]} isValidating={isLoading[field.id]} onRequestAiSuggestion={handleRequestAiSuggestion} />)}
                 </div>
 
-                {optionalFields.length > 0 && (
-                  <div className="border-t border-border pt-6">
+                {optionalFields.length > 0 && <div className="border-t border-border pt-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-4">
                       Optional Information (strengthens your case)
                     </h4>
                     <div className="space-y-5">
-                      {optionalFields.map((field) => (
-                        <SmartField
-                          key={field.id}
-                          field={field}
-                          value={formData[field.id] || ''}
-                          onChange={(value) => handleInputChange(field.id, value)}
-                          aiSuggestion={suggestions[field.id]}
-                          isValidating={isLoading[field.id]}
-                          onRequestAiSuggestion={handleRequestAiSuggestion}
-                        />
-                      ))}
+                      {optionalFields.map(field => <SmartField key={field.id} field={field} value={formData[field.id] || ''} onChange={value => handleInputChange(field.id, value)} aiSuggestion={suggestions[field.id]} isValidating={isLoading[field.id]} onRequestAiSuggestion={handleRequestAiSuggestion} />)}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  </div>}
+              </div>}
 
             {/* Step 2: Customize */}
-            {step === 2 && (
-              <div className="space-y-6 animate-fade-in">
+            {step === 2 && <div className="space-y-6 animate-fade-in">
                 <div>
                   <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
                     Customize Your Letter
@@ -176,35 +147,29 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                 {/* Tone Selection */}
                 <div className="space-y-3">
                   <Label>Letter Tone</Label>
-                  <RadioGroup value={selectedTone} onValueChange={(v) => setSelectedTone(v as typeof selectedTone)}>
+                  <RadioGroup value={selectedTone} onValueChange={v => setSelectedTone(v as typeof selectedTone)}>
                     <div className="grid gap-3">
-                      {template.tones.includes('neutral') && (
-                        <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                      {template.tones.includes('neutral') && <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
                           <RadioGroupItem value="neutral" className="mt-0.5" />
                           <div>
                             <div className="font-medium">Neutral</div>
                             <p className="text-sm text-muted-foreground">Professional and factual. Good for initial contact.</p>
                           </div>
-                        </label>
-                      )}
-                      {template.tones.includes('firm') && (
-                        <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                        </label>}
+                      {template.tones.includes('firm') && <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
                           <RadioGroupItem value="firm" className="mt-0.5" />
                           <div>
                             <div className="font-medium">Firm</div>
                             <p className="text-sm text-muted-foreground">Assertive but polite. Good for follow-ups.</p>
                           </div>
-                        </label>
-                      )}
-                      {template.tones.includes('final') && (
-                        <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                        </label>}
+                      {template.tones.includes('final') && <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
                           <RadioGroupItem value="final" className="mt-0.5" />
                           <div>
                             <div className="font-medium">Final Notice</div>
                             <p className="text-sm text-muted-foreground">Strong language for unresolved issues.</p>
                           </div>
-                        </label>
-                      )}
+                        </label>}
                     </div>
                   </RadioGroup>
                 </div>
@@ -217,23 +182,19 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {template.jurisdictions.map((j) => (
-                        <SelectItem key={j.code} value={j.code}>
+                      {template.jurisdictions.map(j => <SelectItem key={j.code} value={j.code}>
                           {j.name}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     This helps us include appropriate legal references (available in paid tiers).
                   </p>
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Step 3: Review */}
-            {step === 3 && (
-              <div className="space-y-6 animate-fade-in">
+            {step === 3 && <div className="space-y-6 animate-fade-in">
                 <div>
                   <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
                     Review & Generate
@@ -247,10 +208,7 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                 <LetterStrengthMeter strength={letterStrength} showDetails={false} />
 
                 {/* Preview Card */}
-                <div 
-                  className="relative border border-border rounded-lg p-6 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors"
-                  onClick={() => setShowPreview(true)}
-                >
+                <div className="relative border border-border rounded-lg p-6 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => setShowPreview(true)}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-medium text-foreground">Letter Preview</h4>
                     <Button variant="ghost" size="sm">
@@ -295,95 +253,56 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Letter Strength</span>
-                      <span className={
-                        letterStrength.level === 'strong' ? 'text-green-600' :
-                        letterStrength.level === 'moderate' ? 'text-yellow-600' : 'text-red-600'
-                      }>
+                      <span className={letterStrength.level === 'strong' ? 'text-green-600' : letterStrength.level === 'moderate' ? 'text-yellow-600' : 'text-red-600'}>
                         {letterStrength.overallScore}% - {letterStrength.level}
                       </span>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-8 pt-6 border-t border-border">
-              {step > 1 ? (
-                <Button variant="outline" onClick={() => setStep(step - 1)}>
+              {step > 1 ? <Button variant="outline" onClick={() => setStep(step - 1)}>
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Back
-                </Button>
-              ) : (
-                <div />
-              )}
+                </Button> : <div />}
 
-              {step < totalSteps ? (
-                <Button variant="accent" onClick={() => setStep(step + 1)}>
+              {step < totalSteps ? <Button variant="accent" onClick={() => setStep(step + 1)}>
                   Continue
                   <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button variant="hero" onClick={() => setShowPricing(true)}>
+                </Button> : <Button variant="hero" onClick={() => setShowPricing(true)}>
                   Generate Letter
                   <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              )}
+                </Button>}
             </div>
           </Card>
         </div>
 
         {/* Sidebar - Evidence Checklist & Tips */}
-        <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <div className="lg:col-span-1 space-y-4">
           {/* Evidence Checklist Toggle */}
-          <Button
-            variant="outline"
-            className="w-full justify-between lg:hidden"
-            onClick={() => setShowEvidenceChecklist(!showEvidenceChecklist)}
-          >
+          <Button variant="outline" className="w-full justify-between lg:hidden" onClick={() => setShowEvidenceChecklist(!showEvidenceChecklist)}>
             <span>Evidence Checklist</span>
             <ChevronRight className={`h-4 w-4 transition-transform ${showEvidenceChecklist ? 'rotate-90' : ''}`} />
           </Button>
 
           {/* Evidence Checklist - Always visible on desktop */}
           <div className={`${showEvidenceChecklist ? 'block' : 'hidden'} lg:block`}>
-            <EvidenceChecklist 
-              category={template.category}
-              checkedItems={evidenceChecked}
-              onItemToggle={handleEvidenceToggle}
-            />
+            <EvidenceChecklist category={template.category} checkedItems={evidenceChecked} onItemToggle={handleEvidenceToggle} />
           </div>
 
           {/* Compact Strength Meter for Step 1 */}
-          {step === 1 && (
-            <div className="hidden lg:block">
+          {step === 1 && <div className="hidden lg:block">
               <LetterStrengthMeter strength={letterStrength} showDetails={false} />
-            </div>
-          )}
+            </div>}
         </div>
       </div>
 
       {/* Modals */}
-      {showPreview && (
-        <LetterPreview
-          template={template}
-          formData={formData}
-          tone={selectedTone}
-          jurisdiction={selectedJurisdiction}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
+      {showPreview && <LetterPreview template={template} formData={formData} tone={selectedTone} jurisdiction={selectedJurisdiction} onClose={() => setShowPreview(false)} />}
 
-      {showPricing && (
-        <PricingModal
-          templateSlug={template.slug}
-          templateName={template.title}
-          letterContent={generatedLetterContent}
-          onClose={() => setShowPricing(false)}
-        />
-      )}
-    </div>
-  );
+      {showPricing && <PricingModal templateSlug={template.slug} templateName={template.title} letterContent={generatedLetterContent} onClose={() => setShowPricing(false)} />}
+    </div>;
 };
-
 export default LetterGenerator;
