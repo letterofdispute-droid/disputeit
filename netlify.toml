@@ -5,6 +5,34 @@
 [build.environment]
   NODE_VERSION = "18"
 
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = true
+
+# ============================================
+# URL Canonicalization (Force HTTPS & non-www)
+# ============================================
+
+[[redirects]]
+  from = "http://disputeletters.com/*"
+  to = "https://disputeletters.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.disputeletters.com/*"
+  to = "https://disputeletters.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.disputeletters.com/*"
+  to = "https://disputeletters.com/:splat"
+  status = 301
+  force = true
+
 # ============================================
 # Sitemap Redirects (serve directly)
 # ============================================
@@ -43,6 +71,46 @@
 # Static HTML for Search Engine Bots
 # Bot detection rules MUST come before SPA rules
 # ============================================
+
+# Homepage - Serve static HTML to bots
+[[redirects]]
+  from = "/"
+  to = "/static/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# About page - Serve static HTML to bots
+[[redirects]]
+  from = "/about"
+  to = "/static/about/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# Contact page - Serve static HTML to bots
+[[redirects]]
+  from = "/contact"
+  to = "/static/contact/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# Pricing page - Serve static HTML to bots
+[[redirects]]
+  from = "/pricing"
+  to = "/static/pricing/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
+
+# Articles listing - Serve static HTML to bots
+[[redirects]]
+  from = "/articles"
+  to = "/static/articles/index.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["*bot*", "*Bot*", "*BOT*", "*crawler*", "*Crawler*", "*spider*", "*Spider*", "*Googlebot*", "*Bingbot*", "*DuckDuckBot*", "*YandexBot*", "*facebookexternalhit*", "*LinkedInBot*", "*TwitterBot*", "*APIs-Google*", "*Slurp*", "*Baidu*", "*msnbot*", "*Teoma*", "*AdsBot*"]}
 
 # Templates landing page - Serve static HTML to bots
 [[redirects]]
