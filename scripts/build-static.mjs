@@ -922,6 +922,419 @@ ${urls}
 }
 
 // ============================================
+// Static Page Generators (Home, About, Contact, Pricing, Articles)
+// ============================================
+
+function generateHomepageHTML(templates) {
+  const totalTemplates = templates.length;
+  
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Dispute Letters",
+    "url": SITE_URL,
+    "description": "Professional complaint letter generator with legal references",
+    "logo": `${SITE_URL}/favicon.ico`
+  };
+  
+  const webAppSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Dispute Letters",
+    "url": SITE_URL,
+    "description": `Professional complaint letter generator with ${totalTemplates}+ templates covering refunds, housing, travel, insurance, and more.`,
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "9.99",
+      "priceCurrency": "EUR"
+    }
+  };
+
+  return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispute Letters - Professional Complaint Letter Generator | \${totalTemplates}+ Templates</title>
+  <meta name="description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. \${totalTemplates}+ legally-referenced templates ready in minutes.">
+  <link rel="canonical" href="\${SITE_URL}/">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Dispute Letters - Professional Complaint Letter Generator">
+  <meta property="og:description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, and more. \${totalTemplates}+ templates with legal references.">
+  <meta property="og:url" content="\${SITE_URL}/">
+  <meta property="og:site_name" content="Dispute Letters">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Dispute Letters - Professional Complaint Letter Generator">
+  <meta name="twitter:description" content="Generate professional complaint letters in minutes. \${totalTemplates}+ legally-referenced templates.">
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">\${JSON.stringify(organizationSchema)}</script>
+  <script type="application/ld+json">\${JSON.stringify(webAppSchema)}</script>
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; line-height: 1.6; color: #1a1a1a; }
+    header { background: #1e293b; color: white; padding: 1rem 2rem; }
+    header nav { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    header a { color: white; text-decoration: none; margin-left: 1.5rem; }
+    .hero { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 4rem 2rem; text-align: center; }
+    .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; }
+    .hero p { font-size: 1.25rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
+    .cta { display: inline-block; padding: 1rem 2rem; background: #f59e0b; color: #1e293b; font-weight: 600; text-decoration: none; border-radius: 8px; }
+    main { max-width: 1200px; margin: 0 auto; padding: 3rem 2rem; }
+    .categories { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .category-card { background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .category-card h3 { margin-top: 0; }
+    .category-card a { color: #2563eb; text-decoration: none; }
+    footer { background: #1e293b; color: white; padding: 2rem; text-align: center; margin-top: 3rem; }
+    footer a { color: #94a3b8; margin: 0 1rem; }
+  </style>
+</head>
+<body>
+  <header role="banner">
+    <nav>
+      <a href="/" style="font-weight: bold; font-size: 1.25rem; margin-left: 0;">Dispute Letters</a>
+      <div>
+        <a href="/templates">Templates</a>
+        <a href="/articles">Blog</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </nav>
+  </header>
+  
+  <section class="hero">
+    <h1>Professional Complaint Letters That Get Results</h1>
+    <p>Generate legally-referenced dispute letters in minutes. \${totalTemplates}+ templates for refunds, housing, travel, insurance, and more.</p>
+    <a href="/templates" class="cta">Browse All Templates</a>
+  </section>
+  
+  <main role="main">
+    <h2>Letter Categories</h2>
+    <p>Choose from \${categories.length} categories covering the most common consumer disputes:</p>
+    
+    <div class="categories">
+      \${categories.map(cat => \`
+        <div class="category-card">
+          <h3><a href="/templates/\${cat.id}">\${escapeHtml(cat.name)}</a></h3>
+          <p>\${escapeHtml(cat.description)}</p>
+        </div>
+      \`).join('')}
+    </div>
+    
+    <h2 style="margin-top: 3rem;">How It Works</h2>
+    <ol>
+      <li><strong>Choose a Template</strong> - Browse our \${totalTemplates}+ professionally crafted letter templates</li>
+      <li><strong>Fill in Your Details</strong> - Our guided form helps you provide the right information</li>
+      <li><strong>Download Your Letter</strong> - Get your letter in PDF or Word format, ready to send</li>
+    </ol>
+    
+    <h2 style="margin-top: 3rem;">Why Choose Dispute Letters?</h2>
+    <ul>
+      <li>Legally-referenced templates based on consumer protection laws</li>
+      <li>AI-enhanced field assistance to help you write effectively</li>
+      <li>Professional formatting that companies take seriously</li>
+      <li>Guidance on escalation paths and regulatory bodies</li>
+    </ul>
+  </main>
+  
+  <footer role="contentinfo">
+    <p>© \${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+    <p>
+      <a href="/templates">Templates</a>
+      <a href="/articles">Blog</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </p>
+  </footer>
+</body>
+</html>\`;
+}
+
+function generateAboutHTML() {
+  return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us | Dispute Letters</title>
+  <meta name="description" content="Learn about Dispute Letters - the professional complaint letter generator helping consumers resolve disputes effectively with legally-referenced templates.">
+  <link rel="canonical" href="\${SITE_URL}/about">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="About Dispute Letters">
+  <meta property="og:description" content="Learn about our mission to help consumers resolve disputes effectively.">
+  <meta property="og:url" content="\${SITE_URL}/about">
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    a.cta { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → About Us
+  </nav>
+  
+  <main>
+    <h1>About Dispute Letters</h1>
+    
+    <p>Dispute Letters is a professional complaint letter generator designed to help consumers resolve disputes effectively. We believe everyone deserves access to well-crafted, legally-referenced correspondence when dealing with businesses, landlords, or service providers.</p>
+    
+    <h2>Our Mission</h2>
+    <p>We empower consumers to stand up for their rights by providing professionally structured letter templates that reference relevant laws and regulations. Our templates are designed to be taken seriously and get results.</p>
+    
+    <h2>What We Offer</h2>
+    <ul>
+      <li>400+ professionally crafted letter templates</li>
+      <li>Legal references and regulatory guidance</li>
+      <li>AI-enhanced assistance for writing effective letters</li>
+      <li>Multiple formats (PDF and Word)</li>
+      <li>Guidance on escalation paths</li>
+    </ul>
+    
+    <h2>Our Approach</h2>
+    <p>Each template is built using established consumer protection frameworks, industry standards, and proven dispute resolution methodologies. We combine legal expertise with AI technology to help you articulate your complaint clearly and professionally.</p>
+    
+    <a href="/templates" class="cta">Browse Our Templates</a>
+  </main>
+</body>
+</html>\`;
+}
+
+function generateContactHTML() {
+  return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | Dispute Letters</title>
+  <meta name="description" content="Get in touch with Dispute Letters. We're here to help with questions about our complaint letter templates and dispute resolution services.">
+  <link rel="canonical" href="\${SITE_URL}/contact">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Contact Dispute Letters">
+  <meta property="og:description" content="Get in touch with our team for help with complaint letters and dispute resolution.">
+  <meta property="og:url" content="\${SITE_URL}/contact">
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .contact-info { background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → Contact
+  </nav>
+  
+  <main>
+    <h1>Contact Us</h1>
+    
+    <p>Have questions about our complaint letter templates or need help with a dispute? We're here to help.</p>
+    
+    <div class="contact-info">
+      <h2>Get in Touch</h2>
+      <p>For general inquiries, template suggestions, or support, please reach out to us. We aim to respond within 24-48 hours.</p>
+      <p><strong>Email:</strong> support@disputeletters.com</p>
+    </div>
+    
+    <h2>Frequently Asked Questions</h2>
+    <p>Before contacting us, you might find your answer in our <a href="/articles">blog articles</a> or by browsing our <a href="/templates">template categories</a>.</p>
+    
+    <h2>Template Suggestions</h2>
+    <p>Don't see a template for your specific situation? Let us know! We're constantly expanding our library based on user feedback.</p>
+  </main>
+</body>
+</html>\`;
+}
+
+function generatePricingHTML() {
+  return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing | Dispute Letters</title>
+  <meta name="description" content="Affordable pricing for professional complaint letters. Get a single letter for €9.99 or unlimited access for €29.99. Download in PDF and Word formats.">
+  <link rel="canonical" href="\${SITE_URL}/pricing">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Dispute Letters Pricing">
+  <meta property="og:description" content="Affordable pricing for professional complaint letters. Single letter €9.99 or unlimited access €29.99.">
+  <meta property="og:url" content="\${SITE_URL}/pricing">
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 1.5rem; text-align: center; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 2rem; }
+    .pricing-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center; }
+    .pricing-card.featured { border-color: #2563eb; background: #f8fafc; }
+    .price { font-size: 2.5rem; font-weight: bold; color: #1e293b; }
+    .price span { font-size: 1rem; color: #666; }
+    ul { text-align: left; list-style: none; padding: 0; }
+    ul li { padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+    ul li:before { content: "✓ "; color: #22c55e; }
+    a.cta { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → Pricing
+  </nav>
+  
+  <main>
+    <h1>Simple, Transparent Pricing</h1>
+    <p style="text-align: center; color: #666; max-width: 600px; margin: 0 auto 2rem;">Get professionally written complaint letters that get results. No subscriptions, no hidden fees.</p>
+    
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h2>Single Letter</h2>
+        <p class="price">€9.99 <span>/ letter</span></p>
+        <ul>
+          <li>One professionally formatted letter</li>
+          <li>PDF and Word download</li>
+          <li>Legal references included</li>
+          <li>Customized to your situation</li>
+        </ul>
+        <a href="/templates" class="cta">Get Started</a>
+      </div>
+      
+      <div class="pricing-card featured">
+        <h2>Letter Bundle</h2>
+        <p class="price">€29.99 <span>/ 5 letters</span></p>
+        <ul>
+          <li>Five professionally formatted letters</li>
+          <li>PDF and Word downloads</li>
+          <li>Legal references included</li>
+          <li>Best value for multiple disputes</li>
+          <li>Use anytime within 12 months</li>
+        </ul>
+        <a href="/templates" class="cta">Get Bundle</a>
+      </div>
+    </div>
+    
+    <h2 style="margin-top: 3rem;">What's Included</h2>
+    <ul>
+      <li>Professionally structured letter format</li>
+      <li>Jurisdiction-specific legal references</li>
+      <li>AI-enhanced writing assistance</li>
+      <li>Download in PDF and Microsoft Word</li>
+      <li>Guidance on next steps and escalation</li>
+    </ul>
+  </main>
+</body>
+</html>\`;
+}
+
+function generateArticlesListingHTML(blogPosts) {
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Dispute Letters Blog",
+    "description": "Expert guides and tips for resolving consumer disputes",
+    "numberOfItems": blogPosts.length,
+    "itemListElement": blogPosts.slice(0, 20).map((p, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": p.title,
+      "url": \`\${SITE_URL}/articles/\${p.categorySlug}/\${p.slug}\`
+    }))
+  };
+
+  // Group posts by category
+  const postsByCategory = {};
+  blogPosts.forEach(post => {
+    if (!postsByCategory[post.categorySlug]) {
+      postsByCategory[post.categorySlug] = {
+        name: post.category,
+        slug: post.categorySlug,
+        posts: []
+      };
+    }
+    postsByCategory[post.categorySlug].posts.push(post);
+  });
+
+  return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog | Dispute Letters - Expert Guides for Consumer Disputes</title>
+  <meta name="description" content="Expert guides, tips, and resources for resolving consumer disputes. Learn about your rights and how to write effective complaint letters.">
+  <link rel="canonical" href="\${SITE_URL}/articles">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Dispute Letters Blog">
+  <meta property="og:description" content="Expert guides and tips for resolving consumer disputes effectively.">
+  <meta property="og:url" content="\${SITE_URL}/articles">
+  
+  <script type="application/ld+json">\${JSON.stringify(itemListSchema)}</script>
+  
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2rem; margin-bottom: 1rem; }
+    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .categories { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .category-tag { background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 20px; text-decoration: none; color: #1e293b; }
+    .category-tag:hover { background: #e2e8f0; }
+    .posts { display: grid; gap: 1.5rem; }
+    .post-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; }
+    .post-card h3 { margin-top: 0; }
+    .post-card h3 a { color: #1e293b; text-decoration: none; }
+    .post-card h3 a:hover { color: #2563eb; }
+    .post-meta { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> → Blog
+  </nav>
+  
+  <main>
+    <h1>Dispute Letters Blog</h1>
+    <p>Expert guides, tips, and resources for resolving consumer disputes effectively.</p>
+    
+    <div class="categories">
+      \${blogCategories.map(cat => \`
+        <a href="/articles/\${cat.slug}" class="category-tag">\${escapeHtml(cat.name)}</a>
+      \`).join('')}
+    </div>
+    
+    <div class="posts">
+      \${blogPosts.slice(0, 20).map(post => \`
+        <article class="post-card">
+          <h3><a href="/articles/\${post.categorySlug}/\${post.slug}">\${escapeHtml(post.title)}</a></h3>
+          <p>\${escapeHtml(post.excerpt)}</p>
+          <p class="post-meta">
+            <span>\${escapeHtml(post.category)}</span> • 
+            <span>\${post.readTime}</span> • 
+            <span>\${post.publishedAt}</span>
+          </p>
+        </article>
+      \`).join('')}
+    </div>
+  </main>
+</body>
+</html>\`;
+}
+
+// ============================================
 // Main Build Function
 // ============================================
 
@@ -944,7 +1357,46 @@ async function build() {
   
   // Create directories
   const sitemapsDir = path.join(distDir, 'sitemaps');
+  const staticDir = path.join(distDir, 'static');
   fs.mkdirSync(sitemapsDir, { recursive: true });
+  fs.mkdirSync(staticDir, { recursive: true });
+  
+  // ============================================
+  // Generate Static Pages (for bot detection)
+  // ============================================
+  console.log('📝 Generating static pages for crawlers...');
+  
+  // Homepage
+  fs.writeFileSync(path.join(staticDir, 'index.html'), generateHomepageHTML(templates));
+  console.log('   ✅ Generated homepage');
+  
+  // About page
+  const aboutDir = path.join(staticDir, 'about');
+  fs.mkdirSync(aboutDir, { recursive: true });
+  fs.writeFileSync(path.join(aboutDir, 'index.html'), generateAboutHTML());
+  console.log('   ✅ Generated about page');
+  
+  // Contact page
+  const contactDir = path.join(staticDir, 'contact');
+  fs.mkdirSync(contactDir, { recursive: true });
+  fs.writeFileSync(path.join(contactDir, 'index.html'), generateContactHTML());
+  console.log('   ✅ Generated contact page');
+  
+  // Pricing page
+  const pricingDir = path.join(staticDir, 'pricing');
+  fs.mkdirSync(pricingDir, { recursive: true });
+  fs.writeFileSync(path.join(pricingDir, 'index.html'), generatePricingHTML());
+  console.log('   ✅ Generated pricing page');
+  
+  // Articles listing page
+  const articlesDir = path.join(staticDir, 'articles');
+  fs.mkdirSync(articlesDir, { recursive: true });
+  fs.writeFileSync(path.join(articlesDir, 'index.html'), generateArticlesListingHTML(blogPosts));
+  console.log('   ✅ Generated articles listing page');
+  
+  // ============================================
+  // Generate Templates Pages
+  // ============================================
   
   // Generate /templates landing page
   console.log('📝 Generating templates landing page...');
@@ -1023,7 +1475,9 @@ async function build() {
   fs.writeFileSync(path.join(sitemapsDir, 'blog.xml'), generateBlogSitemap(blogPosts));
   console.log('   ✅ Generated 5 sitemap files');
   
-  const totalPages = 1 + categories.length + subcategorySet.size + templates.length + blogPosts.length;
+  // Calculate total pages (including new static pages)
+  const staticPages = 5; // home, about, contact, pricing, articles
+  const totalPages = staticPages + 1 + categories.length + subcategorySet.size + templates.length + blogPosts.length;
   console.log('\n✅ Static HTML generation complete!');
   console.log(`   📊 Total: ${totalPages} HTML pages + 5 sitemaps`);
 }
