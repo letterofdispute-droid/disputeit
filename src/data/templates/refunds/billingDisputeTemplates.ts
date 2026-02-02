@@ -24,7 +24,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Unauthorized Charge Dispute Letter | Fraudulent Billing Template',
     seoDescription: 'Dispute unauthorized charges on your card or account.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company That Charged You', type: 'text', required: true, impactLevel: 'critical', evidenceHint: 'Exact name as appears on your statement' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },
@@ -55,7 +54,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Hidden Fee Dispute Letter | Undisclosed Charges Template',
     seoDescription: 'Get refunds for hidden fees that were not disclosed.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },
@@ -86,7 +84,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Stop Recurring Charges Letter | Cancel Subscription Template',
     seoDescription: 'Stop unwanted recurring charges and get refunds.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },
@@ -119,7 +116,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Refund Delay Complaint Letter | Chase Outstanding Refund',
     seoDescription: 'Demand processing of unreasonably delayed refunds.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },
@@ -150,7 +146,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Partial Refund Dispute Letter | Incomplete Refund Template',
     seoDescription: 'Demand the full refund amount when only partial was received.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },
@@ -181,7 +176,6 @@ export const billingDisputeTemplates: LetterTemplate[] = [
     seoTitle: 'Chargeback Warning Letter | Final Refund Demand Template',
     seoDescription: 'Final warning letter before initiating a bank chargeback.',
     tones: ['final'],
-    aiEnhanced: true,
     fields: [
       { id: 'companyName', label: 'Company Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', required: true, impactLevel: 'important' },

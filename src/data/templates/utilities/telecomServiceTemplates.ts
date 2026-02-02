@@ -22,7 +22,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Broadband Speed Complaint Letter | Free Template',
     seoDescription: 'Complain about slow internet speeds. Demand compensation or contract exit.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Broadband Provider', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical', evidenceHint: 'Exact name as appears on your bill' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -51,7 +50,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Service Outage Compensation Letter | Free Template',
     seoDescription: 'Claim compensation for telecom service outages.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -80,7 +78,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Installation Delay Complaint Letter | Free Template',
     seoDescription: 'Complain about delayed broadband or utility installation.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -109,7 +106,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Missed Engineer Appointment Complaint | Free Template',
     seoDescription: 'Complain about missed engineer appointments. Claim compensation.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -137,7 +133,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Mobile Signal Complaint Letter | Free Template',
     seoDescription: 'Complain about poor mobile signal coverage. Request solutions or contract exit.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Mobile Provider', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -165,7 +160,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Network Congestion Complaint Letter | Free Template',
     seoDescription: 'Complain about slow broadband during peak hours.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -193,7 +187,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'VoIP Quality Complaint Letter | Free Template',
     seoDescription: 'Complain about poor VoIP phone quality. Demand service improvements.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -221,7 +214,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Digital Switchover Complaint Letter | PSTN Migration Template',
     seoDescription: 'Complain about digital phone switchover problems.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -249,7 +241,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Internet Throttling Complaint Letter | Traffic Management Template',
     seoDescription: 'Complain about ISP throttling. Challenge unfair traffic management.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -276,7 +267,6 @@ export const telecomServiceTemplates: LetterTemplate[] = [
     seoTitle: 'Router Equipment Complaint Letter | WiFi Quality Template',
     seoDescription: 'Complain about poor router equipment. Demand replacement or upgrade.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Provider Name', type: 'text', required: true, placeholder: 'Enter provider name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },

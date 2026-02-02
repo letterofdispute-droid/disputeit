@@ -22,7 +22,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Water Bill Dispute Letter | Free Template',
     seoDescription: 'Dispute incorrect water bills or meter readings.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -50,7 +49,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Water Quality Complaint Letter | Free Template',
     seoDescription: 'Complain about poor water quality or contamination issues.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -78,7 +76,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Water Leak Complaint Letter | Free Template',
     seoDescription: 'Report water leaks and claim for resulting damage.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -106,7 +103,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Sewerage Complaint Letter | Free Template',
     seoDescription: 'Complain about sewage or drainage problems.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water/Sewerage Company', type: 'text', required: true, placeholder: 'Enter company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -134,7 +130,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Water Meter Installation Request | Free Template',
     seoDescription: 'Request water meter installation at your property.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -160,7 +155,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Hosepipe Ban Exemption Request | Free Template',
     seoDescription: 'Request exemption from hosepipe ban restrictions.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -186,7 +180,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Surface Water Drainage Rebate Request | Free Template',
     seoDescription: 'Claim surface water drainage rebate if eligible.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
@@ -212,7 +205,6 @@ export const waterComplaintTemplates: LetterTemplate[] = [
     seoTitle: 'Water Supply Interruption Compensation | Free Template',
     seoDescription: 'Claim compensation for water supply interruptions.',
     tones: ['neutral', 'firm', 'final'],
-    aiEnhanced: true,
     fields: [
       { id: 'providerName', label: 'Water Company', type: 'text', required: true, placeholder: 'Enter water company name', impactLevel: 'critical' },
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
