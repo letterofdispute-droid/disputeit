@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /_*
 
-Sitemap: https://disputeletters.com/sitemap.xml
+Sitemap: https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap
