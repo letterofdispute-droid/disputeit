@@ -1,38 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
-import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // Fetch a professional hero image
-  const { largeUrl } = useCategoryImage('hero', 'professional business documents', 'hero-main');
 
-  useEffect(() => {
-    if (largeUrl) {
-      const img = new Image();
-      img.onload = () => setImageLoaded(true);
-      img.src = largeUrl;
+  const handleBrowseClick = () => {
+    const lettersSection = document.getElementById('letters');
+    if (lettersSection) {
+      lettersSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.location.href = '/#letters';
     }
-  }, [largeUrl]);
+  };
 
   return (
     <section className="relative overflow-hidden bg-primary py-20 md:py-28">
       {/* Background Image with Overlay */}
-      {largeUrl && (
-        <div 
-          className={`absolute inset-0 transition-opacity duration-700 ${imageLoaded ? 'opacity-20' : 'opacity-0'}`}
-          style={{
-            backgroundImage: `url(${largeUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-      )}
+      <div 
+        className="absolute inset-0 opacity-15 grayscale"
+        style={{
+          backgroundImage: `url('/images/hero-bg.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+        }}
+      />
       
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
@@ -87,10 +80,8 @@ const Hero = () => {
               Start Your Dispute
               <ArrowRight className="h-5 w-5" />
             </Button>
-            <Button variant="heroOutline" size="xl" asChild>
-              <Link to="/#letters">
-                Browse Letter Templates
-              </Link>
+            <Button variant="heroOutline" size="xl" onClick={handleBrowseClick}>
+              Browse Letter Templates
             </Button>
           </div>
 

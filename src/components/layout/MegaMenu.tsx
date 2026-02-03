@@ -10,22 +10,28 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
 const resources = [
   {
-    title: 'Blog',
-    description: 'Tips, guides, and consumer rights articles',
-    href: '/articles',
-    icon: BookOpen,
-  },
-  {
     title: 'How It Works',
-    description: 'Learn how our templates help you win disputes',
+    description: 'Learn our 3-step process',
     href: '/how-it-works',
     icon: HelpCircle,
+  },
+  {
+    title: 'FAQ',
+    description: 'Common questions answered',
+    href: '/faq',
+    icon: MessageCircle,
+  },
+  {
+    title: 'Blog',
+    description: 'Tips, guides, and articles',
+    href: '/articles',
+    icon: BookOpen,
   },
   {
     title: 'About Us',
@@ -43,24 +49,34 @@ const resources = [
 
 interface ListItemProps extends React.ComponentPropsWithoutRef<'a'> {
   title: string;
+  description?: string;
   icon?: React.ElementType;
   href: string;
 }
 
-const ListItem = ({ className, title, icon: Icon, href, ...props }: ListItemProps) => {
+const ListItem = ({ className, title, description, icon: Icon, href, ...props }: ListItemProps) => {
   return (
     <li>
       <NavigationMenuLink asChild>
         <Link
           to={href}
           className={cn(
-            'flex items-center gap-2.5 select-none rounded-lg px-3 py-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
+            'flex items-start gap-3 select-none rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
             className
           )}
           {...props}
         >
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
-          <span className="text-sm font-medium">{title}</span>
+          {Icon && (
+            <div className="p-2 rounded-md bg-primary/5 flex-shrink-0">
+              <Icon className="h-4 w-4 text-primary" />
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium">{title}</span>
+            {description && (
+              <span className="text-xs text-muted-foreground line-clamp-2">{description}</span>
+            )}
+          </div>
         </Link>
       </NavigationMenuLink>
     </li>
@@ -114,7 +130,7 @@ const MegaMenu = () => {
               Letter Templates
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[480px] p-4">
+              <div className="w-[600px] p-4">
                 {/* AI Helper Prompt */}
                 <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
                   <p className="text-sm text-muted-foreground mb-2">Not sure which letter you need?</p>
@@ -127,7 +143,7 @@ const MegaMenu = () => {
                   </button>
                 </div>
 
-                {/* Single category grid - 2 columns */}
+                {/* Category grid with descriptions - 2 columns */}
                 <ul className="grid grid-cols-2 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
@@ -135,6 +151,7 @@ const MegaMenu = () => {
                       <ListItem
                         key={category.id}
                         title={category.name}
+                        description={category.description}
                         href={`/templates/${category.id}`}
                         icon={Icon}
                       />

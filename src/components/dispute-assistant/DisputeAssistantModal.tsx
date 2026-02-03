@@ -156,7 +156,7 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[700px] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[700px] flex flex-col p-0 gap-0 [&>button]:hidden">
         <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
