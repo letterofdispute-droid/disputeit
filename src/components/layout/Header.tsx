@@ -98,7 +98,7 @@ const Header = () => {
                 <SheetTitle className="text-left">Menu</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-6">
-                <Accordion type="single" collapsible>
+              <Accordion type="single" collapsible>
                   <AccordionItem value="templates">
                     <AccordionTrigger className="text-base font-medium">
                       Letter Templates
@@ -118,6 +118,32 @@ const Header = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  <AccordionItem value="guides">
+                    <AccordionTrigger className="text-base font-medium">
+                      Consumer Rights Guides
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col gap-2 pl-2">
+                        {templateCategories.map((category) => (
+                          <Link
+                            key={category.id}
+                            to={`/guides/${category.id}`}
+                            className="text-sm text-muted-foreground hover:text-foreground py-2"
+                            onClick={() => setOpen(false)}
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                        <Link 
+                          to="/guides" 
+                          className="text-sm font-medium text-primary hover:text-primary/80 py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          View All Guides →
+                        </Link>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                   <AccordionItem value="resources">
                     <AccordionTrigger className="text-base font-medium">
                       Resources
@@ -125,18 +151,25 @@ const Header = () => {
                     <AccordionContent>
                       <div className="flex flex-col gap-2 pl-2">
                         <Link 
-                          to="/articles" 
-                          className="text-sm text-muted-foreground hover:text-foreground py-2"
-                          onClick={() => setOpen(false)}
-                        >
-                          Blog
-                        </Link>
-                        <Link 
                           to="/how-it-works" 
                           className="text-sm text-muted-foreground hover:text-foreground py-2"
                           onClick={() => setOpen(false)}
                         >
                           How It Works
+                        </Link>
+                        <Link 
+                          to="/faq" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          FAQ
+                        </Link>
+                        <Link 
+                          to="/articles" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Blog
                         </Link>
                         <Link 
                           to="/about" 

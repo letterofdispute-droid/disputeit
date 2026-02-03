@@ -10,7 +10,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
@@ -20,12 +20,6 @@ const resources = [
     description: 'Learn our 3-step process',
     href: '/how-it-works',
     icon: HelpCircle,
-  },
-  {
-    title: 'Consumer Rights Guides',
-    description: 'Learn your legal protections',
-    href: '/guides',
-    icon: Scale,
   },
   {
     title: 'FAQ',
@@ -67,20 +61,20 @@ const ListItem = ({ className, title, description, icon: Icon, href, ...props }:
         <Link
           to={href}
           className={cn(
-            'flex items-start gap-3 select-none rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
+            'flex items-start gap-2 select-none rounded-lg p-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
             className
           )}
           {...props}
         >
           {Icon && (
-            <div className="p-2 rounded-md bg-primary/5 flex-shrink-0">
-              <Icon className="h-4 w-4 text-primary" />
+            <div className="p-1.5 rounded-md bg-primary/5 flex-shrink-0">
+              <Icon className="h-3.5 w-3.5 text-primary" />
             </div>
           )}
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">{title}</span>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-sm font-medium leading-tight">{title}</span>
             {description && (
-              <span className="text-xs text-muted-foreground line-clamp-2">{description}</span>
+              <span className="text-xs text-muted-foreground line-clamp-2 leading-snug">{description}</span>
             )}
           </div>
         </Link>
@@ -123,6 +117,26 @@ const ResourceListItem = ({ className, title, children, icon: Icon, href, ...pro
   );
 };
 
+const GuideListItem = ({ className, title, icon: Icon, href, ...props }: ListItemProps) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <Link
+          to={href}
+          className={cn(
+            'flex items-center gap-2 select-none rounded-lg p-2 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
+            className
+          )}
+          {...props}
+        >
+          {Icon && <Icon className="h-4 w-4 text-primary flex-shrink-0" />}
+          <span className="text-sm">{title}</span>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+};
+
 const MegaMenu = () => {
   const [assistantOpen, setAssistantOpen] = useState(false);
 
@@ -130,16 +144,16 @@ const MegaMenu = () => {
     <>
       <NavigationMenu>
         <NavigationMenuList>
-          {/* Letter Templates */}
+          {/* Letter Templates - 3 Column Layout */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">
               Letter Templates
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[600px] p-4">
+              <div className="w-[800px] p-4">
                 {/* AI Helper Prompt */}
-                <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
-                  <p className="text-sm text-muted-foreground mb-2">Not sure which letter you need?</p>
+                <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <p className="text-sm text-muted-foreground mb-1.5">Not sure which letter you need?</p>
                   <button 
                     onClick={() => setAssistantOpen(true)}
                     className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
@@ -149,8 +163,8 @@ const MegaMenu = () => {
                   </button>
                 </div>
 
-                {/* Category grid with descriptions - 2 columns */}
-                <ul className="grid grid-cols-2 gap-1">
+                {/* Category grid with descriptions - 3 columns */}
+                <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
                     return (
@@ -166,13 +180,60 @@ const MegaMenu = () => {
                 </ul>
 
                 {/* Footer link */}
-                <div className="border-t border-border mt-4 pt-3">
+                <div className="border-t border-border mt-3 pt-2">
                   <Link 
                     to="/#letters" 
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-3"
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-2"
                   >
                     <FileText className="h-4 w-4" />
                     Browse all templates →
+                  </Link>
+                </div>
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+
+          {/* Consumer Rights Guides - Standalone menu */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent">
+              Guides
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-[500px] p-4">
+                {/* Header */}
+                <div className="mb-3 px-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Scale className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Know Your Rights</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Understand your legal protections before writing your dispute letter
+                  </p>
+                </div>
+
+                {/* 2-column grid of guides */}
+                <ul className="grid grid-cols-2 gap-1">
+                  {templateCategories.map((category) => {
+                    const Icon = category.icon;
+                    return (
+                      <GuideListItem
+                        key={category.id}
+                        title={category.name.replace(' & ', ' ')}
+                        href={`/guides/${category.id}`}
+                        icon={Icon}
+                      />
+                    );
+                  })}
+                </ul>
+
+                {/* Footer link */}
+                <div className="border-t border-border mt-3 pt-2">
+                  <Link 
+                    to="/guides" 
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-2"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    View all consumer rights guides →
                   </Link>
                 </div>
               </div>
