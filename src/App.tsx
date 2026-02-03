@@ -40,6 +40,8 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 import SettingsPage from "./pages/SettingsPage";
+import GuidesPage from "./pages/GuidesPage";
+import CategoryGuidePage from "./pages/CategoryGuidePage";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,8 @@ const App = () => (
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/disclaimer" element={<DisclaimerPage />} />
+          <Route path="/guides" element={<GuidesPage />} />
+          <Route path="/guides/:categoryId" element={<CategoryGuidePage />} />
           <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
           
           {/* Auth & Dashboard */}

@@ -10,7 +10,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
@@ -20,6 +20,12 @@ const resources = [
     description: 'Learn our 3-step process',
     href: '/how-it-works',
     icon: HelpCircle,
+  },
+  {
+    title: 'Consumer Rights Guides',
+    description: 'Learn your legal protections',
+    href: '/guides',
+    icon: Scale,
   },
   {
     title: 'FAQ',
