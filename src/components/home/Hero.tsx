@@ -95,18 +95,18 @@ const Hero = () => {
           </div>
 
           {/* Trust Indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <Target className="h-5 w-5 text-accent" />
-              <span className="text-sm">Certainty, not guesswork</span>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 max-w-3xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <Target className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Certainty, not guesswork</span>
             </div>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <ShieldCheck className="h-5 w-5 text-accent" />
-              <span className="text-sm">Pre-validated letters</span>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <ShieldCheck className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Pre-validated letters</span>
             </div>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <Clock className="h-5 w-5 text-accent" />
-              <span className="text-sm">Legal-safe language</span>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <Clock className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Legal-safe language</span>
             </div>
           </div>
         </div>
