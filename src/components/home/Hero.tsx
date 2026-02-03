@@ -18,8 +18,9 @@ const Hero = () => {
   return (
     <section className="relative overflow-hidden bg-primary py-20 md:py-28">
       {/* Background Image with Overlay */}
+      {/* Background Image - Increased opacity */}
       <div 
-        className="absolute inset-0 opacity-15 grayscale"
+        className="absolute inset-0 opacity-30 grayscale"
         style={{
           backgroundImage: `url('/images/hero-bg.jpg')`,
           backgroundSize: 'cover',
@@ -27,8 +28,8 @@ const Hero = () => {
         }}
       />
       
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+      {/* Gradient Overlay - More transparent to show image */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/85 to-primary/90" />
 
       {/* Background Pattern (subtle) */}
       <div className="absolute inset-0 opacity-5">
