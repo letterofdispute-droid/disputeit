@@ -308,13 +308,15 @@ const Dashboard = () => {
                 </Card>
               )}
               <Card className="cursor-pointer hover:shadow-lg transition-all">
-                <CardHeader>
-                  <div className="p-3 bg-primary/10 rounded-lg w-fit mb-2">
-                    <User className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Account Settings</CardTitle>
-                  <CardDescription>Update your profile and preferences</CardDescription>
-                </CardHeader>
+                <Link to="/settings">
+                  <CardHeader>
+                    <div className="p-3 bg-primary/10 rounded-lg w-fit mb-2">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">Account Settings</CardTitle>
+                    <CardDescription>Update your profile and preferences</CardDescription>
+                  </CardHeader>
+                </Link>
               </Card>
               <Card className="cursor-pointer hover:shadow-lg transition-all">
                 <Link to="/contact">
