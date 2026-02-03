@@ -95,11 +95,6 @@ const Footer = () => {
               For legal matters, please consult a qualified attorney in your jurisdiction.
             </p>
           </div>
-          {/* US Trust Indicator + Copyright */}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-3">
-            <span>🇺🇸</span>
-            <span>US-Based Service</span>
-          </div>
           <p className="text-sm text-muted-foreground text-center">
             © {new Date().getFullYear()} DisputeLetters. All rights reserved.
           </p>
