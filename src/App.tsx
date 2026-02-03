@@ -25,6 +25,7 @@ import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 import PricingPage from "./pages/PricingPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
+import FAQPage from "./pages/FAQPage";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/faq" element={<FAQPage />} />
           <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
           
           {/* Auth & Dashboard */}
