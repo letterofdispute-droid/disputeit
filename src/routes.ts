@@ -32,6 +32,7 @@ export const routes = [
   '/templates',
   '/how-it-works',
   '/pricing',
+  '/faq',
   '/about',
   '/contact',
   ...templateCategories.map(c => `/templates/${c.id}`),
