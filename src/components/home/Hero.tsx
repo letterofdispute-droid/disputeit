@@ -108,10 +108,6 @@ const Hero = () => {
               <Clock className="h-5 w-5 text-accent" />
               <span className="text-sm">Legal-safe language</span>
             </div>
-            <div className="flex items-center justify-center gap-2 text-primary-foreground/70">
-              <span className="text-base">🇺🇸</span>
-              <span className="text-sm">US-Based Service</span>
-            </div>
           </div>
         </div>
       </div>
