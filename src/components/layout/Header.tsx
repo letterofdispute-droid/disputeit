@@ -132,7 +132,7 @@ const Header = () => {
                           Blog
                         </Link>
                         <Link 
-                          to="/#how-it-works" 
+                          to="/how-it-works" 
                           className="text-sm text-muted-foreground hover:text-foreground py-2"
                           onClick={() => setOpen(false)}
                         >

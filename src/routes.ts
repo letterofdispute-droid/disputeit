@@ -30,6 +30,10 @@ const getTemplateRoutes = (): string[] => {
 export const routes = [
   '/',
   '/templates',
+  '/how-it-works',
+  '/pricing',
+  '/about',
+  '/contact',
   ...templateCategories.map(c => `/templates/${c.id}`),
   ...getSubcategoryRoutes(),
   ...getTemplateRoutes(),

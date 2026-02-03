@@ -1,10 +1,29 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ArrowRight, FileText, FileEdit } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { 
+  Check, 
+  ArrowRight, 
+  FileText, 
+  FileEdit, 
+  Shield, 
+  Lock, 
+  RefreshCw,
+  AlertTriangle,
+  Scale,
+  Bot,
+  X
+} from 'lucide-react';
 
 const options = [
   {
@@ -38,25 +57,167 @@ const options = [
   },
 ];
 
+const trustIndicators = [
+  {
+    icon: Shield,
+    title: '30-Day Guarantee',
+    description: 'Not satisfied? Full refund, no questions asked.',
+  },
+  {
+    icon: Lock,
+    title: 'Secure Payments',
+    description: 'Processed securely by Stripe. We never store your card.',
+  },
+  {
+    icon: RefreshCw,
+    title: 'Instant Delivery',
+    description: 'Download your letter immediately after purchase.',
+  },
+];
+
+const comparisons = [
+  {
+    icon: Bot,
+    title: 'Why not just use ChatGPT?',
+    problems: [
+      'Generic output not optimized for disputes',
+      'May include language that hurts your case',
+      'No legal references or proper formatting',
+      'Risk of "AI-sounding" text that gets dismissed',
+    ],
+    solution: 'Our templates are researched and validated specifically for each dispute type, with correct legal tone and references.',
+  },
+  {
+    icon: Scale,
+    title: 'Why not hire a lawyer?',
+    problems: [
+      'Consultation fees start at $150-300/hour',
+      'Most disputes don\'t require legal representation',
+      'Overkill for straightforward consumer issues',
+      'Takes days to weeks to schedule',
+    ],
+    solution: 'For standard consumer disputes, a well-written demand letter is often all you need. Save the lawyer for complex cases.',
+  },
+  {
+    icon: AlertTriangle,
+    title: 'Why not ignore the issue?',
+    problems: [
+      'You lose money you\'re owed',
+      'Bad actors face no consequences',
+      'Problem may escalate or repeat',
+      'Statute of limitations may expire',
+    ],
+    solution: 'A formal letter often gets results where casual complaints fail. Most issues resolve at this stage.',
+  },
+];
+
+const faqs = [
+  {
+    question: 'What\'s the difference between PDF and Editable?',
+    answer: 'The PDF option gives you a ready-to-send professional letter. The PDF + Editable option includes a Word document so you can make additional changes before sending. Choose Editable if you want to customize the letter or use it as a template for similar disputes.',
+  },
+  {
+    question: 'Can I get a refund if I\'m not satisfied?',
+    answer: 'Yes! We offer a 30-day money-back guarantee. If you\'re not satisfied with your letter for any reason, contact us for a full refund—no questions asked.',
+  },
+  {
+    question: 'Can I use the same letter for multiple disputes?',
+    answer: 'With the PDF + Editable option, you can modify the document as many times as you need for similar disputes. This is especially useful if you\'re dealing with the same company on multiple issues.',
+  },
+  {
+    question: 'Is my payment information secure?',
+    answer: 'Absolutely. We use Stripe for payment processing, which is PCI-compliant and used by millions of businesses worldwide. Your payment information is never stored on our servers.',
+  },
+  {
+    question: 'Do you offer bulk pricing for multiple letters?',
+    answer: 'Currently we offer per-letter pricing. If you need to create many letters, the PDF + Editable option at $9.99 gives you a template you can modify for similar situations.',
+  },
+  {
+    question: 'How quickly can I get my letter?',
+    answer: 'Instantly! As soon as your payment is processed, you can download your letter immediately. There\'s no waiting—start your letter, fill in the details, pay, and download.',
+  },
+  {
+    question: 'What if my dispute doesn\'t fit any template?',
+    answer: 'With 400+ templates across 13 categories, we cover most consumer situations. Try our AI assistant to describe your issue, and it will recommend the closest match. The Editable option lets you customize any template to fit your specific needs.',
+  },
+];
+
+// Product Schema
+const productSchema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "DisputeLetters - Professional Dispute Letter Templates",
+  "description": "Create professional dispute and complaint letters in minutes. Pre-validated templates with correct legal tone and formatting.",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "PDF Only",
+      "price": "5.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    {
+      "@type": "Offer",
+      "name": "PDF + Editable",
+      "price": "9.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    }
+  ]
+};
+
+// FAQ Schema
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+};
+
 const PricingPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Pricing | DisputeLetters"
-        description="Simple, transparent per-letter pricing. Pay only for what you need — no subscriptions."
+        title="Pricing - Simple Per-Letter Pricing | DisputeLetters"
+        description="Create professional dispute letters from $5.99. No subscriptions, no hidden fees. Pay only for what you need with our simple per-letter pricing."
         canonicalPath="/pricing"
       />
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(productSchema)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(faqSchema)}
+        </script>
+      </Helmet>
 
       {/* Hero */}
       <section className="bg-primary py-16 md:py-20">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="font-serif text-4xl md:text-5xl font-bold text-primary-foreground mb-6">
-              Simple, Per-Letter Pricing
+              Simple, Transparent Pricing
             </h1>
-            <p className="text-lg text-primary-foreground/80">
-              Pay only for what you need. No subscriptions, no hidden fees.
+            <p className="text-lg md:text-xl text-primary-foreground/80 mb-6">
+              Pay only for what you need. No subscriptions, no hidden fees, no surprises.
             </p>
+            {/* Trust badges in hero */}
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-primary-foreground/70">
+              <span className="flex items-center gap-1.5">
+                <Shield className="h-4 w-4" />
+                30-Day Money-Back Guarantee
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Lock className="h-4 w-4" />
+                Secure Payment via Stripe
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -117,9 +278,77 @@ const PricingPage = () => {
           <div className="mt-12 max-w-2xl mx-auto text-center">
             <div className="inline-block px-6 py-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">What you're paying for:</span> Pre-validated letter templates, legal-safe phrasing, and the certainty that your letter won't hurt your case.
+                <span className="font-medium text-foreground">What you're paying for:</span> Pre-validated letter templates, legal-safe phrasing, correct formatting, and the certainty that your letter won't hurt your case.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="py-12 bg-muted/30">
+        <div className="container-wide">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {trustIndicators.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className="flex items-center gap-4 p-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Section */}
+      <section className="py-16 md:py-24 bg-background">
+        <div className="container-wide">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-3xl font-bold text-foreground mb-4">
+              Why DisputeLetters?
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              See how we compare to the alternatives.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {comparisons.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                        <Icon className="h-5 w-5 text-destructive" />
+                      </div>
+                      <h3 className="font-semibold text-foreground">{item.title}</h3>
+                    </div>
+                    <ul className="space-y-2 mb-4">
+                      {item.problems.map((problem, pIndex) => (
+                        <li key={pIndex} className="flex items-start gap-2 text-sm">
+                          <X className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{problem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="pt-4 border-t border-border">
+                      <p className="text-sm">
+                        <span className="font-medium text-success">Our solution: </span>
+                        <span className="text-muted-foreground">{item.solution}</span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -130,43 +359,43 @@ const PricingPage = () => {
           <h2 className="font-serif text-3xl font-bold text-foreground text-center mb-12">
             Frequently Asked Questions
           </h2>
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-semibold text-foreground mb-2">
-                What's the difference between PDF and Editable?
-              </h3>
-              <p className="text-muted-foreground">
-                The PDF option gives you a ready-to-send professional letter. The PDF + Editable 
-                option includes a Word document so you can make additional changes before sending.
-              </p>
-            </div>
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-semibold text-foreground mb-2">
-                Can I get a refund if I'm not satisfied?
-              </h3>
-              <p className="text-muted-foreground">
-                Yes! We offer a 30-day money-back guarantee. If you're not satisfied 
-                with your letter, contact us for a full refund.
-              </p>
-            </div>
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-semibold text-foreground mb-2">
-                Can I use the same letter for multiple disputes?
-              </h3>
-              <p className="text-muted-foreground">
-                With the PDF + Editable option, you can modify the document as many times 
-                as you need for similar disputes.
-              </p>
-            </div>
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-semibold text-foreground mb-2">
-                Is my payment information secure?
-              </h3>
-              <p className="text-muted-foreground">
-                Absolutely. We use Stripe for payment processing, and your payment information 
-                is never stored on our servers.
-              </p>
-            </div>
+          <div className="max-w-3xl mx-auto">
+            <Accordion type="single" collapsible className="space-y-4">
+              {faqs.map((faq, index) => (
+                <AccordionItem 
+                  key={index} 
+                  value={`item-${index}`}
+                  className="bg-card border border-border rounded-xl px-6"
+                >
+                  <AccordionTrigger className="text-left font-medium hover:no-underline">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 md:py-20 bg-primary">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+              Ready to Resolve Your Dispute?
+            </h2>
+            <p className="text-lg text-primary-foreground/80 mb-8">
+              Create a professional letter in minutes. Most disputes are resolved at this stage.
+            </p>
+            <Button variant="accent" size="lg" asChild>
+              <Link to="/#letters">
+                Browse Letter Templates
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
