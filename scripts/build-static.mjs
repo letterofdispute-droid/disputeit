@@ -952,30 +952,30 @@ function generateHomepageHTML(templates) {
     }
   };
 
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dispute Letters - Professional Complaint Letter Generator | \${totalTemplates}+ Templates</title>
-  <meta name="description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. \${totalTemplates}+ legally-referenced templates ready in minutes.">
-  <link rel="canonical" href="\${SITE_URL}/">
+  <title>Dispute Letters - Professional Complaint Letter Generator | ${totalTemplates}+ Templates</title>
+  <meta name="description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. ${totalTemplates}+ legally-referenced templates ready in minutes.">
+  <link rel="canonical" href="${SITE_URL}/">
   
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Dispute Letters - Professional Complaint Letter Generator">
-  <meta property="og:description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, and more. \${totalTemplates}+ templates with legal references.">
-  <meta property="og:url" content="\${SITE_URL}/">
+  <meta property="og:description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, and more. ${totalTemplates}+ templates with legal references.">
+  <meta property="og:url" content="${SITE_URL}/">
   <meta property="og:site_name" content="Dispute Letters">
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Dispute Letters - Professional Complaint Letter Generator">
-  <meta name="twitter:description" content="Generate professional complaint letters in minutes. \${totalTemplates}+ legally-referenced templates.">
+  <meta name="twitter:description" content="Generate professional complaint letters in minutes. ${totalTemplates}+ legally-referenced templates.">
   
   <!-- Structured Data -->
-  <script type="application/ld+json">\${JSON.stringify(organizationSchema)}</script>
-  <script type="application/ld+json">\${JSON.stringify(webAppSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(organizationSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(webAppSchema)}</script>
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; margin: 0; line-height: 1.6; color: #1a1a1a; }
@@ -1011,26 +1011,26 @@ function generateHomepageHTML(templates) {
   
   <section class="hero">
     <h1>Professional Complaint Letters That Get Results</h1>
-    <p>Generate legally-referenced dispute letters in minutes. \${totalTemplates}+ templates for refunds, housing, travel, insurance, and more.</p>
+    <p>Generate legally-referenced dispute letters in minutes. ${totalTemplates}+ templates for refunds, housing, travel, insurance, and more.</p>
     <a href="/templates" class="cta">Browse All Templates</a>
   </section>
   
   <main role="main">
     <h2>Letter Categories</h2>
-    <p>Choose from \${categories.length} categories covering the most common consumer disputes:</p>
+    <p>Choose from ${categories.length} categories covering the most common consumer disputes:</p>
     
     <div class="categories">
-      \${categories.map(cat => \`
+      ${categories.map(cat => `
         <div class="category-card">
-          <h3><a href="/templates/\${cat.id}">\${escapeHtml(cat.name)}</a></h3>
-          <p>\${escapeHtml(cat.description)}</p>
+          <h3><a href="/templates/${cat.id}">${escapeHtml(cat.name)}</a></h3>
+          <p>${escapeHtml(cat.description)}</p>
         </div>
-      \`).join('')}
+      `).join('')}
     </div>
     
     <h2 style="margin-top: 3rem;">How It Works</h2>
     <ol>
-      <li><strong>Choose a Template</strong> - Browse our \${totalTemplates}+ professionally crafted letter templates</li>
+      <li><strong>Choose a Template</strong> - Browse our ${totalTemplates}+ professionally crafted letter templates</li>
       <li><strong>Fill in Your Details</strong> - Our guided form helps you provide the right information</li>
       <li><strong>Download Your Letter</strong> - Get your letter in PDF or Word format, ready to send</li>
     </ol>
@@ -1045,7 +1045,7 @@ function generateHomepageHTML(templates) {
   </main>
   
   <footer role="contentinfo">
-    <p>© \${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+    <p>© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
     <p>
       <a href="/templates">Templates</a>
       <a href="/articles">Blog</a>
@@ -1055,23 +1055,23 @@ function generateHomepageHTML(templates) {
     </p>
   </footer>
 </body>
-</html>\`;
+</html>`;
 }
 
 function generateAboutHTML() {
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>About Us | Dispute Letters</title>
   <meta name="description" content="Learn about Dispute Letters - the professional complaint letter generator helping consumers resolve disputes effectively with legally-referenced templates.">
-  <link rel="canonical" href="\${SITE_URL}/about">
+  <link rel="canonical" href="${SITE_URL}/about">
   
   <meta property="og:type" content="website">
   <meta property="og:title" content="About Dispute Letters">
   <meta property="og:description" content="Learn about our mission to help consumers resolve disputes effectively.">
-  <meta property="og:url" content="\${SITE_URL}/about">
+  <meta property="og:url" content="${SITE_URL}/about">
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
@@ -1109,23 +1109,23 @@ function generateAboutHTML() {
     <a href="/templates" class="cta">Browse Our Templates</a>
   </main>
 </body>
-</html>\`;
+</html>`;
 }
 
 function generateContactHTML() {
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contact Us | Dispute Letters</title>
   <meta name="description" content="Get in touch with Dispute Letters. We're here to help with questions about our complaint letter templates and dispute resolution services.">
-  <link rel="canonical" href="\${SITE_URL}/contact">
+  <link rel="canonical" href="${SITE_URL}/contact">
   
   <meta property="og:type" content="website">
   <meta property="og:title" content="Contact Dispute Letters">
   <meta property="og:description" content="Get in touch with our team for help with complaint letters and dispute resolution.">
-  <meta property="og:url" content="\${SITE_URL}/contact">
+  <meta property="og:url" content="${SITE_URL}/contact">
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
@@ -1158,23 +1158,23 @@ function generateContactHTML() {
     <p>Don't see a template for your specific situation? Let us know! We're constantly expanding our library based on user feedback.</p>
   </main>
 </body>
-</html>\`;
+</html>`;
 }
 
 function generatePricingHTML() {
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing | Dispute Letters</title>
   <meta name="description" content="Affordable pricing for professional complaint letters. Get a single letter for €9.99 or unlimited access for €29.99. Download in PDF and Word formats.">
-  <link rel="canonical" href="\${SITE_URL}/pricing">
+  <link rel="canonical" href="${SITE_URL}/pricing">
   
   <meta property="og:type" content="website">
   <meta property="og:title" content="Dispute Letters Pricing">
   <meta property="og:description" content="Affordable pricing for professional complaint letters. Single letter €9.99 or unlimited access €29.99.">
-  <meta property="og:url" content="\${SITE_URL}/pricing">
+  <meta property="og:url" content="${SITE_URL}/pricing">
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
@@ -1238,7 +1238,7 @@ function generatePricingHTML() {
     </ul>
   </main>
 </body>
-</html>\`;
+</html>`;
 }
 
 function generateArticlesListingHTML(blogPosts) {
@@ -1252,7 +1252,7 @@ function generateArticlesListingHTML(blogPosts) {
       "@type": "ListItem",
       "position": i + 1,
       "name": p.title,
-      "url": \`\${SITE_URL}/articles/\${p.categorySlug}/\${p.slug}\`
+      "url": `${SITE_URL}/articles/${p.categorySlug}/${p.slug}`
     }))
   };
 
@@ -1269,21 +1269,21 @@ function generateArticlesListingHTML(blogPosts) {
     postsByCategory[post.categorySlug].posts.push(post);
   });
 
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blog | Dispute Letters - Expert Guides for Consumer Disputes</title>
   <meta name="description" content="Expert guides, tips, and resources for resolving consumer disputes. Learn about your rights and how to write effective complaint letters.">
-  <link rel="canonical" href="\${SITE_URL}/articles">
+  <link rel="canonical" href="${SITE_URL}/articles">
   
   <meta property="og:type" content="website">
   <meta property="og:title" content="Dispute Letters Blog">
   <meta property="og:description" content="Expert guides and tips for resolving consumer disputes effectively.">
-  <meta property="og:url" content="\${SITE_URL}/articles">
+  <meta property="og:url" content="${SITE_URL}/articles">
   
-  <script type="application/ld+json">\${JSON.stringify(itemListSchema)}</script>
+  <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
   
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
@@ -1311,27 +1311,27 @@ function generateArticlesListingHTML(blogPosts) {
     <p>Expert guides, tips, and resources for resolving consumer disputes effectively.</p>
     
     <div class="categories">
-      \${blogCategories.map(cat => \`
-        <a href="/articles/\${cat.slug}" class="category-tag">\${escapeHtml(cat.name)}</a>
-      \`).join('')}
+      ${blogCategories.map(cat => `
+        <a href="/articles/${cat.slug}" class="category-tag">${escapeHtml(cat.name)}</a>
+      `).join('')}
     </div>
     
     <div class="posts">
-      \${blogPosts.slice(0, 20).map(post => \`
+      ${blogPosts.slice(0, 20).map(post => `
         <article class="post-card">
-          <h3><a href="/articles/\${post.categorySlug}/\${post.slug}">\${escapeHtml(post.title)}</a></h3>
-          <p>\${escapeHtml(post.excerpt)}</p>
+          <h3><a href="/articles/${post.categorySlug}/${post.slug}">${escapeHtml(post.title)}</a></h3>
+          <p>${escapeHtml(post.excerpt)}</p>
           <p class="post-meta">
-            <span>\${escapeHtml(post.category)}</span> • 
-            <span>\${post.readTime}</span> • 
-            <span>\${post.publishedAt}</span>
+            <span>${escapeHtml(post.category)}</span> • 
+            <span>${post.readTime}</span> • 
+            <span>${post.publishedAt}</span>
           </p>
         </article>
-      \`).join('')}
+      `).join('')}
     </div>
   </main>
 </body>
-</html>\`;
+</html>`;
 }
 
 // ============================================
