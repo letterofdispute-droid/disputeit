@@ -36,6 +36,7 @@ export const routes = [
   '/about',
   '/contact',
   '/terms',
+  '/privacy',
   ...templateCategories.map(c => `/templates/${c.id}`),
   ...getSubcategoryRoutes(),
   ...getTemplateRoutes(),
