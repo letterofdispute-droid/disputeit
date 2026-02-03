@@ -42,19 +42,19 @@ interface StepCardProps {
 
 const StepCard = ({ step, isLast }: StepCardProps) => {
   return (
-    <div className="relative group">
+    <div className="relative group pt-5">
+      {/* Step Number Badge - outside overflow-hidden card */}
+      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center shadow-md z-10">
+        {step.step}
+      </div>
+
       {/* Connector Line */}
       {!isLast && (
-        <div className="hidden lg:block absolute top-12 left-1/2 w-full h-0.5 bg-border" />
+        <div className="hidden lg:block absolute top-16 left-1/2 w-full h-0.5 bg-border" />
       )}
 
       <div className="relative bg-card rounded-xl overflow-hidden shadow-soft group-hover:shadow-elevated transition-shadow">
-        <div className="relative p-6 text-center">
-          {/* Step Number */}
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center shadow-md">
-            {step.step}
-          </div>
-
+        <div className="relative p-6 pt-4 text-center">
           {/* Icon */}
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <step.icon className="h-8 w-8" />
