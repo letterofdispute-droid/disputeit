@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 interface Scenario {
   id: string;
@@ -24,6 +25,7 @@ interface Scenario {
   letterSlug: string;
   letterTitle: string;
   category: string;
+  imageQuery: string;
 }
 
 const scenarios: Scenario[] = [
@@ -44,6 +46,7 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/housing/security-deposit-return',
     letterTitle: 'Security Deposit Return Request',
     category: 'housing',
+    imageQuery: 'apartment keys rental',
   },
   {
     id: 'medical-billing',
@@ -62,6 +65,7 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/healthcare/medical-bill-dispute',
     letterTitle: 'Medical Bill Error Dispute',
     category: 'healthcare',
+    imageQuery: 'medical billing hospital',
   },
   {
     id: 'insurance-denial',
@@ -80,6 +84,7 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/insurance/claim-denial-appeal',
     letterTitle: 'Insurance Claim Appeal',
     category: 'insurance',
+    imageQuery: 'insurance documents claim',
   },
   {
     id: 'defective-product',
@@ -98,6 +103,7 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/refunds/defective-product-refund',
     letterTitle: 'Defective Product Refund Request',
     category: 'refunds',
+    imageQuery: 'product refund shopping',
   },
   {
     id: 'flight-compensation',
@@ -116,8 +122,42 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/travel/flight-delay-compensation',
     letterTitle: 'Flight Delay/Cancellation Compensation',
     category: 'travel',
+    imageQuery: 'airport flight delay',
   },
 ];
+
+interface ScenarioCardImageProps {
+  scenarioId: string;
+  imageQuery: string;
+}
+
+const ScenarioCardImage = ({ scenarioId, imageQuery }: ScenarioCardImageProps) => {
+  const { thumbnailUrl, isLoading } = useCategoryImage(scenarioId, imageQuery, 'scenario');
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (thumbnailUrl) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = thumbnailUrl;
+    }
+  }, [thumbnailUrl]);
+
+  if (isLoading || !thumbnailUrl) {
+    return null;
+  }
+
+  return (
+    <div 
+      className={`absolute inset-0 transition-opacity duration-500 ${imageLoaded ? 'opacity-10' : 'opacity-0'}`}
+      style={{
+        backgroundImage: `url(${thumbnailUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    />
+  );
+};
 
 const RealWorldScenarios = () => {
   const [expandedId, setExpandedId] = useState<string | null>('security-deposit');
@@ -161,14 +201,17 @@ const RealWorldScenarios = () => {
                 transition={{ duration: 0.4, delay: index * 0.1 }}
                 layout
                 className={cn(
-                  'bg-card rounded-xl shadow-soft overflow-hidden',
+                  'relative bg-card rounded-xl shadow-soft overflow-hidden',
                   isExpanded && 'shadow-elevated'
                 )}
               >
+                {/* Background Image */}
+                <ScenarioCardImage scenarioId={scenario.id} imageQuery={scenario.imageQuery} />
+                
                 {/* Header - Always Visible */}
                 <motion.button
                   onClick={() => toggleExpanded(scenario.id)}
-                  className="w-full p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors"
+                  className="relative w-full p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors z-10"
                   whileHover={{ backgroundColor: 'hsl(var(--muted) / 0.3)' }}
                   whileTap={{ scale: 0.995 }}
                 >
@@ -201,9 +244,9 @@ const RealWorldScenarios = () => {
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3, ease: 'easeInOut' }}
-                      className="overflow-hidden"
+                      className="overflow-hidden relative z-10"
                     >
-                      <div className="px-5 pb-5 pt-0 border-t border-border">
+                      <div className="px-5 pb-5 pt-0 border-t border-border bg-card/80 backdrop-blur-sm">
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}

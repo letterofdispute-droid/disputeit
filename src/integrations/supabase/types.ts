@@ -169,6 +169,48 @@ export type Database = {
         }
         Relationships: []
       }
+      category_images: {
+        Row: {
+          category_id: string
+          context_key: string
+          created_at: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          image_url: string
+          large_url: string
+          pixabay_id: string
+          search_query: string
+          thumbnail_url: string
+        }
+        Insert: {
+          category_id: string
+          context_key?: string
+          created_at?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          image_url: string
+          large_url: string
+          pixabay_id: string
+          search_query: string
+          thumbnail_url: string
+        }
+        Update: {
+          category_id?: string
+          context_key?: string
+          created_at?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          image_url?: string
+          large_url?: string
+          pixabay_id?: string
+          search_query?: string
+          thumbnail_url?: string
+        }
+        Relationships: []
+      }
       letter_purchases: {
         Row: {
           amount_cents: number

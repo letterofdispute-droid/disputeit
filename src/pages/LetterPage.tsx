@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { getTemplateBySlug, getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
@@ -19,6 +20,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 const LetterPage = () => {
   const { categoryId, subcategorySlug, templateSlug } = useParams<{ 
@@ -29,6 +31,22 @@ const LetterPage = () => {
   
   const template = templateSlug ? getTemplateBySlug(templateSlug) : undefined;
   const category = categoryId ? getCategoryById(categoryId) : undefined;
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Get category image for hero background
+  const { largeUrl } = useCategoryImage(
+    category?.id,
+    category?.imageKeywords?.[0],
+    'letter-hero'
+  );
+
+  useEffect(() => {
+    if (largeUrl) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = largeUrl;
+    }
+  }, [largeUrl]);
 
   if (!template || !category) {
     return <Navigate to="/404" replace />;
@@ -134,9 +152,24 @@ const LetterPage = () => {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
 
-      {/* SEO-Optimized Header */}
-      <section className="bg-primary py-12 md:py-16">
-        <div className="container-wide">
+      {/* SEO-Optimized Header with Background Image */}
+      <section className="relative py-12 md:py-16 overflow-hidden">
+        {/* Background Image */}
+        {largeUrl && (
+          <div 
+            className={`absolute inset-0 transition-opacity duration-700 ${imageLoaded ? 'opacity-25' : 'opacity-0'}`}
+            style={{
+              backgroundImage: `url(${largeUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+
+        <div className="container-wide relative z-10">
           {/* Breadcrumb Navigation */}
           <Breadcrumb className="mb-6">
             <BreadcrumbList>
