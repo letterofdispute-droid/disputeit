@@ -2,12 +2,12 @@
 /**
  * Static Build Script for DisputeLetters
  * 
- * Generates sitemaps for SEO:
- * - /dist/sitemaps/sitemap-index.xml
- * - /dist/sitemaps/templates.xml
- * - /dist/sitemaps/categories.xml
- * - /dist/sitemaps/static.xml
- * - /dist/sitemap.xml (copy of index)
+ * Generates sitemaps to public/ folder for SEO:
+ * - /public/sitemap.xml (sitemap index)
+ * - /public/sitemap-static.xml (static pages)
+ * - /public/sitemap-categories.xml (categories + subcategories + guides)
+ * - /public/sitemap-templates.xml (all 400+ templates)
+ * - /public/sitemap-blog.xml (blog categories + articles)
  */
 
 import fs from 'fs';
@@ -16,151 +16,203 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distDir = path.join(__dirname, '..', 'dist');
+const publicDir = path.join(__dirname, '..', 'public');
 
 const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
 
 // ============================================
-// Template and Category Data
+// Categories Data
 // ============================================
 
 const categories = [
-  { id: 'refunds', name: 'Refunds & Purchases', description: 'Get your money back for products or services that did not meet expectations.' },
-  { id: 'housing', name: 'Landlord & Housing', description: 'Request repairs, address deposit disputes, or document housing issues.' },
-  { id: 'travel', name: 'Travel & Transportation', description: 'Claim compensation for flight delays, lost baggage, or booking issues.' },
-  { id: 'damaged-goods', name: 'Damaged & Defective Goods', description: 'File complaints for items that arrived broken, defective, or not as described.' },
-  { id: 'utilities', name: 'Utilities & Telecommunications', description: 'Dispute billing errors, service quality issues, or contract problems.' },
-  { id: 'financial', name: 'Financial Services', description: 'Challenge bank fees, credit report errors, or debt collection issues.' },
-  { id: 'insurance', name: 'Insurance Claims', description: 'Appeal denied claims, dispute settlements, or challenge cancellations.' },
-  { id: 'vehicle', name: 'Vehicle & Auto', description: 'Address dealer complaints, warranty disputes, or repair issues.' },
-  { id: 'healthcare', name: 'Healthcare & Medical Billing', description: 'Dispute medical bills, coding errors, or surprise charges.' },
-  { id: 'employment', name: 'Employment & Workplace', description: 'Address wage issues, workplace problems, or termination disputes.' },
-  { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Report seller issues, account problems, or data privacy requests.' },
-  { id: 'hoa', name: 'Neighbor & HOA Disputes', description: 'Address community issues, fee disputes, or neighbor conflicts.' },
-  { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Dispute poor workmanship, project abandonment, or cost overruns.' },
+  { id: 'refunds', name: 'Refunds & Purchases' },
+  { id: 'housing', name: 'Housing' },
+  { id: 'travel', name: 'Travel' },
+  { id: 'damaged-goods', name: 'Damaged Goods' },
+  { id: 'utilities', name: 'Utilities & Telecom' },
+  { id: 'financial', name: 'Financial' },
+  { id: 'insurance', name: 'Insurance' },
+  { id: 'vehicle', name: 'Vehicle' },
+  { id: 'healthcare', name: 'Healthcare' },
+  { id: 'employment', name: 'Employment' },
+  { id: 'ecommerce', name: 'E-commerce' },
+  { id: 'hoa', name: 'HOA & Property' },
+  { id: 'contractors', name: 'Contractors' },
 ];
 
-// Subcategory patterns for inferring subcategory from template ID
+// All subcategories per category (from subcategoryMappings.ts)
+const subcategoriesByCategory = {
+  'contractors': ['general', 'plumbing', 'electrical', 'roofing', 'hvac', 'landscaping', 'flooring-painting', 'kitchen-bath', 'windows-doors', 'specialty'],
+  'healthcare': ['insurance-claims', 'billing', 'debt-collection', 'provider', 'pharmacy', 'privacy-records'],
+  'insurance': ['auto', 'home', 'health', 'life', 'travel', 'pet', 'business'],
+  'housing': ['repairs', 'deposits', 'tenancy', 'neighbor', 'letting-agents', 'safety'],
+  'travel': ['flights', 'hotels', 'cruises', 'car-rentals', 'tours', 'rail-bus'],
+  'employment': ['wages', 'termination', 'discrimination', 'benefits', 'workplace'],
+  'utilities': ['energy', 'water', 'internet', 'phone', 'tv-cable'],
+  'financial': ['banking', 'credit-cards', 'loans', 'credit-reports', 'debt-collection', 'investments', 'fraud'],
+  'refunds': ['refunds', 'warranty', 'subscriptions', 'delivery', 'service'],
+  'damaged-goods': ['delivery-damage', 'defective', 'misrepresentation', 'warranty-repair'],
+  'vehicle': ['dealer', 'repair', 'warranty-lemon', 'finance', 'parking'],
+  'ecommerce': ['refunds', 'delivery', 'marketplace', 'subscriptions', 'privacy'],
+  'hoa': ['fees', 'violations', 'maintenance', 'neighbor', 'governance'],
+};
+
+// Blog categories (from blogPosts.ts)
+const blogCategories = [
+  'consumer-rights',
+  'landlord-tenant',
+  'travel-disputes',
+  'financial-tips',
+  'legal-guides',
+];
+
+// ============================================
+// Subcategory patterns for inferring from template ID
+// ============================================
+
 const subcategoryPatterns = {
   'Contractors': [
-    { pattern: /^general-|project-delay|cost-overrun|abandoned-|unfinished-|permit-|lien-|contract-dispute/, subcategory: { name: 'General Contractor', slug: 'general' } },
-    { pattern: /plumb|leak|pipe|water-heater|drain|sewage|toilet|faucet/, subcategory: { name: 'Plumbing', slug: 'plumbing' } },
-    { pattern: /electri|wiring|outlet|panel|circuit|breaker|electrical/, subcategory: { name: 'Electrical', slug: 'electrical' } },
-    { pattern: /roof|gutter|shingle|flashing|skylight/, subcategory: { name: 'Roofing', slug: 'roofing' } },
-    { pattern: /hvac|heating|cooling|air-conditioning|furnace|ac-|heat-pump|ductwork|thermostat/, subcategory: { name: 'HVAC', slug: 'hvac' } },
-    { pattern: /landscap|lawn|irrigation|sprinkler|tree|garden|hardscape|patio|deck/, subcategory: { name: 'Landscaping', slug: 'landscaping' } },
-    { pattern: /floor|paint|carpet|tile|hardwood|laminate|wallpaper|stain/, subcategory: { name: 'Flooring & Painting', slug: 'flooring-painting' } },
-    { pattern: /kitchen|bath|cabinet|countertop|remodel/, subcategory: { name: 'Kitchen & Bath', slug: 'kitchen-bath' } },
-    { pattern: /window|door|siding|glass/, subcategory: { name: 'Windows & Doors', slug: 'windows-doors' } },
-    { pattern: /pool|fence|garage|foundation|basement|concrete|masonry|solar|home-security|pest|mold|asbestos|demolition/, subcategory: { name: 'Specialty Services', slug: 'specialty' } },
+    { pattern: /^general-|project-delay|cost-overrun|abandoned-|unfinished-|permit-|lien-|contract-dispute/, slug: 'general' },
+    { pattern: /plumb|leak|pipe|water-heater|drain|sewage|toilet|faucet/, slug: 'plumbing' },
+    { pattern: /electri|wiring|outlet|panel|circuit|breaker|electrical/, slug: 'electrical' },
+    { pattern: /roof|gutter|shingle|flashing|skylight/, slug: 'roofing' },
+    { pattern: /hvac|heating|cooling|air-conditioning|furnace|ac-|heat-pump|ductwork|thermostat/, slug: 'hvac' },
+    { pattern: /landscap|lawn|irrigation|sprinkler|tree|garden|hardscape|patio|deck/, slug: 'landscaping' },
+    { pattern: /floor|paint|carpet|tile|hardwood|laminate|wallpaper|stain/, slug: 'flooring-painting' },
+    { pattern: /kitchen|bath|cabinet|countertop|remodel/, slug: 'kitchen-bath' },
+    { pattern: /window|door|siding|glass/, slug: 'windows-doors' },
+    { pattern: /pool|fence|garage|foundation|basement|concrete|masonry|solar|home-security|pest|mold|asbestos|demolition/, slug: 'specialty' },
   ],
   'Healthcare': [
-    { pattern: /insurance-|claim-denial|prior-auth|pre-auth|coverage/, subcategory: { name: 'Insurance Claims', slug: 'insurance-claims' } },
-    { pattern: /billing-|overcharge|invoice|charge-dispute|itemized/, subcategory: { name: 'Medical Billing', slug: 'billing' } },
-    { pattern: /debt-|collection|collector/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
-    { pattern: /hospital|provider|doctor|physician|nurse|staff|facility/, subcategory: { name: 'Provider Complaints', slug: 'provider' } },
-    { pattern: /prescription|pharmacy|medication|rx|drug/, subcategory: { name: 'Pharmacy Issues', slug: 'pharmacy' } },
-    { pattern: /hipaa|privacy|records|medical-record/, subcategory: { name: 'Privacy & Records', slug: 'privacy-records' } },
+    { pattern: /insurance-|claim-denial|prior-auth|pre-auth|coverage/, slug: 'insurance-claims' },
+    { pattern: /billing-|overcharge|invoice|charge-dispute|itemized/, slug: 'billing' },
+    { pattern: /debt-|collection|collector/, slug: 'debt-collection' },
+    { pattern: /hospital|provider|doctor|physician|nurse|staff|facility/, slug: 'provider' },
+    { pattern: /prescription|pharmacy|medication|rx|drug/, slug: 'pharmacy' },
+    { pattern: /hipaa|privacy|records|medical-record/, slug: 'privacy-records' },
   ],
   'Insurance': [
-    { pattern: /auto-|car-|vehicle-|accident-claim|collision/, subcategory: { name: 'Auto Insurance', slug: 'auto' } },
-    { pattern: /home-|property-|homeowner|damage-claim|storm|fire|water-damage|theft-claim/, subcategory: { name: 'Home Insurance', slug: 'home' } },
-    { pattern: /health-|medical-insurance|claim-denial|pre-existing|out-of-network/, subcategory: { name: 'Health Insurance', slug: 'health' } },
-    { pattern: /life-|beneficiary|death-benefit/, subcategory: { name: 'Life Insurance', slug: 'life' } },
-    { pattern: /travel-|trip-|flight-insurance|luggage-insurance/, subcategory: { name: 'Travel Insurance', slug: 'travel' } },
-    { pattern: /pet-|veterinary/, subcategory: { name: 'Pet Insurance', slug: 'pet' } },
-    { pattern: /business-|liability|professional/, subcategory: { name: 'Business Insurance', slug: 'business' } },
+    { pattern: /auto-|car-|vehicle-|accident-claim|collision/, slug: 'auto' },
+    { pattern: /home-|property-|homeowner|damage-claim|storm|fire|water-damage|theft-claim/, slug: 'home' },
+    { pattern: /health-|medical-insurance|claim-denial|pre-existing|out-of-network/, slug: 'health' },
+    { pattern: /life-|beneficiary|death-benefit/, slug: 'life' },
+    { pattern: /travel-|trip-|flight-insurance|luggage-insurance/, slug: 'travel' },
+    { pattern: /pet-|veterinary/, slug: 'pet' },
+    { pattern: /business-|liability|professional/, slug: 'business' },
   ],
   'Housing': [
-    { pattern: /repair|maintenance|fix|broken|mold|pest|heating|plumbing-issue/, subcategory: { name: 'Repair & Maintenance', slug: 'repairs' } },
-    { pattern: /deposit|security|move-out|deduction/, subcategory: { name: 'Deposits & Move-Out', slug: 'deposits' } },
-    { pattern: /rent-|lease|eviction|tenancy|notice-to-quit/, subcategory: { name: 'Tenancy Disputes', slug: 'tenancy' } },
-    { pattern: /neighbor|noise|nuisance/, subcategory: { name: 'Neighbor Issues', slug: 'neighbor' } },
-    { pattern: /letting-agent|property-manager|estate-agent|management-company/, subcategory: { name: 'Letting Agents', slug: 'letting-agents' } },
-    { pattern: /safety|fire-safety|gas-safety|electrical-safety|habitability/, subcategory: { name: 'Safety & Compliance', slug: 'safety' } },
+    { pattern: /repair|maintenance|fix|broken|mold|pest|heating|plumbing-issue/, slug: 'repairs' },
+    { pattern: /deposit|security|move-out|deduction/, slug: 'deposits' },
+    { pattern: /rent-|lease|eviction|tenancy|notice-to-quit/, slug: 'tenancy' },
+    { pattern: /neighbor|noise|nuisance/, slug: 'neighbor' },
+    { pattern: /letting-agent|property-manager|estate-agent|management-company/, slug: 'letting-agents' },
+    { pattern: /safety|fire-safety|gas-safety|electrical-safety|habitability/, slug: 'safety' },
   ],
   'Travel': [
-    { pattern: /flight|airline|delay|cancellation|eu261|baggage|luggage|boarding|overbooking/, subcategory: { name: 'Flights', slug: 'flights' } },
-    { pattern: /hotel|accommodation|booking|reservation|room/, subcategory: { name: 'Hotels', slug: 'hotels' } },
-    { pattern: /cruise|ship|cabin|onboard/, subcategory: { name: 'Cruises', slug: 'cruises' } },
-    { pattern: /car-rental|rental-car|hire-car|vehicle-rental/, subcategory: { name: 'Car Rentals', slug: 'car-rentals' } },
-    { pattern: /tour|package|travel-agent|vacation|holiday/, subcategory: { name: 'Tours & Packages', slug: 'tours' } },
-    { pattern: /rail|train|bus|coach/, subcategory: { name: 'Rail & Bus', slug: 'rail-bus' } },
+    { pattern: /flight|airline|delay|cancellation|eu261|baggage|luggage|boarding|overbooking/, slug: 'flights' },
+    { pattern: /hotel|accommodation|booking|reservation|room/, slug: 'hotels' },
+    { pattern: /cruise|ship|cabin|onboard/, slug: 'cruises' },
+    { pattern: /car-rental|rental-car|hire-car|vehicle-rental/, slug: 'car-rentals' },
+    { pattern: /tour|package|travel-agent|vacation|holiday/, slug: 'tours' },
+    { pattern: /rail|train|bus|coach/, slug: 'rail-bus' },
   ],
   'Employment': [
-    { pattern: /wage|pay|salary|overtime|commission|bonus|paycheck/, subcategory: { name: 'Wages & Pay', slug: 'wages' } },
-    { pattern: /terminat|fired|dismissal|wrongful|severance/, subcategory: { name: 'Termination', slug: 'termination' } },
-    { pattern: /discriminat|harassment|hostile|retaliation|whistleblower/, subcategory: { name: 'Discrimination', slug: 'discrimination' } },
-    { pattern: /benefit|401k|health-insurance|pto|vacation|leave/, subcategory: { name: 'Benefits', slug: 'benefits' } },
-    { pattern: /workplace|safety|osha|condition|ergonomic/, subcategory: { name: 'Workplace Conditions', slug: 'workplace' } },
+    { pattern: /wage|pay|salary|overtime|commission|bonus|paycheck/, slug: 'wages' },
+    { pattern: /terminat|fired|dismissal|wrongful|severance/, slug: 'termination' },
+    { pattern: /discriminat|harassment|hostile|retaliation|whistleblower/, slug: 'discrimination' },
+    { pattern: /benefit|401k|health-insurance|pto|vacation|leave/, slug: 'benefits' },
+    { pattern: /workplace|safety|osha|condition|ergonomic/, slug: 'workplace' },
   ],
   'Utilities & Telecom': [
-    { pattern: /energy|gas|electric|power|utility-bill/, subcategory: { name: 'Energy', slug: 'energy' } },
-    { pattern: /water|sewage|sewer/, subcategory: { name: 'Water', slug: 'water' } },
-    { pattern: /internet|broadband|wifi|isp|fiber/, subcategory: { name: 'Internet', slug: 'internet' } },
-    { pattern: /phone|mobile|cell|carrier|telecom|sms|call/, subcategory: { name: 'Phone & Mobile', slug: 'phone' } },
-    { pattern: /cable|tv|streaming|satellite/, subcategory: { name: 'TV & Cable', slug: 'tv-cable' } },
+    { pattern: /energy|gas|electric|power|utility-bill/, slug: 'energy' },
+    { pattern: /water|sewage|sewer/, slug: 'water' },
+    { pattern: /internet|broadband|wifi|isp|fiber/, slug: 'internet' },
+    { pattern: /phone|mobile|cell|carrier|telecom|sms|call/, slug: 'phone' },
+    { pattern: /cable|tv|streaming|satellite/, slug: 'tv-cable' },
   ],
   'Financial': [
-    { pattern: /bank|account|checking|savings|atm|branch/, subcategory: { name: 'Banking', slug: 'banking' } },
-    { pattern: /credit-card|charge|statement|interest|apr/, subcategory: { name: 'Credit Cards', slug: 'credit-cards' } },
-    { pattern: /loan|mortgage|lending|interest-rate/, subcategory: { name: 'Loans', slug: 'loans' } },
-    { pattern: /credit-report|credit-score|bureau|equifax|experian|transunion/, subcategory: { name: 'Credit Reports', slug: 'credit-reports' } },
-    { pattern: /debt|collection|collector/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
-    { pattern: /investment|broker|advisor|retirement|401k/, subcategory: { name: 'Investments', slug: 'investments' } },
-    { pattern: /scam|fraud|unauthorized|identity/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
+    { pattern: /bank|account|checking|savings|atm|branch/, slug: 'banking' },
+    { pattern: /credit-card|charge|statement|interest|apr/, slug: 'credit-cards' },
+    { pattern: /loan|mortgage|lending|interest-rate/, slug: 'loans' },
+    { pattern: /credit-report|credit-score|bureau|equifax|experian|transunion/, slug: 'credit-reports' },
+    { pattern: /debt|collection|collector/, slug: 'debt-collection' },
+    { pattern: /investment|broker|advisor|retirement|401k/, slug: 'investments' },
+    { pattern: /scam|fraud|unauthorized|identity/, slug: 'fraud' },
   ],
   'Refunds & Purchases': [
-    { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },
-    { pattern: /warranty|guarantee|defect/, subcategory: { name: 'Warranty', slug: 'warranty' } },
-    { pattern: /subscription|recurring|cancel|auto-renew/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
-    { pattern: /delivery|shipping|late|missing|lost-package/, subcategory: { name: 'Delivery Issues', slug: 'delivery' } },
-    { pattern: /service|poor-service|unsatisfactory/, subcategory: { name: 'Service Complaints', slug: 'service' } },
+    { pattern: /refund|return|money-back/, slug: 'refunds' },
+    { pattern: /warranty|guarantee|defect/, slug: 'warranty' },
+    { pattern: /subscription|recurring|cancel|auto-renew/, slug: 'subscriptions' },
+    { pattern: /delivery|shipping|late|missing|lost-package/, slug: 'delivery' },
+    { pattern: /service|poor-service|unsatisfactory/, slug: 'service' },
   ],
   'Damaged Goods': [
-    { pattern: /delivery|shipping|transit|carrier/, subcategory: { name: 'Delivery Damage', slug: 'delivery-damage' } },
-    { pattern: /defect|faulty|malfunction|broken/, subcategory: { name: 'Defective Products', slug: 'defective' } },
-    { pattern: /misrepresent|description|advertised|fake|counterfeit/, subcategory: { name: 'Misrepresentation', slug: 'misrepresentation' } },
-    { pattern: /warranty|repair/, subcategory: { name: 'Warranty & Repair', slug: 'warranty-repair' } },
+    { pattern: /delivery|shipping|transit|carrier/, slug: 'delivery-damage' },
+    { pattern: /defect|faulty|malfunction|broken/, slug: 'defective' },
+    { pattern: /misrepresent|description|advertised|fake|counterfeit/, slug: 'misrepresentation' },
+    { pattern: /warranty|repair/, slug: 'warranty-repair' },
   ],
   'Vehicle': [
-    { pattern: /dealer|dealership|sales|purchase/, subcategory: { name: 'Dealer Disputes', slug: 'dealer' } },
-    { pattern: /repair|mechanic|garage|service-center/, subcategory: { name: 'Repair & Service', slug: 'repair' } },
-    { pattern: /warranty|lemon|defect/, subcategory: { name: 'Warranty & Lemon Law', slug: 'warranty-lemon' } },
-    { pattern: /finance|loan|lease|payment/, subcategory: { name: 'Finance & Lease', slug: 'finance' } },
-    { pattern: /parking|ticket|tow|traffic/, subcategory: { name: 'Parking & Traffic', slug: 'parking' } },
+    { pattern: /dealer|dealership|sales|purchase/, slug: 'dealer' },
+    { pattern: /repair|mechanic|garage|service-center/, slug: 'repair' },
+    { pattern: /warranty|lemon|defect/, slug: 'warranty-lemon' },
+    { pattern: /finance|loan|lease|payment/, slug: 'finance' },
+    { pattern: /parking|ticket|tow|traffic/, slug: 'parking' },
   ],
   'E-commerce': [
-    { pattern: /refund|return|chargeback/, subcategory: { name: 'Refunds & Returns', slug: 'refunds' } },
-    { pattern: /delivery|shipping|late|missing/, subcategory: { name: 'Delivery Issues', slug: 'delivery' } },
-    { pattern: /seller|marketplace|amazon|ebay/, subcategory: { name: 'Marketplace Disputes', slug: 'marketplace' } },
-    { pattern: /subscription|recurring|trial/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
-    { pattern: /privacy|data|account|gdpr|ccpa/, subcategory: { name: 'Privacy & Data', slug: 'privacy' } },
+    { pattern: /refund|return|chargeback/, slug: 'refunds' },
+    { pattern: /delivery|shipping|late|missing/, slug: 'delivery' },
+    { pattern: /seller|marketplace|amazon|ebay/, slug: 'marketplace' },
+    { pattern: /subscription|recurring|trial/, slug: 'subscriptions' },
+    { pattern: /privacy|data|account|gdpr|ccpa/, slug: 'privacy' },
   ],
   'HOA & Property': [
-    { pattern: /fee|assessment|dues|charge/, subcategory: { name: 'Fees & Assessments', slug: 'fees' } },
-    { pattern: /violation|fine|rule|architectural|enforcement/, subcategory: { name: 'Violations & Fines', slug: 'violations' } },
-    { pattern: /maintenance|common-area|amenity|repair/, subcategory: { name: 'Maintenance', slug: 'maintenance' } },
-    { pattern: /neighbor|dispute|noise|parking/, subcategory: { name: 'Neighbor Disputes', slug: 'neighbor' } },
-    { pattern: /governance|board|meeting|election/, subcategory: { name: 'Governance', slug: 'governance' } },
+    { pattern: /fee|assessment|dues|charge/, slug: 'fees' },
+    { pattern: /violation|fine|rule|architectural|enforcement/, slug: 'violations' },
+    { pattern: /maintenance|common-area|amenity|repair/, slug: 'maintenance' },
+    { pattern: /neighbor|dispute|noise|parking/, slug: 'neighbor' },
+    { pattern: /governance|board|meeting|election/, slug: 'governance' },
   ],
 };
 
 function inferSubcategory(templateId, category) {
   const patterns = subcategoryPatterns[category];
-  if (!patterns) return { name: 'General', slug: 'general' };
+  if (!patterns) return 'general';
   
   const idLower = templateId.toLowerCase();
   
-  for (const { pattern, subcategory } of patterns) {
+  for (const { pattern, slug } of patterns) {
     if (pattern.test(idLower)) {
-      return subcategory;
+      return slug;
     }
   }
   
-  return { name: 'General', slug: 'general' };
+  return 'general';
 }
+
+function getCategoryIdFromName(categoryName) {
+  const mapping = {
+    'Refunds & Purchases': 'refunds',
+    'Housing': 'housing',
+    'Travel': 'travel',
+    'Damaged Goods': 'damaged-goods',
+    'Utilities & Telecom': 'utilities',
+    'Financial': 'financial',
+    'Insurance': 'insurance',
+    'Vehicle': 'vehicle',
+    'Healthcare': 'healthcare',
+    'Employment': 'employment',
+    'E-commerce': 'ecommerce',
+    'HOA & Property': 'hoa',
+    'Contractors': 'contractors',
+  };
+  return mapping[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
+}
+
+// ============================================
+// Template Loading
+// ============================================
 
 async function loadAllTemplates() {
   const templateFiles = [
@@ -189,24 +241,17 @@ async function loadAllTemplates() {
     }
     const content = fs.readFileSync(filePath, 'utf-8');
     
-    const templateMatches = content.matchAll(/{\s*id:\s*['"]([^'"]+)['"],\s*slug:\s*['"]([^'"]+)['"],\s*category:\s*['"]([^'"]+)['"],\s*title:\s*['"]([^'"]+)['"],[\s\S]*?shortDescription:\s*['"]([^'"]+)['"],[\s\S]*?longDescription:\s*['"]([^'"]+)['"],[\s\S]*?seoTitle:\s*['"]([^'"]+)['"],\s*seoDescription:\s*['"]([^'"]+)['"]/g);
+    // Match template objects - extract id, slug, and category
+    const templateMatches = content.matchAll(/{\s*id:\s*['"]([^'"]+)['"],\s*slug:\s*['"]([^'"]+)['"],\s*category:\s*['"]([^'"]+)['"]/g);
     
     for (const match of templateMatches) {
       const template = {
         id: match[1],
         slug: match[2],
         category: match[3],
-        title: match[4],
-        shortDescription: match[5],
-        longDescription: match[6],
-        seoTitle: match[7],
-        seoDescription: match[8],
       };
       
-      const subcategoryInfo = inferSubcategory(template.id, template.category);
-      template.subcategory = subcategoryInfo.name;
-      template.subcategorySlug = subcategoryInfo.slug;
-      
+      template.subcategorySlug = inferSubcategory(template.id, template.category);
       templates.push(template);
     }
   }
@@ -215,26 +260,30 @@ async function loadAllTemplates() {
 }
 
 // ============================================
-// Utility Functions
+// Blog Post Loading
 // ============================================
 
-function getCategoryIdFromName(categoryName) {
-  const mapping = {
-    'Refunds & Purchases': 'refunds',
-    'Housing': 'housing',
-    'Travel': 'travel',
-    'Damaged Goods': 'damaged-goods',
-    'Utilities & Telecom': 'utilities',
-    'Financial': 'financial',
-    'Insurance': 'insurance',
-    'Vehicle': 'vehicle',
-    'Healthcare': 'healthcare',
-    'Employment': 'employment',
-    'E-commerce': 'ecommerce',
-    'HOA & Property': 'hoa',
-    'Contractors': 'contractors',
-  };
-  return mapping[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
+async function loadBlogPosts() {
+  const blogFilePath = path.join(__dirname, '../src/data/blogPosts.ts');
+  if (!fs.existsSync(blogFilePath)) {
+    console.log('   ⚠️ Blog posts file not found');
+    return [];
+  }
+  
+  const content = fs.readFileSync(blogFilePath, 'utf-8');
+  const posts = [];
+  
+  // Match blog post objects - extract slug and categorySlug
+  const postMatches = content.matchAll(/{\s*slug:\s*['"]([^'"]+)['"],[\s\S]*?categorySlug:\s*['"]([^'"]+)['"]/g);
+  
+  for (const match of postMatches) {
+    posts.push({
+      slug: match[1],
+      categorySlug: match[2],
+    });
+  }
+  
+  return posts;
 }
 
 // ============================================
@@ -245,15 +294,19 @@ function generateSitemapIndex() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>${SITE_URL}/sitemaps/static.xml</loc>
+    <loc>${SITE_URL}/sitemap-static.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${SITE_URL}/sitemaps/categories.xml</loc>
+    <loc>${SITE_URL}/sitemap-categories.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${SITE_URL}/sitemaps/templates.xml</loc>
+    <loc>${SITE_URL}/sitemap-templates.xml</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${SITE_URL}/sitemap-blog.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
 </sitemapindex>`;
@@ -268,6 +321,8 @@ function generateStaticSitemap() {
     { loc: '/faq', priority: '0.7', changefreq: 'weekly' },
     { loc: '/about', priority: '0.6', changefreq: 'monthly' },
     { loc: '/contact', priority: '0.6', changefreq: 'monthly' },
+    { loc: '/guides', priority: '0.7', changefreq: 'weekly' },
+    { loc: '/articles', priority: '0.8', changefreq: 'daily' },
     { loc: '/privacy', priority: '0.3', changefreq: 'monthly' },
     { loc: '/terms', priority: '0.3', changefreq: 'monthly' },
     { loc: '/disclaimer', priority: '0.3', changefreq: 'monthly' },
@@ -282,23 +337,47 @@ function generateStaticSitemap() {
   </url>`).join('');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
 </urlset>`;
 }
 
-function generateCategoriesSitemap(allCategories) {
-  const urls = allCategories.map(cat => `
+function generateCategoriesSitemap() {
+  const urls = [];
+  
+  // Main category pages
+  for (const cat of categories) {
+    urls.push(`
   <url>
     <loc>${SITE_URL}/templates/${cat.id}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`).join('');
+  </url>`);
+    
+    // Subcategory pages
+    const subcats = subcategoriesByCategory[cat.id] || [];
+    for (const subcat of subcats) {
+      urls.push(`
+  <url>
+    <loc>${SITE_URL}/templates/${cat.id}/${subcat}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+    }
+    
+    // Guide page for each category
+    urls.push(`
+  <url>
+    <loc>${SITE_URL}/guides/${cat.id}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+  }
   
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}
 </urlset>`;
 }
 
@@ -316,8 +395,37 @@ function generateTemplatesSitemap(templates) {
   }).join('');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
+</urlset>`;
+}
+
+function generateBlogSitemap(blogPosts) {
+  const urls = [];
+  
+  // Blog category pages
+  for (const cat of blogCategories) {
+    urls.push(`
+  <url>
+    <loc>${SITE_URL}/articles/${cat}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+  }
+  
+  // Individual blog posts
+  for (const post of blogPosts) {
+    urls.push(`
+  <url>
+    <loc>${SITE_URL}/articles/${post.categorySlug}/${post.slug}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+  }
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}
 </urlset>`;
 }
 
@@ -326,36 +434,50 @@ ${urls}
 // ============================================
 
 async function buildSitemaps() {
-  console.log('\n🗺️  Generating sitemaps...\n');
+  console.log('\n🗺️  Generating sitemaps to public/...\n');
   
-  // Ensure dist directory exists
-  if (!fs.existsSync(distDir)) {
-    console.log('⚠️  dist/ directory not found. Run vite build first.');
-    return;
+  // Ensure public directory exists
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
   }
   
-  // Load all templates for sitemap
-  console.log('📚 Loading template data...');
+  // Load all templates
+  console.log('📚 Loading templates...');
   const templates = await loadAllTemplates();
-  console.log(`   Found ${templates.length} templates`);
+  console.log(`   ✅ Found ${templates.length} templates`);
+  
+  // Load blog posts
+  console.log('📝 Loading blog posts...');
+  const blogPosts = await loadBlogPosts();
+  console.log(`   ✅ Found ${blogPosts.length} blog posts`);
   
   // Generate sitemaps
-  const sitemapsDir = path.join(distDir, 'sitemaps');
-  fs.mkdirSync(sitemapsDir, { recursive: true });
+  console.log('\n📄 Generating sitemap files...');
   
-  fs.writeFileSync(path.join(sitemapsDir, 'sitemap-index.xml'), generateSitemapIndex());
-  fs.writeFileSync(path.join(sitemapsDir, 'static.xml'), generateStaticSitemap());
-  fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap(categories));
-  fs.writeFileSync(path.join(sitemapsDir, 'templates.xml'), generateTemplatesSitemap(templates));
+  // Sitemap index
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapIndex());
+  console.log('   ✅ sitemap.xml (index)');
   
-  // Also copy sitemap-index to root as sitemap.xml
-  fs.copyFileSync(
-    path.join(sitemapsDir, 'sitemap-index.xml'),
-    path.join(distDir, 'sitemap.xml')
-  );
+  // Static pages sitemap
+  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), generateStaticSitemap());
+  console.log('   ✅ sitemap-static.xml');
   
-  console.log('   Generated 4 sitemaps');
-  console.log('\n✅ Sitemap generation complete!');
+  // Categories + subcategories + guides sitemap
+  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
+  const subcatCount = Object.values(subcategoriesByCategory).flat().length;
+  console.log(`   ✅ sitemap-categories.xml (${categories.length} categories + ${subcatCount} subcategories + ${categories.length} guides)`);
+  
+  // Templates sitemap
+  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
+  console.log(`   ✅ sitemap-templates.xml (${templates.length} templates)`);
+  
+  // Blog sitemap
+  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
+  console.log(`   ✅ sitemap-blog.xml (${blogCategories.length} categories + ${blogPosts.length} posts)`);
+  
+  // Summary
+  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogCategories.length + blogPosts.length;
+  console.log(`\n✨ Generated ${totalUrls} URLs across 5 sitemap files\n`);
 }
 
 // Run the build
