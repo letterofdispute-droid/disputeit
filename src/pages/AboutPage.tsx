@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Shield, Users, Scale } from 'lucide-react';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 const values = [
   {
@@ -28,6 +30,31 @@ const values = [
 ];
 
 const AboutPage = () => {
+  const [heroImageLoaded, setHeroImageLoaded] = useState(false);
+  const [missionImageLoaded, setMissionImageLoaded] = useState(false);
+
+  // Fetch hero image
+  const { largeUrl: heroImage } = useCategoryImage('about', 'professional team meeting office', 'about-hero');
+  
+  // Fetch mission section image
+  const { largeUrl: missionImage } = useCategoryImage('about-mission', 'justice legal documents', 'about-mission');
+
+  useEffect(() => {
+    if (heroImage) {
+      const img = new Image();
+      img.onload = () => setHeroImageLoaded(true);
+      img.src = heroImage;
+    }
+  }, [heroImage]);
+
+  useEffect(() => {
+    if (missionImage) {
+      const img = new Image();
+      img.onload = () => setMissionImageLoaded(true);
+      img.src = missionImage;
+    }
+  }, [missionImage]);
+
   return (
     <Layout>
       <SEOHead 
@@ -37,8 +64,23 @@ const AboutPage = () => {
       />
 
       {/* Hero */}
-      <section className="bg-primary py-16 md:py-24">
-        <div className="container-wide">
+      <section className="relative py-16 md:py-24 overflow-hidden">
+        {/* Background Image */}
+        {heroImage && (
+          <div 
+            className={`absolute inset-0 transition-opacity duration-700 ${heroImageLoaded ? 'opacity-20' : 'opacity-0'}`}
+            style={{
+              backgroundImage: `url(${heroImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+
+        <div className="container-wide relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="font-serif text-4xl md:text-5xl font-bold text-primary-foreground mb-6">
               Empowering Consumers to Protect Their Rights
@@ -54,24 +96,41 @@ const AboutPage = () => {
       {/* Mission */}
       <section className="py-16 md:py-24 bg-background">
         <div className="container-wide">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="font-serif text-3xl font-bold text-foreground mb-6">Our Mission</h2>
-            <div className="prose prose-lg max-w-none">
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Too often, consumers face an uphill battle when dealing with companies that have 
-                wronged them. Without legal expertise, many people don't know how to effectively 
-                communicate their grievances in a way that gets results.
-              </p>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                That's where we come in. DisputeLetters provides pre-validated, legally-sound 
-                templates that give everyday consumers the same quality of formal communication 
-                that expensive lawyers produce.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                We've taken the guesswork out of dispute resolution. Our templates are designed 
-                by legal professionals, tested against real-world scenarios, and continuously 
-                improved based on user feedback and success rates.
-              </p>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-xl">
+              <h2 className="font-serif text-3xl font-bold text-foreground mb-6">Our Mission</h2>
+              <div className="prose prose-lg max-w-none">
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Too often, consumers face an uphill battle when dealing with companies that have 
+                  wronged them. Without legal expertise, many people don't know how to effectively 
+                  communicate their grievances in a way that gets results.
+                </p>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  That's where we come in. DisputeLetters provides pre-validated, legally-sound 
+                  templates that give everyday consumers the same quality of formal communication 
+                  that expensive lawyers produce.
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  We've taken the guesswork out of dispute resolution. Our templates are designed 
+                  by legal professionals, tested against real-world scenarios, and continuously 
+                  improved based on user feedback and success rates.
+                </p>
+              </div>
+            </div>
+            
+            {/* Mission Image */}
+            <div className="relative rounded-2xl overflow-hidden shadow-elevated">
+              {missionImage ? (
+                <img 
+                  src={missionImage}
+                  alt="Professional legal documents and justice"
+                  className={`w-full h-80 object-cover transition-opacity duration-700 ${missionImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-80 bg-muted animate-pulse" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent" />
             </div>
           </div>
         </div>
@@ -102,8 +161,11 @@ const AboutPage = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-16 md:py-24 bg-primary">
-        <div className="container-wide text-center">
+      <section className="relative py-16 md:py-24 overflow-hidden">
+        {/* Background with gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/90" />
+        
+        <div className="container-wide relative z-10 text-center">
           <h2 className="font-serif text-3xl font-bold text-primary-foreground mb-4">
             Ready to Resolve Your Dispute?
           </h2>

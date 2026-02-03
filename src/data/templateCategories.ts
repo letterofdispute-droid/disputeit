@@ -11,6 +11,7 @@ export interface TemplateCategory {
   templateCount: number;
   color: string;
   popular?: boolean;
+  imageKeywords: string[];
 }
 
 export const templateCategories: TemplateCategory[] = [
@@ -22,6 +23,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-1))',
     popular: true,
+    imageKeywords: ['shopping receipt', 'customer service desk', 'retail refund'],
   },
   {
     id: 'housing',
@@ -31,6 +33,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-2))',
     popular: true,
+    imageKeywords: ['apartment keys', 'rental property', 'house keys handover'],
   },
   {
     id: 'travel',
@@ -40,6 +43,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 20,
     color: 'hsl(var(--chart-3))',
     popular: true,
+    imageKeywords: ['airport terminal', 'flight delay', 'airplane travel'],
   },
   {
     id: 'damaged-goods',
@@ -49,6 +53,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-4))',
     popular: true,
+    imageKeywords: ['damaged package delivery', 'broken product', 'cardboard box'],
   },
   {
     id: 'utilities',
@@ -58,6 +63,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-5))',
     popular: true,
+    imageKeywords: ['utility bills', 'telecommunications tower', 'power lines'],
   },
   {
     id: 'financial',
@@ -67,6 +73,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-1))',
     popular: true,
+    imageKeywords: ['credit card statement', 'bank documents', 'financial papers'],
   },
   {
     id: 'insurance',
@@ -76,6 +83,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-2))',
     popular: true,
+    imageKeywords: ['insurance claim form', 'insurance documents', 'protection shield'],
   },
   {
     id: 'vehicle',
@@ -85,6 +93,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-3))',
     popular: true,
+    imageKeywords: ['car dealership', 'auto repair garage', 'mechanic workshop'],
   },
   {
     id: 'healthcare',
@@ -94,6 +103,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-4))',
     popular: true,
+    imageKeywords: ['medical billing', 'doctor office', 'healthcare professional'],
   },
   {
     id: 'employment',
@@ -103,6 +113,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-5))',
     popular: true,
+    imageKeywords: ['office workplace', 'business meeting', 'employment contract'],
   },
   {
     id: 'ecommerce',
@@ -112,6 +123,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-1))',
     popular: true,
+    imageKeywords: ['online shopping', 'delivery package', 'ecommerce laptop'],
   },
   {
     id: 'hoa',
@@ -121,6 +133,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 50,
     color: 'hsl(var(--chart-2))',
     popular: true,
+    imageKeywords: ['suburban neighborhood', 'community houses', 'residential street'],
   },
   {
     id: 'contractors',
@@ -130,6 +143,7 @@ export const templateCategories: TemplateCategory[] = [
     templateCount: 61,
     color: 'hsl(var(--chart-3))',
     popular: true,
+    imageKeywords: ['home renovation', 'construction site', 'contractor tools'],
   },
 ];
 

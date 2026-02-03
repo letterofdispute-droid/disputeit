@@ -1,31 +1,112 @@
+import { useState, useEffect } from 'react';
 import { FileText, Edit3, Download, Send } from 'lucide-react';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
 
-const steps = [
+interface Step {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  step: string;
+  imageQuery: string;
+}
+
+const steps: Step[] = [
   {
     icon: FileText,
     title: 'Choose Your Letter Type',
     description: 'Select a letter template designed for your exact dispute type. No prompt engineering required.',
     step: '01',
+    imageQuery: 'document selection template',
   },
   {
     icon: Edit3,
     title: 'Fill in the Details',
     description: 'Answer guided questions. No guessing what information is needed or how to phrase it.',
     step: '02',
+    imageQuery: 'form filling writing',
   },
   {
     icon: Download,
     title: 'Generate Your Letter',
     description: 'Get a pre-validated letter template with correct legal tone, proper structure, and appropriate deadlines.',
     step: '03',
+    imageQuery: 'download document pdf',
   },
   {
     icon: Send,
     title: 'Send & Get Results',
     description: 'Ready to send immediately. No editing, proofreading, or second-guessing required.',
     step: '04',
+    imageQuery: 'sending mail envelope',
   },
 ];
+
+interface StepCardProps {
+  step: Step;
+  index: number;
+  isLast: boolean;
+}
+
+const StepCard = ({ step, index, isLast }: StepCardProps) => {
+  const { thumbnailUrl, isLoading } = useCategoryImage(
+    `how-it-works-${step.step}`,
+    step.imageQuery,
+    'how-it-works'
+  );
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (thumbnailUrl) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = thumbnailUrl;
+    }
+  }, [thumbnailUrl]);
+
+  return (
+    <div className="relative group">
+      {/* Connector Line */}
+      {!isLast && (
+        <div className="hidden lg:block absolute top-12 left-1/2 w-full h-0.5 bg-border" />
+      )}
+
+      <div className="relative bg-card rounded-xl overflow-hidden shadow-soft group-hover:shadow-elevated transition-shadow">
+        {/* Background Image */}
+        {thumbnailUrl && (
+          <div 
+            className={`absolute inset-0 transition-opacity duration-500 ${imageLoaded ? 'opacity-10' : 'opacity-0'}`}
+            style={{
+              backgroundImage: `url(${thumbnailUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        
+        {/* Loading shimmer */}
+        {isLoading && !thumbnailUrl && (
+          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-muted/50 to-transparent animate-pulse" />
+        )}
+
+        <div className="relative p-6 text-center z-10">
+          {/* Step Number */}
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center shadow-md">
+            {step.step}
+          </div>
+
+          {/* Icon */}
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <step.icon className="h-8 w-8" />
+          </div>
+
+          {/* Content */}
+          <h3 className="font-semibold text-foreground mb-2">{step.title}</h3>
+          <p className="text-sm text-muted-foreground">{step.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const HowItWorks = () => {
   return (
@@ -45,28 +126,12 @@ const HowItWorks = () => {
         {/* Steps */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, index) => (
-            <div key={step.title} className="relative group">
-              {/* Connector Line */}
-              {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-12 left-1/2 w-full h-0.5 bg-border" />
-              )}
-
-              <div className="relative bg-card rounded-xl p-6 text-center shadow-soft group-hover:shadow-elevated transition-shadow">
-                {/* Step Number */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center">
-                  {step.step}
-                </div>
-
-                {/* Icon */}
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <step.icon className="h-8 w-8" />
-                </div>
-
-                {/* Content */}
-                <h3 className="font-semibold text-foreground mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
-              </div>
-            </div>
+            <StepCard 
+              key={step.title} 
+              step={step} 
+              index={index}
+              isLast={index === steps.length - 1}
+            />
           ))}
         </div>
       </div>

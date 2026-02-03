@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { getCategoryById, templateCategories } from '@/data/templateCategories';
@@ -17,15 +17,32 @@ import {
 import CategorySearch from '@/components/category/CategorySearch';
 import SubcategoryFilter from '@/components/category/SubcategoryFilter';
 import TemplateCard from '@/components/category/TemplateCard';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const category = categoryId ? getCategoryById(categoryId) : undefined;
   const templates = categoryId ? getTemplatesByCategory(categoryId) : [];
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // State for filtering
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+
+  // Fetch category background image
+  const { largeUrl } = useCategoryImage(
+    category?.id,
+    category?.imageKeywords?.[0],
+    'category-hero'
+  );
+
+  useEffect(() => {
+    if (largeUrl) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = largeUrl;
+    }
+  }, [largeUrl]);
 
   if (!category) {
     return <Navigate to="/404" replace />;
@@ -148,9 +165,24 @@ const CategoryPage = () => {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
 
-      {/* Hero Section */}
-      <section className="bg-primary py-12 md:py-16">
-        <div className="container-wide">
+      {/* Hero Section with Background Image */}
+      <section className="relative py-12 md:py-16 overflow-hidden">
+        {/* Background Image */}
+        {largeUrl && (
+          <div 
+            className={`absolute inset-0 transition-opacity duration-700 ${imageLoaded ? 'opacity-30' : 'opacity-0'}`}
+            style={{
+              backgroundImage: `url(${largeUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+        
+        <div className="container-wide relative z-10">
           {/* Breadcrumb Navigation */}
           <Breadcrumb className="mb-6">
             <BreadcrumbList>
@@ -184,7 +216,7 @@ const CategoryPage = () => {
 
           <div className="flex items-start gap-6">
             <div
-              className="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center"
+              className="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center backdrop-blur-sm"
               style={{
                 backgroundColor: 'hsl(var(--primary-foreground) / 0.15)',
                 color: 'hsl(var(--primary-foreground))',

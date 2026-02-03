@@ -2,6 +2,81 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { templateCategories, getTotalTemplateCount } from '@/data/templateCategories';
+import { useCategoryImage } from '@/hooks/useCategoryImage';
+
+interface CategoryCardProps {
+  category: typeof templateCategories[0];
+}
+
+const CategoryCard = ({ category }: CategoryCardProps) => {
+  const { imageUrl, isLoading } = useCategoryImage(
+    category.id,
+    category.imageKeywords[0],
+    'category-card'
+  );
+
+  return (
+    <Link
+      to={`/templates/${category.id}`}
+      className="group block"
+    >
+      <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">
+        {/* Background Image */}
+        {imageUrl && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+          />
+        )}
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/60 to-foreground/30" />
+        
+        {/* Loading state */}
+        {isLoading && !imageUrl && (
+          <div className="absolute inset-0 bg-muted animate-pulse" />
+        )}
+        
+        {/* Fallback background if no image */}
+        {!imageUrl && !isLoading && (
+          <div 
+            className="absolute inset-0"
+            style={{ backgroundColor: category.color }}
+          />
+        )}
+
+        {/* Popular Badge */}
+        {category.popular && (
+          <div className="absolute top-3 right-3 px-3 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-full z-10">
+            Popular
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="relative z-10 p-6 h-full flex flex-col justify-end min-h-[200px]">
+          <div className="flex items-start gap-3 mb-3">
+            <div 
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm"
+            >
+              <category.icon className="h-5 w-5 text-white" />
+            </div>
+          </div>
+          
+          <h3 className="font-semibold text-white text-lg mb-1 group-hover:text-accent transition-colors">
+            {category.name}
+          </h3>
+          <p className="text-sm text-white/80 mb-3 line-clamp-2">
+            {category.description}
+          </p>
+          <span className="inline-flex items-center text-sm font-medium text-accent group-hover:gap-2 transition-all">
+            Start Building
+            <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+          </span>
+        </div>
+      </Card>
+    </Link>
+  );
+};
 
 const LetterCategories = () => {
   const totalLetterBuilders = getTotalTemplateCount();
@@ -22,48 +97,9 @@ const LetterCategories = () => {
 
         {/* Category Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templateCategories.map((category) => {
-            return (
-              <Link
-                key={category.id}
-                to={`/templates/${category.id}`}
-                className="group"
-              >
-                <Card className="relative h-full p-6 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">
-                  {/* Popular Badge */}
-                  {category.popular && (
-                    <div className="absolute -top-3 right-4 px-3 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-full">
-                      Popular
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-4">
-                    <div 
-                      className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center transition-colors"
-                      style={{ 
-                        backgroundColor: `${category.color}20`,
-                        color: category.color 
-                      }}
-                    >
-                      <category.icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                        {category.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {category.description}
-                      </p>
-                      <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                        Start Building
-                        <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
+          {templateCategories.map((category) => (
+            <CategoryCard key={category.id} category={category} />
+          ))}
         </div>
       </div>
     </section>

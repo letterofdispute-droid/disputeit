@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.form-assistant]
 verify_jwt = false
+
+[functions.fetch-category-images]
+verify_jwt = false
