@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -91,9 +92,7 @@ const SignupPage = () => {
           <Card>
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <FileText className="h-6 w-6" />
-                </div>
+                <img src={ldLogoIcon} alt="DisputeLetters" className="h-12 w-12" />
               </div>
               <CardTitle className="font-serif text-2xl">Create your account</CardTitle>
               <CardDescription>

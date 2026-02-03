@@ -49,6 +49,7 @@ const SEOHead = ({
       '@type': 'Organization',
       name: 'Dispute Letters',
       url: siteUrl,
+      logo: `${siteUrl}/ld-logo.svg`,
     },
     ...(templateCategory && {
       applicationSubCategory: templateCategory,
@@ -61,6 +62,7 @@ const SEOHead = ({
     '@type': 'Organization',
     name: 'Dispute Letters',
     url: siteUrl,
+    logo: `${siteUrl}/ld-logo.svg`,
     description: 'Professional dispute letter templates for consumers',
   } : null;
 
