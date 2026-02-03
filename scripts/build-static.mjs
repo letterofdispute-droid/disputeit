@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 /**
- * Static HTML Generation Script for DisputeLetters
+ * Static Build Script for DisputeLetters
  * 
- * Generates SPA-ready static HTML files for SEO:
- * - Each file includes React assets (CSS/JS) from the built app
- * - Each file includes route-specific SEO content
- * - Each file includes loading overlay for smooth transition
- * 
- * This allows search bots to see full page content while humans
- * get the React SPA experience.
- * 
- * Output:
- * - /dist/templates/index.html (all templates landing)
- * - /dist/templates/:categoryId/index.html (13 categories)
- * - /dist/templates/:categoryId/:subcategorySlug/index.html (subcategories)
- * - /dist/templates/:categoryId/:subcategorySlug/:templateSlug/index.html (400+ templates)
+ * Generates sitemaps for SEO:
  * - /dist/sitemaps/sitemap-index.xml
  * - /dist/sitemaps/templates.xml
  * - /dist/sitemaps/categories.xml
  * - /dist/sitemaps/static.xml
+ * - /dist/sitemap.xml (copy of index)
  */
 
 import fs from 'fs';
@@ -31,95 +20,6 @@ const distDir = path.join(__dirname, '..', 'dist');
 
 const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
-
-// ============================================
-// React Assets Extraction
-// ============================================
-
-/**
- * Extract CSS and JS assets from the built index.html
- * These will be included in every generated static page
- */
-function extractReactAssets() {
-  const indexPath = path.join(distDir, 'index.html');
-  
-  if (!fs.existsSync(indexPath)) {
-    console.log('⚠️  dist/index.html not found, cannot extract React assets');
-    return { headAssets: '', bodyScripts: '', baseHead: '' };
-  }
-  
-  const html = fs.readFileSync(indexPath, 'utf-8');
-  
-  // Extract everything in <head> except title/description (we'll customize those)
-  const headMatch = html.match(/<head>([\s\S]*?)<\/head>/);
-  let headContent = headMatch ? headMatch[1] : '';
-  
-  // Keep only link/script tags and essential meta from head
-  const linkTags = html.match(/<link[^>]+>/g) || [];
-  const headScripts = html.match(/<script[^>]*>[\s\S]*?<\/script>/g) || [];
-  
-  // Filter to only CSS and modulepreload links
-  const cssLinks = linkTags.filter(link => 
-    link.includes('stylesheet') || link.includes('modulepreload')
-  ).join('\n    ');
-  
-  // Extract body scripts (the React entry point)
-  const bodyScriptMatch = html.match(/<script type="module"[^>]*src="[^"]*"[^>]*><\/script>/g) || [];
-  const bodyScripts = bodyScriptMatch.join('\n    ');
-  
-  return {
-    headAssets: cssLinks,
-    bodyScripts: bodyScripts,
-  };
-}
-
-// ============================================
-// Loading Overlay (shared across all pages)
-// ============================================
-
-const overlayCSS = `
-  <style id="seo-overlay-styles">
-    #loading-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: hsl(210 20% 98%);
-      transition: opacity 0.3s ease-out;
-    }
-    #loading-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    #loading-overlay .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid hsl(214 32% 91%);
-      border-top-color: hsl(222 47% 20%);
-      border-radius: 50%;
-      animation: seo-spin 1s linear infinite;
-    }
-    @keyframes seo-spin {
-      to { transform: rotate(360deg); }
-    }
-    /* Hide static content visually but keep for SEO */
-    #seo-static-content {
-      position: absolute;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-    }
-  </style>`;
-
-const overlayHTML = `
-  <div id="loading-overlay">
-    <img src="/ld-logo.svg" alt="Dispute Letters" style="height:40px;margin-bottom:16px;">
-    <div class="spinner"></div>
-  </div>`;
 
 // ============================================
 // Template and Category Data
@@ -318,16 +218,6 @@ async function loadAllTemplates() {
 // Utility Functions
 // ============================================
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 function getCategoryIdFromName(categoryName) {
   const mapping = {
     'Refunds & Purchases': 'refunds',
@@ -345,347 +235,6 @@ function getCategoryIdFromName(categoryName) {
     'Contractors': 'contractors',
   };
   return mapping[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
-}
-
-// ============================================
-// SPA-Ready HTML Generator
-// ============================================
-
-/**
- * Generate a complete SPA entry point HTML file
- * Includes React assets, loading overlay, and route-specific SEO content
- */
-function generateSPAPage({ title, description, canonicalUrl, seoContent, schemas = [], headAssets, bodyScripts }) {
-  const schemaScripts = schemas.map(s => 
-    `<script type="application/ld+json">${JSON.stringify(s)}</script>`
-  ).join('\n    ');
-  
-  return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHtml(title)}</title>
-    <meta name="description" content="${escapeHtml(description)}">
-    <meta name="author" content="Dispute Letters">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="${canonicalUrl}">
-    
-    <!-- Favicon -->
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="/ld-logo-icon.svg">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="${escapeHtml(title)}">
-    <meta property="og:description" content="${escapeHtml(description)}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="${canonicalUrl}">
-    <meta property="og:site_name" content="Dispute Letters">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${escapeHtml(title)}">
-    <meta name="twitter:description" content="${escapeHtml(description)}">
-    
-    <!-- Structured Data -->
-    ${schemaScripts}
-    
-    <!-- React Assets -->
-    ${headAssets}
-    
-    <!-- Loading Overlay Styles -->
-    ${overlayCSS}
-  </head>
-  <body>
-    ${overlayHTML}
-    <div id="root">
-      <div id="seo-static-content">
-        ${seoContent}
-      </div>
-    </div>
-    ${bodyScripts}
-  </body>
-</html>`;
-}
-
-// ============================================
-// Page-Specific Content Generators
-// ============================================
-
-function generateTemplatePageContent(template, headAssets, bodyScripts) {
-  const categoryId = getCategoryIdFromName(template.category);
-  const subcategorySlug = template.subcategorySlug || 'general';
-  const canonicalUrl = `${SITE_URL}/templates/${categoryId}/${subcategorySlug}/${template.slug}`;
-  
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
-      { "@type": "ListItem", "position": 3, "name": template.category, "item": `${SITE_URL}/templates/${categoryId}` },
-      { "@type": "ListItem", "position": 4, "name": template.subcategory, "item": `${SITE_URL}/templates/${categoryId}/${subcategorySlug}` },
-      { "@type": "ListItem", "position": 5, "name": template.title, "item": canonicalUrl }
-    ]
-  };
-  
-  const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": template.seoTitle,
-    "description": template.seoDescription,
-    "author": { "@type": "Organization", "name": "DisputeLetters" },
-    "publisher": { "@type": "Organization", "name": "DisputeLetters", "url": SITE_URL },
-    "datePublished": BUILD_DATE,
-    "dateModified": BUILD_DATE,
-    "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
-  };
-  
-  const seoContent = `
-        <header>
-          <nav style="display:flex;gap:1.5rem;padding:1rem;">
-            <a href="/" style="font-weight:bold;">Dispute Letters</a>
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/faq">FAQ</a>
-            <a href="/pricing">Pricing</a>
-          </nav>
-        </header>
-        <main>
-          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
-            <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${categoryId}">${escapeHtml(template.category)}</a> → <a href="/templates/${categoryId}/${subcategorySlug}">${escapeHtml(template.subcategory)}</a> → ${escapeHtml(template.title)}
-          </nav>
-          <h1>${escapeHtml(template.seoTitle)}</h1>
-          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">${escapeHtml(template.seoDescription)}</p>
-          <section>
-            <h2>About This Template</h2>
-            <p>${escapeHtml(template.longDescription)}</p>
-            <h2>Why Use This Template?</h2>
-            <ul>
-              <li>Professionally structured for maximum impact</li>
-              <li>Includes jurisdiction-specific legal references</li>
-              <li>Customizable to your specific situation</li>
-              <li>Proven format for successful dispute resolution</li>
-            </ul>
-          </section>
-          <a href="${canonicalUrl}" style="display:inline-block;margin-top:2rem;padding:0.75rem 1.5rem;background:#1a2744;color:white;border-radius:0.5rem;text-decoration:none;">Generate Your Letter Now</a>
-        </main>
-        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
-          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/faq">FAQ</a>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-          </nav>
-          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
-        </footer>`;
-  
-  return generateSPAPage({
-    title: template.seoTitle,
-    description: template.seoDescription,
-    canonicalUrl,
-    seoContent,
-    schemas: [breadcrumbSchema, articleSchema],
-    headAssets,
-    bodyScripts
-  });
-}
-
-function generateCategoryPageContent(category, templates, headAssets, bodyScripts) {
-  const canonicalUrl = `${SITE_URL}/templates/${category.id}`;
-  const categoryTemplates = templates.filter(t => getCategoryIdFromName(t.category) === category.id);
-  
-  // Group by subcategory
-  const subcategoryGroups = {};
-  categoryTemplates.forEach(t => {
-    const subSlug = t.subcategorySlug || 'general';
-    if (!subcategoryGroups[subSlug]) {
-      subcategoryGroups[subSlug] = { name: t.subcategory || 'General', slug: subSlug, templates: [] };
-    }
-    subcategoryGroups[subSlug].templates.push(t);
-  });
-  
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
-      { "@type": "ListItem", "position": 3, "name": category.name, "item": canonicalUrl }
-    ]
-  };
-  
-  const subcategoryLinks = Object.values(subcategoryGroups).map(group => `
-            <li style="padding:1rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:0.5rem;">
-              <a href="/templates/${category.id}/${group.slug}" style="font-weight:600;color:#2563eb;text-decoration:none;">${escapeHtml(group.name)}</a>
-              <span style="color:#666;font-size:0.875rem;margin-left:0.5rem;">${group.templates.length} templates</span>
-            </li>`).join('');
-  
-  const seoContent = `
-        <header>
-          <nav style="display:flex;gap:1.5rem;padding:1rem;">
-            <a href="/" style="font-weight:bold;">Dispute Letters</a>
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/faq">FAQ</a>
-          </nav>
-        </header>
-        <main>
-          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
-            <a href="/">Home</a> → <a href="/templates">Templates</a> → ${escapeHtml(category.name)}
-          </nav>
-          <h1>${escapeHtml(category.name)} Letter Templates</h1>
-          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">${escapeHtml(category.description)} Browse ${categoryTemplates.length} professional letter templates.</p>
-          <h2>Browse by Subcategory</h2>
-          <ul style="list-style:none;padding:0;">
-            ${subcategoryLinks}
-          </ul>
-        </main>
-        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
-          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
-            <a href="/templates">Letter Templates</a>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-          </nav>
-          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
-        </footer>`;
-  
-  return generateSPAPage({
-    title: `${category.name} Complaint Letter Templates | DisputeLetters`,
-    description: `${category.description} Browse ${categoryTemplates.length} professional letter templates.`,
-    canonicalUrl,
-    seoContent,
-    schemas: [breadcrumbSchema],
-    headAssets,
-    bodyScripts
-  });
-}
-
-function generateSubcategoryPageContent(category, subcategory, templates, headAssets, bodyScripts) {
-  const canonicalUrl = `${SITE_URL}/templates/${category.id}/${subcategory.slug}`;
-  
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Templates", "item": `${SITE_URL}/templates` },
-      { "@type": "ListItem", "position": 3, "name": category.name, "item": `${SITE_URL}/templates/${category.id}` },
-      { "@type": "ListItem", "position": 4, "name": subcategory.name, "item": canonicalUrl }
-    ]
-  };
-  
-  const templateLinks = templates.map(t => `
-            <li style="padding:1rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:0.5rem;">
-              <a href="/templates/${category.id}/${subcategory.slug}/${t.slug}" style="font-weight:600;color:#2563eb;text-decoration:none;">${escapeHtml(t.title)}</a>
-              <p style="color:#666;font-size:0.875rem;margin:0.25rem 0 0;">${escapeHtml(t.shortDescription)}</p>
-            </li>`).join('');
-  
-  const seoContent = `
-        <header>
-          <nav style="display:flex;gap:1.5rem;padding:1rem;">
-            <a href="/" style="font-weight:bold;">Dispute Letters</a>
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/faq">FAQ</a>
-          </nav>
-        </header>
-        <main>
-          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
-            <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${category.id}">${escapeHtml(category.name)}</a> → ${escapeHtml(subcategory.name)}
-          </nav>
-          <h1>${escapeHtml(subcategory.name)} Letter Templates</h1>
-          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates in our ${category.name.toLowerCase()} collection.</p>
-          <ul style="list-style:none;padding:0;">
-            ${templateLinks}
-          </ul>
-        </main>
-        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
-          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
-            <a href="/templates">Letter Templates</a>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-          </nav>
-          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
-        </footer>`;
-  
-  return generateSPAPage({
-    title: `${subcategory.name} Letter Templates | ${category.name} | DisputeLetters`,
-    description: `Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.`,
-    canonicalUrl,
-    seoContent,
-    schemas: [breadcrumbSchema],
-    headAssets,
-    bodyScripts
-  });
-}
-
-function generateAllTemplatesPageContent(allCategories, templates, headAssets, bodyScripts) {
-  const canonicalUrl = `${SITE_URL}/templates`;
-  
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Templates", "item": canonicalUrl }
-    ]
-  };
-  
-  const categoryLinks = allCategories.map(cat => {
-    const count = templates.filter(t => getCategoryIdFromName(t.category) === cat.id).length;
-    return `
-            <li style="padding:1.5rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:1rem;">
-              <a href="/templates/${cat.id}" style="font-weight:600;font-size:1.25rem;color:#2563eb;text-decoration:none;">${escapeHtml(cat.name)}</a>
-              <span style="color:#666;font-size:0.875rem;margin-left:0.5rem;">${count} templates</span>
-              <p style="color:#666;margin:0.5rem 0 0;">${escapeHtml(cat.description)}</p>
-            </li>`;
-  }).join('');
-  
-  const seoContent = `
-        <header>
-          <nav style="display:flex;gap:1.5rem;padding:1rem;">
-            <a href="/" style="font-weight:bold;">Dispute Letters</a>
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/faq">FAQ</a>
-            <a href="/pricing">Pricing</a>
-          </nav>
-        </header>
-        <main>
-          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
-            <a href="/">Home</a> → Templates
-          </nav>
-          <h1>Professional Letter Template Library</h1>
-          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">Browse our complete collection of ${templates.length}+ pre-validated letter templates. Every template includes proper legal references and controlled language for professional dispute resolution.</p>
-          <h2>Browse by Category</h2>
-          <ul style="list-style:none;padding:0;">
-            ${categoryLinks}
-          </ul>
-        </main>
-        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
-          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
-            <a href="/templates">Letter Templates</a>
-            <a href="/how-it-works">How It Works</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/faq">FAQ</a>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-          </nav>
-          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
-        </footer>`;
-  
-  return generateSPAPage({
-    title: `All Letter Templates - ${templates.length}+ Free Professional Complaint Letters | DisputeLetters`,
-    description: `Browse our complete library of ${templates.length}+ professional letter templates across ${allCategories.length} categories. Generate legally-referenced complaint letters for any situation.`,
-    canonicalUrl,
-    seoContent,
-    schemas: [breadcrumbSchema],
-    headAssets,
-    bodyScripts
-  });
 }
 
 // ============================================
@@ -776,8 +325,8 @@ ${urls}
 // Main Build Function
 // ============================================
 
-async function buildStaticFiles() {
-  console.log('\n📦 Building SPA-ready static HTML files...\n');
+async function buildSitemaps() {
+  console.log('\n🗺️  Generating sitemaps...\n');
   
   // Ensure dist directory exists
   if (!fs.existsSync(distDir)) {
@@ -785,90 +334,12 @@ async function buildStaticFiles() {
     return;
   }
   
-  // Extract React assets from built index.html
-  console.log('📋 Extracting React assets from dist/index.html...');
-  const { headAssets, bodyScripts } = extractReactAssets();
-  
-  if (!bodyScripts) {
-    console.log('⚠️  Could not extract React scripts. Static files will not have SPA functionality.');
-  }
-  
-  // Load all templates
+  // Load all templates for sitemap
   console.log('📚 Loading template data...');
   const templates = await loadAllTemplates();
   console.log(`   Found ${templates.length} templates`);
   
-  let filesGenerated = 0;
-  
-  // 1. Generate /templates page
-  console.log('\n📄 Generating /templates page...');
-  const templatesDir = path.join(distDir, 'templates');
-  fs.mkdirSync(templatesDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(templatesDir, 'index.html'),
-    generateAllTemplatesPageContent(categories, templates, headAssets, bodyScripts)
-  );
-  filesGenerated++;
-  
-  // 2. Generate category pages
-  console.log('📂 Generating category pages...');
-  for (const category of categories) {
-    const categoryDir = path.join(distDir, 'templates', category.id);
-    fs.mkdirSync(categoryDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(categoryDir, 'index.html'),
-      generateCategoryPageContent(category, templates, headAssets, bodyScripts)
-    );
-    filesGenerated++;
-  }
-  console.log(`   Generated ${categories.length} category pages`);
-  
-  // 3. Generate subcategory pages
-  console.log('📂 Generating subcategory pages...');
-  let subcategoryCount = 0;
-  for (const category of categories) {
-    const categoryTemplates = templates.filter(t => getCategoryIdFromName(t.category) === category.id);
-    
-    // Group by subcategory
-    const subcategoryGroups = {};
-    categoryTemplates.forEach(t => {
-      const subSlug = t.subcategorySlug || 'general';
-      if (!subcategoryGroups[subSlug]) {
-        subcategoryGroups[subSlug] = { name: t.subcategory || 'General', slug: subSlug, templates: [] };
-      }
-      subcategoryGroups[subSlug].templates.push(t);
-    });
-    
-    for (const [slug, group] of Object.entries(subcategoryGroups)) {
-      const subcategoryDir = path.join(distDir, 'templates', category.id, slug);
-      fs.mkdirSync(subcategoryDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(subcategoryDir, 'index.html'),
-        generateSubcategoryPageContent(category, { name: group.name, slug }, group.templates, headAssets, bodyScripts)
-      );
-      filesGenerated++;
-      subcategoryCount++;
-    }
-  }
-  console.log(`   Generated ${subcategoryCount} subcategory pages`);
-  
-  // 4. Generate template pages
-  console.log('📝 Generating template pages...');
-  for (const template of templates) {
-    const categoryId = getCategoryIdFromName(template.category);
-    const subcategorySlug = template.subcategorySlug || 'general';
-    const templateDir = path.join(distDir, 'templates', categoryId, subcategorySlug, template.slug);
-    fs.mkdirSync(templateDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(templateDir, 'index.html'),
-      generateTemplatePageContent(template, headAssets, bodyScripts)
-    );
-    filesGenerated++;
-  }
-  console.log(`   Generated ${templates.length} template pages`);
-  
-  // 5. Generate sitemaps
-  console.log('🗺️  Generating sitemaps...');
+  // Generate sitemaps
   const sitemapsDir = path.join(distDir, 'sitemaps');
   fs.mkdirSync(sitemapsDir, { recursive: true });
   
@@ -882,12 +353,10 @@ async function buildStaticFiles() {
     path.join(sitemapsDir, 'sitemap-index.xml'),
     path.join(distDir, 'sitemap.xml')
   );
-  console.log('   Generated 4 sitemaps');
   
-  console.log(`\n✅ Static file generation complete!`);
-  console.log(`   Total files generated: ${filesGenerated}`);
-  console.log(`   Sitemaps: 4`);
+  console.log('   Generated 4 sitemaps');
+  console.log('\n✅ Sitemap generation complete!');
 }
 
 // Run the build
-buildStaticFiles().catch(console.error);
+buildSitemaps().catch(console.error);
