@@ -123,6 +123,40 @@ serve(async (req) => {
       throw new Error(generateResult.error || "Document generation failed");
     }
 
+    // Send email with download links
+    console.log(`Sending purchase email to ${customerEmail}`);
+    
+    try {
+      const emailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-purchase-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            email: customerEmail,
+            templateName: purchase.template_name,
+            purchaseType: purchase.purchase_type,
+            pdfUrl: generateResult.pdfUrl,
+            docxUrl: generateResult.docxUrl,
+          }),
+        }
+      );
+
+      if (!emailResponse.ok) {
+        const emailError = await emailResponse.text();
+        console.error("Email sending failed (non-blocking):", emailError);
+        // Don't throw - email failure shouldn't block purchase success
+      } else {
+        console.log("Purchase email sent successfully");
+      }
+    } catch (emailError) {
+      console.error("Email sending error (non-blocking):", emailError);
+      // Don't throw - email failure shouldn't block purchase success
+    }
+
     // Return purchase details with document URLs
     return new Response(JSON.stringify({
       success: true,
