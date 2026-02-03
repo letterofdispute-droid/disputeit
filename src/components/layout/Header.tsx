@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Menu, User, LogOut, Settings } from 'lucide-react';
+import { Menu, User, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
@@ -34,13 +34,12 @@ const Header = () => {
       <div className="container-wide">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FileText className="h-5 w-5" />
-            </div>
-            <span className="font-serif text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
-              DisputeLetters
-            </span>
+          <Link to="/" className="flex items-center group">
+            <img 
+              src="/ld-logo.svg" 
+              alt="DisputeLetters" 
+              className="h-9 transition-opacity group-hover:opacity-80" 
+            />
           </Link>
 
           {/* Desktop Navigation - Megamenu */}

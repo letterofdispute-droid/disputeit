@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { FileText } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -8,13 +7,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <FileText className="h-5 w-5" />
-              </div>
-              <span className="font-serif text-xl font-semibold text-foreground">
-                DisputeLetters
-              </span>
+            <Link to="/" className="flex items-center mb-4">
+              <img 
+                src="/ld-logo.svg" 
+                alt="DisputeLetters" 
+                className="h-9" 
+              />
             </Link>
             <p className="text-sm text-muted-foreground">
               Professional dispute and complaint letters for everyday consumer situations.
