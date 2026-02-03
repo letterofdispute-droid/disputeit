@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Search, Edit, Trash2, Eye, 
-  MoreHorizontal, Calendar, Loader2
+  MoreHorizontal, Calendar, Loader2, Sparkles
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -121,10 +121,16 @@ const AdminBlog = () => {
           <h1 className="font-serif text-3xl font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground">Manage your blog content</p>
         </div>
-        <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Post
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/admin/blog/generate')}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            AI Generate
+          </Button>
+          <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Post
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

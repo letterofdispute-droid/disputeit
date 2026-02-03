@@ -34,6 +34,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBlog from "./pages/admin/AdminBlog";
 import AdminBlogEditor from "./pages/admin/AdminBlogEditor";
+import AIBlogGenerator from "./pages/admin/AIBlogGenerator";
 import AdminPages from "./pages/admin/AdminPages";
 import AdminPageEditor from "./pages/admin/AdminPageEditor";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -96,6 +97,7 @@ const App = () => (
             <Route index element={<AdminDashboard />} />
             <Route path="blog" element={<AdminBlog />} />
             <Route path="blog/new" element={<AdminBlogEditor />} />
+            <Route path="blog/generate" element={<AIBlogGenerator />} />
             <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
             <Route path="pages" element={<AdminPages />} />
             <Route path="pages/new" element={<AdminPageEditor />} />
