@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 interface Scenario {
   id: string;
@@ -25,7 +24,6 @@ interface Scenario {
   letterSlug: string;
   letterTitle: string;
   category: string;
-  imageQuery: string;
 }
 
 const scenarios: Scenario[] = [
@@ -46,7 +44,6 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/housing/security-deposit-return',
     letterTitle: 'Security Deposit Return Request',
     category: 'housing',
-    imageQuery: 'apartment keys rental',
   },
   {
     id: 'medical-billing',
@@ -65,7 +62,6 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/healthcare/medical-bill-dispute',
     letterTitle: 'Medical Bill Error Dispute',
     category: 'healthcare',
-    imageQuery: 'medical billing hospital',
   },
   {
     id: 'insurance-denial',
@@ -84,7 +80,6 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/insurance/claim-denial-appeal',
     letterTitle: 'Insurance Claim Appeal',
     category: 'insurance',
-    imageQuery: 'insurance documents claim',
   },
   {
     id: 'defective-product',
@@ -103,7 +98,6 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/refunds/defective-product-refund',
     letterTitle: 'Defective Product Refund Request',
     category: 'refunds',
-    imageQuery: 'product refund shopping',
   },
   {
     id: 'flight-compensation',
@@ -122,42 +116,8 @@ const scenarios: Scenario[] = [
     letterSlug: '/letters/travel/flight-delay-compensation',
     letterTitle: 'Flight Delay/Cancellation Compensation',
     category: 'travel',
-    imageQuery: 'airport flight delay',
   },
 ];
-
-interface ScenarioCardImageProps {
-  scenarioId: string;
-  imageQuery: string;
-}
-
-const ScenarioCardImage = ({ scenarioId, imageQuery }: ScenarioCardImageProps) => {
-  const { thumbnailUrl, isLoading } = useCategoryImage(scenarioId, imageQuery, 'scenario');
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  useEffect(() => {
-    if (thumbnailUrl) {
-      const img = new Image();
-      img.onload = () => setImageLoaded(true);
-      img.src = thumbnailUrl;
-    }
-  }, [thumbnailUrl]);
-
-  if (isLoading || !thumbnailUrl) {
-    return null;
-  }
-
-  return (
-    <div 
-      className={`absolute inset-0 transition-opacity duration-500 ${imageLoaded ? 'opacity-10' : 'opacity-0'}`}
-      style={{
-        backgroundImage: `url(${thumbnailUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    />
-  );
-};
 
 const RealWorldScenarios = () => {
   const [expandedId, setExpandedId] = useState<string | null>('security-deposit');
@@ -205,8 +165,6 @@ const RealWorldScenarios = () => {
                   isExpanded && 'shadow-elevated'
                 )}
               >
-                {/* Background Image */}
-                <ScenarioCardImage scenarioId={scenario.id} imageQuery={scenario.imageQuery} />
                 
                 {/* Header - Always Visible */}
                 <motion.button

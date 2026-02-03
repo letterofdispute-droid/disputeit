@@ -1,13 +1,10 @@
-import { useState, useEffect } from 'react';
 import { FileText, Edit3, Download, Send } from 'lucide-react';
-import { useCategoryImage } from '@/hooks/useCategoryImage';
 
 interface Step {
   icon: React.ElementType;
   title: string;
   description: string;
   step: string;
-  imageQuery: string;
 }
 
 const steps: Step[] = [
@@ -16,28 +13,24 @@ const steps: Step[] = [
     title: 'Choose Your Letter Type',
     description: 'Select a letter template designed for your exact dispute type. No prompt engineering required.',
     step: '01',
-    imageQuery: 'document selection template',
   },
   {
     icon: Edit3,
     title: 'Fill in the Details',
     description: 'Answer guided questions. No guessing what information is needed or how to phrase it.',
     step: '02',
-    imageQuery: 'form filling writing',
   },
   {
     icon: Download,
     title: 'Generate Your Letter',
     description: 'Get a pre-validated letter template with correct legal tone, proper structure, and appropriate deadlines.',
     step: '03',
-    imageQuery: 'download document pdf',
   },
   {
     icon: Send,
     title: 'Send & Get Results',
     description: 'Ready to send immediately. No editing, proofreading, or second-guessing required.',
     step: '04',
-    imageQuery: 'sending mail envelope',
   },
 ];
 
@@ -47,22 +40,7 @@ interface StepCardProps {
   isLast: boolean;
 }
 
-const StepCard = ({ step, index, isLast }: StepCardProps) => {
-  const { thumbnailUrl, isLoading } = useCategoryImage(
-    `how-it-works-${step.step}`,
-    step.imageQuery,
-    'how-it-works'
-  );
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  useEffect(() => {
-    if (thumbnailUrl) {
-      const img = new Image();
-      img.onload = () => setImageLoaded(true);
-      img.src = thumbnailUrl;
-    }
-  }, [thumbnailUrl]);
-
+const StepCard = ({ step, isLast }: StepCardProps) => {
   return (
     <div className="relative group">
       {/* Connector Line */}
@@ -71,24 +49,7 @@ const StepCard = ({ step, index, isLast }: StepCardProps) => {
       )}
 
       <div className="relative bg-card rounded-xl overflow-hidden shadow-soft group-hover:shadow-elevated transition-shadow">
-        {/* Background Image */}
-        {thumbnailUrl && (
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${imageLoaded ? 'opacity-10' : 'opacity-0'}`}
-            style={{
-              backgroundImage: `url(${thumbnailUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-        )}
-        
-        {/* Loading shimmer */}
-        {isLoading && !thumbnailUrl && (
-          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-muted/50 to-transparent animate-pulse" />
-        )}
-
-        <div className="relative p-6 text-center z-10">
+        <div className="relative p-6 text-center">
           {/* Step Number */}
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center shadow-md">
             {step.step}
