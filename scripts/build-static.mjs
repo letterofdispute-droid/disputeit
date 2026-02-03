@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, '..', 'public');
+const distDir = path.join(__dirname, '..', 'dist');
 
 const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
@@ -434,11 +434,11 @@ function generateBlogSitemap(blogPosts) {
 // ============================================
 
 async function buildSitemaps() {
-  console.log('\n🗺️  Generating sitemaps to public/...\n');
+  console.log('\n🗺️  Generating sitemaps to dist/...\n');
   
-  // Ensure public directory exists
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
+  // Ensure dist directory exists
+  if (!fs.existsSync(distDir)) {
+    fs.mkdirSync(distDir, { recursive: true });
   }
   
   // Load all templates
@@ -455,24 +455,24 @@ async function buildSitemaps() {
   console.log('\n📄 Generating sitemap files...');
   
   // Sitemap index
-  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapIndex());
+  fs.writeFileSync(path.join(distDir, 'sitemap.xml'), generateSitemapIndex());
   console.log('   ✅ sitemap.xml (index)');
   
   // Static pages sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), generateStaticSitemap());
+  fs.writeFileSync(path.join(distDir, 'sitemap-static.xml'), generateStaticSitemap());
   console.log('   ✅ sitemap-static.xml');
   
   // Categories + subcategories + guides sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
+  fs.writeFileSync(path.join(distDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   console.log(`   ✅ sitemap-categories.xml (${categories.length} categories + ${subcatCount} subcategories + ${categories.length} guides)`);
   
   // Templates sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
+  fs.writeFileSync(path.join(distDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
   console.log(`   ✅ sitemap-templates.xml (${templates.length} templates)`);
   
   // Blog sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
+  fs.writeFileSync(path.join(distDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
   console.log(`   ✅ sitemap-blog.xml (${blogCategories.length} categories + ${blogPosts.length} posts)`);
   
   // Summary
