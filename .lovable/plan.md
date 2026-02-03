@@ -1,64 +1,86 @@
 
-# Privacy Policy Page Creation
+# Legal Disclaimer Page Creation
 
 ## Overview
 
-Create a comprehensive Privacy Policy page at `/privacy` with GDPR (EU) and CCPA (California) compliant content, following the established pattern from the Terms of Service page.
+Create a dedicated Legal Disclaimer page at `/disclaimer` that clearly communicates that DisputeLetters is not a law firm and does not provide legal advice. This page is already linked in the Footer but currently shows a 404.
 
 ---
 
 ## Page Structure
 
-The Privacy Policy will include 15 sections covering all major privacy regulations:
-
-### Section Outline
+The Legal Disclaimer will have 10 sections emphasizing the non-legal nature of the service:
 
 | # | Section | Purpose |
 |---|---------|---------|
-| 1 | Introduction | Company identity and policy scope |
-| 2 | Information We Collect | Types of personal data gathered |
-| 3 | How We Collect Information | Methods (forms, cookies, automatic) |
-| 4 | How We Use Your Information | Legal bases for processing |
-| 5 | Information Sharing | Third parties and data transfers |
-| 6 | Data Retention | How long data is kept |
-| 7 | Your Privacy Rights | GDPR + CCPA rights summary |
-| 8 | GDPR Rights (EU Residents) | Right to access, erasure, portability, etc. |
-| 9 | CCPA Rights (California Residents) | Right to know, delete, opt-out, non-discrimination |
-| 10 | Cookies and Tracking | Cookie policy and controls |
-| 11 | Data Security | Security measures in place |
-| 12 | International Data Transfers | Cross-border data handling |
-| 13 | Children's Privacy | Age requirements (18+) |
-| 14 | Changes to This Policy | Update notification process |
-| 15 | Contact Information | Data controller contact details |
+| 1 | Introduction | State that DisputeLetters is not a law firm |
+| 2 | No Legal Advice | Clarify that content is informational only |
+| 3 | No Attorney-Client Relationship | Explicitly state no professional relationship exists |
+| 4 | No Guarantee of Outcomes | Letters don't guarantee results |
+| 5 | User Responsibility | Users are responsible for their own actions |
+| 6 | Jurisdiction Variations | Laws vary by location |
+| 7 | Third-Party Information | Accuracy of external references |
+| 8 | When to Seek Legal Help | Guidance on consulting attorneys |
+| 9 | Limitation of Liability | Liability limitations |
+| 10 | Contact Information | How to reach support |
+
+---
+
+## Key Content Points
+
+**Primary Message:**
+- DisputeLetters is NOT a law firm
+- No attorney-client relationship is created
+- Content is for informational/educational purposes only
+- No guarantee of any particular outcome
+- Users should consult licensed attorneys for legal matters
+
+**Critical Disclaimers:**
+- Letters are templates, not legal documents drafted by attorneys
+- Success depends on individual circumstances
+- Laws vary by state/country - templates may not apply everywhere
+- We are not responsible for how recipients respond to letters
+- Using our service does not create professional liability
+
+**When to Seek an Attorney:**
+- Court proceedings or litigation
+- Criminal matters
+- Complex contract disputes
+- Real estate transactions
+- Employment law issues beyond simple complaints
+- When facing legal threats or lawsuits
+
+---
+
+## Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `src/pages/DisclaimerPage.tsx` | Create |
+| `src/App.tsx` | Add route import and route |
+| `src/routes.ts` | Add `/disclaimer` to static routes |
 
 ---
 
 ## Technical Implementation
 
-### Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `src/pages/PrivacyPage.tsx` | Create |
-| `src/App.tsx` | Add route |
-| `src/routes.ts` | Add to static routes |
-
-### PrivacyPage Component
+### DisclaimerPage Component Structure
 
 ```tsx
-// Key structure
 <Layout>
-  <SEOHead 
-    title="Privacy Policy | DisputeLetters"
-    description="Learn how DisputeLetters collects, uses, and protects your personal information. GDPR and CCPA compliant privacy practices."
-    canonicalPath="/privacy"
+  <SEOHead
+    title="Legal Disclaimer | DisputeLetters"
+    description="Important legal disclaimer: DisputeLetters is not a law firm. Our letter templates are for informational purposes only."
+    canonicalPath="/disclaimer"
+    type="website"
   />
   
   <div className="container-wide py-12 md:py-16">
     <div className="max-w-4xl mx-auto">
       {/* Header with last updated date */}
-      {/* Table of Contents for quick navigation */}
-      {/* 15 sections with consistent styling */}
+      {/* Prominent warning box highlighting key disclaimer */}
+      {/* 10 sections with consistent styling */}
+      {/* Contact card at bottom */}
     </div>
   </div>
 </Layout>
@@ -67,9 +89,9 @@ The Privacy Policy will include 15 sections covering all major privacy regulatio
 ### App.tsx Update
 
 ```tsx
-import PrivacyPage from "./pages/PrivacyPage";
+import DisclaimerPage from "./pages/DisclaimerPage";
 // ...
-<Route path="/privacy" element={<PrivacyPage />} />
+<Route path="/disclaimer" element={<DisclaimerPage />} />
 ```
 
 ### routes.ts Update
@@ -77,71 +99,18 @@ import PrivacyPage from "./pages/PrivacyPage";
 ```tsx
 export const routes = [
   // ... existing routes
-  '/privacy',
+  '/disclaimer',
   // ...
 ];
 ```
 
 ---
 
-## Content Details
+## Visual Design
 
-### Information We Collect
-
-**Personal Information:**
-- Name and email (account creation)
-- Dispute details entered in letter forms
-- Payment information (processed by Stripe, not stored by us)
-
-**Automatically Collected:**
-- IP address, browser type, device information
-- Usage data (pages visited, time spent)
-- Cookies and similar technologies
-
-### Legal Bases for Processing (GDPR)
-
-- **Contract Performance**: Processing purchases and generating letters
-- **Legitimate Interests**: Improving service, fraud prevention
-- **Consent**: Marketing communications (opt-in)
-
-### GDPR Rights Covered
-
-- Right to Access
-- Right to Rectification
-- Right to Erasure ("Right to be Forgotten")
-- Right to Data Portability
-- Right to Restrict Processing
-- Right to Object
-- Right to Withdraw Consent
-- Right to Lodge a Complaint
-
-### CCPA Rights Covered
-
-- Right to Know (what data is collected)
-- Right to Delete
-- Right to Opt-Out of Sale (we do NOT sell data)
-- Right to Non-Discrimination
-
-### Third-Party Services Mentioned
-
-- Stripe (payment processing)
-- Analytics services
-- Hosting providers
-
----
-
-## Visual Styling
-
-- Follows TermsPage pattern with `prose` typography
-- Highlighted GDPR/CCPA sections in colored boxes
-- Table of Contents with anchor links for easy navigation
-- Contact information in styled card at bottom
-
----
-
-## SEO Optimization
-
-- Comprehensive meta description mentioning GDPR/CCPA
-- Canonical URL set to `/privacy`
-- Proper heading hierarchy (h1, h2, h3)
-- Added to static routes for pre-rendering
+- Follows established pattern from TermsPage and PrivacyPage
+- Uses Tailwind `prose` typography for readability
+- Prominent warning box at top with AlertTriangle icon (red/amber styling)
+- Clear section headings with consistent spacing
+- Contact card at bottom matching other legal pages
+- "When to Seek Legal Help" section in highlighted box to guide users
