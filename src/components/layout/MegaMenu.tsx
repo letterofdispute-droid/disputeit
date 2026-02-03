@@ -24,7 +24,7 @@ const resources = [
   {
     title: 'How It Works',
     description: 'Learn how our templates help you win disputes',
-    href: '/#how-it-works',
+    href: '/how-it-works',
     icon: HelpCircle,
   },
   {
