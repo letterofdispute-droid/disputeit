@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   NavigationMenu,
@@ -9,11 +10,9 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const popularCategories = templateCategories.filter(c => c.popular);
-const allCategories = templateCategories;
+import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
 const resources = [
   {
@@ -48,7 +47,34 @@ interface ListItemProps extends React.ComponentPropsWithoutRef<'a'> {
   href: string;
 }
 
-const ListItem = ({ className, title, children, icon: Icon, href, ...props }: ListItemProps) => {
+const ListItem = ({ className, title, icon: Icon, href, ...props }: ListItemProps) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <Link
+          to={href}
+          className={cn(
+            'flex items-center gap-2.5 select-none rounded-lg px-3 py-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
+            className
+          )}
+          {...props}
+        >
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
+          <span className="text-sm font-medium">{title}</span>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+};
+
+interface ResourceListItemProps extends React.ComponentPropsWithoutRef<'a'> {
+  title: string;
+  icon?: React.ElementType;
+  href: string;
+  children?: React.ReactNode;
+}
+
+const ResourceListItem = ({ className, title, children, icon: Icon, href, ...props }: ResourceListItemProps) => {
   return (
     <li>
       <NavigationMenuLink asChild>
@@ -76,106 +102,97 @@ const ListItem = ({ className, title, children, icon: Icon, href, ...props }: Li
 };
 
 const MegaMenu = () => {
+  const [assistantOpen, setAssistantOpen] = useState(false);
+
   return (
-    <NavigationMenu>
-      <NavigationMenuList>
-        {/* Letter Templates */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent">
-            Letter Templates
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="w-[600px] p-4 md:w-[700px] lg:w-[800px]">
-              {/* Popular Categories */}
-              <div className="mb-4">
-                <h4 className="mb-3 text-sm font-medium text-muted-foreground px-3">
-                  Popular Categories
-                </h4>
-                <ul className="grid grid-cols-3 gap-2">
-                  {popularCategories.map((category) => {
+    <>
+      <NavigationMenu>
+        <NavigationMenuList>
+          {/* Letter Templates */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent">
+              Letter Templates
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-[480px] p-4">
+                {/* AI Helper Prompt */}
+                <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <p className="text-sm text-muted-foreground mb-2">Not sure which letter you need?</p>
+                  <button 
+                    onClick={() => setAssistantOpen(true)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Get AI Help →
+                  </button>
+                </div>
+
+                {/* Single category grid - 2 columns */}
+                <ul className="grid grid-cols-2 gap-1">
+                  {templateCategories.map((category) => {
                     const Icon = category.icon;
                     return (
-                    <ListItem
+                      <ListItem
                         key={category.id}
                         title={category.name}
                         href={`/templates/${category.id}`}
                         icon={Icon}
                       />
-                    
                     );
                   })}
                 </ul>
+
+                {/* Footer link */}
+                <div className="border-t border-border mt-4 pt-3">
+                  <Link 
+                    to="/#letters" 
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-3"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Browse all templates →
+                  </Link>
+                </div>
               </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
 
-              {/* Divider */}
-              <div className="border-t border-border my-4" />
+          {/* Resources */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent">
+              Resources
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="grid w-[400px] gap-2 p-4">
+                {resources.map((resource) => (
+                  <ResourceListItem
+                    key={resource.title}
+                    title={resource.title}
+                    href={resource.href}
+                    icon={resource.icon}
+                  >
+                    {resource.description}
+                  </ResourceListItem>
+                ))}
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
 
-              {/* All Categories */}
-              <div>
-                <h4 className="mb-3 text-sm font-medium text-muted-foreground px-3">
-                  All Categories
-                </h4>
-                <ul className="grid grid-cols-3 gap-2">
-                  {allCategories.map((category) => {
-                    const Icon = category.icon;
-                    return (
-                    <ListItem
-                        key={category.id}
-                        title={category.name}
-                        href={`/templates/${category.id}`}
-                        icon={Icon}
-                      />
-                    
-                    );
-                  })}
-                </ul>
-              </div>
+          {/* Pricing */}
+          <NavigationMenuItem>
+            <Link to="/pricing">
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Pricing
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
 
-              {/* View All Link */}
-              <div className="border-t border-border mt-4 pt-4">
-                <Link 
-                  to="/#letters" 
-                  className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-3"
-                >
-                  <FileText className="h-4 w-4" />
-                  View all letter templates →
-                </Link>
-              </div>
-            </div>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-
-        {/* Resources */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent">
-            Resources
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid w-[400px] gap-2 p-4">
-              {resources.map((resource) => (
-                <ListItem
-                  key={resource.title}
-                  title={resource.title}
-                  href={resource.href}
-                  icon={resource.icon}
-                >
-                  {resource.description}
-                </ListItem>
-              ))}
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-
-        {/* Pricing */}
-        <NavigationMenuItem>
-          <Link to="/pricing">
-            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-              Pricing
-            </NavigationMenuLink>
-          </Link>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
+      <DisputeAssistantModal 
+        isOpen={assistantOpen} 
+        onClose={() => setAssistantOpen(false)} 
+      />
+    </>
   );
 };
 
