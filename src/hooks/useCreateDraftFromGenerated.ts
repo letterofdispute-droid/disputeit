@@ -1,0 +1,164 @@
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import type { GeneratedContent } from './useGenerateBlogContent';
+import type { SuggestedImage } from './useImageSuggestions';
+
+interface CreateDraftParams {
+  content: GeneratedContent;
+  featuredImage?: SuggestedImage | null;
+  publish?: boolean;
+}
+
+export function useCreateDraftFromGenerated() {
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const createDraft = async ({ content, featuredImage, publish = false }: CreateDraftParams) => {
+    if (!user) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please log in to create posts',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    setIsCreating(true);
+
+    try {
+      // Generate slug from title
+      const slug = content.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 100);
+
+      // Check if slug exists and make unique if needed
+      const { data: existing } = await supabase
+        .from('blog_posts')
+        .select('slug')
+        .eq('slug', slug)
+        .single();
+
+      const finalSlug = existing 
+        ? `${slug}-${Date.now().toString(36)}`
+        : slug;
+
+      // Find or use suggested category
+      let categorySlug = content.suggested_category || 'consumer-rights';
+      let categoryName = categorySlug
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      // Check if category exists
+      const { data: categoryData } = await supabase
+        .from('blog_categories')
+        .select('slug, name')
+        .eq('slug', categorySlug)
+        .single();
+
+      if (categoryData) {
+        categorySlug = categoryData.slug;
+        categoryName = categoryData.name;
+      } else {
+        // Create the category if it doesn't exist
+        await supabase
+          .from('blog_categories')
+          .insert({
+            name: categoryName,
+            slug: categorySlug,
+          });
+      }
+
+      // Upload featured image if selected
+      let featuredImageUrl = null;
+      if (featuredImage) {
+        try {
+          // Download image and upload to Supabase storage
+          const imageResponse = await fetch(featuredImage.url);
+          const imageBlob = await imageResponse.blob();
+          
+          const fileName = `${finalSlug}-${Date.now()}.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('blog-images')
+            .upload(fileName, imageBlob, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('blog-images')
+              .getPublicUrl(fileName);
+            featuredImageUrl = publicUrl;
+          }
+        } catch (e) {
+          console.error('Failed to upload featured image:', e);
+          // Continue without featured image
+        }
+      }
+
+      // Clean content - ensure middle image placeholder is on its own line
+      let cleanedContent = content.content
+        .replace(/{{MIDDLE_IMAGE}}/g, '<p class="middle-image-placeholder">{{MIDDLE_IMAGE}}</p>');
+
+      // Create the blog post
+      const { data: post, error: postError } = await supabase
+        .from('blog_posts')
+        .insert({
+          title: content.title,
+          slug: finalSlug,
+          excerpt: content.excerpt,
+          content: cleanedContent,
+          featured_image_url: featuredImageUrl,
+          category: categoryName,
+          category_slug: categorySlug,
+          tags: content.suggested_tags.slice(0, 3),
+          meta_title: content.seo_title,
+          meta_description: content.seo_description,
+          status: publish ? 'published' : 'draft',
+          published_at: publish ? new Date().toISOString() : null,
+          author: 'Admin',
+          author_id: user.id,
+          read_time: `${Math.ceil(content.word_count / 200)} min read`,
+        })
+        .select()
+        .single();
+
+      if (postError) {
+        throw postError;
+      }
+
+      toast({
+        title: publish ? 'Post published!' : 'Draft created!',
+        description: `"${content.title}" has been ${publish ? 'published' : 'saved as draft'}`,
+      });
+
+      return {
+        postId: post.id,
+        slug: finalSlug,
+        title: content.title,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create post';
+      toast({
+        title: 'Failed to create post',
+        description: message,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return {
+    createDraft,
+    isCreating,
+  };
+}
