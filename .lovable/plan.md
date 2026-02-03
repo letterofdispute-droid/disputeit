@@ -1,116 +1,196 @@
 
-# Legal Disclaimer Page Creation
+
+# Account Settings Page Implementation
 
 ## Overview
 
-Create a dedicated Legal Disclaimer page at `/disclaimer` that clearly communicates that DisputeLetters is not a law firm and does not provide legal advice. This page is already linked in the Footer but currently shows a 404.
+Create a comprehensive Account Settings page at `/settings` where authenticated users can update their profile information, change their password, and manage account preferences. The page will be protected and accessible from the Dashboard.
 
 ---
 
 ## Page Structure
 
-The Legal Disclaimer will have 10 sections emphasizing the non-legal nature of the service:
+The settings page will use a tabbed interface with three main sections:
 
-| # | Section | Purpose |
-|---|---------|---------|
-| 1 | Introduction | State that DisputeLetters is not a law firm |
-| 2 | No Legal Advice | Clarify that content is informational only |
-| 3 | No Attorney-Client Relationship | Explicitly state no professional relationship exists |
-| 4 | No Guarantee of Outcomes | Letters don't guarantee results |
-| 5 | User Responsibility | Users are responsible for their own actions |
-| 6 | Jurisdiction Variations | Laws vary by location |
-| 7 | Third-Party Information | Accuracy of external references |
-| 8 | When to Seek Legal Help | Guidance on consulting attorneys |
-| 9 | Limitation of Liability | Liability limitations |
-| 10 | Contact Information | How to reach support |
-
----
-
-## Key Content Points
-
-**Primary Message:**
-- DisputeLetters is NOT a law firm
-- No attorney-client relationship is created
-- Content is for informational/educational purposes only
-- No guarantee of any particular outcome
-- Users should consult licensed attorneys for legal matters
-
-**Critical Disclaimers:**
-- Letters are templates, not legal documents drafted by attorneys
-- Success depends on individual circumstances
-- Laws vary by state/country - templates may not apply everywhere
-- We are not responsible for how recipients respond to letters
-- Using our service does not create professional liability
-
-**When to Seek an Attorney:**
-- Court proceedings or litigation
-- Criminal matters
-- Complex contract disputes
-- Real estate transactions
-- Employment law issues beyond simple complaints
-- When facing legal threats or lawsuits
-
----
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `src/pages/DisclaimerPage.tsx` | Create |
-| `src/App.tsx` | Add route import and route |
-| `src/routes.ts` | Add `/disclaimer` to static routes |
+| Tab | Features |
+|-----|----------|
+| **Profile** | First name, last name, email (read-only), member since |
+| **Security** | Change password (current + new + confirm) |
+| **Preferences** | Email notifications toggle, account deletion option |
 
 ---
 
 ## Technical Implementation
 
-### DisclaimerPage Component Structure
+### Files to Create/Modify
 
-```tsx
-<Layout>
-  <SEOHead
-    title="Legal Disclaimer | DisputeLetters"
-    description="Important legal disclaimer: DisputeLetters is not a law firm. Our letter templates are for informational purposes only."
-    canonicalPath="/disclaimer"
-    type="website"
-  />
-  
-  <div className="container-wide py-12 md:py-16">
-    <div className="max-w-4xl mx-auto">
-      {/* Header with last updated date */}
-      {/* Prominent warning box highlighting key disclaimer */}
-      {/* 10 sections with consistent styling */}
-      {/* Contact card at bottom */}
-    </div>
-  </div>
-</Layout>
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/pages/SettingsPage.tsx` | Create | Main settings page component |
+| `src/App.tsx` | Modify | Add protected route for `/settings` |
+| `src/pages/Dashboard.tsx` | Modify | Link "Account Settings" card to `/settings` |
+
+---
+
+## Component Design
+
+### SettingsPage Structure
+
+```text
++--------------------------------------------------+
+|  Account Settings                                |
+|  Manage your profile and preferences             |
++--------------------------------------------------+
+|  [Profile] [Security] [Preferences]              |
++--------------------------------------------------+
+|                                                  |
+|  Tab Content Area                                |
+|  - Forms with validation                         |
+|  - Save buttons per section                      |
+|  - Success/error feedback via toast              |
+|                                                  |
++--------------------------------------------------+
 ```
 
-### App.tsx Update
+### Profile Tab
+- **First Name** - Editable input
+- **Last Name** - Editable input
+- **Email** - Read-only display (from Supabase Auth)
+- **Member Since** - Read-only display (profile.created_at)
+- **Save Changes** button
+
+### Security Tab
+- **Current Password** - Required for verification
+- **New Password** - Min 6 characters
+- **Confirm New Password** - Must match new password
+- **Update Password** button
+- Uses `supabase.auth.updateUser({ password })` API
+
+### Preferences Tab
+- **Email Notifications** - Switch toggle (placeholder for future)
+- **Delete Account** - Destructive action with confirmation dialog
+
+---
+
+## Data Flow
+
+### Fetching Profile Data
 
 ```tsx
-import DisclaimerPage from "./pages/DisclaimerPage";
-// ...
-<Route path="/disclaimer" element={<DisclaimerPage />} />
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('first_name, last_name, email, created_at')
+  .eq('user_id', user.id)
+  .single();
 ```
 
-### routes.ts Update
+### Updating Profile
 
 ```tsx
-export const routes = [
-  // ... existing routes
-  '/disclaimer',
-  // ...
-];
+const { error } = await supabase
+  .from('profiles')
+  .update({ first_name, last_name })
+  .eq('user_id', user.id);
+```
+
+### Changing Password
+
+```tsx
+const { error } = await supabase.auth.updateUser({
+  password: newPassword
+});
 ```
 
 ---
 
-## Visual Design
+## UI Components Used
 
-- Follows established pattern from TermsPage and PrivacyPage
-- Uses Tailwind `prose` typography for readability
-- Prominent warning box at top with AlertTriangle icon (red/amber styling)
-- Clear section headings with consistent spacing
-- Contact card at bottom matching other legal pages
-- "When to Seek Legal Help" section in highlighted box to guide users
+- `Layout` - Consistent page wrapper
+- `SEOHead` - Meta tags and canonical URL
+- `Card`, `CardHeader`, `CardContent` - Section containers
+- `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` - Tab navigation
+- `Input`, `Label` - Form fields
+- `Button` - Actions
+- `Switch` - Toggle preferences
+- `AlertDialog` - Delete account confirmation
+- `Separator` - Visual dividers
+- Lucide icons: `User`, `Lock`, `Settings`, `Trash2`, `ArrowLeft`
+
+---
+
+## Validation
+
+### Profile Update
+- First/last name: Optional, max 50 characters each
+- Trimmed before saving
+
+### Password Change
+- Current password: Required (not verified client-side, Supabase handles)
+- New password: Min 6 characters
+- Confirm password: Must match new password
+- Show inline validation errors
+
+---
+
+## Route Configuration
+
+### App.tsx Addition
+
+```tsx
+import SettingsPage from "./pages/SettingsPage";
+
+// Inside Routes
+<Route path="/settings" element={
+  <ProtectedRoute><SettingsPage /></ProtectedRoute>
+} />
+```
+
+### Dashboard Link Update
+
+```tsx
+<Link to="/settings">
+  <Card className="cursor-pointer hover:shadow-lg transition-all">
+    {/* Account Settings card content */}
+  </Card>
+</Link>
+```
+
+---
+
+## User Experience
+
+1. **Loading State**: Show skeleton or spinner while fetching profile
+2. **Success Feedback**: Toast notification on successful save
+3. **Error Handling**: Toast notification with error message
+4. **Optimistic Updates**: Update local state immediately for profile
+5. **Back Navigation**: Link to return to dashboard
+6. **Responsive Design**: Single column on mobile, consistent with existing pages
+
+---
+
+## Security Considerations
+
+- Password change uses Supabase Auth API (server-validated)
+- Profile updates protected by RLS policies (users can only update their own)
+- Delete account confirmation requires explicit user action
+- No sensitive data exposed in client state
+
+---
+
+## Technical Notes
+
+### Profiles Table Schema (Existing)
+
+| Column | Type | Updatable |
+|--------|------|-----------|
+| first_name | text | Yes |
+| last_name | text | Yes |
+| email | text | No (display only) |
+| created_at | timestamp | No |
+| plan | text | No (display only) |
+| status | text | No |
+
+### RLS Policies (Existing)
+- Users can update their own profile via `auth.uid() = user_id`
+- No additional database changes needed
+
