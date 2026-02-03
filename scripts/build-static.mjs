@@ -2,20 +2,23 @@
 /**
  * Static HTML Generation Script for DisputeLetters
  * 
- * Generates static HTML files for SEO (search engine bots)
- * while users get the React SPA experience.
+ * Generates SPA-ready static HTML files for SEO:
+ * - Each file includes React assets (CSS/JS) from the built app
+ * - Each file includes route-specific SEO content
+ * - Each file includes loading overlay for smooth transition
+ * 
+ * This allows search bots to see full page content while humans
+ * get the React SPA experience.
  * 
  * Output:
  * - /dist/templates/index.html (all templates landing)
  * - /dist/templates/:categoryId/index.html (13 categories)
  * - /dist/templates/:categoryId/:subcategorySlug/index.html (subcategories)
  * - /dist/templates/:categoryId/:subcategorySlug/:templateSlug/index.html (400+ templates)
- * - /dist/articles/:category/:slug/index.html (blog posts)
  * - /dist/sitemaps/sitemap-index.xml
  * - /dist/sitemaps/templates.xml
  * - /dist/sitemaps/categories.xml
  * - /dist/sitemaps/static.xml
- * - /dist/sitemaps/blog.xml
  */
 
 import fs from 'fs';
@@ -30,10 +33,98 @@ const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
 
 // ============================================
-// Template and Category Data (imported inline)
+// React Assets Extraction
 // ============================================
 
-// Category definitions
+/**
+ * Extract CSS and JS assets from the built index.html
+ * These will be included in every generated static page
+ */
+function extractReactAssets() {
+  const indexPath = path.join(distDir, 'index.html');
+  
+  if (!fs.existsSync(indexPath)) {
+    console.log('⚠️  dist/index.html not found, cannot extract React assets');
+    return { headAssets: '', bodyScripts: '', baseHead: '' };
+  }
+  
+  const html = fs.readFileSync(indexPath, 'utf-8');
+  
+  // Extract everything in <head> except title/description (we'll customize those)
+  const headMatch = html.match(/<head>([\s\S]*?)<\/head>/);
+  let headContent = headMatch ? headMatch[1] : '';
+  
+  // Keep only link/script tags and essential meta from head
+  const linkTags = html.match(/<link[^>]+>/g) || [];
+  const headScripts = html.match(/<script[^>]*>[\s\S]*?<\/script>/g) || [];
+  
+  // Filter to only CSS and modulepreload links
+  const cssLinks = linkTags.filter(link => 
+    link.includes('stylesheet') || link.includes('modulepreload')
+  ).join('\n    ');
+  
+  // Extract body scripts (the React entry point)
+  const bodyScriptMatch = html.match(/<script type="module"[^>]*src="[^"]*"[^>]*><\/script>/g) || [];
+  const bodyScripts = bodyScriptMatch.join('\n    ');
+  
+  return {
+    headAssets: cssLinks,
+    bodyScripts: bodyScripts,
+  };
+}
+
+// ============================================
+// Loading Overlay (shared across all pages)
+// ============================================
+
+const overlayCSS = `
+  <style id="seo-overlay-styles">
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: hsl(210 20% 98%);
+      transition: opacity 0.3s ease-out;
+    }
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loading-overlay .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid hsl(214 32% 91%);
+      border-top-color: hsl(222 47% 20%);
+      border-radius: 50%;
+      animation: seo-spin 1s linear infinite;
+    }
+    @keyframes seo-spin {
+      to { transform: rotate(360deg); }
+    }
+    /* Hide static content visually but keep for SEO */
+    #seo-static-content {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+  </style>`;
+
+const overlayHTML = `
+  <div id="loading-overlay">
+    <img src="/ld-logo.svg" alt="Dispute Letters" style="height:40px;margin-bottom:16px;">
+    <div class="spinner"></div>
+  </div>`;
+
+// ============================================
+// Template and Category Data
+// ============================================
+
 const categories = [
   { id: 'refunds', name: 'Refunds & Purchases', description: 'Get your money back for products or services that did not meet expectations.' },
   { id: 'housing', name: 'Landlord & Housing', description: 'Request repairs, address deposit disputes, or document housing issues.' },
@@ -48,15 +139,6 @@ const categories = [
   { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Report seller issues, account problems, or data privacy requests.' },
   { id: 'hoa', name: 'Neighbor & HOA Disputes', description: 'Address community issues, fee disputes, or neighbor conflicts.' },
   { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Dispute poor workmanship, project abandonment, or cost overruns.' },
-];
-
-// Blog categories
-const blogCategories = [
-  { slug: 'consumer-rights', name: 'Consumer Rights' },
-  { slug: 'landlord-tenant', name: 'Landlord & Tenant' },
-  { slug: 'travel-disputes', name: 'Travel Disputes' },
-  { slug: 'financial-tips', name: 'Financial Tips' },
-  { slug: 'legal-guides', name: 'Legal Guides' },
 ];
 
 // Subcategory patterns for inferring subcategory from template ID
@@ -165,7 +247,6 @@ const subcategoryPatterns = {
   ],
 };
 
-// Infer subcategory from template ID
 function inferSubcategory(templateId, category) {
   const patterns = subcategoryPatterns[category];
   if (!patterns) return { name: 'General', slug: 'general' };
@@ -181,7 +262,6 @@ function inferSubcategory(templateId, category) {
   return { name: 'General', slug: 'general' };
 }
 
-// We'll dynamically import all template files
 async function loadAllTemplates() {
   const templateFiles = [
     '../src/data/templates/refundsTemplates.ts',
@@ -199,7 +279,6 @@ async function loadAllTemplates() {
     '../src/data/templates/contractorsTemplates.ts',
   ];
   
-  // Read TypeScript files and extract template data
   const templates = [];
   
   for (const file of templateFiles) {
@@ -210,7 +289,6 @@ async function loadAllTemplates() {
     }
     const content = fs.readFileSync(filePath, 'utf-8');
     
-    // Extract template objects using regex (simpler than parsing TS)
     const templateMatches = content.matchAll(/{\s*id:\s*['"]([^'"]+)['"],\s*slug:\s*['"]([^'"]+)['"],\s*category:\s*['"]([^'"]+)['"],\s*title:\s*['"]([^'"]+)['"],[\s\S]*?shortDescription:\s*['"]([^'"]+)['"],[\s\S]*?longDescription:\s*['"]([^'"]+)['"],[\s\S]*?seoTitle:\s*['"]([^'"]+)['"],\s*seoDescription:\s*['"]([^'"]+)['"]/g);
     
     for (const match of templateMatches) {
@@ -225,7 +303,6 @@ async function loadAllTemplates() {
         seoDescription: match[8],
       };
       
-      // Infer subcategory
       const subcategoryInfo = inferSubcategory(template.id, template.category);
       template.subcategory = subcategoryInfo.name;
       template.subcategorySlug = subcategoryInfo.slug;
@@ -237,38 +314,8 @@ async function loadAllTemplates() {
   return templates;
 }
 
-// Load blog posts from static data file
-function loadBlogPosts() {
-  const blogPostsPath = path.join(__dirname, '../src/data/blogPosts.ts');
-  if (!fs.existsSync(blogPostsPath)) {
-    console.log('   ⚠️ Blog posts file not found');
-    return [];
-  }
-  
-  const content = fs.readFileSync(blogPostsPath, 'utf-8');
-  const posts = [];
-  
-  // Extract blog post objects
-  const postMatches = content.matchAll(/{\s*slug:\s*['"]([^'"]+)['"],\s*title:\s*['"]([^'"]+)['"],\s*excerpt:\s*['"]([^'"]+)['"],[\s\S]*?category:\s*['"]([^'"]+)['"],\s*categorySlug:\s*['"]([^'"]+)['"],\s*author:\s*['"]([^'"]+)['"],\s*publishedAt:\s*['"]([^'"]+)['"],\s*readTime:\s*['"]([^'"]+)['"]/g);
-  
-  for (const match of postMatches) {
-    posts.push({
-      slug: match[1],
-      title: match[2],
-      excerpt: match[3],
-      category: match[4],
-      categorySlug: match[5],
-      author: match[6],
-      publishedAt: match[7],
-      readTime: match[8],
-    });
-  }
-  
-  return posts;
-}
-
 // ============================================
-// HTML Generators
+// Utility Functions
 // ============================================
 
 function escapeHtml(str) {
@@ -300,7 +347,72 @@ function getCategoryIdFromName(categoryName) {
   return mapping[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
 }
 
-function generateTemplateHTML(template) {
+// ============================================
+// SPA-Ready HTML Generator
+// ============================================
+
+/**
+ * Generate a complete SPA entry point HTML file
+ * Includes React assets, loading overlay, and route-specific SEO content
+ */
+function generateSPAPage({ title, description, canonicalUrl, seoContent, schemas = [], headAssets, bodyScripts }) {
+  const schemaScripts = schemas.map(s => 
+    `<script type="application/ld+json">${JSON.stringify(s)}</script>`
+  ).join('\n    ');
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}">
+    <meta name="author" content="Dispute Letters">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="${canonicalUrl}">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/ld-logo-icon.svg">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="${escapeHtml(title)}">
+    <meta property="og:description" content="${escapeHtml(description)}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:site_name" content="Dispute Letters">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escapeHtml(title)}">
+    <meta name="twitter:description" content="${escapeHtml(description)}">
+    
+    <!-- Structured Data -->
+    ${schemaScripts}
+    
+    <!-- React Assets -->
+    ${headAssets}
+    
+    <!-- Loading Overlay Styles -->
+    ${overlayCSS}
+  </head>
+  <body>
+    ${overlayHTML}
+    <div id="root">
+      <div id="seo-static-content">
+        ${seoContent}
+      </div>
+    </div>
+    ${bodyScripts}
+  </body>
+</html>`;
+}
+
+// ============================================
+// Page-Specific Content Generators
+// ============================================
+
+function generateTemplatePageContent(template, headAssets, bodyScripts) {
   const categoryId = getCategoryIdFromName(template.category);
   const subcategorySlug = template.subcategorySlug || 'general';
   const canonicalUrl = `${SITE_URL}/templates/${categoryId}/${subcategorySlug}/${template.slug}`;
@@ -329,84 +441,59 @@ function generateTemplateHTML(template) {
     "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
   };
   
-  const howToSchema = {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": `How to Write a ${template.title}`,
-    "description": template.seoDescription,
-    "step": [
-      { "@type": "HowToStep", "position": 1, "name": "Gather Information", "text": "Collect relevant dates, reference numbers, and documentation for your dispute." },
-      { "@type": "HowToStep", "position": 2, "name": "Fill Out the Template", "text": "Enter your specific details into our guided form." },
-      { "@type": "HowToStep", "position": 3, "name": "Choose Your Tone", "text": "Select the appropriate tone (neutral, firm, or final notice) for your situation." },
-      { "@type": "HowToStep", "position": 4, "name": "Download Your Letter", "text": "Get your professionally formatted letter in PDF or DOCX format." }
-    ]
-  };
+  const seoContent = `
+        <header>
+          <nav style="display:flex;gap:1.5rem;padding:1rem;">
+            <a href="/" style="font-weight:bold;">Dispute Letters</a>
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/faq">FAQ</a>
+            <a href="/pricing">Pricing</a>
+          </nav>
+        </header>
+        <main>
+          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
+            <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${categoryId}">${escapeHtml(template.category)}</a> → <a href="/templates/${categoryId}/${subcategorySlug}">${escapeHtml(template.subcategory)}</a> → ${escapeHtml(template.title)}
+          </nav>
+          <h1>${escapeHtml(template.seoTitle)}</h1>
+          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">${escapeHtml(template.seoDescription)}</p>
+          <section>
+            <h2>About This Template</h2>
+            <p>${escapeHtml(template.longDescription)}</p>
+            <h2>Why Use This Template?</h2>
+            <ul>
+              <li>Professionally structured for maximum impact</li>
+              <li>Includes jurisdiction-specific legal references</li>
+              <li>Customizable to your specific situation</li>
+              <li>Proven format for successful dispute resolution</li>
+            </ul>
+          </section>
+          <a href="${canonicalUrl}" style="display:inline-block;margin-top:2rem;padding:0.75rem 1.5rem;background:#1a2744;color:white;border-radius:0.5rem;text-decoration:none;">Generate Your Letter Now</a>
+        </main>
+        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
+          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/faq">FAQ</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </nav>
+          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+        </footer>`;
   
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(template.seoTitle)}</title>
-  <meta name="description" content="${escapeHtml(template.seoDescription)}">
-  <link rel="canonical" href="${canonicalUrl}">
-  
-  <!-- Open Graph -->
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="${escapeHtml(template.seoTitle)}">
-  <meta property="og:description" content="${escapeHtml(template.seoDescription)}">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="DisputeLetters">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(template.seoTitle)}">
-  <meta name="twitter:description" content="${escapeHtml(template.seoDescription)}">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(articleSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(howToSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .description { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
-    .content { background: #f9fafb; padding: 1.5rem; border-radius: 8px; }
-    .cta { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${categoryId}">${escapeHtml(template.category)}</a> → <a href="/templates/${categoryId}/${subcategorySlug}">${escapeHtml(template.subcategory)}</a> → ${escapeHtml(template.title)}
-  </nav>
-  
-  <main>
-    <h1>${escapeHtml(template.seoTitle)}</h1>
-    <p class="description">${escapeHtml(template.seoDescription)}</p>
-    
-    <div class="content">
-      <h2>About This Template</h2>
-      <p>${escapeHtml(template.longDescription)}</p>
-      
-      <h2>Why Use This Template?</h2>
-      <ul>
-        <li>Professionally structured for maximum impact</li>
-        <li>Includes jurisdiction-specific legal references</li>
-        <li>Customizable to your specific situation</li>
-        <li>Proven format for successful dispute resolution</li>
-      </ul>
-    </div>
-    
-    <a href="/templates/${categoryId}/${subcategorySlug}/${template.slug}" class="cta">Generate Your Letter Now</a>
-  </main>
-</body>
-</html>`;
+  return generateSPAPage({
+    title: template.seoTitle,
+    description: template.seoDescription,
+    canonicalUrl,
+    seoContent,
+    schemas: [breadcrumbSchema, articleSchema],
+    headAssets,
+    bodyScripts
+  });
 }
 
-function generateCategoryHTML(category, templates) {
+function generateCategoryPageContent(category, templates, headAssets, bodyScripts) {
   const canonicalUrl = `${SITE_URL}/templates/${category.id}`;
   const categoryTemplates = templates.filter(t => getCategoryIdFromName(t.category) === category.id);
   
@@ -415,11 +502,7 @@ function generateCategoryHTML(category, templates) {
   categoryTemplates.forEach(t => {
     const subSlug = t.subcategorySlug || 'general';
     if (!subcategoryGroups[subSlug]) {
-      subcategoryGroups[subSlug] = {
-        name: t.subcategory || 'General',
-        slug: subSlug,
-        templates: []
-      };
+      subcategoryGroups[subSlug] = { name: t.subcategory || 'General', slug: subSlug, templates: [] };
     }
     subcategoryGroups[subSlug].templates.push(t);
   });
@@ -434,96 +517,53 @@ function generateCategoryHTML(category, templates) {
     ]
   };
   
-  const itemListSchema = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "name": `${category.name} Letter Templates`,
-    "description": category.description,
-    "numberOfItems": categoryTemplates.length,
-    "itemListElement": categoryTemplates.map((t, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "name": t.title,
-      "url": `${SITE_URL}/templates/${category.id}/${t.subcategorySlug || 'general'}/${t.slug}`
-    }))
-  };
+  const subcategoryLinks = Object.values(subcategoryGroups).map(group => `
+            <li style="padding:1rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:0.5rem;">
+              <a href="/templates/${category.id}/${group.slug}" style="font-weight:600;color:#2563eb;text-decoration:none;">${escapeHtml(group.name)}</a>
+              <span style="color:#666;font-size:0.875rem;margin-left:0.5rem;">${group.templates.length} templates</span>
+            </li>`).join('');
   
-  // Generate subcategory sections
-  const subcategoryHtml = Object.values(subcategoryGroups).map(group => `
-    <div class="subcategory">
-      <h3><a href="/templates/${category.id}/${group.slug}">${escapeHtml(group.name)}</a></h3>
-      <ul class="templates">
-        ${group.templates.slice(0, 5).map(t => `
-          <li>
-            <a href="/templates/${category.id}/${group.slug}/${t.slug}">${escapeHtml(t.title)}</a>
-            <p>${escapeHtml(t.shortDescription)}</p>
-          </li>
-        `).join('')}
-        ${group.templates.length > 5 ? `<li class="more"><a href="/templates/${category.id}/${group.slug}">View all templates →</a></li>` : ''}
-      </ul>
-    </div>
-  `).join('');
+  const seoContent = `
+        <header>
+          <nav style="display:flex;gap:1.5rem;padding:1rem;">
+            <a href="/" style="font-weight:bold;">Dispute Letters</a>
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/faq">FAQ</a>
+          </nav>
+        </header>
+        <main>
+          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
+            <a href="/">Home</a> → <a href="/templates">Templates</a> → ${escapeHtml(category.name)}
+          </nav>
+          <h1>${escapeHtml(category.name)} Letter Templates</h1>
+          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">${escapeHtml(category.description)} Browse ${categoryTemplates.length} professional letter templates.</p>
+          <h2>Browse by Subcategory</h2>
+          <ul style="list-style:none;padding:0;">
+            ${subcategoryLinks}
+          </ul>
+        </main>
+        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
+          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
+            <a href="/templates">Letter Templates</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </nav>
+          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+        </footer>`;
   
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(category.name)} Complaint Letter Templates | DisputeLetters</title>
-  <meta name="description" content="${escapeHtml(category.description)} Browse ${categoryTemplates.length} professional letter templates.">
-  <link rel="canonical" href="${canonicalUrl}">
-  
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="${escapeHtml(category.name)} Letter Templates">
-  <meta property="og:description" content="${escapeHtml(category.description)}">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="DisputeLetters">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="${escapeHtml(category.name)} Letter Templates">
-  <meta name="twitter:description" content="${escapeHtml(category.description)}">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    h3 { margin-top: 2rem; margin-bottom: 1rem; }
-    h3 a { color: #1a1a1a; text-decoration: none; }
-    h3 a:hover { color: #2563eb; }
-    .description { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .templates { list-style: none; padding: 0; }
-    .templates li { padding: 1rem; margin-bottom: 0.5rem; background: #f9fafb; border-radius: 8px; }
-    .templates a { color: #2563eb; text-decoration: none; font-weight: 600; }
-    .templates p { margin: 0.25rem 0 0; color: #666; font-size: 0.875rem; }
-    .more { font-style: italic; }
-    .subcategory { border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → <a href="/templates">Templates</a> → ${escapeHtml(category.name)}
-  </nav>
-  
-  <main>
-    <h1>${escapeHtml(category.name)} Letter Templates</h1>
-    <p class="description">${escapeHtml(category.description)}</p>
-    
-    <p><strong>Templates available</strong> across ${Object.keys(subcategoryGroups).length} subcategories.</p>
-    
-    ${subcategoryHtml}
-  </main>
-</body>
-</html>`;
+  return generateSPAPage({
+    title: `${category.name} Complaint Letter Templates | DisputeLetters`,
+    description: `${category.description} Browse ${categoryTemplates.length} professional letter templates.`,
+    canonicalUrl,
+    seoContent,
+    schemas: [breadcrumbSchema],
+    headAssets,
+    bodyScripts
+  });
 }
 
-function generateSubcategoryHTML(category, subcategory, templates) {
+function generateSubcategoryPageContent(category, subcategory, templates, headAssets, bodyScripts) {
   const canonicalUrl = `${SITE_URL}/templates/${category.id}/${subcategory.slug}`;
   
   const breadcrumbSchema = {
@@ -537,77 +577,52 @@ function generateSubcategoryHTML(category, subcategory, templates) {
     ]
   };
   
-  const itemListSchema = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "name": `${subcategory.name} Letter Templates`,
-    "description": `Professional ${subcategory.name.toLowerCase()} letter templates for ${category.name.toLowerCase()} disputes.`,
-    "numberOfItems": templates.length,
-    "itemListElement": templates.map((t, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "name": t.title,
-      "url": `${SITE_URL}/templates/${category.id}/${subcategory.slug}/${t.slug}`
-    }))
-  };
+  const templateLinks = templates.map(t => `
+            <li style="padding:1rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:0.5rem;">
+              <a href="/templates/${category.id}/${subcategory.slug}/${t.slug}" style="font-weight:600;color:#2563eb;text-decoration:none;">${escapeHtml(t.title)}</a>
+              <p style="color:#666;font-size:0.875rem;margin:0.25rem 0 0;">${escapeHtml(t.shortDescription)}</p>
+            </li>`).join('');
   
-  const templateListHtml = templates.map(t => `
-    <li>
-      <a href="/templates/${category.id}/${subcategory.slug}/${t.slug}">${escapeHtml(t.title)}</a>
-      <p>${escapeHtml(t.shortDescription)}</p>
-    </li>
-  `).join('');
+  const seoContent = `
+        <header>
+          <nav style="display:flex;gap:1.5rem;padding:1rem;">
+            <a href="/" style="font-weight:bold;">Dispute Letters</a>
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/faq">FAQ</a>
+          </nav>
+        </header>
+        <main>
+          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
+            <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${category.id}">${escapeHtml(category.name)}</a> → ${escapeHtml(subcategory.name)}
+          </nav>
+          <h1>${escapeHtml(subcategory.name)} Letter Templates</h1>
+          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates in our ${category.name.toLowerCase()} collection.</p>
+          <ul style="list-style:none;padding:0;">
+            ${templateLinks}
+          </ul>
+        </main>
+        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
+          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
+            <a href="/templates">Letter Templates</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </nav>
+          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+        </footer>`;
   
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(subcategory.name)} Letter Templates | ${escapeHtml(category.name)} | DisputeLetters</title>
-  <meta name="description" content="Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.">
-  <link rel="canonical" href="${canonicalUrl}">
-  
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="${escapeHtml(subcategory.name)} Letter Templates">
-  <meta property="og:description" content="Professional ${subcategory.name.toLowerCase()} letter templates">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="DisputeLetters">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    .description { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .templates { list-style: none; padding: 0; }
-    .templates li { padding: 1rem; margin-bottom: 1rem; background: #f9fafb; border-radius: 8px; }
-    .templates a { color: #2563eb; text-decoration: none; font-weight: 600; font-size: 1.125rem; }
-    .templates p { margin: 0.5rem 0 0; color: #666; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → <a href="/templates">Templates</a> → <a href="/templates/${category.id}">${escapeHtml(category.name)}</a> → ${escapeHtml(subcategory.name)}
-  </nav>
-  
-  <main>
-    <h1>${escapeHtml(subcategory.name)} Letter Templates</h1>
-    <p class="description">Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates in our ${category.name.toLowerCase()} collection.</p>
-    
-    <ul class="templates">
-      ${templateListHtml}
-    </ul>
-  </main>
-</body>
-</html>`;
+  return generateSPAPage({
+    title: `${subcategory.name} Letter Templates | ${category.name} | DisputeLetters`,
+    description: `Browse ${templates.length} professional ${subcategory.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.`,
+    canonicalUrl,
+    seoContent,
+    schemas: [breadcrumbSchema],
+    headAssets,
+    bodyScripts
+  });
 }
 
-function generateAllTemplatesHTML(categories, templates) {
+function generateAllTemplatesPageContent(allCategories, templates, headAssets, bodyScripts) {
   const canonicalUrl = `${SITE_URL}/templates`;
   
   const breadcrumbSchema = {
@@ -619,166 +634,58 @@ function generateAllTemplatesHTML(categories, templates) {
     ]
   };
   
-  const collectionSchema = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Letter Template Library",
-    "description": `Browse ${templates.length}+ professional letter templates across ${categories.length} categories.`,
-    "numberOfItems": templates.length,
-    "hasPart": categories.map(cat => ({
-      "@type": "ItemList",
-      "name": cat.name,
-      "numberOfItems": templates.filter(t => getCategoryIdFromName(t.category) === cat.id).length,
-      "url": `${SITE_URL}/templates/${cat.id}`
-    }))
-  };
-  
-  const categoryListHtml = categories.map(cat => {
+  const categoryLinks = allCategories.map(cat => {
     const count = templates.filter(t => getCategoryIdFromName(t.category) === cat.id).length;
     return `
-      <li>
-        <a href="/templates/${cat.id}">${escapeHtml(cat.name)}</a>
-        <span class="count">${count} templates</span>
-        <p>${escapeHtml(cat.description)}</p>
-      </li>
-    `;
+            <li style="padding:1.5rem;background:#f9fafb;border-radius:0.5rem;margin-bottom:1rem;">
+              <a href="/templates/${cat.id}" style="font-weight:600;font-size:1.25rem;color:#2563eb;text-decoration:none;">${escapeHtml(cat.name)}</a>
+              <span style="color:#666;font-size:0.875rem;margin-left:0.5rem;">${count} templates</span>
+              <p style="color:#666;margin:0.5rem 0 0;">${escapeHtml(cat.description)}</p>
+            </li>`;
   }).join('');
   
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All Letter Templates - ${templates.length}+ Free Professional Complaint Letters | DisputeLetters</title>
-  <meta name="description" content="Browse our complete library of ${templates.length}+ professional letter templates across ${categories.length} categories. Generate legally-referenced complaint letters for any situation.">
-  <link rel="canonical" href="${canonicalUrl}">
+  const seoContent = `
+        <header>
+          <nav style="display:flex;gap:1.5rem;padding:1rem;">
+            <a href="/" style="font-weight:bold;">Dispute Letters</a>
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/faq">FAQ</a>
+            <a href="/pricing">Pricing</a>
+          </nav>
+        </header>
+        <main>
+          <nav aria-label="breadcrumb" style="font-size:0.875rem;color:#666;margin-bottom:1.5rem;">
+            <a href="/">Home</a> → Templates
+          </nav>
+          <h1>Professional Letter Template Library</h1>
+          <p style="font-size:1.125rem;color:#444;margin-bottom:2rem;">Browse our complete collection of ${templates.length}+ pre-validated letter templates. Every template includes proper legal references and controlled language for professional dispute resolution.</p>
+          <h2>Browse by Category</h2>
+          <ul style="list-style:none;padding:0;">
+            ${categoryLinks}
+          </ul>
+        </main>
+        <footer style="padding:2rem 1rem;border-top:1px solid #e5e7eb;margin-top:3rem;">
+          <nav style="display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1rem;">
+            <a href="/templates">Letter Templates</a>
+            <a href="/how-it-works">How It Works</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/faq">FAQ</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </nav>
+          <p style="color:#6b7280;font-size:0.875rem;text-align:center;">© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
+        </footer>`;
   
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Professional Letter Template Library">
-  <meta property="og:description" content="Browse ${templates.length}+ professional letter templates">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="DisputeLetters">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(collectionSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    .intro { font-size: 1.125rem; color: #444; margin-bottom: 2rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .categories { list-style: none; padding: 0; }
-    .categories li { padding: 1.5rem; margin-bottom: 1rem; background: #f9fafb; border-radius: 8px; }
-    .categories a { color: #2563eb; text-decoration: none; font-weight: 600; font-size: 1.25rem; }
-    .categories p { margin: 0.5rem 0 0; color: #666; }
-    .count { color: #666; font-size: 0.875rem; margin-left: 0.5rem; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → Templates
-  </nav>
-  
-  <main>
-    <h1>Professional Letter Template Library</h1>
-    <p class="intro">Browse our complete collection of ${templates.length}+ pre-validated letter templates. Every template includes proper legal references and controlled language for professional dispute resolution.</p>
-    
-    <h2>Browse by Category</h2>
-    <ul class="categories">
-      ${categoryListHtml}
-    </ul>
-  </main>
-</body>
-</html>`;
-}
-
-function generateBlogPostHTML(post) {
-  const canonicalUrl = `${SITE_URL}/articles/${post.categorySlug}/${post.slug}`;
-  
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${SITE_URL}/articles` },
-      { "@type": "ListItem", "position": 3, "name": post.category, "item": `${SITE_URL}/articles/${post.categorySlug}` },
-      { "@type": "ListItem", "position": 4, "name": post.title, "item": canonicalUrl }
-    ]
-  };
-  
-  const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": post.title,
-    "description": post.excerpt,
-    "author": { "@type": "Person", "name": post.author },
-    "publisher": { "@type": "Organization", "name": "DisputeLetters", "url": SITE_URL },
-    "datePublished": post.publishedAt,
-    "dateModified": post.publishedAt,
-    "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
-  };
-  
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(post.title)} | DisputeLetters Blog</title>
-  <meta name="description" content="${escapeHtml(post.excerpt)}">
-  <link rel="canonical" href="${canonicalUrl}">
-  
-  <!-- Open Graph -->
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="${escapeHtml(post.title)}">
-  <meta property="og:description" content="${escapeHtml(post.excerpt)}">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="DisputeLetters">
-  <meta property="article:published_time" content="${post.publishedAt}">
-  <meta property="article:author" content="${escapeHtml(post.author)}">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(post.title)}">
-  <meta name="twitter:description" content="${escapeHtml(post.excerpt)}">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(articleSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .meta { color: #666; margin-bottom: 2rem; display: flex; gap: 1.5rem; }
-    .excerpt { font-size: 1.25rem; color: #444; margin-bottom: 2rem; border-left: 4px solid #2563eb; padding-left: 1rem; }
-    .cta { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → <a href="/articles">Blog</a> → <a href="/articles/${post.categorySlug}">${escapeHtml(post.category)}</a> → ${escapeHtml(post.title)}
-  </nav>
-  
-  <main>
-    <article>
-      <h1>${escapeHtml(post.title)}</h1>
-      <div class="meta">
-        <span>By ${escapeHtml(post.author)}</span>
-        <span>${post.publishedAt}</span>
-        <span>${post.readTime}</span>
-      </div>
-      <p class="excerpt">${escapeHtml(post.excerpt)}</p>
-      <p>Read the full article on our website for expert guidance on consumer rights and dispute resolution.</p>
-    </article>
-    
-    <a href="/articles/${post.categorySlug}/${post.slug}" class="cta">Read Full Article</a>
-  </main>
-</body>
-</html>`;
+  return generateSPAPage({
+    title: `All Letter Templates - ${templates.length}+ Free Professional Complaint Letters | DisputeLetters`,
+    description: `Browse our complete library of ${templates.length}+ professional letter templates across ${allCategories.length} categories. Generate legally-referenced complaint letters for any situation.`,
+    canonicalUrl,
+    seoContent,
+    schemas: [breadcrumbSchema],
+    headAssets,
+    bodyScripts
+  });
 }
 
 // ============================================
@@ -800,690 +707,187 @@ function generateSitemapIndex() {
     <loc>${SITE_URL}/sitemaps/templates.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
-  <sitemap>
-    <loc>${SITE_URL}/sitemaps/blog.xml</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-  </sitemap>
 </sitemapindex>`;
 }
 
 function generateStaticSitemap() {
+  const staticPages = [
+    { loc: '/', priority: '1.0', changefreq: 'daily' },
+    { loc: '/templates', priority: '0.9', changefreq: 'daily' },
+    { loc: '/how-it-works', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/pricing', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/faq', priority: '0.7', changefreq: 'weekly' },
+    { loc: '/about', priority: '0.6', changefreq: 'monthly' },
+    { loc: '/contact', priority: '0.6', changefreq: 'monthly' },
+    { loc: '/privacy', priority: '0.3', changefreq: 'monthly' },
+    { loc: '/terms', priority: '0.3', changefreq: 'monthly' },
+    { loc: '/disclaimer', priority: '0.3', changefreq: 'monthly' },
+  ];
+  
+  const urls = staticPages.map(page => `
+  <url>
+    <loc>${SITE_URL}${page.loc}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join('');
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${SITE_URL}/</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${SITE_URL}/templates</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>${SITE_URL}/articles</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${SITE_URL}/pricing</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${SITE_URL}/about</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>${SITE_URL}/contact</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
+${urls}
 </urlset>`;
 }
 
-function generateCategoriesSitemap(templates) {
-  // Category URLs
-  const categoryUrls = categories.map(cat => `  <url>
+function generateCategoriesSitemap(allCategories) {
+  const urls = allCategories.map(cat => `
+  <url>
     <loc>${SITE_URL}/templates/${cat.id}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`).join('\n');
-  
-  // Subcategory URLs - derive from templates
-  const subcategorySet = new Set();
-  templates.forEach(t => {
-    const catId = getCategoryIdFromName(t.category);
-    const subSlug = t.subcategorySlug || 'general';
-    subcategorySet.add(`${catId}/${subSlug}`);
-  });
-  
-  const subcategoryUrls = Array.from(subcategorySet).map(path => `  <url>
-    <loc>${SITE_URL}/templates/${path}</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.75</priority>
-  </url>`).join('\n');
-  
-  // Blog category URLs
-  const blogCategoryUrls = blogCategories.map(cat => `  <url>
-    <loc>${SITE_URL}/articles/${cat.slug}</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`).join('\n');
+  </url>`).join('');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${categoryUrls}
-${subcategoryUrls}
-${blogCategoryUrls}
+${urls}
 </urlset>`;
 }
 
 function generateTemplatesSitemap(templates) {
   const urls = templates.map(t => {
-    const catId = getCategoryIdFromName(t.category);
-    const subSlug = t.subcategorySlug || 'general';
-    return `  <url>
-    <loc>${SITE_URL}/templates/${catId}/${subSlug}/${t.slug}</loc>
+    const categoryId = getCategoryIdFromName(t.category);
+    const subcategorySlug = t.subcategorySlug || 'general';
+    return `
+  <url>
+    <loc>${SITE_URL}/templates/${categoryId}/${subcategorySlug}/${t.slug}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`;
-  }).join('\n');
+  }).join('');
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>`;
-}
-
-function generateBlogSitemap(posts) {
-  const urls = posts.map(p => `  <url>
-    <loc>${SITE_URL}/articles/${p.categorySlug}/${p.slug}</loc>
-    <lastmod>${p.publishedAt || BUILD_DATE}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>`).join('\n');
-  
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`;
-}
-
-// ============================================
-// Static Page Generators (Home, About, Contact, Pricing, Articles)
-// ============================================
-
-function generateHomepageHTML(templates) {
-  const totalTemplates = templates.length;
-  
-  const organizationSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Dispute Letters",
-    "url": SITE_URL,
-    "description": "Professional complaint letter generator with legal references",
-    "logo": `${SITE_URL}/favicon.ico`
-  };
-  
-  const webAppSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Dispute Letters",
-    "url": SITE_URL,
-    "description": `Professional complaint letter generator with ${totalTemplates}+ templates covering refunds, housing, travel, insurance, and more.`,
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web",
-    "offers": {
-      "@type": "Offer",
-      "price": "9.99",
-      "priceCurrency": "EUR"
-    }
-  };
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dispute Letters - Professional Complaint Letter Generator | ${totalTemplates}+ Templates</title>
-  <meta name="description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. ${totalTemplates}+ legally-referenced templates ready in minutes.">
-  <link rel="canonical" href="${SITE_URL}/">
-  
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Dispute Letters - Professional Complaint Letter Generator">
-  <meta property="og:description" content="Generate professional complaint letters for refunds, housing issues, travel compensation, and more. ${totalTemplates}+ templates with legal references.">
-  <meta property="og:url" content="${SITE_URL}/">
-  <meta property="og:site_name" content="Dispute Letters">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Dispute Letters - Professional Complaint Letter Generator">
-  <meta name="twitter:description" content="Generate professional complaint letters in minutes. ${totalTemplates}+ legally-referenced templates.">
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">${JSON.stringify(organizationSchema)}</script>
-  <script type="application/ld+json">${JSON.stringify(webAppSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; line-height: 1.6; color: #1a1a1a; }
-    header { background: #1e293b; color: white; padding: 1rem 2rem; }
-    header nav { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-    header a { color: white; text-decoration: none; margin-left: 1.5rem; }
-    .hero { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 4rem 2rem; text-align: center; }
-    .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; }
-    .hero p { font-size: 1.25rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
-    .cta { display: inline-block; padding: 1rem 2rem; background: #f59e0b; color: #1e293b; font-weight: 600; text-decoration: none; border-radius: 8px; }
-    main { max-width: 1200px; margin: 0 auto; padding: 3rem 2rem; }
-    .categories { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-    .category-card { background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .category-card h3 { margin-top: 0; }
-    .category-card a { color: #2563eb; text-decoration: none; }
-    footer { background: #1e293b; color: white; padding: 2rem; text-align: center; margin-top: 3rem; }
-    footer a { color: #94a3b8; margin: 0 1rem; }
-  </style>
-</head>
-<body>
-  <header role="banner">
-    <nav>
-      <a href="/" style="font-weight: bold; font-size: 1.25rem; margin-left: 0;">Dispute Letters</a>
-      <div>
-        <a href="/templates">Templates</a>
-        <a href="/articles">Blog</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-      </div>
-    </nav>
-  </header>
-  
-  <section class="hero">
-    <h1>Professional Complaint Letters That Get Results</h1>
-    <p>Generate legally-referenced dispute letters in minutes. ${totalTemplates}+ templates for refunds, housing, travel, insurance, and more.</p>
-    <a href="/templates" class="cta">Browse All Templates</a>
-  </section>
-  
-  <main role="main">
-    <h2>Letter Categories</h2>
-    <p>Choose from ${categories.length} categories covering the most common consumer disputes:</p>
-    
-    <div class="categories">
-      ${categories.map(cat => `
-        <div class="category-card">
-          <h3><a href="/templates/${cat.id}">${escapeHtml(cat.name)}</a></h3>
-          <p>${escapeHtml(cat.description)}</p>
-        </div>
-      `).join('')}
-    </div>
-    
-    <h2 style="margin-top: 3rem;">How It Works</h2>
-    <ol>
-      <li><strong>Choose a Template</strong> - Browse our ${totalTemplates}+ professionally crafted letter templates</li>
-      <li><strong>Fill in Your Details</strong> - Our guided form helps you provide the right information</li>
-      <li><strong>Download Your Letter</strong> - Get your letter in PDF or Word format, ready to send</li>
-    </ol>
-    
-    <h2 style="margin-top: 3rem;">Why Choose Dispute Letters?</h2>
-    <ul>
-      <li>Legally-referenced templates based on consumer protection laws</li>
-      <li>AI-enhanced field assistance to help you write effectively</li>
-      <li>Professional formatting that companies take seriously</li>
-      <li>Guidance on escalation paths and regulatory bodies</li>
-    </ul>
-  </main>
-  
-  <footer role="contentinfo">
-    <p>© ${new Date().getFullYear()} Dispute Letters. All rights reserved.</p>
-    <p>
-      <a href="/templates">Templates</a>
-      <a href="/articles">Blog</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/about">About</a>
-      <a href="/contact">Contact</a>
-    </p>
-  </footer>
-</body>
-</html>`;
-}
-
-function generateAboutHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About Us | Dispute Letters</title>
-  <meta name="description" content="Learn about Dispute Letters - the professional complaint letter generator helping consumers resolve disputes effectively with legally-referenced templates.">
-  <link rel="canonical" href="${SITE_URL}/about">
-  
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="About Dispute Letters">
-  <meta property="og:description" content="Learn about our mission to help consumers resolve disputes effectively.">
-  <meta property="og:url" content="${SITE_URL}/about">
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1.5rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    a.cta { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → About Us
-  </nav>
-  
-  <main>
-    <h1>About Dispute Letters</h1>
-    
-    <p>Dispute Letters is a professional complaint letter generator designed to help consumers resolve disputes effectively. We believe everyone deserves access to well-crafted, legally-referenced correspondence when dealing with businesses, landlords, or service providers.</p>
-    
-    <h2>Our Mission</h2>
-    <p>We empower consumers to stand up for their rights by providing professionally structured letter templates that reference relevant laws and regulations. Our templates are designed to be taken seriously and get results.</p>
-    
-    <h2>What We Offer</h2>
-    <ul>
-      <li>400+ professionally crafted letter templates</li>
-      <li>Legal references and regulatory guidance</li>
-      <li>AI-enhanced assistance for writing effective letters</li>
-      <li>Multiple formats (PDF and Word)</li>
-      <li>Guidance on escalation paths</li>
-    </ul>
-    
-    <h2>Our Approach</h2>
-    <p>Each template is built using established consumer protection frameworks, industry standards, and proven dispute resolution methodologies. We combine legal expertise with AI technology to help you articulate your complaint clearly and professionally.</p>
-    
-    <a href="/templates" class="cta">Browse Our Templates</a>
-  </main>
-</body>
-</html>`;
-}
-
-function generateContactHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contact Us | Dispute Letters</title>
-  <meta name="description" content="Get in touch with Dispute Letters. We're here to help with questions about our complaint letter templates and dispute resolution services.">
-  <link rel="canonical" href="${SITE_URL}/contact">
-  
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Contact Dispute Letters">
-  <meta property="og:description" content="Get in touch with our team for help with complaint letters and dispute resolution.">
-  <meta property="og:url" content="${SITE_URL}/contact">
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1.5rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .contact-info { background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → Contact
-  </nav>
-  
-  <main>
-    <h1>Contact Us</h1>
-    
-    <p>Have questions about our complaint letter templates or need help with a dispute? We're here to help.</p>
-    
-    <div class="contact-info">
-      <h2>Get in Touch</h2>
-      <p>For general inquiries, template suggestions, or support, please reach out to us. We aim to respond within 24-48 hours.</p>
-      <p><strong>Email:</strong> support@disputeletters.com</p>
-    </div>
-    
-    <h2>Frequently Asked Questions</h2>
-    <p>Before contacting us, you might find your answer in our <a href="/articles">blog articles</a> or by browsing our <a href="/templates">template categories</a>.</p>
-    
-    <h2>Template Suggestions</h2>
-    <p>Don't see a template for your specific situation? Let us know! We're constantly expanding our library based on user feedback.</p>
-  </main>
-</body>
-</html>`;
-}
-
-function generatePricingHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pricing | Dispute Letters</title>
-  <meta name="description" content="Affordable pricing for professional complaint letters. Get a single letter for €9.99 or unlimited access for €29.99. Download in PDF and Word formats.">
-  <link rel="canonical" href="${SITE_URL}/pricing">
-  
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Dispute Letters Pricing">
-  <meta property="og:description" content="Affordable pricing for professional complaint letters. Single letter €9.99 or unlimited access €29.99.">
-  <meta property="og:url" content="${SITE_URL}/pricing">
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1.5rem; text-align: center; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 2rem; }
-    .pricing-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center; }
-    .pricing-card.featured { border-color: #2563eb; background: #f8fafc; }
-    .price { font-size: 2.5rem; font-weight: bold; color: #1e293b; }
-    .price span { font-size: 1rem; color: #666; }
-    ul { text-align: left; list-style: none; padding: 0; }
-    ul li { padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
-    ul li:before { content: "✓ "; color: #22c55e; }
-    a.cta { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 2rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → Pricing
-  </nav>
-  
-  <main>
-    <h1>Simple, Transparent Pricing</h1>
-    <p style="text-align: center; color: #666; max-width: 600px; margin: 0 auto 2rem;">Get professionally written complaint letters that get results. No subscriptions, no hidden fees.</p>
-    
-    <div class="pricing-grid">
-      <div class="pricing-card">
-        <h2>Single Letter</h2>
-        <p class="price">€9.99 <span>/ letter</span></p>
-        <ul>
-          <li>One professionally formatted letter</li>
-          <li>PDF and Word download</li>
-          <li>Legal references included</li>
-          <li>Customized to your situation</li>
-        </ul>
-        <a href="/templates" class="cta">Get Started</a>
-      </div>
-      
-      <div class="pricing-card featured">
-        <h2>Letter Bundle</h2>
-        <p class="price">€29.99 <span>/ 5 letters</span></p>
-        <ul>
-          <li>Five professionally formatted letters</li>
-          <li>PDF and Word downloads</li>
-          <li>Legal references included</li>
-          <li>Best value for multiple disputes</li>
-          <li>Use anytime within 12 months</li>
-        </ul>
-        <a href="/templates" class="cta">Get Bundle</a>
-      </div>
-    </div>
-    
-    <h2 style="margin-top: 3rem;">What's Included</h2>
-    <ul>
-      <li>Professionally structured letter format</li>
-      <li>Jurisdiction-specific legal references</li>
-      <li>AI-enhanced writing assistance</li>
-      <li>Download in PDF and Microsoft Word</li>
-      <li>Guidance on next steps and escalation</li>
-    </ul>
-  </main>
-</body>
-</html>`;
-}
-
-function generateArticlesListingHTML(blogPosts) {
-  const itemListSchema = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "name": "Dispute Letters Blog",
-    "description": "Expert guides and tips for resolving consumer disputes",
-    "numberOfItems": blogPosts.length,
-    "itemListElement": blogPosts.slice(0, 20).map((p, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "name": p.title,
-      "url": `${SITE_URL}/articles/${p.categorySlug}/${p.slug}`
-    }))
-  };
-
-  // Group posts by category
-  const postsByCategory = {};
-  blogPosts.forEach(post => {
-    if (!postsByCategory[post.categorySlug]) {
-      postsByCategory[post.categorySlug] = {
-        name: post.category,
-        slug: post.categorySlug,
-        posts: []
-      };
-    }
-    postsByCategory[post.categorySlug].posts.push(post);
-  });
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog | Dispute Letters - Expert Guides for Consumer Disputes</title>
-  <meta name="description" content="Expert guides, tips, and resources for resolving consumer disputes. Learn about your rights and how to write effective complaint letters.">
-  <link rel="canonical" href="${SITE_URL}/articles">
-  
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Dispute Letters Blog">
-  <meta property="og:description" content="Expert guides and tips for resolving consumer disputes effectively.">
-  <meta property="og:url" content="${SITE_URL}/articles">
-  
-  <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
-  
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a1a; }
-    h1 { font-size: 2rem; margin-bottom: 1rem; }
-    .breadcrumb { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
-    .breadcrumb a { color: #2563eb; text-decoration: none; }
-    .categories { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
-    .category-tag { background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 20px; text-decoration: none; color: #1e293b; }
-    .category-tag:hover { background: #e2e8f0; }
-    .posts { display: grid; gap: 1.5rem; }
-    .post-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; }
-    .post-card h3 { margin-top: 0; }
-    .post-card h3 a { color: #1e293b; text-decoration: none; }
-    .post-card h3 a:hover { color: #2563eb; }
-    .post-meta { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
-  </style>
-</head>
-<body>
-  <nav class="breadcrumb">
-    <a href="/">Home</a> → Blog
-  </nav>
-  
-  <main>
-    <h1>Dispute Letters Blog</h1>
-    <p>Expert guides, tips, and resources for resolving consumer disputes effectively.</p>
-    
-    <div class="categories">
-      ${blogCategories.map(cat => `
-        <a href="/articles/${cat.slug}" class="category-tag">${escapeHtml(cat.name)}</a>
-      `).join('')}
-    </div>
-    
-    <div class="posts">
-      ${blogPosts.slice(0, 20).map(post => `
-        <article class="post-card">
-          <h3><a href="/articles/${post.categorySlug}/${post.slug}">${escapeHtml(post.title)}</a></h3>
-          <p>${escapeHtml(post.excerpt)}</p>
-          <p class="post-meta">
-            <span>${escapeHtml(post.category)}</span> • 
-            <span>${post.readTime}</span> • 
-            <span>${post.publishedAt}</span>
-          </p>
-        </article>
-      `).join('')}
-    </div>
-  </main>
-</body>
-</html>`;
 }
 
 // ============================================
 // Main Build Function
 // ============================================
 
-async function build() {
-  console.log('🏗️  Starting static HTML generation...\n');
-  
-  // Load templates
-  const templates = await loadAllTemplates();
-  console.log(`📄 Found ${templates.length} templates`);
-  console.log(`📁 Found ${categories.length} categories`);
-  
-  // Load blog posts
-  const blogPosts = loadBlogPosts();
-  console.log(`📝 Found ${blogPosts.length} blog posts\n`);
+async function buildStaticFiles() {
+  console.log('\n📦 Building SPA-ready static HTML files...\n');
   
   // Ensure dist directory exists
   if (!fs.existsSync(distDir)) {
-    fs.mkdirSync(distDir, { recursive: true });
+    console.log('⚠️  dist/ directory not found. Run vite build first.');
+    return;
   }
   
-  // Create directories
-  const sitemapsDir = path.join(distDir, 'sitemaps');
-  const staticDir = path.join(distDir, 'static');
-  fs.mkdirSync(sitemapsDir, { recursive: true });
-  fs.mkdirSync(staticDir, { recursive: true });
+  // Extract React assets from built index.html
+  console.log('📋 Extracting React assets from dist/index.html...');
+  const { headAssets, bodyScripts } = extractReactAssets();
   
-  // ============================================
-  // Generate Static Pages (for bot detection)
-  // ============================================
-  console.log('📝 Generating static pages for crawlers...');
+  if (!bodyScripts) {
+    console.log('⚠️  Could not extract React scripts. Static files will not have SPA functionality.');
+  }
   
-  // Homepage
-  fs.writeFileSync(path.join(staticDir, 'index.html'), generateHomepageHTML(templates));
-  console.log('   ✅ Generated homepage');
+  // Load all templates
+  console.log('📚 Loading template data...');
+  const templates = await loadAllTemplates();
+  console.log(`   Found ${templates.length} templates`);
   
-  // About page
-  const aboutDir = path.join(staticDir, 'about');
-  fs.mkdirSync(aboutDir, { recursive: true });
-  fs.writeFileSync(path.join(aboutDir, 'index.html'), generateAboutHTML());
-  console.log('   ✅ Generated about page');
+  let filesGenerated = 0;
   
-  // Contact page
-  const contactDir = path.join(staticDir, 'contact');
-  fs.mkdirSync(contactDir, { recursive: true });
-  fs.writeFileSync(path.join(contactDir, 'index.html'), generateContactHTML());
-  console.log('   ✅ Generated contact page');
-  
-  // Pricing page
-  const pricingDir = path.join(staticDir, 'pricing');
-  fs.mkdirSync(pricingDir, { recursive: true });
-  fs.writeFileSync(path.join(pricingDir, 'index.html'), generatePricingHTML());
-  console.log('   ✅ Generated pricing page');
-  
-  // Articles listing page
-  const articlesDir = path.join(staticDir, 'articles');
-  fs.mkdirSync(articlesDir, { recursive: true });
-  fs.writeFileSync(path.join(articlesDir, 'index.html'), generateArticlesListingHTML(blogPosts));
-  console.log('   ✅ Generated articles listing page');
-  
-  // ============================================
-  // Generate Templates Pages
-  // ============================================
-  
-  // Generate /templates landing page
-  console.log('📝 Generating templates landing page...');
+  // 1. Generate /templates page
+  console.log('\n📄 Generating /templates page...');
   const templatesDir = path.join(distDir, 'templates');
   fs.mkdirSync(templatesDir, { recursive: true });
-  fs.writeFileSync(path.join(templatesDir, 'index.html'), generateAllTemplatesHTML(categories, templates));
-  console.log('   ✅ Generated templates landing page');
+  fs.writeFileSync(
+    path.join(templatesDir, 'index.html'),
+    generateAllTemplatesPageContent(categories, templates, headAssets, bodyScripts)
+  );
+  filesGenerated++;
   
-  // Generate category HTML files
-  console.log('📝 Generating category HTML files...');
+  // 2. Generate category pages
+  console.log('📂 Generating category pages...');
   for (const category of categories) {
     const categoryDir = path.join(distDir, 'templates', category.id);
     fs.mkdirSync(categoryDir, { recursive: true });
-    
-    const html = generateCategoryHTML(category, templates);
-    fs.writeFileSync(path.join(categoryDir, 'index.html'), html);
+    fs.writeFileSync(
+      path.join(categoryDir, 'index.html'),
+      generateCategoryPageContent(category, templates, headAssets, bodyScripts)
+    );
+    filesGenerated++;
   }
-  console.log(`   ✅ Generated ${categories.length} category pages`);
+  console.log(`   Generated ${categories.length} category pages`);
   
-  // Generate subcategory HTML files
-  console.log('📝 Generating subcategory HTML files...');
-  const subcategorySet = new Map();
-  templates.forEach(t => {
-    const catId = getCategoryIdFromName(t.category);
-    const subSlug = t.subcategorySlug || 'general';
-    const key = `${catId}/${subSlug}`;
-    if (!subcategorySet.has(key)) {
-      subcategorySet.set(key, {
-        category: categories.find(c => c.id === catId),
-        subcategory: { name: t.subcategory || 'General', slug: subSlug },
-        templates: []
-      });
+  // 3. Generate subcategory pages
+  console.log('📂 Generating subcategory pages...');
+  let subcategoryCount = 0;
+  for (const category of categories) {
+    const categoryTemplates = templates.filter(t => getCategoryIdFromName(t.category) === category.id);
+    
+    // Group by subcategory
+    const subcategoryGroups = {};
+    categoryTemplates.forEach(t => {
+      const subSlug = t.subcategorySlug || 'general';
+      if (!subcategoryGroups[subSlug]) {
+        subcategoryGroups[subSlug] = { name: t.subcategory || 'General', slug: subSlug, templates: [] };
+      }
+      subcategoryGroups[subSlug].templates.push(t);
+    });
+    
+    for (const [slug, group] of Object.entries(subcategoryGroups)) {
+      const subcategoryDir = path.join(distDir, 'templates', category.id, slug);
+      fs.mkdirSync(subcategoryDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(subcategoryDir, 'index.html'),
+        generateSubcategoryPageContent(category, { name: group.name, slug }, group.templates, headAssets, bodyScripts)
+      );
+      filesGenerated++;
+      subcategoryCount++;
     }
-    subcategorySet.get(key).templates.push(t);
-  });
-  
-  for (const [key, data] of subcategorySet) {
-    const subcategoryDir = path.join(distDir, 'templates', key);
-    fs.mkdirSync(subcategoryDir, { recursive: true });
-    
-    const html = generateSubcategoryHTML(data.category, data.subcategory, data.templates);
-    fs.writeFileSync(path.join(subcategoryDir, 'index.html'), html);
   }
-  console.log(`   ✅ Generated ${subcategorySet.size} subcategory pages`);
+  console.log(`   Generated ${subcategoryCount} subcategory pages`);
   
-  // Generate template HTML files
-  console.log('📝 Generating template HTML files...');
+  // 4. Generate template pages
+  console.log('📝 Generating template pages...');
   for (const template of templates) {
-    const catId = getCategoryIdFromName(template.category);
-    const subSlug = template.subcategorySlug || 'general';
-    const templateDir = path.join(distDir, 'templates', catId, subSlug, template.slug);
+    const categoryId = getCategoryIdFromName(template.category);
+    const subcategorySlug = template.subcategorySlug || 'general';
+    const templateDir = path.join(distDir, 'templates', categoryId, subcategorySlug, template.slug);
     fs.mkdirSync(templateDir, { recursive: true });
-    
-    const html = generateTemplateHTML(template);
-    fs.writeFileSync(path.join(templateDir, 'index.html'), html);
+    fs.writeFileSync(
+      path.join(templateDir, 'index.html'),
+      generateTemplatePageContent(template, headAssets, bodyScripts)
+    );
+    filesGenerated++;
   }
-  console.log(`   ✅ Generated ${templates.length} template pages`);
+  console.log(`   Generated ${templates.length} template pages`);
   
-  // Generate blog post HTML files
-  console.log('📝 Generating blog post HTML files...');
-  for (const post of blogPosts) {
-    const postDir = path.join(distDir, 'articles', post.categorySlug, post.slug);
-    fs.mkdirSync(postDir, { recursive: true });
-    
-    const html = generateBlogPostHTML(post);
-    fs.writeFileSync(path.join(postDir, 'index.html'), html);
-  }
-  console.log(`   ✅ Generated ${blogPosts.length} blog post pages`);
-  
-  // Generate sitemaps
+  // 5. Generate sitemaps
   console.log('🗺️  Generating sitemaps...');
+  const sitemapsDir = path.join(distDir, 'sitemaps');
+  fs.mkdirSync(sitemapsDir, { recursive: true });
+  
   fs.writeFileSync(path.join(sitemapsDir, 'sitemap-index.xml'), generateSitemapIndex());
   fs.writeFileSync(path.join(sitemapsDir, 'static.xml'), generateStaticSitemap());
-  fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap(templates));
+  fs.writeFileSync(path.join(sitemapsDir, 'categories.xml'), generateCategoriesSitemap(categories));
   fs.writeFileSync(path.join(sitemapsDir, 'templates.xml'), generateTemplatesSitemap(templates));
-  fs.writeFileSync(path.join(sitemapsDir, 'blog.xml'), generateBlogSitemap(blogPosts));
-  console.log('   ✅ Generated 5 sitemap files');
   
-  // Calculate total pages (including new static pages)
-  const staticPages = 5; // home, about, contact, pricing, articles
-  const totalPages = staticPages + 1 + categories.length + subcategorySet.size + templates.length + blogPosts.length;
-  console.log('\n✅ Static HTML generation complete!');
-  console.log(`   📊 Total: ${totalPages} HTML pages + 5 sitemaps`);
+  // Also copy sitemap-index to root as sitemap.xml
+  fs.copyFileSync(
+    path.join(sitemapsDir, 'sitemap-index.xml'),
+    path.join(distDir, 'sitemap.xml')
+  );
+  console.log('   Generated 4 sitemaps');
+  
+  console.log(`\n✅ Static file generation complete!`);
+  console.log(`   Total files generated: ${filesGenerated}`);
+  console.log(`   Sitemaps: 4`);
 }
 
 // Run the build
-build().catch(err => {
-  console.error('❌ Build failed:', err);
-  process.exit(1);
-});
+buildStaticFiles().catch(console.error);
