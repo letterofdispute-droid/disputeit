@@ -1,72 +1,131 @@
 
-# Fix Sitemaps: Write to dist/ Instead of public/
+# Fix Sitemaps: Use Edge Function (The ONLY Reliable Solution)
 
-## Root Cause
+## Why Static Files Don't Work on Lovable
 
-The build process timing is wrong:
+Lovable hosting uses SPA routing where:
+1. ALL requests go through `index.html` first
+2. React Router's `path="*"` catches everything not defined
+3. Static XML files get intercepted and routed to `<NotFound />`
 
+This is why the main `sitemap.xml` might work (if there's special handling) but sub-sitemaps fail.
+
+## The Solution: Dynamic Edge Function Sitemaps
+
+You already have a `generate-sitemap` edge function! It just needs to be properly configured and the URLs fixed.
+
+### Current Edge Function Issues
+
+1. References wrong paths: `/sitemaps/static.xml` (subdirectory that doesn't exist)
+2. Missing template sitemap generation
+3. Not connected via URL rewriting
+
+## Implementation Plan
+
+### Step 1: Update Edge Function to Include ALL Content
+
+Modify `supabase/functions/generate-sitemap/index.ts`:
+
+| Section | Change |
+|---------|--------|
+| Sitemap Index | Point to `?type=static`, `?type=categories`, `?type=templates`, `?type=blog` |
+| Static Sitemap | Already complete |
+| Categories Sitemap | Add subcategory URLs (missing!) |
+| Templates Sitemap | NEW - Generate 400+ template URLs |
+| Blog Sitemap | Already fetches from database |
+
+### Step 2: Configure URL Routing
+
+Add Netlify-style redirects or use the edge function as API endpoint:
+
+**Option A: Direct API calls**
+Update the sitemap index to reference:
+```xml
+<loc>https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap?type=static</loc>
+```
+
+**Option B (Better): Serve via `/api/sitemap` route**
+The edge function responds at `/functions/v1/generate-sitemap` which can be accessed as:
+- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap?type=index`
+- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap?type=static`
+- etc.
+
+### Step 3: Update robots.txt
+
+Point to the edge function URL for the sitemap:
 ```text
-1. Vite build starts
-2. public/ contents copied to dist/  ← Sitemaps don't exist yet!
-3. closeBundle() runs build-static.mjs
-4. Sitemaps written to public/  ← Too late! Already copied!
-5. Build ends
+Sitemap: https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap
 ```
 
-**Result:** Sitemaps exist in `public/` but not in `dist/` - so they're never deployed.
+## Technical Changes
 
-## The Fix
+### Edge Function Updates
 
-Change `build-static.mjs` to write directly to `dist/` instead of `public/`:
-
-```javascript
-// BEFORE (line 19)
-const publicDir = path.join(__dirname, '..', 'public');
-
-// AFTER
-const distDir = path.join(__dirname, '..', 'dist');
+```typescript
+// In generateSitemapIndex - fix the URLs to use the edge function:
+function generateSitemapIndex(today: string): string {
+  const baseUrl = 'https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${baseUrl}?type=static</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${baseUrl}?type=categories</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${baseUrl}?type=templates</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${baseUrl}?type=blog</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+</sitemapindex>`;
+}
 ```
 
-That's it! One line change.
+### Add Templates Sitemap (NEW)
 
-## Why This Works
+```typescript
+case 'templates':
+  xml = generateTemplatesSitemap(today);
+  break;
 
-Since `closeBundle()` runs AFTER the build completes:
-- `dist/` already exists with all built files
-- Writing sitemaps directly to `dist/` means they're included in deployment
-- No timing issues
+function generateTemplatesSitemap(today: string): string {
+  // Include all 400+ templates with hierarchical URLs
+  // /templates/:categoryId/:subcategorySlug/:templateSlug
+}
+```
+
+### Add Subcategories to Categories Sitemap
+
+```typescript
+// Add all subcategory URLs like:
+// /templates/contractors/plumbing
+// /templates/housing/repairs
+```
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `scripts/build-static.mjs` | Line 19: Change output from `public/` to `dist/` |
+| `supabase/functions/generate-sitemap/index.ts` | Major update - fix URLs, add templates, add subcategories |
+| `public/robots.txt` | Point sitemap to edge function URL |
+| `scripts/build-static.mjs` | Remove (no longer needed for sitemaps) |
 
-## Technical Details
+## Result
 
-### Before
-```javascript
-const publicDir = path.join(__dirname, '..', 'public');
-```
+- `/functions/v1/generate-sitemap` → Main sitemap index (works)
+- `/functions/v1/generate-sitemap?type=static` → Static pages (works)
+- `/functions/v1/generate-sitemap?type=categories` → All categories + subcategories (works)
+- `/functions/v1/generate-sitemap?type=templates` → All 400+ templates (works)
+- `/functions/v1/generate-sitemap?type=blog` → All blog posts from database (works)
 
-### After  
-```javascript
-const distDir = path.join(__dirname, '..', 'dist');
-```
+Google Search Console can access all sitemaps via the edge function URL.
 
-Also update all references from `publicDir` to `distDir` in the file (variable rename for clarity).
+## Why This Is The Only Solution
 
-## Result After Fix
-
-After deployment:
-- `/sitemap.xml` → Works
-- `/sitemap-static.xml` → Works  
-- `/sitemap-categories.xml` → Works
-- `/sitemap-templates.xml` → Works
-- `/sitemap-blog.xml` → Works
-
-All 500+ URLs will be accessible to Google Search Console.
-
-## Credit Cost
-
-This is a **1-line fix** (plus variable rename). Minimal changes, maximum impact.
+Static files on Lovable hosting get intercepted by React Router. Edge functions bypass this entirely because they're served from the backend function endpoint, not the static hosting.
