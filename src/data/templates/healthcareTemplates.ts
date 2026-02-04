@@ -12,16 +12,6 @@ const standardPricing = [
 
 const healthcareJurisdictions = [
   { 
-    code: 'UK', 
-    name: 'United Kingdom', 
-    legalReference: 'NHS Constitution / Consumer Rights Act 2015', 
-    approvedPhrases: [
-      'Under the NHS Constitution',
-      'In accordance with patient rights',
-      'Under the Health and Social Care Act 2012'
-    ] 
-  },
-  { 
     code: 'US', 
     name: 'United States', 
     legalReference: 'No Surprises Act / HIPAA / FCRA / FDCPA', 
@@ -32,6 +22,16 @@ const healthcareJurisdictions = [
       'Under the Fair Debt Collection Practices Act',
       'Under the Employee Retirement Income Security Act (ERISA)',
       'Under the Prudent Layperson Standard'
+    ] 
+  },
+  { 
+    code: 'UK', 
+    name: 'United Kingdom', 
+    legalReference: 'NHS Constitution / Consumer Rights Act 2015', 
+    approvedPhrases: [
+      'Under the NHS Constitution',
+      'In accordance with patient rights',
+      'Under the Health and Social Care Act 2012'
     ] 
   },
   { 

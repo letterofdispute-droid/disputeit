@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Magnuson-Moss Warranty Act', approvedPhrases: ['Under the Magnuson-Moss Warranty Act', 'In accordance with state lemon law'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Consumer Sales Directive', approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Magnuson-Moss Warranty Act', approvedPhrases: ['Under the Magnuson-Moss Warranty Act', 'In accordance with state lemon law'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 

@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State and local parking ordinances', approvedPhrases: ['Under state parking laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Protection of Freedoms Act 2012', approvedPhrases: ['Under the Protection of Freedoms Act 2012', 'Per POPLA/IAS guidelines'] },
   { code: 'EU', name: 'European Union', legalReference: 'Local traffic regulations', approvedPhrases: ['Under applicable traffic regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'State and local parking ordinances', approvedPhrases: ['Under state parking laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable parking regulations'] },
 ];
 
