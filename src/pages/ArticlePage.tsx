@@ -426,45 +426,6 @@ const ArticlePage = () => {
         </div>
       </section>
 
-      {/* Left-side Table of Contents - Linearity Style */}
-      {tableOfContents.length > 0 && (
-        <aside className="hidden xl:block fixed left-8 top-1/2 -translate-y-1/2 w-56 z-40">
-          <div className="p-5 bg-card/95 backdrop-blur-sm rounded-xl border border-border shadow-lg">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2 text-sm">
-              <List className="h-4 w-4 text-primary" />
-              In this article
-            </h3>
-            <nav className="relative">
-              {/* Vertical connecting line */}
-              <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
-              
-              <ul className="space-y-3">
-                {tableOfContents.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    {/* Dot indicator */}
-                    <span className={`relative z-10 mt-1.5 w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
-                      activeHeading === item.id 
-                        ? 'bg-primary border-primary' 
-                        : 'bg-background border-border'
-                    }`} />
-                    
-                    <a 
-                      href={`#${item.id}`}
-                      className={`text-sm leading-snug transition-colors ${
-                        activeHeading === item.id 
-                          ? 'text-foreground font-medium' 
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {item.text}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </aside>
-      )}
 
       {/* Article Content */}
       <section className="py-12 md:py-16 bg-background">
