@@ -1,225 +1,197 @@
 
 
-# Linearity-Style Split Hero Redesign
+# Fix Breadcrumb, Hero Gradient & Enhanced Table of Contents
 
-## Reference Analysis
+## Problems Identified
 
-The Linearity blog layout features a dramatic split-screen hero:
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  Breadcrumb                                                        Nav  │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  [DARK BACKGROUND - Left Side]     │  [FEATURED IMAGE - Right Side]     │
-│                                    │                                     │
-│                                    │  ┌─────────────────────────────┐   │
-│                                    │  │ [Category Badge]            │   │
-│                                    │  │                             │   │
-│   Title Goes Here                  │  │  Title Goes Here            │   │
-│   In Large Serif Font              │  │  On The Image               │   │
-│                                    │  │                             │   │
-│   Subtitle/excerpt text            │  └─────────────────────────────┘   │
-│                                    │                                     │
-│   By Author  |  Date  |  5 min     │                                     │
-│                                    │                                     │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-Key design elements:
-- Full-width dark gradient background (deep teal/green to black)
-- Split layout: 50/50 or 40/60
-- Left: Title + subtitle + metadata (left-aligned)
-- Right: Featured image with category badge overlay + title overlay
-- Clean minimal spacing
-- No overlap effects - clean separation
+1. **Breadcrumb shows slug format** - The breadcrumb for category is showing "consumer-rights" instead of "Consumer Rights" (the proper display name)
+2. **Hero gradient is greenish** - Current HSL values create a subtle green tint; needs pure dark blue
+3. **Table of Contents needs enhancement** - Current ToC is in the sidebar; user wants a Linearity-style left ToC with active state tracking
 
 ---
 
-## Implementation Plan
+## Solution
 
-### Hero Section Redesign
+### Part 1: Fix Breadcrumb Category Display
 
-Transform the current stacked hero into a side-by-side split layout:
+Looking at line 304-305 of ArticlePage.tsx:
+```tsx
+<Link to={`/articles/${post.category_slug}`} className="...">
+  {post.category}  // This should show "Consumer Rights" from the category field
+</Link>
+```
+
+The issue is that `post.category` from the database might be storing the slug instead of the display name. Need to add a helper function to convert category slugs to proper names:
+
+```typescript
+// Convert category slug to display name
+const formatCategoryName = (categorySlug: string): string => {
+  return categorySlug
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+// Use in breadcrumb
+{post.category || formatCategoryName(post.category_slug)}
+```
+
+Also apply this to the hero section where category appears in the badge (lines 362, 372).
+
+---
+
+### Part 2: Change Hero Gradient to Dark Blue
+
+Replace the current gradient with a pure dark blue theme:
+
+**Current (greenish tint):**
+```tsx
+bg-gradient-to-br from-[hsl(220,40%,12%)] via-[hsl(224,45%,8%)] to-[hsl(230,50%,4%)]
+```
+
+**New (dark blue matching primary):**
+```tsx
+bg-gradient-to-br from-[hsl(221,50%,15%)] via-[hsl(221,55%,10%)] to-[hsl(221,60%,5%)]
+```
+
+Using HSL 221 consistently (the primary blue hue) to create a cohesive dark blue gradient that matches the site's branding.
+
+---
+
+### Part 3: Enhanced Table of Contents (Linearity-Style)
+
+Transform the current sidebar ToC into a premium left-side component that matches the Linearity reference:
+
+**Design Elements:**
+- Fixed position on the left side of content
+- "In this article" header with list icon
+- Vertical line connecting headings
+- Active dot indicator showing current section
+- Muted text for headings, highlight on active/hover
+- Scroll-aware active state tracking
 
 **Layout Structure:**
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                                                                        │
+│  ┌──────────────────┐   Article Content                                │
+│  │ In this article  │                                                  │
+│  │                  │   [Content paragraphs...]                        │
+│  │ ● Heading One ◄──│──────────────────────────────────────────────── │
+│  │ │                │                                                  │
+│  │ ○ Heading Two    │                                                  │
+│  │ │                │                                                  │
+│  │ ○ Heading Three  │                                                  │
+│  │ │                │                                                  │
+│  │ ○ Heading Four   │                                                  │
+│  └──────────────────┘                                                  │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Approach:**
+
+1. Add scroll-based active heading tracking with `IntersectionObserver`
+2. Create a left-aligned ToC component with visual connecting line
+3. Show filled dot for active section, empty dots for others
+4. Keep the existing sidebar for share buttons and CTA
+
+**New Code Structure:**
+
 ```tsx
-<section className="bg-gradient-to-br from-[#1a2e2a] via-[#0f1f1d] to-[#0a1614] min-h-[500px] md:min-h-[600px]">
-  <div className="container-wide h-full">
-    <div className="grid md:grid-cols-2 gap-8 items-center py-12 md:py-16">
-      
-      {/* Left Side - Text Content */}
-      <div className="text-left">
-        <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-          {post.title}
-        </h1>
-        {post.excerpt && (
-          <p className="text-white/70 text-lg mb-8 max-w-lg">
-            {post.excerpt}
-          </p>
-        )}
-        <div className="flex items-center gap-4 text-white/60 text-sm">
-          <span>By LoD Contributor</span>
-          <span>|</span>
-          <span>📅 {formattedDate}</span>
-          <span>|</span>
-          <span>⏱ {readTime}</span>
-        </div>
-      </div>
-      
-      {/* Right Side - Featured Image Card */}
-      <div className="relative">
-        <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-2xl">
-          <div className="p-6 pb-0">
-            <Badge className="mb-4">{post.category}</Badge>
-            <h2 className="font-serif text-2xl font-bold text-foreground mb-4">
-              {post.title}
-            </h2>
-          </div>
-          <img 
-            src={post.featured_image_url} 
-            alt={post.title}
-            className="w-full h-64 object-cover"
-          />
-        </div>
-      </div>
-      
+// State for active heading
+const [activeHeading, setActiveHeading] = useState<string>('');
+
+// Intersection Observer for heading tracking
+useEffect(() => {
+  if (tableOfContents.length === 0) return;
+  
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveHeading(entry.target.id);
+        }
+      });
+    },
+    { rootMargin: '-100px 0px -70% 0px' }
+  );
+
+  tableOfContents.forEach((item) => {
+    const element = document.getElementById(item.id);
+    if (element) observer.observe(element);
+  });
+
+  return () => observer.disconnect();
+}, [tableOfContents]);
+```
+
+**ToC Component Styling:**
+```tsx
+{/* Left-side Table of Contents - Linearity Style */}
+{tableOfContents.length > 0 && (
+  <aside className="hidden xl:block fixed left-8 top-1/2 -translate-y-1/2 w-64 z-40">
+    <div className="p-5 bg-card/80 backdrop-blur-sm rounded-xl border border-border shadow-sm">
+      <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2 text-sm">
+        <List className="h-4 w-4 text-primary" />
+        In this article
+      </h3>
+      <nav className="relative">
+        {/* Vertical connecting line */}
+        <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
+        
+        <ul className="space-y-3">
+          {tableOfContents.map((item, index) => (
+            <li key={index} className="flex items-start gap-3">
+              {/* Dot indicator */}
+              <span className={`relative z-10 mt-1.5 w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                activeHeading === item.id 
+                  ? 'bg-primary border-primary' 
+                  : 'bg-background border-border'
+              }`} />
+              
+              <a 
+                href={`#${item.id}`}
+                className={`text-sm leading-snug transition-colors ${
+                  activeHeading === item.id 
+                    ? 'text-foreground font-medium' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {item.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
-  </div>
-</section>
+  </aside>
+)}
 ```
 
 ---
 
-## Visual Design Details
-
-### Color Scheme for Hero
-- Background: Deep teal-to-black gradient (`from-[#1a2e2a] via-[#0f1f1d] to-[#0a1614]`)
-- Text: Pure white for title, white/70 for subtitle, white/60 for metadata
-- Right card: Light gray gradient background for the image card
-
-### Featured Image Card Style
-The right side contains a "floating" card with:
-- Rounded corners (`rounded-2xl`)
-- Subtle shadow (`shadow-2xl`)
-- Light gray gradient background
-- Category badge at top
-- Title overlay in dark text
-- Featured image at the bottom of the card
-
-### Responsive Behavior
-- **Desktop (md+)**: Side-by-side split layout
-- **Mobile**: Stacked layout with text above, image below
-
----
-
-## Content Section Updates
-
-Keep the existing content section but refine:
-- Move breadcrumb above the hero (already done)
-- Adjust content area padding since hero now flows differently
-- Maintain the sticky sidebar with TOC and share buttons
-
----
-
-## File to Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/ArticlePage.tsx` | Replace hero section with Linearity-inspired split layout |
+| `src/pages/ArticlePage.tsx` | Fix category name display in breadcrumb and hero, change gradient to dark blue, add enhanced left-side ToC with scroll tracking |
 
 ---
 
-## Technical Implementation
+## Summary of Changes
 
-### New Hero Structure
-
-```tsx
-{/* Article Hero - Linearity-inspired split layout */}
-<section className="bg-gradient-to-br from-[#1a2e2a] via-[#0f1f1d] to-[#0a1614]">
-  <div className="container-wide py-12 md:py-20">
-    <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-      
-      {/* Left: Text Content */}
-      <div className="order-2 md:order-1">
-        <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-          {post.title}
-        </h1>
-        
-        {post.excerpt && (
-          <p className="text-white/70 text-lg md:text-xl mb-8 leading-relaxed">
-            {post.excerpt}
-          </p>
-        )}
-        
-        <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm text-white/60">
-          <span className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            LoD Contributor
-          </span>
-          <span className="hidden sm:inline text-white/40">|</span>
-          <span className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            {formattedDate}
-          </span>
-          <span className="hidden sm:inline text-white/40">|</span>
-          <span className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            {calculatedReadTime}
-          </span>
-        </div>
-      </div>
-      
-      {/* Right: Featured Image Card */}
-      <div className="order-1 md:order-2">
-        {post.featured_image_url ? (
-          <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-            {/* Card Header */}
-            <div className="p-6 pb-4">
-              <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
-                {post.category}
-              </Badge>
-              <h2 className="font-serif text-xl md:text-2xl font-bold text-foreground leading-snug">
-                {post.title}
-              </h2>
-            </div>
-            {/* Featured Image */}
-            <img 
-              src={post.featured_image_url} 
-              alt={post.title}
-              className="w-full h-48 md:h-64 object-cover"
-            />
-          </div>
-        ) : (
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 shadow-2xl">
-            <Badge variant="outline" className="mb-4">{post.category}</Badge>
-            <h2 className="font-serif text-2xl font-bold text-foreground">
-              {post.title}
-            </h2>
-          </div>
-        )}
-      </div>
-      
-    </div>
-  </div>
-</section>
-```
+| Issue | Before | After |
+|-------|--------|-------|
+| Breadcrumb category | "consumer-rights" | "Consumer Rights" |
+| Hero gradient | Greenish tint (mixed hues) | Dark blue (consistent HSL 221) |
+| Table of Contents | Right sidebar only | Left-side Linearity-style ToC with active tracking + right sidebar share |
 
 ---
 
 ## Expected Result
 
-### Before (Current)
-- Blue gradient centered layout
-- Title centered above
-- Featured image pulls up with overlap effect
-- Author byline below image
-
-### After (Linearity-Style)
-- Dark teal/green gradient
-- Split 50/50 layout
-- Left: Large title + subtitle + meta (left-aligned)
-- Right: Card with category badge, title overlay, and featured image
-- Modern, editorial, magazine-quality appearance
-- No overlap effects - clean professional separation
+- Breadcrumb will show properly formatted category names like "Consumer Rights" instead of slug format
+- Hero background will be a consistent dark blue tone matching the site's primary color
+- Premium Table of Contents on the left side with visual connecting line, dot indicators, and active section highlighting (visible on xl screens and above)
 
