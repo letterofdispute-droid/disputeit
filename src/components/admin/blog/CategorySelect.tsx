@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,13 +20,16 @@ interface BlogCategory {
 interface CategorySelectProps {
   value: string;
   onChange: (value: string) => void;
+  title?: string;
+  content?: string;
 }
 
-const CategorySelect = ({ value, onChange }: CategorySelectProps) => {
+const CategorySelect = ({ value, onChange, title, content }: CategorySelectProps) => {
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -79,10 +83,85 @@ const CategorySelect = ({ value, onChange }: CategorySelectProps) => {
     }
   };
 
+  const handleAISuggest = async () => {
+    if (!title) {
+      toast({
+        title: 'Title required',
+        description: 'Please add a title before using AI suggestion.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (categories.length === 0) {
+      toast({
+        title: 'No categories',
+        description: 'Please create at least one category first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSuggesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-category-tags', {
+        body: {
+          title,
+          content,
+          availableCategories: categories.map(c => ({ slug: c.slug, name: c.name })),
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.suggestedCategory) {
+        onChange(data.suggestedCategory);
+        const categoryName = categories.find(c => c.slug === data.suggestedCategory)?.name;
+        toast({
+          title: 'Category suggested',
+          description: `Set to "${categoryName}" (${data.confidence}% confidence)`,
+        });
+      }
+    } catch (error) {
+      console.error('Error suggesting category:', error);
+      toast({
+        title: 'Suggestion failed',
+        description: 'Failed to get AI suggestion.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Category</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Category</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleAISuggest}
+                  disabled={isSuggesting || !title}
+                  className="h-6 w-6"
+                >
+                  {isSuggesting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Suggest with AI</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <Select value={value} onValueChange={onChange}>

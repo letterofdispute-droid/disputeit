@@ -33,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, keywords } = await req.json();
+    const { topic, keywords, count = 6, offset = 0 } = await req.json();
 
     if (!topic) {
       throw new Error('Topic is required');
@@ -90,8 +90,9 @@ serve(async (req) => {
     searchQuery = searchQuery.substring(0, 100);
     console.log('Searching Pixabay for:', searchQuery);
 
-    // Step 2: Search Pixabay
-    const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(searchQuery)}&image_type=photo&orientation=horizontal&per_page=12&safesearch=true`;
+    // Step 2: Search Pixabay (fetch extra for offset)
+    const fetchCount = Math.min(count + offset + 10, 50);
+    const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(searchQuery)}&image_type=photo&orientation=horizontal&per_page=${fetchCount}&safesearch=true`;
     
     const pixabayResponse = await fetch(pixabayUrl);
     
@@ -107,7 +108,10 @@ serve(async (req) => {
     // Step 3: Generate alt text and score relevance using AI
     const images: ImageResult[] = [];
 
-    for (const hit of hits.slice(0, 6)) {
+    // Apply offset and count limits
+    const slicedHits = hits.slice(offset, offset + count);
+
+    for (const hit of slicedHits) {
       let altText = `${topic} - professional stock photo`;
       let relevanceScore = 70;
 

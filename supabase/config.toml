@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.apply-links-bulk]
 verify_jwt = false
+
+[functions.suggest-category-tags]
+verify_jwt = false
+
+[functions.generate-blog-image]
+verify_jwt = false

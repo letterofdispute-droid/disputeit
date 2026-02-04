@@ -217,8 +217,8 @@ const AdminBlogEditor = () => {
             scheduledAt={scheduledAt}
             onScheduledAtChange={setScheduledAt}
           />
-          <CategorySelect value={category} onChange={setCategory} />
-          <TagInput tags={tags} onChange={setTags} />
+          <CategorySelect value={category} onChange={setCategory} title={title} content={content} />
+          <TagInput tags={tags} onChange={setTags} title={title} content={content} />
           <FeaturedImageUploader
             imageUrl={featuredImageUrl}
             onImageChange={setFeaturedImageUrl}
