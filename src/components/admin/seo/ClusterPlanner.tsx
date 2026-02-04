@@ -195,10 +195,7 @@ export default function ClusterPlanner({
                             {type.name}
                           </label>
                           <p className="text-sm text-muted-foreground">
-                            {type.purpose}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1 italic">
-                            Template: {type.titleTemplate}
+                            {type.displayHint}
                           </p>
                         </div>
                       </div>
