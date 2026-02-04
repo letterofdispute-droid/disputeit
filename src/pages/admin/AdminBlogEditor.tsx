@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import RichTextEditor from '@/components/admin/blog/RichTextEditor';
 import SEOPanel from '@/components/admin/blog/SEOPanel';
 import FeaturedImageUploader from '@/components/admin/blog/FeaturedImageUploader';
+import MiddleImagePicker from '@/components/admin/blog/MiddleImagePicker';
 import TagInput from '@/components/admin/blog/TagInput';
 import CategorySelect from '@/components/admin/blog/CategorySelect';
 import PostStatusPanel from '@/components/admin/blog/PostStatusPanel';
@@ -41,6 +42,8 @@ const AdminBlogEditor = () => {
   const [metaTitle, setMetaTitle] = useState('');
   const [metaDescription, setMetaDescription] = useState('');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
+  const [middleImage1Url, setMiddleImage1Url] = useState('');
+  const [middleImage2Url, setMiddleImage2Url] = useState('');
 
   // Fetch categories for auto-suggest
   useEffect(() => {
@@ -128,6 +131,8 @@ const AdminBlogEditor = () => {
         setMetaTitle(data.meta_title || '');
         setMetaDescription(data.meta_description || '');
         setFeaturedImageUrl(data.featured_image_url || '');
+        setMiddleImage1Url((data as any).middle_image_1_url || '');
+        setMiddleImage2Url((data as any).middle_image_2_url || '');
       }
     } catch (error) {
       console.error('Error fetching post:', error);
@@ -159,6 +164,8 @@ const AdminBlogEditor = () => {
         meta_title: metaTitle,
         meta_description: metaDescription,
         featured_image_url: featuredImageUrl,
+        middle_image_1_url: middleImage1Url || null,
+        middle_image_2_url: middleImage2Url || null,
         author_id: user?.id,
         author: user?.email?.split('@')[0] || 'Admin',
       };
@@ -283,6 +290,14 @@ const AdminBlogEditor = () => {
             onImageChange={setFeaturedImageUrl}
             title={title}
             excerpt={excerpt}
+          />
+          <MiddleImagePicker
+            content={content}
+            middleImage1Url={middleImage1Url}
+            middleImage2Url={middleImage2Url}
+            onMiddleImage1Change={setMiddleImage1Url}
+            onMiddleImage2Change={setMiddleImage2Url}
+            title={title}
           />
         </div>
       </div>
