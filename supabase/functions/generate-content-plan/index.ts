@@ -15,16 +15,96 @@ interface GeneratePlanRequest {
   valueTier: 'high' | 'medium' | 'longtail';
 }
 
-// Article type definitions matching frontend
+// Article type definitions with diversity patterns
 const ARTICLE_TYPES = [
-  { id: 'how-to', name: 'How-To Guide', priority: 100 },
-  { id: 'mistakes', name: 'Mistakes to Avoid', priority: 95 },
-  { id: 'rights', name: 'Rights Explainer', priority: 90 },
-  { id: 'sample', name: 'Sample/Example', priority: 85 },
-  { id: 'faq', name: 'FAQ/Q&A', priority: 80 },
-  { id: 'case-study', name: 'Case Study', priority: 75 },
-  { id: 'comparison', name: 'Comparison', priority: 70 },
-  { id: 'checklist', name: 'Checklist', priority: 65 },
+  { 
+    id: 'how-to', 
+    name: 'How-To Guide', 
+    priority: 100,
+    variations: [
+      'How to {action} {topic}',
+      '{topic}: A Complete Guide',
+      'The Smart Way to Handle {topic}',
+      'What to Do When {scenario}',
+    ],
+  },
+  { 
+    id: 'mistakes', 
+    name: 'Mistakes to Avoid', 
+    priority: 95,
+    variations: [
+      '{number} Costly {topic} Mistakes',
+      'Why Your {topic} Keeps Getting Rejected',
+      'Stop Making These {topic} Blunders',
+      'The Hidden Traps in {topic}',
+    ],
+  },
+  { 
+    id: 'rights', 
+    name: 'Rights Explainer', 
+    priority: 90,
+    variations: [
+      'What {entity} Won\'t Tell You About {topic}',
+      'Your {topic} Rights Explained',
+      'The Consumer Rights You Didn\'t Know You Had',
+      'UK {topic} Laws: What Protects You',
+    ],
+  },
+  { 
+    id: 'sample', 
+    name: 'Sample/Example', 
+    priority: 85,
+    variations: [
+      'Real {topic} Letters That Got Results',
+      '{topic} Example: What Actually Worked',
+      'Copy This: A {topic} Letter That Worked',
+      'Before & After: {topic} Letters Compared',
+    ],
+  },
+  { 
+    id: 'faq', 
+    name: 'FAQ/Q&A', 
+    priority: 80,
+    variations: [
+      '{topic} Questions Everyone Asks',
+      'Your {topic} Questions, Sorted',
+      'The {topic} FAQ You Actually Need',
+      'Everything About {topic}, Answered',
+    ],
+  },
+  { 
+    id: 'case-study', 
+    name: 'Case Study', 
+    priority: 75,
+    variations: [
+      'How {name} Won Their {topic} Battle',
+      'From Rejected to Refunded: A {topic} Story',
+      '{amount} Recovered: A Real {topic} Win',
+      'The {topic} Fight That Paid Off',
+    ],
+  },
+  { 
+    id: 'comparison', 
+    name: 'Comparison', 
+    priority: 70,
+    variations: [
+      '{option1} vs {option2}: Which Works?',
+      'Comparing Your {topic} Options',
+      'The {topic} Approach That Wins',
+      '{topic} Methods: What Gets Results',
+    ],
+  },
+  { 
+    id: 'checklist', 
+    name: 'Checklist', 
+    priority: 65,
+    variations: [
+      'Before You File: {topic} Checklist',
+      'The Complete {topic} Prep List',
+      'Don\'t Submit Until You\'ve Checked This',
+      '{topic} Ready? Check This First',
+    ],
+  },
 ];
 
 const VALUE_TIER_CONFIGS = {
@@ -39,6 +119,62 @@ const VALUE_TIER_CONFIGS = {
   longtail: {
     articleCount: 5,
     articleTypes: ['how-to', 'mistakes', 'rights', 'sample', 'checklist'],
+  },
+};
+
+// Category-specific language for natural-sounding titles
+const CATEGORY_LANGUAGE: Record<string, { terms: string[]; tone: string }> = {
+  contractors: {
+    terms: ['builder', 'tradesman', 'workmanship', 'job', 'quote', 'deposit'],
+    tone: 'practical and no-nonsense',
+  },
+  financial: {
+    terms: ['bank', 'lender', 'charges', 'account', 'statement', 'fees'],
+    tone: 'authoritative but accessible',
+  },
+  travel: {
+    terms: ['airline', 'carrier', 'booking', 'flight', 'delay', 'compensation'],
+    tone: 'empathetic and action-oriented',
+  },
+  insurance: {
+    terms: ['claim', 'policy', 'adjuster', 'denial', 'coverage', 'premium'],
+    tone: 'confident and reassuring',
+  },
+  housing: {
+    terms: ['landlord', 'tenant', 'letting agent', 'deposit', 'repairs', 'lease'],
+    tone: 'supportive and empowering',
+  },
+  vehicle: {
+    terms: ['dealer', 'garage', 'warranty', 'repair', 'defect', 'mechanic'],
+    tone: 'straightforward and fair',
+  },
+  utilities: {
+    terms: ['provider', 'bill', 'meter', 'overcharge', 'tariff', 'service'],
+    tone: 'matter-of-fact and helpful',
+  },
+  ecommerce: {
+    terms: ['seller', 'order', 'refund', 'delivery', 'faulty', 'return'],
+    tone: 'consumer-focused and practical',
+  },
+  'damaged-goods': {
+    terms: ['product', 'defect', 'quality', 'return', 'refund', 'warranty'],
+    tone: 'assertive consumer advocacy',
+  },
+  refunds: {
+    terms: ['refund', 'return', 'money back', 'policy', 'chargeback', 'dispute'],
+    tone: 'determined and practical',
+  },
+  employment: {
+    terms: ['employer', 'workplace', 'contract', 'wages', 'dismissal', 'HR'],
+    tone: 'professional and supportive',
+  },
+  healthcare: {
+    terms: ['NHS', 'treatment', 'appointment', 'referral', 'complaint', 'care'],
+    tone: 'compassionate and clear',
+  },
+  hoa: {
+    terms: ['HOA', 'association', 'fees', 'rules', 'board', 'violation'],
+    tone: 'assertive homeowner advocacy',
   },
 };
 
@@ -125,36 +261,82 @@ serve(async (req) => {
       .filter(t => tierConfig.articleTypes.includes(t.id))
       .slice(0, tierConfig.articleCount);
 
-    const systemPrompt = `You are an SEO content strategist. Generate article titles and keywords for a content cluster supporting a complaint letter template.
+    // Get category-specific context
+    const categoryContext = CATEGORY_LANGUAGE[categoryId] || {
+      terms: [],
+      tone: 'helpful and professional',
+    };
 
-RULES:
-1. Each title must be unique and SEO-optimized
-2. Keywords should include long-tail variations
-3. Titles should match the article type purpose
-4. Focus on UK consumer rights context
-5. Output valid JSON only`;
+    const systemPrompt = `You are a UK-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN—never templated or formulaic.
 
-    const userPrompt = `Generate content cluster for this template:
+CRITICAL DIVERSITY RULES:
+1. Each title must feel like it was written by a different person
+2. NEVER start two titles the same way
+3. Vary sentence structures dramatically:
+   - Questions: "Why Does Your Claim Keep Failing?"
+   - Numbers: "5 Costly Mistakes You're Making"
+   - Statements: "What Companies Hope You Don't Know"
+   - Action: "Getting Your Money Back After..."
+   - Emotional: "Fed Up? Here's What Actually Works"
+4. Mix title lengths: some punchy (5-7 words), some descriptive (10-12 words)
+5. Use natural language people actually type into Google
+6. Include UK-specific references where relevant (Consumer Rights Act, etc.)
 
-Template: "${templateName}"
-Category: ${categoryId}
-${subcategorySlug ? `Subcategory: ${subcategorySlug}` : ''}
+ANTI-PATTERN RULES:
+- Never repeat the exact template name in titles
+- Avoid generic phrasing like "Complete Guide to X"
+- Don't use the same power words repeatedly
+- Each title should pass the "would a real journalist write this?" test
 
-Generate ${articleTypesToGenerate.length} articles with these types:
-${articleTypesToGenerate.map(t => `- ${t.id}: ${t.name}`).join('\n')}
+BAD EXAMPLES (too templated):
+- "How to File a Poor Workmanship Complaint Step-by-Step"
+- "7 Mistakes That Get Your Claim Rejected"
+- "Your Rights: Poor Workmanship - What Contractors Won't Tell You"
+
+GOOD EXAMPLES (diverse & human):
+- "What to Do When Your Builder's Work Falls Apart"
+- "The 7 Excuses Dodgy Builders Use (And How to Fight Back)"
+- "UK Consumer Rights After Shoddy Construction Work"
+
+Output valid JSON only.`;
+
+    const userPrompt = `Generate a diverse content cluster for this complaint letter template:
+
+TEMPLATE: "${templateName}"
+CATEGORY: ${categoryId}
+${subcategorySlug ? `SUBCATEGORY: ${subcategorySlug}` : ''}
+
+CATEGORY CONTEXT:
+- Typical terms: ${categoryContext.terms.join(', ')}
+- Tone: ${categoryContext.tone}
+
+Generate ${articleTypesToGenerate.length} unique articles. Each needs a DIFFERENT structure and feel:
+
+${articleTypesToGenerate.map((t, i) => {
+  const structureHints = ['question format', 'numbered list', 'bold statement', 'emotional hook', 'how-to style', 'case study angle', 'comparison frame', 'checklist style'];
+  return `${i + 1}. ${t.name} (${t.id}) - Try: ${structureHints[i % structureHints.length]}
+   Inspiration patterns (don't copy literally): ${t.variations.slice(0, 2).join(', ')}`;
+}).join('\n')}
+
+VALIDATION REQUIREMENTS:
+- No two titles can share the same first 3 words
+- No title can exactly match "${templateName}"
+- At least 3 titles should NOT start with "How" or a number
+- Include at least one question-format title
+- Mix of short (5-7 words) and longer (10-12 words) titles
 
 Return JSON:
 {
   "articles": [
     {
       "type": "article-type-id",
-      "title": "SEO optimized title",
-      "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+      "title": "Unique, human-crafted SEO title",
+      "keywords": ["long-tail keyword 1", "natural search phrase 2", "question keyword 3", "action keyword 4", "UK-specific term 5"]
     }
   ]
 }`;
 
-    console.log('Generating content plan for:', templateName);
+    console.log('Generating diverse content plan for:', templateName);
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -168,8 +350,8 @@ Return JSON:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.85, // Higher temperature for more creative variation
+        max_tokens: 2500,
       }),
     });
 
@@ -193,7 +375,27 @@ Return JSON:
     cleanedContent = cleanedContent.trim();
 
     const parsedContent = JSON.parse(cleanedContent);
-    const generatedArticles = parsedContent.articles || [];
+    let generatedArticles = parsedContent.articles || [];
+
+    // Validate title diversity
+    const titleStarts = new Set<string>();
+    const validatedArticles = [];
+    
+    for (const article of generatedArticles) {
+      const title = article.title || '';
+      const firstThreeWords = title.split(' ').slice(0, 3).join(' ').toLowerCase();
+      
+      // Skip if duplicate start or matches template name exactly
+      if (titleStarts.has(firstThreeWords) || title.toLowerCase() === templateName.toLowerCase()) {
+        console.log('Skipping duplicate or template-matching title:', title);
+        continue;
+      }
+      
+      titleStarts.add(firstThreeWords);
+      validatedArticles.push(article);
+    }
+
+    console.log(`Validated ${validatedArticles.length} unique titles from ${generatedArticles.length} generated`);
 
     // Create the content plan
     const { data: plan, error: planError } = await supabase
@@ -214,7 +416,7 @@ Return JSON:
     }
 
     // Create queue items for each article
-    const queueItems = generatedArticles.map((article: any, index: number) => {
+    const queueItems = validatedArticles.map((article: any, index: number) => {
       const articleType = ARTICLE_TYPES.find(t => t.id === article.type);
       return {
         plan_id: plan.id,
@@ -237,7 +439,7 @@ Return JSON:
       throw new Error(`Failed to create queue items: ${queueError.message}`);
     }
 
-    console.log(`Created plan ${plan.id} with ${queuedItems.length} queued articles`);
+    console.log(`Created plan ${plan.id} with ${queuedItems.length} diverse queued articles`);
 
     return new Response(JSON.stringify({
       success: true,
