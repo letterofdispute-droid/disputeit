@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +74,7 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
       toast({
         title: 'Scan complete',
-        description: `Found ${data.totalSuggestions} link opportunities`,
+        description: `Found ${data.totalSuggestions} link opportunities across ${data.scanned} articles`,
       });
     },
     onError: (error) => {
@@ -100,6 +101,29 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     },
   });
 
+  // Update anchor text
+  const updateAnchorMutation = useMutation({
+    mutationFn: async ({ id, anchor_text }: { id: string; anchor_text: string }) => {
+      const { error } = await supabase
+        .from('link_suggestions')
+        .update({ anchor_text })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({ title: 'Anchor text updated' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Bulk update status
   const bulkUpdateStatusMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
@@ -110,9 +134,19 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
       
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
-      toast({ title: 'Suggestions updated' });
+      toast({ 
+        title: 'Suggestions updated',
+        description: `${variables.ids.length} suggestions marked as ${variables.status}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -136,7 +170,7 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       toast({
         title: 'Links applied',
-        description: `Applied ${data.applied} links, ${data.failed} failed`,
+        description: `Applied ${data.applied} links${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
       });
     },
     onError: (error) => {
@@ -148,8 +182,24 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     },
   });
 
+  // Delete suggestions
+  const deleteSuggestionsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('link_suggestions')
+        .delete()
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({ title: 'Suggestions deleted' });
+    },
+  });
+
   // Get stats
-  const getStats = () => {
+  const getStats = useCallback(() => {
     if (!suggestions) return { pending: 0, approved: 0, rejected: 0, applied: 0 };
     
     return {
@@ -158,7 +208,19 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
       rejected: suggestions.filter(s => s.status === 'rejected').length,
       applied: suggestions.filter(s => s.status === 'applied').length,
     };
-  };
+  }, [suggestions]);
+
+  // Get high-relevance pending IDs
+  const getHighRelevanceIds = useCallback((threshold = 85) => {
+    return suggestions?.filter(s => 
+      s.status === 'pending' && (s.relevance_score || 0) >= threshold
+    ).map(s => s.id) || [];
+  }, [suggestions]);
+
+  // Get approved IDs
+  const getApprovedIds = useCallback(() => {
+    return suggestions?.filter(s => s.status === 'approved').map(s => s.id) || [];
+  }, [suggestions]);
 
   return {
     suggestions,
@@ -168,9 +230,13 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     scan: scanMutation.mutate,
     isScanning: scanMutation.isPending,
     updateStatus: updateStatusMutation.mutate,
+    updateAnchor: updateAnchorMutation.mutate,
     bulkUpdateStatus: bulkUpdateStatusMutation.mutate,
     applyLinks: applyLinksMutation.mutate,
     isApplyingLinks: applyLinksMutation.isPending,
+    deleteSuggestions: deleteSuggestionsMutation.mutate,
     getStats,
+    getHighRelevanceIds,
+    getApprovedIds,
   };
 }
