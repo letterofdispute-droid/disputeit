@@ -1,146 +1,137 @@
 
 
-# Auto-Suggest Category & Tags on Post Load
+# Multiple Middle Images with Random Assignment
 
-## Problem
+## Overview
 
-Currently, the category and tags have AI "sparkles" buttons that require manual clicking. The user wants these to be **automatically populated** when:
-1. Opening an existing post that lacks category/tags
-2. Creating a new post once title/content is available
+Enhance the blog system to support **1-2 middle images** that are randomly assigned during content generation, adding visual diversity throughout articles.
 
-## Solution Overview
+---
 
-Add automatic AI suggestion triggering in the `AdminBlogEditor` that:
-1. Detects when category or tags are missing but content is available
-2. Automatically calls the `suggest-category-tags` edge function
-3. Pre-populates the fields without user intervention
-4. Shows a subtle indicator that AI is working (loading state in sidebar)
+## Current State
+
+- Content generator inserts a single `{{MIDDLE_IMAGE}}` placeholder at ~40-50% of content
+- No database columns exist to store middle image URLs
+- No UI component for selecting middle images
+- No rendering logic for the placeholder
+
+---
+
+## Solution Design
+
+### Random Assignment Strategy
+
+When generating content, the AI will randomly decide:
+- **Option A (50% chance)**: Insert 1 middle image at ~45% through the content
+- **Option B (50% chance)**: Insert 2 middle images at ~33% and ~66% through the content
+
+Placeholders used:
+- `{{MIDDLE_IMAGE_1}}` - First (or only) middle image
+- `{{MIDDLE_IMAGE_2}}` - Second middle image (when applicable)
 
 ---
 
 ## Implementation Details
 
-### Changes to `AdminBlogEditor.tsx`
+### Part 1: Database Migration
 
-Add a new `useEffect` that triggers auto-suggestion:
+Add two new columns to `blog_posts`:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `middle_image_1_url` | text, nullable | First in-content image URL |
+| `middle_image_2_url` | text, nullable | Second in-content image URL |
+
+### Part 2: Update Content Generator
+
+Modify `generate-blog-content/index.ts`:
 
 ```text
-Trigger conditions:
-- Title exists (minimum 10 characters)
-- Content exists (minimum 50 characters) 
-- Category is empty OR tags array is empty
-- Not currently loading post data
-- Not already auto-suggesting
+AI Prompt Changes:
+- Randomly choose between 1 or 2 middle images
+- If 1 image: Insert {{MIDDLE_IMAGE_1}} at ~45% of content
+- If 2 images: Insert {{MIDDLE_IMAGE_1}} at ~33% and {{MIDDLE_IMAGE_2}} at ~66%
+- Each placeholder must be on its own line between paragraphs
 ```
 
-**Behavior:**
-1. Wait 1 second after conditions are met (debounce for typing)
-2. Call `suggest-category-tags` edge function
-3. If category is empty → auto-set the suggested category
-4. If tags are empty → auto-add the 2 suggested tags
-5. Show a brief toast: "AI filled in category and tags"
+### Part 3: Middle Image Picker Component
 
-**Edge cases handled:**
-- Skip if user already manually set category/tags
-- Don't override existing selections
-- Only run once per editing session (use ref to track)
+Create `MiddleImagePicker.tsx` that:
+- Detects which placeholders exist in content (`{{MIDDLE_IMAGE_1}}`, `{{MIDDLE_IMAGE_2}}`)
+- Shows separate image pickers for each detected placeholder
+- Uses different Pixabay offsets for variety (e.g., offset 8-12 for middle images)
+- Compact design since there may be 2 pickers
 
-### Flow Diagram
-
+**UI Layout (when 2 middle images exist):**
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ User opens/creates post                                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────┐                                          │
-│  │ Title + Content  │                                          │
-│  │ available?       │                                          │
-│  └────────┬─────────┘                                          │
-│           │ Yes                                                 │
-│           ▼                                                     │
-│  ┌──────────────────┐     ┌───────────────────────────────┐   │
-│  │ Category empty?  │ Yes │ Auto-call AI suggestion       │   │
-│  │ OR Tags empty?   │────▶│ Set category + add 2 tags     │   │
-│  └────────┬─────────┘     │ Show "AI filled in fields" ✓  │   │
-│           │ No            └───────────────────────────────┘   │
-│           ▼                                                    │
-│  ┌──────────────────┐                                          │
-│  │ Skip auto-fill   │                                          │
-│  │ (already set)    │                                          │
-│  └──────────────────┘                                          │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────┐
+│ Middle Images                          │
+│ These appear at placeholders in body   │
+├────────────────────────────────────────┤
+│ Image 1 (at ~33%)                      │
+│ ┌────┐ ┌────┐ ┌────┐ ┌────┐          │
+│ │ ✓  │ │    │ │    │ │    │          │
+│ └────┘ └────┘ └────┘ └────┘          │
+├────────────────────────────────────────┤
+│ Image 2 (at ~66%)                      │
+│ ┌────┐ ┌────┐ ┌────┐ ┌────┐          │
+│ │    │ │    │ │ ✓  │ │    │          │
+│ └────┘ └────┘ └────┘ └────┘          │
+├────────────────────────────────────────┤
+│ [Find More]              [Upload Both] │
+└────────────────────────────────────────┘
 ```
 
-### New State & Refs in AdminBlogEditor
+### Part 4: Editor Integration
 
-| State/Ref | Purpose |
-|-----------|---------|
-| `isAutoSuggesting` | Show loading indicator during auto-suggestion |
-| `hasAutoSuggested` (ref) | Prevent running auto-suggest multiple times per session |
+Update `AdminBlogEditor.tsx`:
+- Add `middleImage1Url` and `middleImage2Url` state
+- Detect placeholders in content to show appropriate pickers
+- Save/load to database
 
-### Auto-Suggest Logic
+### Part 5: Frontend Rendering
+
+Update `ArticlePage.tsx` to replace placeholders:
 
 ```typescript
-// New useEffect in AdminBlogEditor
-useEffect(() => {
-  // Skip if already ran, still loading, or no content
-  if (hasAutoSuggested.current || isLoading) return;
-  if (title.length < 10 || content.length < 50) return;
-  
-  // Skip if category AND tags are already set
-  if (category && tags.length > 0) return;
-  
-  // Debounce to avoid triggering while typing
-  const timer = setTimeout(async () => {
-    hasAutoSuggested.current = true;
-    setIsAutoSuggesting(true);
-    
-    try {
-      const { data } = await supabase.functions.invoke('suggest-category-tags', {
-        body: { title, content, availableCategories: [...] }
-      });
-      
-      if (!category && data.suggestedCategory) {
-        setCategory(data.suggestedCategory);
-      }
-      if (tags.length === 0 && data.suggestedTags?.length > 0) {
-        setTags(data.suggestedTags.slice(0, 2));
-      }
-      
-      toast({ title: '✨ AI filled in category & tags' });
-    } catch (e) {
-      // Silent fail - user can still manually set
-    } finally {
-      setIsAutoSuggesting(false);
-    }
-  }, 1000);
-  
-  return () => clearTimeout(timer);
-}, [title, content, category, tags.length, isLoading]);
-```
+// Replace middle image placeholders with actual images
+if (post.middle_image_1_url) {
+  html = html.replace(
+    /{{MIDDLE_IMAGE_1}}/g,
+    `<figure class="my-8">
+       <img src="${post.middle_image_1_url}" alt="" class="w-full rounded-xl shadow-md" />
+     </figure>`
+  );
+} else {
+  html = html.replace(/{{MIDDLE_IMAGE_1}}/g, '');
+}
 
-### UI Feedback
+if (post.middle_image_2_url) {
+  html = html.replace(
+    /{{MIDDLE_IMAGE_2}}/g,
+    `<figure class="my-8">
+       <img src="${post.middle_image_2_url}" alt="" class="w-full rounded-xl shadow-md" />
+     </figure>`
+  );
+} else {
+  html = html.replace(/{{MIDDLE_IMAGE_2}}/g, '');
+}
 
-Add a subtle loading indicator in the sidebar when auto-suggesting:
-
-```text
-┌──────────────────────────────────────┐
-│ Category                    ✨       │
-│ ┌────────────────────────────────┐  │
-│ │ Consumer Rights           ▼   │  │ ← auto-selected
-│ └────────────────────────────────┘  │
-│                                      │
-│ AI analyzing content...              │ ← shown during auto-suggest
-└──────────────────────────────────────┘
+// Also handle legacy {{MIDDLE_IMAGE}} placeholder
+html = html.replace(/{{MIDDLE_IMAGE}}/g, '');
 ```
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/admin/AdminBlogEditor.tsx` | Add auto-suggest useEffect, loading state, and category fetch for AI call |
+| File | Action | Description |
+|------|--------|-------------|
+| Database migration | CREATE | Add `middle_image_1_url` and `middle_image_2_url` columns |
+| `supabase/functions/generate-blog-content/index.ts` | MODIFY | Add random 1-2 image placeholder logic |
+| `src/components/admin/blog/MiddleImagePicker.tsx` | CREATE | New component for selecting 1-2 middle images |
+| `src/pages/admin/AdminBlogEditor.tsx` | MODIFY | Add middle image state, detection, and component |
+| `src/pages/ArticlePage.tsx` | MODIFY | Replace placeholders with actual images |
 
 ---
 
@@ -148,11 +139,30 @@ Add a subtle loading indicator in the sidebar when auto-suggesting:
 
 | Scenario | Result |
 |----------|--------|
-| New post, title + content entered | Auto-fill category + 2 tags after 1s |
-| Editing post with missing category | Auto-suggest category only |
-| Editing post with category but no tags | Auto-suggest 2 tags only |
-| Editing post with both set | Skip auto-suggestion entirely |
-| User manually sets before auto-suggest | Respects user's choice |
+| New content generation | AI randomly inserts 1 or 2 placeholders |
+| Editing post with 1 placeholder | Show 1 image picker |
+| Editing post with 2 placeholders | Show 2 image pickers |
+| No placeholders in content | Hide middle image section |
+| Images selected | Saved to database, rendered in article |
+| Images not selected | Placeholders removed from rendered output |
 
-This eliminates the need to click any sparkles buttons - the AI works behind the scenes automatically.
+---
+
+## Expected Result
+
+### Content Generation
+- ~50% of articles get 1 middle image
+- ~50% of articles get 2 middle images
+- Natural distribution of visuals throughout content
+
+### Blog Editor
+- Compact image picker that adapts to placeholder count
+- Each picker shows 4 Pixabay suggestions
+- Different images suggested for each slot
+- Upload option available
+
+### Published Article
+- Full-width, rounded images at placeholder locations
+- Proper spacing and styling
+- No visible placeholder text if images are missing
 
