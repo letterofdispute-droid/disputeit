@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,9 +32,16 @@ interface BulkGenerateParams {
   wordCount?: number;
 }
 
+interface GenerationProgress {
+  current: number;
+  total: number;
+  currentTitle?: string;
+}
+
 export function useContentQueue(planId?: string, categoryId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
 
   // Fetch queue items with optional filtering
   const { data: queueItems, isLoading, error, refetch } = useQuery({
@@ -65,20 +73,30 @@ export function useContentQueue(planId?: string, categoryId?: string) {
 
       return data as ContentQueueItem[];
     },
+    // Poll while generating for real-time updates
+    refetchInterval: generationProgress ? 3000 : false,
   });
 
-  // Bulk generate articles
+  // Bulk generate articles with progress tracking
   const bulkGenerateMutation = useMutation({
     mutationFn: async (params: BulkGenerateParams) => {
+      const itemIds = params.queueItemIds || [];
+      const total = itemIds.length;
+      
+      // Set initial progress
+      setGenerationProgress({ current: 0, total });
+
       const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
         body: params,
       });
 
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Failed to generate articles');
+      
       return data;
     },
     onSuccess: (data) => {
+      setGenerationProgress(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       toast({
@@ -87,8 +105,47 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       });
     },
     onError: (error) => {
+      setGenerationProgress(null);
       toast({
         title: 'Generation failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Retry failed items
+  const retryFailedMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // First, reset status to 'queued' for failed items
+      const { error: updateError } = await supabase
+        .from('content_queue')
+        .update({ status: 'queued', error_message: null })
+        .in('id', ids);
+      
+      if (updateError) throw updateError;
+
+      // Then trigger bulk generation
+      const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
+        body: { queueItemIds: ids, batchSize: ids.length },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to retry articles');
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+      toast({
+        title: 'Retry complete',
+        description: `Retried ${data.succeeded} articles, ${data.failed} failed`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Retry failed',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -127,7 +184,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
   });
 
   // Get stats
-  const getStats = () => {
+  const getStats = useCallback(() => {
     if (!queueItems) return { queued: 0, generating: 0, generated: 0, published: 0, failed: 0 };
     
     return {
@@ -137,7 +194,12 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       published: queueItems.filter(i => i.status === 'published').length,
       failed: queueItems.filter(i => i.status === 'failed').length,
     };
-  };
+  }, [queueItems]);
+
+  // Get failed item IDs
+  const getFailedIds = useCallback(() => {
+    return queueItems?.filter(i => i.status === 'failed').map(i => i.id) || [];
+  }, [queueItems]);
 
   return {
     queueItems,
@@ -146,8 +208,12 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     refetch,
     bulkGenerate: bulkGenerateMutation.mutate,
     isBulkGenerating: bulkGenerateMutation.isPending,
+    retryFailed: retryFailedMutation.mutate,
+    isRetrying: retryFailedMutation.isPending,
     updateStatus: updateStatusMutation.mutate,
     deleteItems: deleteItemsMutation.mutate,
     getStats,
+    getFailedIds,
+    generationProgress,
   };
 }
