@@ -25,7 +25,7 @@ export const neighborHousingDisputeTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Your Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'City', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Postcode', type: 'text', required: true, impactLevel: 'important' },
+      { id: 'propertyZipCode', label: 'ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'noiseSource', label: 'Noise Source', type: 'text', required: true, placeholder: 'e.g., Flat above, Unit 5B', impactLevel: 'critical' },
       { id: 'noiseType', label: 'Type of Noise', type: 'select', options: ['Loud music', 'Parties', 'Shouting/arguing', 'Footsteps/stomping', 'TV/stereo', 'Pet noise', 'DIY/construction', 'Other'], required: true, impactLevel: 'critical' },
       { id: 'noiseDescription', label: 'Description', type: 'textarea', required: true, impactLevel: 'critical', aiEnhanced: true, evidenceHint: 'Note decibel level if you can measure, or compare to everyday sounds' },

@@ -25,7 +25,7 @@ export const safetyComplianceTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Property Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'City', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Postcode', type: 'text', required: true, impactLevel: 'important' },
+  { id: 'propertyZipCode', label: 'ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'tenancyStartDate', label: 'Tenancy Start Date', type: 'date', required: true, impactLevel: 'critical', evidenceHint: 'EPC should have been provided at or before tenancy start' },
     ],
     sections: [

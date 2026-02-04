@@ -25,7 +25,7 @@ export const tenancyDisputeTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Property Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'City', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Postcode', type: 'text', required: true, impactLevel: 'important' },
+  { id: 'propertyZipCode', label: 'ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'currentTenancyEnd', label: 'Current Tenancy End Date', type: 'date', required: true, impactLevel: 'critical', evidenceHint: 'Check your tenancy agreement for exact date' },
       { id: 'desiredTermLength', label: 'Desired New Term', type: 'select', options: ['6 months', '12 months', '24 months', 'Rolling/Periodic'], required: true, impactLevel: 'important' },
       { id: 'additionalRequests', label: 'Additional Requests', type: 'textarea', required: false, impactLevel: 'helpful', aiEnhanced: true },

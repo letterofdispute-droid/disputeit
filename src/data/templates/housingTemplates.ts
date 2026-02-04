@@ -31,7 +31,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name (Tenant)', type: 'text', required: true, placeholder: 'Your full name', impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Property Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'Property City/Town', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Property Postcode', type: 'text', required: true, impactLevel: 'important' },
+      { id: 'propertyZipCode', label: 'Property ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'repairIssue', label: 'Repair Issue Description', type: 'textarea', required: true, impactLevel: 'critical', aiEnhanced: true, evidenceHint: 'Describe location, severity, and impact on habitability' },
       { id: 'dateReported', label: 'Date First Reported', type: 'date', required: true, impactLevel: 'critical', evidenceHint: 'Check emails, texts, or call logs for first report date' },
     ],

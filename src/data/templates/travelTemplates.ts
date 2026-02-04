@@ -201,7 +201,7 @@ export const travelTemplates: LetterTemplate[] = [
       { id: 'baggageTagNumber', label: 'Baggage Tag Number', type: 'text', required: true, placeholder: 'e.g., BA123456', validation: { format: 'bagTag' }, impactLevel: 'critical' },
       { id: 'baggageBrand', label: 'Baggage Brand', type: 'text', required: true, placeholder: 'e.g., Samsonite', impactLevel: 'important' },
       { id: 'baggageModel', label: 'Baggage Model', type: 'text', required: false, placeholder: 'Model name if known', impactLevel: 'helpful' },
-      { id: 'baggageColour', label: 'Baggage Colour', type: 'text', required: true, placeholder: 'e.g., Black', impactLevel: 'important' },
+      { id: 'baggageColor', label: 'Baggage Color', type: 'text', required: true, placeholder: 'e.g., Black', impactLevel: 'important' },
       { id: 'baggageAge', label: 'Age of Baggage', type: 'text', required: false, placeholder: 'e.g., 2 years old', impactLevel: 'important', helpText: 'Affects depreciation calculation for older bags' },
       { id: 'originalPurchasePrice', label: 'Original Purchase Price', type: 'text', required: false, placeholder: 'e.g., £200', validation: { format: 'currency' }, impactLevel: 'important', evidenceHint: 'Receipt or bank statement helps' },
       { id: 'damageType', label: 'Type of Damage', type: 'select', required: true, options: ['Broken wheel(s)', 'Broken handle', 'Torn fabric', 'Cracked shell', 'Broken zipper', 'Broken lock', 'Multiple damage', 'Other'], impactLevel: 'critical' },

@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'FCC Regulations', approvedPhrases: ['Under FCC regulations', 'In accordance with applicable state utility laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with Ofcom regulations'] },
   { code: 'EU', name: 'European Union', legalReference: 'EU Consumer Rights Directive', approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'FCC Regulations', approvedPhrases: ['Under FCC regulations', 'In accordance with applicable state utility laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 
