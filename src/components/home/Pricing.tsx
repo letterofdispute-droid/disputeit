@@ -2,6 +2,7 @@ import { Check, FileText, FileEdit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
+import { trackCTAClick } from '@/hooks/useGTM';
 
 const options = [
   {
@@ -93,6 +94,7 @@ const Pricing = () => {
                   variant={option.popular ? 'accent' : 'outline'}
                   className="w-full"
                   asChild
+                  onClick={() => trackCTAClick(`pricing_${option.name.toLowerCase().replace(' ', '_')}`, 'pricing_section')}
                 >
                   <Link to="/#letters">
                     Create Letter

@@ -22,6 +22,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
+import { trackTemplateView } from '@/hooks/useGTM';
 
 const LetterPage = () => {
   const { categoryId, subcategorySlug, templateSlug } = useParams<{ 
@@ -48,6 +49,13 @@ const LetterPage = () => {
       img.src = largeUrl;
     }
   }, [largeUrl]);
+
+  // Track template view
+  useEffect(() => {
+    if (template && category) {
+      trackTemplateView(template.slug, category.id, template.title);
+    }
+  }, [template?.slug, category?.id, template?.title]);
 
   if (!template || !category) {
     return <Navigate to="/404" replace />;

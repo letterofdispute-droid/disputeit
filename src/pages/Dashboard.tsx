@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import PurchasedLetterCard from '@/components/dashboard/PurchasedLetterCard';
+import { trackDashboardView } from '@/hooks/useGTM';
 
 interface UserLetter {
   id: string;
@@ -39,12 +40,21 @@ const Dashboard = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasesLoading, setIsPurchasesLoading] = useState(true);
+  const dashboardViewedRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/login');
     }
   }, [user, authLoading, navigate]);
+
+  // Track dashboard view once when user is loaded
+  useEffect(() => {
+    if (user && !dashboardViewedRef.current) {
+      dashboardViewedRef.current = true;
+      trackDashboardView();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {

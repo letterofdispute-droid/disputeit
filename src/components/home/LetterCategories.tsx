@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { templateCategories, getTotalTemplateCount } from '@/data/templateCategories';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
+import { trackCategoryCardClick } from '@/hooks/useGTM';
 
 interface CategoryCardProps {
   category: typeof templateCategories[0];
@@ -16,11 +17,16 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
     category.name
   );
 
+  const handleClick = () => {
+    trackCategoryCardClick(category.id, category.name);
+  };
+
   return (
     <Link
       to={`/templates/${category.id}`}
       className="group block"
       aria-label={`${category.name} letter templates`}
+      onClick={handleClick}
     >
       <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">
         {/* Background Image */}

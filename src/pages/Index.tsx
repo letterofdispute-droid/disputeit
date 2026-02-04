@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import Hero from '@/components/home/Hero';
 import WhatIsDisputeLetter from '@/components/home/WhatIsDisputeLetter';
@@ -9,8 +10,13 @@ import HowItWorks from '@/components/home/HowItWorks';
 import TrustIndicators from '@/components/home/TrustIndicators';
 import Pricing from '@/components/home/Pricing';
 import FAQ from '@/components/home/FAQ';
+import { trackHomepageView } from '@/hooks/useGTM';
 
 const Index = () => {
+  useEffect(() => {
+    trackHomepageView();
+  }, []);
+
   return (
     <Layout>
       <Hero />

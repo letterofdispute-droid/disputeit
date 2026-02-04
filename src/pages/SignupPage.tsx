@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -12,6 +12,7 @@ import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { lovable } from '@/integrations/lovable';
+import { trackSignupStarted, trackSignupComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
 const benefits = [
   'Save and manage your letters',
@@ -31,6 +32,10 @@ const SignupPage = () => {
   const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    trackSignupStarted();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +60,7 @@ const SignupPage = () => {
         variant: 'destructive',
       });
     } else {
+      trackSignupComplete('email');
       toast({
         title: 'Account created!',
         description: 'Welcome to DisputeLetters.',
@@ -67,6 +73,7 @@ const SignupPage = () => {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    trackGoogleAuthClick('signup');
     
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
