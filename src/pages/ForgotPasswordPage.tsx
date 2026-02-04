@@ -10,6 +10,7 @@ import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +18,7 @@ const ForgotPasswordPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const { toast } = useToast();
+  const { verifyRecaptcha } = useRecaptcha();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +26,18 @@ const ForgotPasswordPage = () => {
     if (cooldown > 0) return;
     
     setIsLoading(true);
+
+    // Verify reCAPTCHA first
+    const recaptchaResult = await verifyRecaptcha('forgot_password');
+    if (!recaptchaResult.success) {
+      toast({
+        title: 'Verification failed',
+        description: recaptchaResult.error || 'Please try again.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -57,6 +71,18 @@ const ForgotPasswordPage = () => {
   const handleResend = async () => {
     if (cooldown > 0) return;
     setIsLoading(true);
+
+    // Verify reCAPTCHA first
+    const recaptchaResult = await verifyRecaptcha('forgot_password_resend');
+    if (!recaptchaResult.success) {
+      toast({
+        title: 'Verification failed',
+        description: recaptchaResult.error || 'Please try again.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
