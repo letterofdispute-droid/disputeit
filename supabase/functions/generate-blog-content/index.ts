@@ -73,7 +73,7 @@ CONTENT REQUIREMENTS:
 - ${toneInstruction}
 - Naturally incorporate the primary keywords 2-3+ times each throughout the article
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords
-- Write for UK readers who need help with disputes and complaints
+- Write for US readers who need help with disputes and complaints
 - Include actionable advice and practical steps
 - Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
 ${relevantCategory ? `- This article relates to our ${relevantCategory.name} category (${relevantCategory.description})` : ''}
