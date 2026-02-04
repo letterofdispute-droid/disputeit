@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.expert_professional;
     const keywordList = keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
-    const targetWordCount = requestedWordCount || 1500;
+    const targetWordCount = Math.max(requestedWordCount || 1200, 1200);
 
     // Find relevant category for context
     const relevantCategory = categorySlug 
