@@ -1,99 +1,184 @@
 
-
-# Fix: GTM Not Loading in Production Build
+# UK to US Market Focus: Site-Wide Content Correction
 
 ## Problem Identified
 
-The GTM script is correctly placed in `index.html`, but the **production build at `letterofdispute.com`** is missing the GTM scripts entirely. The HTML source you shared shows:
-- No GTM head script
-- No GTM noscript fallback
-- The page starts with meta tags instead of the GTM script
+The screenshot shows the Dispute Assistant saying: **"you still have rights under UK consumer law regarding 'reasonable time'"** - but you're targeting the **US market**.
 
-This indicates the build/deploy pipeline is not including the GTM scripts from `index.html` in the final output.
+After exploring the codebase, I found **UK-centric content throughout 80+ files**:
+
+### Key Issues Found
+
+1. **AI Context Files (Root Cause)** - `supabase/functions/_shared/siteContext.ts`
+   - Tagline: "Professional dispute and complaint letter templates for **UK consumers**"
+   - Describes platform as "UK-focused"
+   - Blog writer context: "Write for **UK readers**", "Use **British English spelling**"
+   - Dispute Assistant context: "helping **UK consumers**", "recommend consulting a **solicitor**"
+
+2. **Jurisdiction Configuration** - All 43+ template files list UK as the **first** jurisdiction option (appearing as default)
+
+3. **Legal References** - Heavy emphasis on UK laws:
+   - Consumer Rights Act 2015 (UK)
+   - Landlord and Tenant Act 1985 (UK)
+   - Financial Ombudsman Service (UK)
+   - Environmental Health (UK)
+   - Trading Standards (UK)
+
+4. **Terminology** - British spellings and terms:
+   - "Postcode" instead of "ZIP code"
+   - "Neighbour" instead of "Neighbor"
+   - "colour" instead of "color"
+   - "solicitor" instead of "attorney/lawyer"
+   - "ombudsman" (UK-specific)
+
+5. **Category Knowledge** - `src/data/categoryKnowledge.ts`:
+   - UK regulatory bodies listed first
+   - UK-specific escalation paths
+   - References to UK acts and tribunals
+
+6. **Jurisdiction Phrases** - `src/data/jurisdictionPhrases.ts`:
+   - UK is first in the array (default selection)
+   - UK-specific escalation paths throughout
 
 ---
 
-## Root Cause
+## Solution
 
-The Lovable build system may be transforming or replacing the `index.html` content during deployment. The `scripts/inject-homepage-content.mjs` script modifies the built HTML, but the issue occurs earlier - the GTM scripts are never reaching the final build.
+Make the site US-first while keeping international support:
 
----
+### Phase 1: AI Context Updates (Immediate Impact)
 
-## Solution: Initialize GTM from React
+**File: `supabase/functions/_shared/siteContext.ts`**
 
-Instead of relying solely on inline scripts in `index.html`, we will **inject GTM dynamically from JavaScript** when the app starts. This guarantees GTM loads regardless of how the HTML is processed.
+| Current | New |
+|---------|-----|
+| "UK consumers" | "American consumers" |
+| "UK-focused platform" | "US-focused platform" |
+| "British English spelling" | "American English spelling" |
+| "consult a solicitor" | "consult an attorney" |
+| "UK consumer rights focus" | "US consumer rights focus" |
+| UK regulations listed first | US regulations listed first |
 
----
+### Phase 2: Jurisdiction Order Changes
 
-## Implementation
-
-### 1. Update `src/main.tsx`
-
-Add GTM initialization before React renders:
-
-```typescript
-// Initialize GTM
-const initGTM = () => {
-  if (typeof window !== 'undefined' && !window.dataLayer) {
-    // Create dataLayer
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      'gtm.start': new Date().getTime(),
-      event: 'gtm.js'
-    });
-
-    // Inject GTM script
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-WX8PKJXH';
-    document.head.insertBefore(script, document.head.firstChild);
-
-    // Inject noscript iframe
-    const noscript = document.createElement('noscript');
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://www.googletagmanager.com/ns.html?id=GTM-WX8PKJXH';
-    iframe.height = '0';
-    iframe.width = '0';
-    iframe.style.display = 'none';
-    iframe.style.visibility = 'hidden';
-    noscript.appendChild(iframe);
-    document.body.insertBefore(noscript, document.body.firstChild);
-  }
-};
-
-// Initialize GTM immediately
-initGTM();
+**All 43+ template files** - Reorder jurisdictions array:
+```text
+Current: [UK, EU, US, INTL]
+New:     [US, UK, EU, INTL]
 ```
 
-### 2. Keep `index.html` Scripts (Belt and Suspenders)
+This affects how default jurisdiction is selected.
 
-Keep the existing GTM scripts in `index.html` as a fallback. If they work, great. If not, the JavaScript initialization will handle it.
+### Phase 3: Terminology Updates
+
+| British | American |
+|---------|----------|
+| Postcode | ZIP Code |
+| Neighbour | Neighbor |
+| colour | color |
+| favour | favor |
+| solicitor | attorney/lawyer |
+| ombudsman | state agency / commissioner |
+
+### Phase 4: Legal Reference Priority
+
+Reorder legal references to prioritize US laws:
+- FTC Act
+- State Consumer Protection Laws
+- Magnuson-Moss Warranty Act
+- Fair Credit Reporting Act (FCRA)
+- Fair Debt Collection Practices Act (FDCPA)
+- State Lemon Laws
+
+### Phase 5: Category Knowledge Updates
+
+**File: `src/data/categoryKnowledge.ts`**
+
+- Reorder `regulatoryBodies` arrays to put US bodies first
+- Update escalation paths to prioritize US agencies:
+  - FTC
+  - State Attorney General
+  - Better Business Bureau
+  - State Insurance Commissioner
+  - CFPB (Consumer Financial Protection Bureau)
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/main.tsx` | Add GTM initialization function at the top, before React renders |
+| File | Changes |
+|------|---------|
+| `supabase/functions/_shared/siteContext.ts` | Complete rewrite for US focus |
+| `src/data/jurisdictionPhrases.ts` | Reorder US first, update terminology |
+| `src/data/categoryKnowledge.ts` | US regulatory bodies first, US escalation paths |
+| 43+ template files in `src/data/templates/` | Reorder jurisdiction arrays to US first |
+| `src/data/templates/hoa/*` | Change "Neighbour" to "Neighbor" |
+| Various vehicle templates | "Postcode" to "ZIP Code", "colour" to "color" |
 
 ---
 
-## Why This Works
+## Technical Details
 
-1. **Guaranteed execution**: The script runs as part of the JavaScript bundle, which is definitely loaded
-2. **No HTML parsing issues**: Bypasses any build-time HTML transformation
-3. **Same functionality**: Creates `dataLayer` and loads GTM script exactly as the inline version would
-4. **Idempotent**: Checks if `dataLayer` exists before initializing, preventing double-loading
+### siteContext.ts Changes
+
+```typescript
+// Before
+tagline: 'Professional dispute and complaint letter templates for UK consumers',
+
+// After
+tagline: 'Professional dispute and complaint letter templates for US consumers',
+
+// Before
+- References to UK consumer rights law
+- Use British English spelling (colour, favour, organise, etc.)
+- Reference UK-specific regulations: Consumer Rights Act 2015...
+
+// After
+- References to US consumer protection law
+- Use American English spelling (color, favor, organize, etc.)
+- Reference US-specific regulations: FTC Act, Magnuson-Moss...
+```
+
+### Jurisdiction Array Reordering
+
+Each template file currently has:
+```typescript
+const standardJurisdictions = [
+  { code: 'UK', name: 'United Kingdom', ... },
+  { code: 'EU', name: 'European Union', ... },
+  { code: 'US', name: 'United States', ... },
+  { code: 'INTL', name: 'International / Other', ... },
+];
+```
+
+Will become:
+```typescript
+const standardJurisdictions = [
+  { code: 'US', name: 'United States', ... },
+  { code: 'UK', name: 'United Kingdom', ... },
+  { code: 'EU', name: 'European Union', ... },
+  { code: 'INTL', name: 'International / Other', ... },
+];
+```
 
 ---
 
-## Verification Steps
+## Why This Matters
 
-After implementation:
-1. Publish the site
-2. Visit `letterofdispute.com`
-3. Open browser console and type `window.dataLayer` - should show an array with `gtm.start`
-4. Check Network tab for request to `googletagmanager.com`
-5. GA4 should then detect the tag
+1. **Dispute Assistant** will reference US law instead of UK law
+2. **Default jurisdiction** on forms will be US
+3. **Blog content** will be written for American readers
+4. **Legal references** will prioritize US regulations
+5. **Terminology** will use American spellings
 
+---
+
+## Scope
+
+This is a substantial update affecting:
+- 1 edge function context file
+- 2 core data files
+- 43+ template files
+- Approximately 100+ individual text changes
+
+The changes are mostly find-and-replace operations with consistent patterns.
