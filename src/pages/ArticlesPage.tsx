@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -9,6 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, BookOpen, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
+const POSTS_PER_PAGE = 12;
 
 interface BlogPost {
   slug: string;
@@ -26,6 +30,9 @@ interface BlogPost {
 }
 
 const ArticlesPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
+
   // Fetch blog posts from database
   const { data: dbPosts, isLoading } = useQuery({
     queryKey: ['blog-posts'],
@@ -82,7 +89,17 @@ const ArticlesPage = () => {
   };
 
   const featuredPosts = posts.filter(post => post.featured);
-  const regularPosts = posts.filter(post => !post.featured);
+  const allRegularPosts = posts.filter(post => !post.featured);
+  
+  // Pagination
+  const totalPages = Math.ceil(allRegularPosts.length / POSTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const regularPosts = allRegularPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setSearchParams({ page: page.toString() });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Calculate reading time if not provided
   const getReadTime = (post: BlogPost) => {
@@ -294,6 +311,60 @@ const ArticlesPage = () => {
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No articles published yet. Check back soon!</p>
               </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-12">
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        className="cursor-pointer"
+                      />
+                    </PaginationItem>
+                  )}
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    // Show first, last, current, and adjacent pages
+                    const showPage = page === 1 || page === totalPages || 
+                      Math.abs(page - currentPage) <= 1;
+                    
+                    if (!showPage) {
+                      // Show ellipsis only once between gaps
+                      if (page === 2 && currentPage > 3) {
+                        return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
+                      }
+                      if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                        return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
+                      }
+                      return null;
+                    }
+                    
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(page)}
+                          isActive={page === currentPage}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className="cursor-pointer"
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
             )}
           </div>
         </section>
