@@ -168,80 +168,154 @@
   }
 
   /* Enhanced prose styling for articles */
+  
+  /* Heading hierarchy with visual accents */
+  .prose h2 {
+    @apply text-2xl md:text-3xl mt-12 mb-6 pb-3 border-b border-border font-serif font-bold;
+    color: hsl(var(--foreground));
+  }
+
+  .prose h3 {
+    @apply text-xl md:text-2xl mt-10 mb-4 pl-4 border-l-4 border-primary/30 font-serif font-semibold;
+    color: hsl(var(--foreground));
+  }
+
+  .prose h4 {
+    @apply text-lg md:text-xl mt-8 mb-3 font-serif font-semibold;
+    color: hsl(var(--foreground));
+  }
+
+  /* Paragraph spacing and rhythm */
+  .prose p {
+    @apply my-5 leading-relaxed;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose > p:first-of-type {
+    @apply text-lg leading-relaxed;
+  }
+
+  /* Blockquotes with premium styling */
   .prose blockquote {
-    @apply border-l-4 border-primary/30 pl-6 italic my-6 bg-muted/30 py-4 pr-4 rounded-r-lg;
+    @apply border-l-4 border-primary/30 pl-6 italic my-8 bg-muted/30 py-5 pr-6 rounded-r-lg;
     color: hsl(var(--muted-foreground));
   }
 
   .prose blockquote p {
-    @apply mb-0;
+    @apply mb-0 text-base;
   }
 
+  /* Unordered lists with proper spacing */
   .prose ul {
-    @apply list-disc pl-6 my-4 space-y-2;
+    @apply list-none pl-0 my-8 space-y-4;
   }
 
-  .prose ol {
-    @apply list-decimal pl-6 my-4 space-y-2;
-  }
-
-  .prose li {
-    @apply leading-relaxed;
+  .prose ul > li {
+    @apply pl-8 relative leading-relaxed;
     color: hsl(var(--muted-foreground));
   }
 
-  .prose li::marker {
-    color: hsl(var(--primary));
+  .prose ul > li::before {
+    content: "";
+    @apply absolute left-0 top-2.5 w-2 h-2 bg-primary rounded-full;
   }
 
+  /* Ordered lists with styled counters */
+  .prose ol {
+    counter-reset: item;
+    @apply list-none pl-0 my-8 space-y-4;
+  }
+
+  .prose ol > li {
+    counter-increment: item;
+    @apply pl-12 relative leading-relaxed;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose ol > li::before {
+    content: counter(item);
+    @apply absolute left-0 top-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold;
+  }
+
+  /* Nested lists */
+  .prose ul ul,
+  .prose ol ol,
+  .prose ul ol,
+  .prose ol ul {
+    @apply my-3 ml-4;
+  }
+
+  /* Code styling */
   .prose code {
-    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+    @apply bg-muted px-2 py-1 rounded text-sm font-mono;
     color: hsl(var(--foreground));
   }
 
   .prose pre {
-    @apply bg-muted p-4 rounded-lg overflow-x-auto my-6;
+    @apply bg-muted p-5 rounded-xl overflow-x-auto my-8;
   }
 
   .prose pre code {
     @apply bg-transparent p-0;
   }
 
+  /* Horizontal rules */
   .prose hr {
-    @apply my-8 border-border;
+    @apply my-12 border-border;
   }
 
+  /* Strong/Bold text */
   .prose strong,
   .prose b {
     @apply font-semibold;
     color: hsl(var(--foreground));
   }
 
+  /* Tables with premium styling */
   .prose table {
-    @apply w-full my-6 border-collapse;
+    @apply w-full my-8 border-collapse rounded-lg overflow-hidden;
   }
 
   .prose th {
-    @apply bg-muted px-4 py-2 text-left font-semibold border border-border;
+    @apply bg-primary/10 px-4 py-3 text-left font-semibold border border-border;
     color: hsl(var(--foreground));
   }
 
   .prose td {
-    @apply px-4 py-2 border border-border;
+    @apply px-4 py-3 border border-border;
     color: hsl(var(--muted-foreground));
   }
 
+  .prose tr:nth-child(even) {
+    @apply bg-muted/30;
+  }
+
+  /* Figures and images */
   .prose figure {
-    @apply my-6;
+    @apply my-10;
   }
 
   .prose figcaption {
-    @apply text-center text-sm mt-2;
+    @apply text-center text-sm mt-3;
     color: hsl(var(--muted-foreground));
   }
 
   .prose img {
-    @apply rounded-lg my-6;
+    @apply rounded-xl my-8 shadow-md;
+  }
+
+  /* Links */
+  .prose a {
+    @apply text-primary font-medium underline-offset-2 hover:underline;
+  }
+
+  /* Article middle image styling */
+  .article-middle-image {
+    @apply my-10 rounded-xl overflow-hidden shadow-lg;
+  }
+
+  .article-middle-image img {
+    @apply w-full h-auto my-0;
   }
 }
 
