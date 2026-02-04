@@ -1,503 +1,218 @@
 
-# SEO Content Command Center - Implementation Plan
+# Diverse & Human-Sounding Content Titles - Implementation Plan
 
-## Executive Summary
+## Problem Analysis
 
-Building an enterprise-grade SEO content orchestration system that treats each of your 450+ templates as a "conversion hub" with AI-powered content clusters. The system will manage a three-tier content hierarchy (Templates > Guides > Blog Articles), enable bulk generation, and intelligently handle internal linking post-creation.
+You're right - the current system exposes the formulaic nature of the content strategy in two ways:
+
+1. **Visible Templates in UI**: The ClusterPlanner displays static patterns like `"Template: How to {action} {topic} Step-by-Step"` before any AI generation occurs
+2. **Repetitive AI Output**: The prompt to generate titles doesn't emphasize variation, so "How to File a Poor Workmanship Complaint Step-by-Step" looks nearly identical to "How to File a Contractor Deposit Dispute Step-by-Step"
+
+## Solution Overview
+
+Transform the content planning from **template-based** to **AI-first with diversity requirements** by:
+
+1. Removing visible title templates from the UI entirely
+2. Enhancing the AI prompt with explicit diversity and human language instructions
+3. Adding title variation patterns that the AI can choose from (not displayed to users)
+4. Including "anti-pattern" detection to ensure adjacent templates don't share similar title structures
 
 ---
 
-## Architecture Overview
+## Changes to Make
+
+### 1. Update Article Types Configuration
+
+**File: `src/config/articleTypes.ts`**
+
+Instead of showing a single `titleTemplate`, store multiple variation patterns internally (never displayed) and add descriptive guidance for each type:
 
 ```text
-                           ┌────────────────────────────────────────────┐
-                           │        SEO CONTENT COMMAND CENTER          │
-                           │           /admin/seo-dashboard             │
-                           └─────────────────────┬──────────────────────┘
-                                                 │
-          ┌──────────────────────────────────────┼──────────────────────────────────────┐
-          │                                      │                                       │
-          ▼                                      ▼                                       ▼
-┌─────────────────────┐           ┌─────────────────────────┐           ┌─────────────────────────┐
-│   CONTENT PLANNER   │           │    BULK GENERATOR       │           │   LINK INTELLIGENCE     │
-│                     │           │                         │           │                         │
-│ • Template Map      │           │ • Queue Management      │           │ • Content Scanner       │
-│ • Cluster Designer  │           │ • Article Types         │           │ • Anchor Suggestions    │
-│ • Gap Analysis      │           │ • Batch Processing      │           │ • Bulk Link Injection   │
-│ • Calendar View     │           │ • Image Selection       │           │ • Link Health Monitor   │
-└─────────────────────┘           └─────────────────────────┘           └─────────────────────────┘
+Current:
+  titleTemplate: 'How to {action} {topic} Step-by-Step'
+
+New:
+  titleVariations: [
+    'How to {action} {topic} Step-by-Step',
+    '{topic}: A Complete Step-by-Step Guide',
+    'The Ultimate Guide to {action} Your {topic}',
+    '{topic} Made Simple: What You Need to Do',
+    'Everything You Need to Know About {action} {topic}'
+  ]
+  displayHint: 'Step-by-step instructions for taking action'
 ```
 
----
+This gives the AI multiple patterns to choose from while showing users only a generic description.
 
-## Three-Tier Content Hierarchy
+### 2. Update ClusterPlanner UI
 
-### Tier 1: Templates (450+ existing)
-- **Purpose:** Conversion points (purchase letters)
-- **SEO Role:** Target transactional keywords
-- **URL Structure:** `/templates/:category/:subcategory/:slug`
-- **Links TO:** Related articles, guides
-- **Links FROM:** All supporting content
+**File: `src/components/admin/seo/ClusterPlanner.tsx`**
 
-### Tier 2: Guides (13 existing)
-- **Purpose:** Authority/trust building
-- **SEO Role:** Target informational "rights" keywords
-- **URL Structure:** `/guides/:category`
-- **Links TO:** Templates, articles
-- **Links FROM:** Articles
+- **Remove** the italic "Template: ..." line that exposes the formula
+- **Keep** the article type name and purpose (e.g., "How-To Guide - Step-by-step instructions")
+- Add a subtle note: "AI will generate unique, SEO-optimized titles"
 
-### Tier 3: Blog Articles (unlimited)
-- **Purpose:** Traffic magnets, long-tail capture
-- **SEO Role:** Target awareness/how-to keywords
-- **URL Structure:** `/articles/:category/:slug`
-- **Links TO:** Templates (primary), guides, other articles
-- **Links FROM:** External sites, social
+Visual change:
+```text
+Before:
+┌──────────────────────────────────────────────────────────┐
+│ ☑ How-To Guide                                           │
+│   Step-by-step instructions                              │
+│   Template: How to {action} {topic} Step-by-Step    ❌   │
+└──────────────────────────────────────────────────────────┘
 
----
-
-## Content Cluster Strategy (8-10 Articles per Template)
-
-### Article Type Matrix
-
-| Type | Purpose | Example for "Flight Delay Compensation" |
-|------|---------|----------------------------------------|
-| How-To Guide | Step-by-step instructions | "How to Claim EU261 Compensation Step-by-Step" |
-| Mistakes to Avoid | Prevent common errors | "7 Mistakes That Get Flight Delay Claims Rejected" |
-| Rights Explainer | Educational authority | "Your Rights Under EU261: What Airlines Won't Tell You" |
-| Sample/Example | Show real scenarios | "Flight Delay Compensation Letter Examples That Worked" |
-| FAQ/Q&A | Capture question keywords | "Flight Delay Compensation FAQ: 15 Questions Answered" |
-| Case Study | Social proof/scenarios | "How Sarah Got 600 Compensation After 5-Hour Delay" |
-| Comparison | Decision support | "EU261 vs Montreal Convention: Which Applies to Your Delay?" |
-| Checklist | Actionable resource | "Complete Checklist Before Filing Your Flight Delay Claim" |
-
-### Template Value Classification
-
-| Tier | Article Count | Description |
-|------|---------------|-------------|
-| High Value | 10 articles | High-traffic categories (Travel, Insurance, Financial) |
-| Medium Value | 6-8 articles | Standard coverage (Housing, Vehicle, Healthcare) |
-| Long-Tail | 4-5 articles | Basic focused coverage (HOA, Contractors subsections) |
-
----
-
-## Database Schema Changes
-
-### New Tables
-
-```sql
--- Content planning and tracking
-CREATE TABLE content_plans (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_slug TEXT NOT NULL,
-  template_name TEXT NOT NULL,
-  category_id TEXT NOT NULL,
-  subcategory_slug TEXT,
-  value_tier TEXT NOT NULL DEFAULT 'medium', -- high, medium, longtail
-  target_article_count INTEGER NOT NULL DEFAULT 8,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Individual article queue
-CREATE TABLE content_queue (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id UUID REFERENCES content_plans(id) ON DELETE CASCADE,
-  article_type TEXT NOT NULL, -- how-to, mistakes, rights, sample, faq, case-study, comparison, checklist
-  suggested_title TEXT NOT NULL,
-  suggested_keywords TEXT[],
-  priority INTEGER DEFAULT 50, -- 1-100, higher = more urgent
-  status TEXT DEFAULT 'queued', -- queued, generating, generated, published, failed
-  blog_post_id UUID REFERENCES blog_posts(id),
-  generated_at TIMESTAMPTZ,
-  published_at TIMESTAMPTZ,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Link suggestions (post-generation scanner)
-CREATE TABLE link_suggestions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_post_id UUID REFERENCES blog_posts(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL, -- template, article, guide
-  target_slug TEXT NOT NULL,
-  target_title TEXT NOT NULL,
-  anchor_text TEXT NOT NULL,
-  context_snippet TEXT, -- surrounding text for context
-  insert_position INTEGER, -- character position in content
-  relevance_score INTEGER, -- 0-100
-  status TEXT DEFAULT 'pending', -- pending, approved, rejected, applied
-  applied_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Add template linking to existing blog_posts
-ALTER TABLE blog_posts 
-  ADD COLUMN related_templates TEXT[] DEFAULT '{}',
-  ADD COLUMN content_plan_id UUID REFERENCES content_plans(id),
-  ADD COLUMN article_type TEXT;
+After:
+┌──────────────────────────────────────────────────────────┐
+│ ☑ How-To Guide                                           │
+│   Step-by-step instructions for taking action            │
+└──────────────────────────────────────────────────────────┘
 ```
 
+### 3. Enhance AI Prompt for Diversity
+
+**File: `supabase/functions/generate-content-plan/index.ts`**
+
+Completely rewrite the prompt to emphasize:
+
+**Diversity Requirements:**
+- Each title must feel uniquely crafted, not templated
+- Vary sentence structure (questions, statements, lists, emotional hooks)
+- Use different power words and emotional triggers
+- Avoid starting multiple titles the same way
+- Mix title lengths (short punchy vs. descriptive)
+
+**Human Language Guidelines:**
+- Write like a journalist, not a content mill
+- Use natural phrasing people actually search for
+- Include colloquial expressions where appropriate
+- Reference specific scenarios, not generic topics
+
+**Anti-Pattern Rules:**
+- Never start more than one title with "How to"
+- Avoid repeating the exact template name in every title
+- Each title should pass the "would a human write this?" test
+
+Example enhanced prompt:
+```text
+Generate diverse, human-crafted article titles for a content cluster.
+
+CRITICAL DIVERSITY RULES:
+1. Each title must feel like it was written by a different writer
+2. Vary your title structures:
+   - Questions: "Why Does Your Contractor Dispute Keep Failing?"
+   - Numbers: "5 Costly Workmanship Mistakes You're Probably Making"
+   - Statements: "What Homeowners Wish They Knew Before Hiring Contractors"
+   - How-tos: "Getting Your Money Back After Poor Workmanship"
+   - Emotional: "Fed Up With Contractor Excuses? Here's What Actually Works"
+3. Never start two titles the same way
+4. Use natural language people actually type into Google
+5. Include specific scenarios, not generic topics
+
+BAD EXAMPLES (too templated):
+- "How to File a Poor Workmanship Complaint Step-by-Step"
+- "7 Mistakes That Get Your Poor Workmanship Claim Rejected"
+- "Your Rights: Poor Workmanship - What Contractors Won't Tell You"
+
+GOOD EXAMPLES (diverse & human):
+- "What to Do When Your Contractor's Work Is Rubbish"
+- "The 7 Excuses Dodgy Builders Use (And How to Fight Back)"
+- "Homeowner Rights After Shoddy Construction Work in 2024"
+```
+
+### 4. Add Category-Specific Language
+
+Enhance the prompt with category context to use appropriate terminology:
+
+- **Contractors**: "builders", "tradies", "workmanship", "job site"
+- **Financial**: "lender", "bank", "charges", "account"
+- **Travel**: "airline", "carrier", "booking", "compensation"
+- **Insurance**: "claim", "policy", "adjuster", "denial"
+
+This prevents generic language that sounds artificial.
+
+### 5. Title Uniqueness Validation
+
+**File: `supabase/functions/generate-content-plan/index.ts`**
+
+Add post-generation validation:
+
+1. Check that no two titles in the same plan share the first 3 words
+2. Verify no title exactly matches the template name
+3. Ensure variety in title lengths (mix of 6-8 word and 10-12 word titles)
+4. If validation fails, add instruction to AI to regenerate with more variation
+
 ---
 
-## Edge Functions
+## Implementation Summary
 
-### 1. `generate-content-plan` (NEW)
-Auto-generates content plan for a template based on category/value tier.
+| File | Change |
+|------|--------|
+| `src/config/articleTypes.ts` | Replace `titleTemplate` with `displayHint`, add hidden `titleVariations` array for AI reference |
+| `src/components/admin/seo/ClusterPlanner.tsx` | Remove "Template: ..." display line, show only purpose/hint |
+| `supabase/functions/generate-content-plan/index.ts` | Rewrite AI prompt with explicit diversity rules, anti-pattern instructions, category-specific language, and validation |
 
-**Input:**
+---
+
+## Example Output Comparison
+
+**Template: "Poor Workmanship Complaint Letter"**
+
+### Before (Templated)
+1. How to File a Poor Workmanship Complaint Step-by-Step
+2. 7 Mistakes That Get Your Poor Workmanship Claim Rejected
+3. Your Rights: Poor Workmanship - What Contractors Won't Tell You
+4. Poor Workmanship Letter Examples That Actually Worked
+5. Poor Workmanship FAQ: 15 Questions Answered
+
+### After (Diverse & Human)
+1. What to Do When Your Builder's Work Falls Apart
+2. The Costly Mistakes Homeowners Make After Shoddy Repairs
+3. UK Building Standards: Your Rights When Work Isn't Up to Scratch
+4. Real Letters That Got Homeowners Their Money Back
+5. "Is This Good Enough?" How to Spot Poor Workmanship Before It's Too Late
+
+---
+
+## Technical Details
+
+### Updated articleTypes.ts Structure
+
 ```typescript
+export interface ArticleType {
+  id: string;
+  name: string;
+  purpose: string;
+  displayHint: string; // Shown in UI instead of template
+  titleVariations: string[]; // Hidden, passed to AI as options
+  keywordSuffixes: string[];
+  priority: number;
+}
+
+// Example:
 {
-  templateSlug: string;
-  valueTier: 'high' | 'medium' | 'longtail';
+  id: 'how-to',
+  name: 'How-To Guide',
+  purpose: 'Step-by-step instructions',
+  displayHint: 'Actionable guide helping readers take immediate action',
+  titleVariations: [
+    'How to {action} {topic}',
+    '{topic}: A Complete Guide',
+    'The Smart Way to Handle {topic}',
+    'Getting Results: {topic} That Works',
+    '{topic} Done Right'
+  ],
+  keywordSuffixes: ['how to', 'guide', 'step by step'],
+  priority: 100,
 }
 ```
 
-**Output:**
-```typescript
-{
-  planId: string;
-  queuedArticles: Array<{
-    type: string;
-    suggestedTitle: string;
-    suggestedKeywords: string[];
-  }>;
-}
-```
+### Enhanced AI Prompt Structure
 
-### 2. `bulk-generate-articles` (NEW)
-Processes queued articles in batches with rate limiting.
+The edge function will:
+1. Pass the template name and category context
+2. Include the `titleVariations` as "inspiration patterns" (not rigid templates)
+3. Add explicit anti-duplication rules
+4. Request diverse sentence structures
+5. Validate output before returning
 
-**Input:**
-```typescript
-{
-  planId?: string;        // Generate for specific plan
-  categoryId?: string;    // Generate for entire category
-  batchSize?: number;     // Default 5
-  articleTypes?: string[]; // Filter by type
-}
-```
-
-**Behavior:**
-- Fetches queued items matching criteria
-- Calls existing `generate-blog-content` for each
-- Calls `suggest-images` for each
-- Updates queue status
-- Stores results in blog_posts with `related_templates` populated
-
-### 3. `scan-for-links` (NEW)
-AI-powered content scanner that finds linking opportunities.
-
-**Input:**
-```typescript
-{
-  postId?: string;        // Scan single post
-  categoryId?: string;    // Scan all posts in category
-  minRelevance?: number;  // Filter threshold (default 70)
-}
-```
-
-**Logic:**
-1. Extract all existing templates, articles, guides as potential targets
-2. For each post, use AI to:
-   - Identify phrases that could naturally link to templates
-   - Find mentions of related topics covered by other articles
-   - Suggest anchor text variations
-3. Store suggestions in `link_suggestions` table
-
-### 4. `apply-links-bulk` (NEW)
-Applies approved link suggestions to article content.
-
-**Input:**
-```typescript
-{
-  suggestionIds?: string[];  // Specific suggestions
-  categoryId?: string;       // All approved in category
-  autoApprove?: boolean;     // Apply all with relevance > 85
-}
-```
-
-**Behavior:**
-- Fetches approved suggestions
-- Injects `<a href="...">anchor</a>` at specified positions
-- Updates `blog_posts.content`
-- Marks suggestions as applied
-
----
-
-## Admin UI Components
-
-### 1. SEO Dashboard (`/admin/seo-dashboard`)
-
-Main command center with four tabs:
-
-**Tab 1: Template Coverage Map**
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  TEMPLATE COVERAGE                                      [Filter ▼]  │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  TRAVEL (20 templates)                               [Plan All]     │
-│  ├── Flight Delay Compensation    ████████░░ 8/10    [View Plan]   │
-│  ├── Lost Baggage Claim          ██████░░░░ 6/10    [View Plan]   │
-│  ├── Denied Boarding             ░░░░░░░░░░ 0/10    [Create Plan] │
-│  └── ...                                                            │
-│                                                                     │
-│  INSURANCE (50 templates)                            [Plan All]     │
-│  ├── Claim Denial Appeal         ██████████ 10/10   [Complete]    │
-│  ├── Home Insurance Dispute      ████░░░░░░ 4/10    [View Plan]   │
-│  └── ...                                                            │
-│                                                                     │
-│  FINANCIAL (50 templates)                            [Plan All]     │
-│  └── ...                                                            │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Tab 2: Content Queue**
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  CONTENT QUEUE                 [Generate Batch (10)] [Clear Failed]│
-├─────────────────────────────────────────────────────────────────────┤
-│  □ │ Title                           │ Type      │ Template │ Status│
-├───┼──────────────────────────────────┼───────────┼──────────┼───────┤
-│  ☑ │ 7 Mistakes That Get Claims...   │ Mistakes  │ EU261    │ Queued│
-│  ☑ │ How to Write a Compensation...  │ How-To    │ EU261    │ Queued│
-│  □ │ Flight Delay Rights Explained   │ Rights    │ EU261    │ Gen...│
-│  □ │ Real Flight Delay Examples      │ Sample    │ EU261    │ Done  │
-└─────────────────────────────────────────────────────────────────────┘
-│  [Generate Selected (2)]  [Preview]  [Edit]  [Delete]              │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Tab 3: Link Intelligence**
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  LINK SUGGESTIONS                      [Scan Category ▼] [Scan All]│
-├─────────────────────────────────────────────────────────────────────┤
-│  PENDING (47)                                                       │
-│  ┌───────────────────────────────────────────────────────────────┐ │
-│  │ "7 Mistakes That Get Claims Rejected"                         │ │
-│  │ → Link "EU261 compensation" to /templates/travel/flight-delay │ │
-│  │   Anchor: "EU261 compensation letter"                         │ │
-│  │   Relevance: 92%                                              │ │
-│  │   Context: "...before filing your EU261 compensation claim..."│ │
-│  │   [✓ Approve] [✗ Reject] [Edit Anchor]                       │ │
-│  └───────────────────────────────────────────────────────────────┘ │
-│  ┌───────────────────────────────────────────────────────────────┐ │
-│  │ ...more suggestions...                                        │ │
-│  └───────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│  [Approve All >85%]  [Apply Approved (12)]                         │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Tab 4: Analytics & Calendar**
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  CONTENT CALENDAR                                    [Month ▼] Feb │
-├─────────────────────────────────────────────────────────────────────┤
-│  Mon    │ Tue    │ Wed    │ Thu    │ Fri    │ Sat    │ Sun         │
-│─────────┼────────┼────────┼────────┼────────┼────────┼─────────────│
-│    3    │    4   │    5   │    6   │    7   │    8   │    9        │
-│ 2 posts │        │ 3 posts│        │ 5 posts│        │             │
-│ ● ●     │        │ ● ● ●  │        │ ● ● ●  │        │             │
-│─────────┴────────┴────────┴────────┴─● ●────┴────────┴─────────────│
-│                                                                     │
-│  COVERAGE STATS                                                    │
-│  • Templates with 0 articles: 312                                  │
-│  • Templates with 1-5 articles: 98                                 │
-│  • Templates with 6+ articles: 40                                  │
-│  • Total articles generated: 1,240                                 │
-│  • Internal links applied: 4,892                                   │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 2. Cluster Planner Component
-
-Modal/slide-out for designing content cluster for a specific template:
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  CONTENT CLUSTER: Flight Delay Compensation Letter        [× Close]│
-├─────────────────────────────────────────────────────────────────────┤
-│  Value Tier: [High ▼]  Target Articles: 10                         │
-│                                                                     │
-│  ARTICLE PLAN                                                       │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ ☑ How-To Guide                                                │  │
-│  │   Title: How to Claim EU261 Compensation Step-by-Step        │  │
-│  │   Keywords: eu261 claim, flight delay compensation, how to   │  │
-│  │   [Edit] [Remove]                                             │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │ ☑ Mistakes to Avoid                                           │  │
-│  │   Title: 7 Mistakes That Get Flight Delay Claims Rejected    │  │
-│  │   Keywords: claim mistakes, rejected claim, flight delay     │  │
-│  │   [Edit] [Remove]                                             │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │ ☑ Rights Explainer                                            │  │
-│  │   Title: Your Rights Under EU261: What Airlines Won't Tell   │  │
-│  │   Keywords: eu261 rights, passenger rights, airline delay    │  │
-│  │   [Edit] [Remove]                                             │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │ + Add Article Type...                                         │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-│  [Save Plan] [Save & Generate All] [Cancel]                        │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 3. Enhanced Article Generator
-
-Update existing `AIBlogGenerator` to support:
-- Template linking (select related template)
-- Article type selection
-- Auto-populated keywords from template
-- Queue integration
-
----
-
-## Linking Intelligence System
-
-### Post-Creation Link Scanner Flow
-
-```text
-Article Generated
-       │
-       ▼
-┌─────────────────┐
-│  scan-for-links │
-│  Edge Function  │
-└────────┬────────┘
-         │
-         ▼
-   AI Analysis
-   • Find template mentions
-   • Find topic overlaps
-   • Extract potential anchors
-         │
-         ▼
-┌─────────────────────────┐
-│  link_suggestions table │
-│  (status: pending)      │
-└────────┬────────────────┘
-         │
-         ▼
-   Admin Reviews
-   • Approve/Reject each
-   • Edit anchor text
-   • Bulk approve >85%
-         │
-         ▼
-┌─────────────────────────┐
-│  apply-links-bulk       │
-│  Edge Function          │
-└────────┬────────────────┘
-         │
-         ▼
-   Links Injected
-   • blog_posts.content updated
-   • status: applied
-```
-
-### Link Types Detected
-
-1. **Template Links** (highest priority)
-   - Match template titles, keywords, use cases
-   - Example: "flight delay compensation" -> link to template
-
-2. **Article Links** (medium priority)
-   - Match related article titles within same category
-   - Example: "common mistakes" -> link to mistakes article
-
-3. **Guide Links** (lower priority)
-   - Match category rights/guide topics
-   - Example: "your rights" -> link to category guide
-
----
-
-## Implementation Phases
-
-### Phase 1: Database & Core Functions (Week 1)
-- Create database tables with migrations
-- Build `generate-content-plan` edge function
-- Build `bulk-generate-articles` edge function
-- Update existing `generate-blog-content` to accept template context
-
-### Phase 2: Admin UI Foundation (Week 1-2)
-- Create SEO Dashboard page structure
-- Build Template Coverage Map component
-- Build Cluster Planner modal
-- Add navigation to admin sidebar
-
-### Phase 3: Queue Management (Week 2)
-- Build Content Queue tab UI
-- Implement batch generation controls
-- Add progress tracking and status updates
-- Handle errors gracefully with retry
-
-### Phase 4: Link Intelligence (Week 2-3)
-- Build `scan-for-links` edge function
-- Build `apply-links-bulk` edge function
-- Create Link Suggestions UI
-- Implement bulk approval workflow
-
-### Phase 5: Analytics & Polish (Week 3)
-- Build Calendar view
-- Add coverage statistics
-- Create gap analysis reports
-- Performance optimization
-
----
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/generate-content-plan/index.ts` | AI plan generation |
-| `supabase/functions/bulk-generate-articles/index.ts` | Batch processing |
-| `supabase/functions/scan-for-links/index.ts` | Link opportunity finder |
-| `supabase/functions/apply-links-bulk/index.ts` | Link injection |
-| `src/pages/admin/SEODashboard.tsx` | Main command center |
-| `src/components/admin/seo/TemplateCoverageMap.tsx` | Coverage visualization |
-| `src/components/admin/seo/ContentQueue.tsx` | Queue management |
-| `src/components/admin/seo/ClusterPlanner.tsx` | Plan designer modal |
-| `src/components/admin/seo/LinkSuggestions.tsx` | Link review UI |
-| `src/components/admin/seo/ContentCalendar.tsx` | Calendar view |
-| `src/components/admin/seo/CoverageStats.tsx` | Analytics cards |
-| `src/hooks/useContentPlans.ts` | Plan CRUD operations |
-| `src/hooks/useContentQueue.ts` | Queue management |
-| `src/hooks/useLinkSuggestions.ts` | Link operations |
-| `src/config/articleTypes.ts` | Article type definitions |
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/admin/AdminLayout.tsx` | Add "SEO Dashboard" nav item |
-| `src/App.tsx` | Add `/admin/seo-dashboard` route |
-| `src/pages/LetterPage.tsx` | Add "Related Articles" section |
-| `src/pages/ArticlePage.tsx` | Show linked templates as CTAs |
-| `supabase/functions/generate-blog-content/index.ts` | Accept template context |
-
----
-
-## Scale Projections
-
-| Metric | Foundation | Growth | Scale |
-|--------|------------|--------|-------|
-| Templates covered | 50 | 200 | 450+ |
-| Articles per template | 4-5 | 6-8 | 8-10 |
-| Total articles | 200-250 | 1,200-1,600 | 3,600-4,500 |
-| Internal links | 1,000 | 6,000 | 18,000+ |
-| Estimated generation time | 2-3 days | 1-2 weeks | 3-4 weeks |
-
----
-
-## Key Differentiators
-
-1. **Template-First Strategy:** Every article exists to support a conversion point
-2. **AI Keyword Extraction:** Keywords derived from template context, not guessed
-3. **Post-Generation Linking:** Links added intelligently after content exists
-4. **Batch Processing:** Rate-limited queue prevents API overload
-5. **Human-in-Loop:** Approve links before injection for quality control
-6. **Coverage Visualization:** Instantly see gaps in content strategy
+This approach keeps the internal structure for SEO consistency while ensuring the visible output feels handcrafted and unique.
