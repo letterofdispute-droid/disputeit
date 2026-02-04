@@ -43,6 +43,15 @@ serve(async (req) => {
     const keywordList = keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
     const targetWordCount = requestedWordCount || 1500;
 
+    // Randomly decide on 1 or 2 middle images
+    const useTwoMiddleImages = Math.random() < 0.5;
+    const middleImageInstructions = useTwoMiddleImages
+      ? `6. Include TWO image placeholders:
+   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 33% through the content
+   - Insert {{MIDDLE_IMAGE_2}} on its own line at approximately 66% through the content`
+      : `6. Include ONE image placeholder:
+   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
+
     const systemPrompt = `You are an expert SEO content writer specializing in consumer rights, dispute resolution, and complaint letters. Your task is to generate high-quality, SEO-optimized blog articles.
 
 CRITICAL OUTPUT REQUIREMENTS:
@@ -51,7 +60,7 @@ CRITICAL OUTPUT REQUIREMENTS:
 3. Use these HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>
 4. NEVER use <h1> tags - the title is displayed separately
 5. NEVER include "Conclusion", "FAQ", "TL;DR", "Summary" sections
-6. Include the placeholder {{MIDDLE_IMAGE}} on its own line approximately 40-50% through the content
+${middleImageInstructions}
 
 CONTENT REQUIREMENTS:
 - Write approximately ${targetWordCount} words

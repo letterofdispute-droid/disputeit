@@ -30,6 +30,8 @@ interface BlogPost {
   meta_title: string | null;
   meta_description: string | null;
   related_templates: string[] | null;
+  middle_image_1_url?: string | null;
+  middle_image_2_url?: string | null;
 }
 
 const ArticlePage = () => {
@@ -175,6 +177,28 @@ const ArticlePage = () => {
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>');
     
+    // Replace middle image placeholders with actual images
+    if (post.middle_image_1_url) {
+      html = html.replace(
+        /{{MIDDLE_IMAGE_1}}/g,
+        `<figure class="my-8"><img src="${post.middle_image_1_url}" alt="" class="w-full rounded-xl shadow-md" loading="lazy" /></figure>`
+      );
+    } else {
+      html = html.replace(/{{MIDDLE_IMAGE_1}}/g, '');
+    }
+
+    if (post.middle_image_2_url) {
+      html = html.replace(
+        /{{MIDDLE_IMAGE_2}}/g,
+        `<figure class="my-8"><img src="${post.middle_image_2_url}" alt="" class="w-full rounded-xl shadow-md" loading="lazy" /></figure>`
+      );
+    } else {
+      html = html.replace(/{{MIDDLE_IMAGE_2}}/g, '');
+    }
+
+    // Handle legacy {{MIDDLE_IMAGE}} placeholder
+    html = html.replace(/{{MIDDLE_IMAGE}}/g, '');
+    
     // Wrap in paragraph if not already
     if (!html.startsWith('<')) {
       html = `<p>${html}</p>`;
@@ -182,9 +206,9 @@ const ArticlePage = () => {
     
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption'],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel', 'style', 'colspan', 'rowspan'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel', 'style', 'colspan', 'rowspan', 'loading'],
     });
-  }, [post?.content]);
+  }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url]);
 
   // Generate Article JSON-LD schema
   const articleSchema = post ? {

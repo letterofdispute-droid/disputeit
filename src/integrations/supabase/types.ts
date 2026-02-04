@@ -84,6 +84,8 @@ export type Database = {
           id: string
           meta_description: string | null
           meta_title: string | null
+          middle_image_1_url: string | null
+          middle_image_2_url: string | null
           published_at: string | null
           read_time: string | null
           related_templates: string[] | null
@@ -110,6 +112,8 @@ export type Database = {
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          middle_image_1_url?: string | null
+          middle_image_2_url?: string | null
           published_at?: string | null
           read_time?: string | null
           related_templates?: string[] | null
@@ -136,6 +140,8 @@ export type Database = {
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          middle_image_1_url?: string | null
+          middle_image_2_url?: string | null
           published_at?: string | null
           read_time?: string | null
           related_templates?: string[] | null
