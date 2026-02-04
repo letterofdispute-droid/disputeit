@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, RotateCcw, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,10 +8,15 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useContentPlans, ContentPlan } from '@/hooks/useContentPlans';
 import { useContentQueue } from '@/hooks/useContentQueue';
 import { ARTICLE_TYPES, VALUE_TIERS, ValueTier, getArticleTypesForTier } from '@/config/articleTypes';
@@ -35,7 +40,7 @@ export default function ClusterPlanner({
   existingPlan,
 }: ClusterPlannerProps) {
   const { generatePlan, isGeneratingPlan } = useContentPlans();
-  const { queueItems, bulkGenerate, isBulkGenerating } = useContentQueue(existingPlan?.id);
+  const { queueItems, bulkGenerate, isBulkGenerating, retryFailed, isRetrying } = useContentQueue(existingPlan?.id);
   
   const [valueTier, setValueTier] = useState<ValueTier>(
     (existingPlan?.value_tier as ValueTier) || 'medium'
@@ -46,6 +51,19 @@ export default function ClusterPlanner({
 
   // Get queue items for this plan
   const planQueueItems = queueItems?.filter(q => q.plan_id === existingPlan?.id) || [];
+  
+  // Calculate stats
+  const stats = {
+    queued: planQueueItems.filter(i => i.status === 'queued').length,
+    generating: planQueueItems.filter(i => i.status === 'generating').length,
+    generated: planQueueItems.filter(i => i.status === 'generated' || i.status === 'published').length,
+    failed: planQueueItems.filter(i => i.status === 'failed').length,
+  };
+  
+  const failedItems = planQueueItems.filter(i => i.status === 'failed');
+  const hasFailedItems = failedItems.length > 0;
+  const hasQueuedItems = stats.queued > 0;
+  const isAllComplete = planQueueItems.length > 0 && stats.queued === 0 && stats.generating === 0;
 
   const handleTierChange = (tier: ValueTier) => {
     setValueTier(tier);
@@ -83,7 +101,49 @@ export default function ClusterPlanner({
     });
   };
 
+  const handleRetryAll = () => {
+    const failedIds = failedItems.map(i => i.id);
+    if (failedIds.length > 0) {
+      retryFailed(failedIds);
+    }
+  };
+
+  const handleRetryItem = (itemId: string) => {
+    retryFailed([itemId]);
+  };
+
   if (!template) return null;
+
+  const getStatusBadge = (item: typeof planQueueItems[0]) => {
+    const status = item.status;
+    
+    if (status === 'failed') {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="destructive" className="cursor-help">
+                failed
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="text-sm">{item.error_message || 'Unknown error'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    if (status === 'generated' || status === 'published') {
+      return <Badge variant="default">{status}</Badge>;
+    }
+    
+    if (status === 'generating') {
+      return <Badge variant="secondary">generating...</Badge>;
+    }
+    
+    return <Badge variant="secondary">{status}</Badge>;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,6 +185,36 @@ export default function ClusterPlanner({
             </p>
           </div>
 
+          {/* Stats Bar - only show for existing plans with items */}
+          {existingPlan && planQueueItems.length > 0 && (
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg text-sm">
+              {stats.generated > 0 && (
+                <div className="flex items-center gap-1.5 text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{stats.generated} generated</span>
+                </div>
+              )}
+              {stats.failed > 0 && (
+                <div className="flex items-center gap-1.5 text-destructive">
+                  <XCircle className="h-4 w-4" />
+                  <span>{stats.failed} failed</span>
+                </div>
+              )}
+              {stats.queued > 0 && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{stats.queued} queued</span>
+                </div>
+              )}
+              {stats.generating > 0 && (
+                <div className="flex items-center gap-1.5 text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{stats.generating} generating</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Article Types */}
           <div className="space-y-3">
             <Label>Article Plan</Label>
@@ -133,6 +223,8 @@ export default function ClusterPlanner({
                 // Show actual queue items for existing plan
                 planQueueItems.map(item => {
                   const typeInfo = ARTICLE_TYPES.find(t => t.id === item.article_type);
+                  const isFailed = item.status === 'failed';
+                  
                   return (
                     <div key={item.id} className="p-3">
                       <div className="flex items-start justify-between gap-3">
@@ -154,17 +246,20 @@ export default function ClusterPlanner({
                             </div>
                           )}
                         </div>
-                        <Badge 
-                          variant={
-                            item.status === 'generated' || item.status === 'published' 
-                              ? 'default' 
-                              : item.status === 'failed' 
-                                ? 'destructive' 
-                                : 'secondary'
-                          }
-                        >
-                          {item.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {isFailed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRetryItem(item.id)}
+                              disabled={isRetrying}
+                              className="h-7 px-2"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {getStatusBadge(item)}
+                        </div>
                       </div>
                     </div>
                   );
@@ -208,31 +303,87 @@ export default function ClusterPlanner({
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
             {existingPlan ? (
-              <Button 
-                onClick={handleGenerateAll}
-                disabled={isBulkGenerating || planQueueItems.filter(q => q.status === 'queued').length === 0}
-              >
-                {isBulkGenerating ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
+              <>
+                {/* For existing plans */}
+                {isAllComplete && !hasFailedItems ? (
+                  // All done successfully
+                  <Button onClick={() => onOpenChange(false)}>
+                    Done
+                  </Button>
+                ) : hasFailedItems && !hasQueuedItems ? (
+                  // Has failures, nothing queued
+                  <>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                      Done
+                    </Button>
+                    <Button 
+                      onClick={handleRetryAll}
+                      disabled={isRetrying}
+                      variant="destructive"
+                    >
+                      {isRetrying ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Retrying...</>
+                      ) : (
+                        <>
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Retry All Failed ({stats.failed})
+                        </>
+                      )}
+                    </Button>
+                  </>
                 ) : (
-                  'Generate All Queued'
+                  // Has queued items
+                  <>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                      Cancel
+                    </Button>
+                    {hasFailedItems && (
+                      <Button 
+                        onClick={handleRetryAll}
+                        disabled={isRetrying || isBulkGenerating}
+                        variant="secondary"
+                      >
+                        {isRetrying ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Retrying...</>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Retry Failed ({stats.failed})
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={handleGenerateAll}
+                      disabled={isBulkGenerating || isRetrying || !hasQueuedItems}
+                    >
+                      {isBulkGenerating ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
+                      ) : (
+                        `Generate All Queued (${stats.queued})`
+                      )}
+                    </Button>
+                  </>
                 )}
-              </Button>
+              </>
             ) : (
-              <Button 
-                onClick={handleCreatePlan}
-                disabled={isGeneratingPlan || selectedTypes.size === 0}
-              >
-                {isGeneratingPlan ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</>
-                ) : (
-                  'Create Plan'
-                )}
-              </Button>
+              // For new plans
+              <>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreatePlan}
+                  disabled={isGeneratingPlan || selectedTypes.size === 0}
+                >
+                  {isGeneratingPlan ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</>
+                  ) : (
+                    'Create Plan'
+                  )}
+                </Button>
+              </>
             )}
           </div>
         </div>
