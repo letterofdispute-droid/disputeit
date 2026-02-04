@@ -250,6 +250,10 @@ const ArticlePage = () => {
     });
   }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url]);
 
+  // Branded author display - always use LoD Contributor
+  const displayAuthor = "LoD Contributor";
+  const authorInitials = "LoD";
+
   // Generate Article JSON-LD schema with correct branding
   const articleSchema = post ? {
     "@context": "https://schema.org",
@@ -258,7 +262,7 @@ const ArticlePage = () => {
     "description": post.meta_description || post.excerpt,
     "author": {
       "@type": "Person",
-      "name": post.author
+      "name": "LoD Contributor"
     },
     "publisher": {
       "@type": "Organization",
@@ -277,12 +281,6 @@ const ArticlePage = () => {
       "@id": shareUrl
     }
   } : null;
-
-  // Get author initials for avatar
-  const authorInitials = useMemo(() => {
-    if (!post?.author) return 'LD';
-    return post.author.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  }, [post?.author]);
 
   if (dbLoading) {
     return (
@@ -343,63 +341,86 @@ const ArticlePage = () => {
         </div>
       </section>
 
-      {/* Article Header - Premium Design */}
-      <section className="bg-gradient-to-b from-primary to-primary/95 py-16 md:py-20">
-        <div className="container-narrow">
+      {/* Article Hero - Redesigned with proper spacing */}
+      <section className="bg-gradient-to-b from-primary via-primary to-primary/95 pt-12 pb-32 md:pt-16 md:pb-40">
+        <div className="container-narrow text-center">
           <Badge variant="secondary" className="mb-6 text-sm px-4 py-1.5">{post.category}</Badge>
+          
           <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl xl:text-[3.25rem] font-bold text-primary-foreground mb-8 leading-[1.15] tracking-tight">
             {post.title}
           </h1>
           
-          {/* Author & Meta Row */}
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 border-2 border-primary-foreground/20">
-                <AvatarFallback className="bg-accent text-accent-foreground font-semibold">
-                  {authorInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-primary-foreground">{post.author}</p>
-                <p className="text-sm text-primary-foreground/60">Consumer Rights Expert</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-4 text-primary-foreground/70 text-sm">
-              <span className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {post.published_at && new Date(post.published_at).toLocaleDateString('en-GB', { 
-                  month: 'long', 
-                  day: 'numeric', 
-                  year: 'numeric' 
-                })}
-              </span>
-              <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {calculatedReadTime}
-              </span>
-              {post.views > 0 && (
+          {/* Meta info - simplified, centered */}
+          <div className="flex justify-center flex-wrap items-center gap-4 text-primary-foreground/70 text-sm">
+            <span className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {post.published_at && new Date(post.published_at).toLocaleDateString('en-GB', { 
+                month: 'long', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })}
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              {calculatedReadTime}
+            </span>
+            {post.views > 0 && (
+              <>
+                <span className="hidden sm:inline">•</span>
                 <span className="flex items-center gap-2">
                   <Eye className="h-4 w-4" />
                   {post.views.toLocaleString()} views
                 </span>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Featured Image - Elevated Design */}
+      {/* Featured Image - Pulled up into hero with proper spacing */}
       {post.featured_image_url && (
         <section className="bg-background">
-          <div className="container-narrow -mt-10">
-            <figure className="rounded-2xl overflow-hidden shadow-xl">
+          <div className="container-narrow -mt-20 md:-mt-28">
+            <figure className="rounded-2xl overflow-hidden shadow-2xl border-4 border-background">
               <img 
                 src={post.featured_image_url} 
                 alt={post.title}
-                className="w-full h-72 md:h-[28rem] object-cover"
+                className="w-full h-64 md:h-96 object-cover"
               />
             </figure>
+            
+            {/* Author byline below image */}
+            <div className="flex justify-center items-center gap-3 mt-6">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-accent text-accent-foreground font-semibold text-sm">
+                  {authorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-sm">
+                <span className="font-medium text-foreground">{displayAuthor}</span>
+                <span className="text-muted-foreground"> • Consumer Rights Expert</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      
+      {/* Author byline for articles without featured image */}
+      {!post.featured_image_url && (
+        <section className="bg-background pt-8">
+          <div className="container-narrow">
+            <div className="flex justify-center items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-accent text-accent-foreground font-semibold text-sm">
+                  {authorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-sm">
+                <span className="font-medium text-foreground">{displayAuthor}</span>
+                <span className="text-muted-foreground"> • Consumer Rights Expert</span>
+              </div>
+            </div>
           </div>
         </section>
       )}
@@ -429,16 +450,17 @@ const ArticlePage = () => {
               <div className="mt-12 p-8 bg-muted/50 rounded-2xl border border-border">
                 <div className="flex items-start gap-5">
                   <Avatar className="h-16 w-16 border-2 border-primary/20">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                       {authorInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Written by</p>
-                    <h3 className="font-serif text-xl font-bold text-foreground mb-2">{post.author}</h3>
+                    <h3 className="font-serif text-xl font-bold text-foreground mb-2">{displayAuthor}</h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      Consumer rights specialist at Letter Of Dispute, helping UK consumers navigate disputes with clear, 
-                      actionable guidance backed by knowledge of the Consumer Rights Act 2015 and related regulations.
+                      Our team of consumer rights specialists at Letter Of Dispute (LoD) help UK consumers 
+                      navigate disputes with clear, actionable guidance backed by knowledge of the 
+                      Consumer Rights Act 2015 and related regulations.
                     </p>
                   </div>
                 </div>
@@ -604,7 +626,7 @@ const ArticlePage = () => {
                       {relatedPost.excerpt}
                     </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{relatedPost.author}</span>
+                      <span>LoD Contributor</span>
                       <span>•</span>
                       <span>{relatedPost.read_time || '5 min read'}</span>
                     </div>
