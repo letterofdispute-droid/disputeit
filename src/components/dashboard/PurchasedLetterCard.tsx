@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, FileEdit, Download, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface Purchase {
   id: string;
@@ -16,9 +17,10 @@ interface Purchase {
 
 interface PurchasedLetterCardProps {
   purchase: Purchase;
+  featured?: boolean;
 }
 
-const PurchasedLetterCard = ({ purchase }: PurchasedLetterCardProps) => {
+const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCardProps) => {
   const [isDownloading, setIsDownloading] = useState<'pdf' | 'docx' | null>(null);
 
   const handleDownload = async (type: 'pdf' | 'docx') => {
@@ -77,6 +79,63 @@ const PurchasedLetterCard = ({ purchase }: PurchasedLetterCardProps) => {
       day: 'numeric',
     });
   };
+
+  if (featured) {
+    return (
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-success/10 rounded-xl">
+            <FileText className="h-6 w-6 text-success" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-foreground text-lg">{purchase.template_name}</h4>
+            <p className="text-sm text-muted-foreground">
+              {purchase.purchase_type === 'pdf-editable' ? 'PDF + Editable Word' : 'PDF Only'} 
+              {' • '}Purchased {formatDate(purchase.created_at)}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="accent" 
+            size="lg"
+            onClick={() => handleDownload('pdf')}
+            disabled={isDownloading !== null}
+            className="gap-2"
+          >
+            {isDownloading === 'pdf' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
+          </Button>
+          
+          {purchase.purchase_type === 'pdf-editable' && (
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => handleDownload('docx')}
+              disabled={isDownloading !== null}
+              className="gap-2"
+            >
+              {isDownloading === 'docx' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <FileEdit className="h-4 w-4" />
+                  Word Doc
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors gap-4">

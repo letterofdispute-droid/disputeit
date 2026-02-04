@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   FileText, Download, Clock, CheckCircle, 
   AlertCircle, ArrowRight, User, Shield,
-  Plus, Loader2, ShoppingBag
+  Plus, Loader2, ShoppingBag, Sparkles,
+  Settings, HelpCircle, FileSearch
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +22,7 @@ interface UserLetter {
   id: string;
   title: string;
   template_name: string;
+  template_slug: string;
   status: string;
   created_at: string;
 }
@@ -27,17 +30,45 @@ interface UserLetter {
 interface Purchase {
   id: string;
   template_name: string;
+  template_slug: string;
   purchase_type: string;
   amount_cents: number;
   created_at: string;
   status: string;
 }
 
+interface Profile {
+  first_name: string | null;
+  last_name: string | null;
+}
+
+// Recommended templates based on category
+const categoryRecommendations: Record<string, { id: string; name: string; icon: string }[]> = {
+  'refunds': [
+    { id: 'insurance', name: 'Insurance Claims', icon: '🛡️' },
+    { id: 'ecommerce', name: 'E-Commerce', icon: '🛒' },
+  ],
+  'insurance': [
+    { id: 'healthcare', name: 'Healthcare', icon: '🏥' },
+    { id: 'vehicle', name: 'Vehicle', icon: '🚗' },
+  ],
+  'housing': [
+    { id: 'utilities', name: 'Utilities', icon: '💡' },
+    { id: 'hoa', name: 'HOA', icon: '🏘️' },
+  ],
+  'default': [
+    { id: 'refunds', name: 'Refunds', icon: '💳' },
+    { id: 'insurance', name: 'Insurance', icon: '🛡️' },
+    { id: 'housing', name: 'Housing', icon: '🏠' },
+  ],
+};
+
 const Dashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [letters, setLetters] = useState<UserLetter[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasesLoading, setIsPurchasesLoading] = useState(true);
   const dashboardViewedRef = useRef(false);
@@ -48,7 +79,6 @@ const Dashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Track dashboard view once when user is loaded
   useEffect(() => {
     if (user && !dashboardViewedRef.current) {
       dashboardViewedRef.current = true;
@@ -60,8 +90,22 @@ const Dashboard = () => {
     if (user) {
       fetchLetters();
       fetchPurchases();
+      fetchProfile();
     }
   }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
 
   const fetchLetters = async () => {
     const { data, error } = await supabase
@@ -79,7 +123,7 @@ const Dashboard = () => {
   const fetchPurchases = async () => {
     const { data, error } = await supabase
       .from('letter_purchases')
-      .select('id, template_name, purchase_type, amount_cents, created_at, status')
+      .select('id, template_name, template_slug, purchase_type, amount_cents, created_at, status')
       .eq('status', 'completed')
       .order('created_at', { ascending: false });
 
@@ -89,8 +133,40 @@ const Dashboard = () => {
     setIsPurchasesLoading(false);
   };
 
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // Get display name
+  const displayName = profile?.first_name || user?.email?.split('@')[0] || 'there';
+
+  // Calculate stats
   const completedCount = letters.filter(l => l.status === 'completed').length;
-  const pendingCount = letters.filter(l => l.status === 'draft' || l.status === 'sent').length;
+  const inProgressCount = letters.filter(l => l.status === 'draft' || l.status === 'sent').length;
+
+  // Get recommended categories based on purchases
+  const recommendations = useMemo(() => {
+    if (purchases.length === 0) return categoryRecommendations['default'];
+    
+    // Get unique categories from purchases
+    const purchasedCategories = purchases.map(p => {
+      const slug = p.template_slug || '';
+      if (slug.includes('refund')) return 'refunds';
+      if (slug.includes('insurance')) return 'insurance';
+      if (slug.includes('housing') || slug.includes('tenant')) return 'housing';
+      return 'default';
+    });
+    
+    const primaryCategory = purchasedCategories[0] || 'default';
+    return categoryRecommendations[primaryCategory] || categoryRecommendations['default'];
+  }, [purchases]);
+
+  // Most recent purchase for highlight
+  const mostRecentPurchase = purchases[0];
 
   if (authLoading) {
     return (
@@ -111,234 +187,316 @@ const Dashboard = () => {
       />
 
       <div className="bg-background min-h-screen">
-        {/* Header */}
-        <section className="bg-card border-b border-border py-8">
+        {/* Personalized Header */}
+        <motion.section
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="bg-gradient-to-r from-primary/5 via-card to-accent/5 border-b border-border py-8"
+        >
           <div className="container-wide">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
-                  My Dashboard
+                  {getGreeting()}, {displayName}! 👋
                 </h1>
                 <p className="text-muted-foreground">
-                  Welcome back, {user?.email}! Manage your dispute letters and account.
+                  {purchases.length > 0 
+                    ? `You have ${purchases.length} letter${purchases.length !== 1 ? 's' : ''} ready to download`
+                    : 'Create your first dispute letter to get started'}
                 </p>
               </div>
-              <Button variant="accent" asChild>
-                <Link to="/#letters">
-                  <Plus className="h-4 w-4 mr-2" />
+              <Button variant="accent" size="lg" asChild className="gap-2">
+                <Link to="/templates">
+                  <Plus className="h-4 w-4" />
                   Create New Letter
                 </Link>
               </Button>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        {/* Stats */}
-        <section className="py-8">
+        {/* Quick Stats */}
+        <section className="py-6 border-b border-border bg-card/50">
           <div className="container-wide">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Letters
-                  </CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{letters.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Completed
-                  </CardTitle>
-                  <CheckCircle className="h-4 w-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{completedCount}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    In Progress
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{pendingCount}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Purchased
-                  </CardTitle>
-                  <ShoppingBag className="h-4 w-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{purchases.length}</div>
-                </CardContent>
-              </Card>
+            <div className="flex flex-wrap gap-6 md:gap-12">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="flex items-center gap-3"
+              >
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <ShoppingBag className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{purchases.length}</p>
+                  <p className="text-sm text-muted-foreground">Purchased</p>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+                className="flex items-center gap-3"
+              >
+                <div className="p-2 bg-accent/10 rounded-lg">
+                  <Clock className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{inProgressCount}</p>
+                  <p className="text-sm text-muted-foreground">In Progress</p>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
+                className="flex items-center gap-3"
+              >
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{completedCount}</p>
+                  <p className="text-sm text-muted-foreground">Completed</p>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Letters & Purchases Tabs */}
+        {/* Main Content */}
         <section className="py-8">
           <div className="container-wide">
-            <Tabs defaultValue="purchases" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="purchases" className="gap-2">
-                  <ShoppingBag className="h-4 w-4" />
-                  Purchased Letters ({purchases.length})
-                </TabsTrigger>
-                <TabsTrigger value="drafts" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  My Drafts ({letters.length})
-                </TabsTrigger>
-              </TabsList>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Main Column - Letters */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Featured Recent Purchase */}
+                {mostRecentPurchase && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
+                  >
+                    <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                            <CardTitle className="text-lg">Most Recent Purchase</CardTitle>
+                          </div>
+                          <Badge className="bg-success text-white">Ready</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <PurchasedLetterCard purchase={mostRecentPurchase} featured />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
 
-              <TabsContent value="purchases">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-serif text-xl">Purchased Letters</CardTitle>
-                    <CardDescription>Download your purchased letters anytime</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isPurchasesLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    ) : purchases.length > 0 ? (
-                      <div className="space-y-4">
-                        {purchases.map((purchase) => (
-                          <PurchasedLetterCard key={purchase.id} purchase={purchase} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="font-medium text-foreground mb-2">No purchases yet</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Create and purchase a letter to see it here.
-                        </p>
-                        <Button variant="accent" asChild>
-                          <Link to="/#letters">
-                            Browse Letter Templates <ArrowRight className="h-4 w-4 ml-2" />
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                {/* Tabs for Purchases and Drafts */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                >
+                  <Tabs defaultValue="purchases" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="purchases" className="gap-2">
+                        <ShoppingBag className="h-4 w-4" />
+                        All Purchases ({purchases.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="drafts" className="gap-2">
+                        <FileText className="h-4 w-4" />
+                        Drafts ({letters.length})
+                      </TabsTrigger>
+                    </TabsList>
 
-              <TabsContent value="drafts">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-serif text-xl">My Drafts</CardTitle>
-                    <CardDescription>Your saved letter drafts</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    ) : letters.length > 0 ? (
-                      <div className="space-y-4">
-                        {letters.map((letter) => (
-                          <div 
-                            key={letter.id}
-                            className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="p-2 bg-primary/10 rounded-lg">
-                                <FileText className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-foreground">{letter.title}</h4>
-                                <p className="text-sm text-muted-foreground">
-                                  {letter.template_name} • Created {new Date(letter.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
+                    <TabsContent value="purchases">
+                      <Card>
+                        <CardContent className="pt-6">
+                          {isPurchasesLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                              <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
-                            <div className="flex items-center gap-3">
-                              <Badge 
-                                variant={letter.status === 'completed' ? 'default' : 'secondary'}
-                                className={letter.status === 'completed' ? 'bg-success' : 'bg-accent/20 text-accent'}
-                              >
-                                {letter.status === 'completed' ? 'Completed' : letter.status}
-                              </Badge>
-                              <Button variant="ghost" size="icon">
-                                <Download className="h-4 w-4" />
+                          ) : purchases.length > 0 ? (
+                            <div className="space-y-4">
+                              {purchases.slice(mostRecentPurchase ? 1 : 0).map((purchase) => (
+                                <PurchasedLetterCard key={purchase.id} purchase={purchase} />
+                              ))}
+                              {purchases.length === 1 && mostRecentPurchase && (
+                                <p className="text-center text-muted-foreground py-4">
+                                  Your only purchase is shown above
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-12">
+                              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-2">No purchases yet</h3>
+                              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                                Create a dispute letter and purchase it to access professional-grade documents.
+                              </p>
+                              <Button variant="accent" asChild>
+                                <Link to="/templates">
+                                  Browse Templates <ArrowRight className="h-4 w-4 ml-2" />
+                                </Link>
                               </Button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="font-medium text-foreground mb-2">No drafts yet</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Create your first dispute letter to get started.
-                        </p>
-                        <Button variant="accent" asChild>
-                          <Link to="/#letters">
-                            Create Your First Letter <ArrowRight className="h-4 w-4 ml-2" />
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
 
-        {/* Quick Actions */}
-        <section className="py-8 pb-16">
-          <div className="container-wide">
-            <h2 className="font-serif text-xl font-bold text-foreground mb-6">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {isAdmin && (
-                <Card className="cursor-pointer hover:shadow-lg transition-all border-primary/50 bg-primary/5">
-                  <Link to="/admin">
+                    <TabsContent value="drafts">
+                      <Card>
+                        <CardContent className="pt-6">
+                          {isLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                          ) : letters.length > 0 ? (
+                            <div className="space-y-3">
+                              {letters.map((letter) => (
+                                <div 
+                                  key={letter.id}
+                                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                      <FileText className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-foreground">{letter.title}</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {letter.template_name} - {new Date(letter.created_at).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <Badge 
+                                      variant={letter.status === 'completed' ? 'default' : 'secondary'}
+                                      className={letter.status === 'completed' ? 'bg-success' : 'bg-accent/20 text-accent'}
+                                    >
+                                      {letter.status === 'completed' ? 'Completed' : letter.status}
+                                    </Badge>
+                                    <Button variant="ghost" size="icon">
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-12">
+                              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                <FileText className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-2">No drafts yet</h3>
+                              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                                Start creating a letter and save it as a draft to continue later.
+                              </p>
+                              <Button variant="accent" asChild>
+                                <Link to="/templates">
+                                  Start a Letter <ArrowRight className="h-4 w-4 ml-2" />
+                                </Link>
+                              </Button>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Recommendations */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.4 }}
+                >
+                  <Card>
                     <CardHeader>
-                      <div className="p-3 bg-primary/20 rounded-lg w-fit mb-2">
-                        <Shield className="h-6 w-6 text-primary" />
-                      </div>
-                      <CardTitle className="text-lg">Admin Panel</CardTitle>
-                      <CardDescription>Manage users, content & settings</CardDescription>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Recommended For You
+                      </CardTitle>
+                      <CardDescription>
+                        {purchases.length > 0 
+                          ? 'Based on your purchase history' 
+                          : 'Popular letter categories'}
+                      </CardDescription>
                     </CardHeader>
-                  </Link>
-                </Card>
-              )}
-              <Card className="cursor-pointer hover:shadow-lg transition-all">
-                <Link to="/settings">
-                  <CardHeader>
-                    <div className="p-3 bg-primary/10 rounded-lg w-fit mb-2">
-                      <User className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg">Account Settings</CardTitle>
-                    <CardDescription>Update your profile and preferences</CardDescription>
-                  </CardHeader>
-                </Link>
-              </Card>
-              <Card className="cursor-pointer hover:shadow-lg transition-all">
-                <Link to="/contact">
-                  <CardHeader>
-                    <div className="p-3 bg-primary/10 rounded-lg w-fit mb-2">
-                      <AlertCircle className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg">Help & Support</CardTitle>
-                    <CardDescription>Get help with your disputes</CardDescription>
-                  </CardHeader>
-                </Link>
-              </Card>
+                    <CardContent className="space-y-3">
+                      {recommendations.map((rec) => (
+                        <Link
+                          key={rec.id}
+                          to={`/templates/${rec.id}`}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                        >
+                          <span className="text-2xl">{rec.icon}</span>
+                          <span className="flex-1 font-medium text-foreground">{rec.name}</span>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Link>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Quick Actions */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+                        >
+                          <Shield className="h-5 w-5 text-primary" />
+                          <span className="font-medium text-foreground">Admin Panel</span>
+                        </Link>
+                      )}
+                      <Link
+                        to="/templates"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <FileSearch className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium text-foreground">Browse Templates</span>
+                      </Link>
+                      <Link
+                        to="/settings"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <Settings className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium text-foreground">Account Settings</span>
+                      </Link>
+                      <Link
+                        to="/contact"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium text-foreground">Help & Support</span>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
             </div>
           </div>
         </section>
