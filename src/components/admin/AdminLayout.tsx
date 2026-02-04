@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, Users, Settings, 
-  BarChart3, LogOut, Menu, X, FileStack
+  BarChart3, LogOut, Menu, X, FileStack, Target
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { href: '/admin/seo', icon: Target, label: 'SEO Command' },
   { href: '/admin/blog', icon: FileText, label: 'Blog Posts' },
   { href: '/admin/pages', icon: FileStack, label: 'Pages' },
   { href: '/admin/users', icon: Users, label: 'Users' },
