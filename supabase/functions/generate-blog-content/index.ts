@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
+import { validateContent, getViolationSummary, type ValidationResult } from "../_shared/contentValidator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -157,6 +158,10 @@ Respond with ONLY this JSON structure (no markdown code blocks):
     const textContent = parsedContent.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = textContent.split(' ').filter(Boolean).length;
 
+    // Validate content for AI-typical phrases
+    const validationResult = validateContent(parsedContent.content);
+    console.log('Content validation:', getViolationSummary(validationResult));
+
     console.log('Generated content with', wordCount, 'words');
 
     return new Response(JSON.stringify({
@@ -171,6 +176,7 @@ Respond with ONLY this JSON structure (no markdown code blocks):
         suggested_tags: parsedContent.suggested_tags?.slice(0, 3) || [],
         lsi_keywords: parsedContent.lsi_keywords || [],
         word_count: wordCount,
+        validation: validationResult,
       },
       model: data.model,
     }), {

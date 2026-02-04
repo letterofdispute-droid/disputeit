@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
+import { validateContent, getViolationSummary } from "../_shared/contentValidator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -350,6 +351,10 @@ Respond with ONLY this JSON:
         cleanedContent = cleanedContent.trim();
 
         const parsedContent = JSON.parse(cleanedContent);
+
+        // Validate content for AI-typical phrases
+        const validationResult = validateContent(parsedContent.content);
+        console.log(`Content validation for "${item.suggested_title}":`, getViolationSummary(validationResult));
 
         // Generate slug from title
         const slug = parsedContent.title

@@ -2,6 +2,19 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ContentViolation {
+  phrase: string;
+  count: number;
+  type: 'phrase' | 'pattern';
+  severity: 'warning' | 'error';
+}
+
+export interface ValidationResult {
+  isClean: boolean;
+  violations: ContentViolation[];
+  score: number;
+}
+
 export interface GeneratedContent {
   title: string;
   seo_title: string;
@@ -12,6 +25,7 @@ export interface GeneratedContent {
   suggested_tags: string[];
   lsi_keywords: string[];
   word_count: number;
+  validation?: ValidationResult;
 }
 
 interface GenerateParams {

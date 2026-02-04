@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import DOMPurify from 'dompurify';
 import type { GeneratedContent } from '@/hooks/useGenerateBlogContent';
+import { ContentValidationAlert } from './ContentValidationAlert';
 
 interface ContentPreviewProps {
   content: GeneratedContent;
@@ -22,6 +23,11 @@ export function ContentPreview({ content }: ContentPreviewProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Validation Alert */}
+        {content.validation && (
+          <ContentValidationAlert validation={content.validation} />
+        )}
+
         {/* Title */}
         <div>
           <h2 className="text-2xl font-bold text-foreground leading-tight">
