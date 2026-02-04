@@ -341,89 +341,89 @@ const ArticlePage = () => {
         </div>
       </section>
 
-      {/* Article Hero - Redesigned with proper spacing */}
-      <section className="bg-gradient-to-b from-primary via-primary to-primary/95 pt-12 pb-32 md:pt-16 md:pb-40">
-        <div className="container-narrow text-center">
-          <Badge variant="secondary" className="mb-6 text-sm px-4 py-1.5">{post.category}</Badge>
-          
-          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl xl:text-[3.25rem] font-bold text-primary-foreground mb-8 leading-[1.15] tracking-tight">
-            {post.title}
-          </h1>
-          
-          {/* Meta info - simplified, centered */}
-          <div className="flex justify-center flex-wrap items-center gap-4 text-primary-foreground/70 text-sm">
-            <span className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {post.published_at && new Date(post.published_at).toLocaleDateString('en-GB', { 
-                month: 'long', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })}
-            </span>
-            <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              {calculatedReadTime}
-            </span>
-            {post.views > 0 && (
-              <>
-                <span className="hidden sm:inline">•</span>
+      {/* Article Hero - Linearity-inspired split layout */}
+      <section className="bg-gradient-to-br from-[hsl(165,30%,14%)] via-[hsl(165,35%,9%)] to-[hsl(165,40%,5%)]">
+        <div className="container-wide py-12 md:py-16 lg:py-20">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+            
+            {/* Left: Text Content */}
+            <div className="order-2 md:order-1">
+              <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+                {post.title}
+              </h1>
+              
+              {post.excerpt && (
+                <p className="text-white/70 text-lg md:text-xl mb-8 leading-relaxed max-w-lg">
+                  {post.excerpt}
+                </p>
+              )}
+              
+              <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm text-white/60">
                 <span className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  {post.views.toLocaleString()} views
+                  <User className="h-4 w-4" />
+                  {displayAuthor}
                 </span>
-              </>
-            )}
+                <span className="hidden sm:inline text-white/40">|</span>
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {post.published_at && new Date(post.published_at).toLocaleDateString('en-GB', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </span>
+                <span className="hidden sm:inline text-white/40">|</span>
+                <span className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {calculatedReadTime}
+                </span>
+                {post.views > 0 && (
+                  <>
+                    <span className="hidden sm:inline text-white/40">|</span>
+                    <span className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      {post.views.toLocaleString()} views
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Right: Featured Image Card */}
+            <div className="order-1 md:order-2">
+              {post.featured_image_url ? (
+                <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-2xl">
+                  {/* Card Header */}
+                  <div className="p-6 pb-4">
+                    <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
+                      {post.category}
+                    </Badge>
+                    <h2 className="font-serif text-xl md:text-2xl font-bold text-foreground leading-snug line-clamp-3">
+                      {post.title}
+                    </h2>
+                  </div>
+                  {/* Featured Image */}
+                  <img 
+                    src={post.featured_image_url} 
+                    alt={post.title}
+                    className="w-full h-48 md:h-64 object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 shadow-2xl">
+                  <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
+                    {post.category}
+                  </Badge>
+                  <h2 className="font-serif text-2xl font-bold text-foreground">
+                    {post.title}
+                  </h2>
+                </div>
+              )}
+            </div>
+            
           </div>
         </div>
       </section>
-
-      {/* Featured Image - Pulled up into hero with proper spacing */}
-      {post.featured_image_url && (
-        <section className="bg-background">
-          <div className="container-narrow -mt-20 md:-mt-28">
-            <figure className="rounded-2xl overflow-hidden shadow-2xl border-4 border-background">
-              <img 
-                src={post.featured_image_url} 
-                alt={post.title}
-                className="w-full h-64 md:h-96 object-cover"
-              />
-            </figure>
-            
-            {/* Author byline below image */}
-            <div className="flex justify-center items-center gap-3 mt-6">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-accent text-accent-foreground font-semibold text-sm">
-                  {authorInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-sm">
-                <span className="font-medium text-foreground">{displayAuthor}</span>
-                <span className="text-muted-foreground"> • Consumer Rights Expert</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-      
-      {/* Author byline for articles without featured image */}
-      {!post.featured_image_url && (
-        <section className="bg-background pt-8">
-          <div className="container-narrow">
-            <div className="flex justify-center items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-accent text-accent-foreground font-semibold text-sm">
-                  {authorInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-sm">
-                <span className="font-medium text-foreground">{displayAuthor}</span>
-                <span className="text-muted-foreground"> • Consumer Rights Expert</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Article Content */}
       <section className="py-12 md:py-16 bg-background">
