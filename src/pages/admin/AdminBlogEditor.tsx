@@ -148,6 +148,19 @@ const AdminBlogEditor = () => {
       return;
     }
 
+    // Enforce minimum word count for publishing
+    if (publishStatus === 'published') {
+      const wordCount = content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0).length;
+      if (wordCount < 1200) {
+        toast({ 
+          title: 'Content too short', 
+          description: `Posts must be at least 1,200 words to publish. Current: ${wordCount} words.`, 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const categoryName = availableCategories.find(c => c.slug === category)?.name || category;
