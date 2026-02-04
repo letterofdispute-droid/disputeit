@@ -47,10 +47,7 @@ const ArticlePage = () => {
 
   // Convert category slug to display name
   const formatCategoryName = (categorySlug: string): string => {
-    return categorySlug
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    return categorySlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   // Reading progress tracker
@@ -175,33 +172,32 @@ const ArticlePage = () => {
       const text = match[1].replace(/<[^>]*>/g, ''); // Strip any inner HTML
       const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       if (!toc.find(t => t.id === id)) {
-        toc.push({ level: 2, text, id });
+        toc.push({
+          level: 2,
+          text,
+          id
+        });
       }
     }
-    
     return toc;
   }, [post]);
 
   // Intersection Observer for active heading tracking
   useEffect(() => {
     if (tableOfContents.length === 0) return;
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveHeading(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '-100px 0px -70% 0px' }
-    );
-
-    tableOfContents.forEach((item) => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveHeading(entry.target.id);
+        }
+      });
+    }, {
+      rootMargin: '-100px 0px -70% 0px'
+    });
+    tableOfContents.forEach(item => {
       const element = document.getElementById(item.id);
       if (element) observer.observe(element);
     });
-
     return () => observer.disconnect();
   }, [tableOfContents]);
 
@@ -366,7 +362,7 @@ const ArticlePage = () => {
                 {formatCategoryName(post.category_slug)}
               </Badge>
               
-              <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+              <h1 className="font-serif text-3xl md:text-4xl font-bold text-white mb-6 leading-tight lg:text-4xl">
                 {post.title}
               </h1>
               
@@ -405,19 +401,11 @@ const ArticlePage = () => {
             
             {/* Right: Featured Image */}
             <div className="order-1 md:order-2">
-              {post.featured_image_url ? (
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                  <img 
-                    src={post.featured_image_url} 
-                    alt={post.title} 
-                    className="w-full h-64 md:h-80 object-cover" 
-                  />
-                </div>
-              ) : (
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl h-64 md:h-80 flex items-center justify-center">
+              {post.featured_image_url ? <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                  <img src={post.featured_image_url} alt={post.title} className="w-full h-64 md:h-80 object-cover" />
+                </div> : <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl h-64 md:h-80 flex items-center justify-center">
                   <FileText className="h-16 w-16 text-white/30" />
-                </div>
-              )}
+                </div>}
             </div>
             
           </div>
