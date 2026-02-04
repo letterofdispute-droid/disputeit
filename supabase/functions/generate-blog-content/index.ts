@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES } from "../_shared/siteContext.ts";
+import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,6 +60,8 @@ serve(async (req) => {
 
     const systemPrompt = `${BLOG_WRITER_CONTEXT}
 
+${WRITING_STYLE_GUIDELINES}
+
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks, no explanations
 2. The "content" field must contain semantic HTML (NOT markdown)
@@ -75,7 +77,6 @@ CONTENT REQUIREMENTS:
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords
 - Write for US readers who need help with disputes and complaints
 - Include actionable advice and practical steps
-- Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
 ${relevantCategory ? `- This article relates to our ${relevantCategory.name} category (${relevantCategory.description})` : ''}
 
 SEO REQUIREMENTS:

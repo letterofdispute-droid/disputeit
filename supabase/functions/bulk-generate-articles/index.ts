@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SITE_CONFIG, CATEGORIES } from "../_shared/siteContext.ts";
+import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -265,6 +265,8 @@ serve(async (req) => {
         const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
 a US platform specializing in consumer rights, dispute resolution, and complaint letters.
 
+${WRITING_STYLE_GUIDELINES}
+
 ABOUT LETTER OF DISPUTE:
 We provide ${SITE_CONFIG.templateCount} professionally written dispute letter templates across ${SITE_CONFIG.categoryCount} categories:
 ${CATEGORY_CONTEXT}
@@ -284,7 +286,6 @@ CONTENT REQUIREMENTS:
 - Naturally incorporate the provided keywords 2-3+ times each
 - Write for US readers seeking help with disputes and complaints
 - Include actionable advice and practical steps
-- Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
 ${categoryInfo ? `- This article relates to our ${categoryInfo.name} category` : ''}
 
 SEO REQUIREMENTS:
