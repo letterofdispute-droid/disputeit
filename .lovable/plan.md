@@ -1,223 +1,161 @@
 
 
-# World-Class Article Page Redesign
+# Redesign Article Hero Section
 
 ## Problems Identified
 
-Based on the screenshots and code analysis:
-
-1. **Bland, unstyled content** - Headings run into paragraphs, no visual separation
-2. **Missing middle image** - The database has `middle_image_1_url` but the content lacks `{{MIDDLE_IMAGE_1}}` placeholder (legacy content)
-3. **Poor list spacing** - Numbered and bulleted lists lack proper margins/padding
-4. **No visual hierarchy** - H2/H3 headings need clear differentiation
-5. **Content feels cramped** - Needs breathing room between sections
-6. **Schema shows "DisputeLetters"** - Still using wrong branding in JSON-LD
+1. **Featured image glued to hero** - The `-mt-10` offset isn't enough; the image feels cramped against the blue header with no visual breathing room
+2. **Personal author name exposed** - Shows "mario.smode" instead of a branded contributor name
+3. **Header layout needs polish** - The transition from blue hero to image to content feels abrupt
 
 ---
 
-## Solution Overview
+## Solution
 
-Transform the article page into a premium, magazine-quality reading experience with:
+### Part 1: Replace Author Name with "LoD Contributor"
 
-- Enhanced typography with proper vertical rhythm
-- Better heading styles with decorative accents
-- Improved list styling with proper spacing
-- Smart middle image injection for legacy content
-- Polished sidebar and share buttons
-- Reading progress indicator
-- Author bio section
-- Fixed branding in schema
-
----
-
-## Implementation Details
-
-### Part 1: Enhanced Prose Styling in `index.css`
-
-Update the prose styles with proper spacing and visual hierarchy:
-
-| Element | Current | Enhanced |
-|---------|---------|----------|
-| H2 headings | Basic serif | Add bottom border accent, more top margin |
-| H3 headings | Basic serif | Muted color accent, subtle left border |
-| Paragraphs | Tight spacing | Relaxed leading, proper margins |
-| Lists (ul/ol) | Minimal spacing | `my-6` margin, `space-y-3` between items |
-| List items | Cramped | `pl-2`, proper line height |
-| Ordered list | Plain numbers | Styled counters with primary color |
-
-**New prose styles:**
-```css
-.prose h2 {
-  @apply text-2xl md:text-3xl mt-12 mb-6 pb-3 border-b border-border;
-}
-
-.prose h3 {
-  @apply text-xl md:text-2xl mt-10 mb-4 pl-4 border-l-4 border-primary/30;
-}
-
-.prose ol {
-  counter-reset: item;
-  @apply list-none pl-0 my-8 space-y-4;
-}
-
-.prose ol > li {
-  @apply pl-10 relative;
-}
-
-.prose ol > li::before {
-  counter-increment: item;
-  content: counter(item);
-  @apply absolute left-0 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold;
-}
-```
-
-### Part 2: Smart Middle Image Injection
-
-For content that doesn't have `{{MIDDLE_IMAGE_1}}` placeholder but has an image URL, intelligently insert the image at approximately 40-50% through the content:
-
-**Logic in `ArticlePage.tsx`:**
-```typescript
-// If we have a middle image URL but no placeholder in content
-// inject it approximately halfway through
-if (post.middle_image_1_url && !html.includes('{{MIDDLE_IMAGE_1}}')) {
-  const paragraphs = html.split('</p>');
-  const midPoint = Math.floor(paragraphs.length * 0.45);
-  if (midPoint > 0 && paragraphs.length > 3) {
-    paragraphs.splice(midPoint, 0, 
-      `</p><figure class="article-middle-image my-10">
-        <img src="${post.middle_image_1_url}" alt="" class="w-full rounded-xl shadow-elevated" loading="lazy" />
-      </figure><p>`
-    );
-    html = paragraphs.join('</p>');
-  }
-}
-```
-
-### Part 3: ArticlePage Layout Enhancements
-
-**Header improvements:**
-- Larger, more prominent title with better line height
-- Author avatar placeholder with refined metadata layout
-- Subtle animated reading time indicator
-
-**Featured image improvements:**
-- Full-bleed option with gradient overlay
-- Caption support
-- Better shadow and rounding
-
-**Content area improvements:**
-- Wider reading column with optimal line length (65-75 characters)
-- Drop cap on first paragraph
-- Pull quotes styling
-- Better article card for CTAs
-
-**Sidebar improvements:**
-- Sticky positioning with proper offset
-- Refined share buttons with hover effects
-- Table of contents with active state tracking
-- Newsletter signup card
-
-### Part 4: New Visual Elements
-
-**Reading progress bar** (top of page):
-```tsx
-// Track scroll position and show thin accent-colored progress bar
-const [readProgress, setReadProgress] = useState(0);
-
-useEffect(() => {
-  const handleScroll = () => {
-    const scrolled = window.scrollY;
-    const total = document.documentElement.scrollHeight - window.innerHeight;
-    setReadProgress((scrolled / total) * 100);
-  };
-  window.addEventListener('scroll', handleScroll);
-  return () => window.removeEventListener('scroll', handleScroll);
-}, []);
-```
-
-**Author bio section** (end of article):
-```
-┌───────────────────────────────────────────────────────────────┐
-│ ┌────────┐                                                    │
-│ │ Avatar │  Written by [Author Name]                         │
-│ │  (M)   │  Consumer rights expert at Letter Of Dispute      │
-│ └────────┘  [Brief bio about their expertise]                │
-└───────────────────────────────────────────────────────────────┘
-```
-
-### Part 5: Fix Branding in Schema
-
-Update JSON-LD from "DisputeLetters" to "Letter Of Dispute":
+Change all author-related displays to use "LoD Contributor" instead of the database author field:
 
 ```typescript
-const articleSchema = post ? {
-  // ...
-  "publisher": {
-    "@type": "Organization",
-    "name": "Letter Of Dispute",
-    "url": "https://letterofdispute.com"
-  },
-  // ...
-} : null;
+// Instead of showing post.author
+// Always display "LoD Contributor" as the author name
+const displayAuthor = "LoD Contributor";
+
+// Update authorInitials to use "LoD"
+const authorInitials = "LoD";
 ```
 
----
+Update all 3 locations where author appears:
+- Hero section author info (line 363)
+- Author bio section (line 438)
+- JSON-LD schema (line 261)
 
-## Visual Design Targets
+### Part 2: Redesign Hero + Featured Image Layout
 
-### Heading Hierarchy
+Create a more elegant, modern hero with proper spacing:
 
+**New Design Concept:**
 ```
-H2 - Understanding Your Rights
-─────────────────────────────
-[Primary heading with bottom border accent]
+┌────────────────────────────────────────────────────────────────────┐
+│  Breadcrumb: Home > Articles > Category > Title                    │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│                      [Blue gradient hero area]                     │
+│                                                                    │
+│        ┌─────────────────────────────────────────────────┐        │
+│        │  [Category Badge]                                │        │
+│        │                                                  │        │
+│        │  The Consumer Rights Act: Your Power             │        │
+│        │  Against Dodgy Builders                          │        │
+│        │                                                  │        │
+│        │  📅 January 15, 2025  •  ⏱ 7 min read           │        │
+│        └─────────────────────────────────────────────────┘        │
+│                                                                    │
+│   ┌────────────────────────────────────────────────────────────┐  │
+│   │                                                            │  │
+│   │                   [FEATURED IMAGE]                         │  │
+│   │              with rounded corners and shadow               │  │
+│   │                                                            │  │
+│   └────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+│                 LoD Contributor  •  Consumer Rights Expert         │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+```
 
-┃  H3 - Key Provisions
-[Secondary heading with left accent bar]
+**Key Changes:**
+- Move author/meta info BELOW the featured image (currently above)
+- Add more padding at the bottom of the hero (pb-24 instead of pb-0)
+- Pull the featured image up more dramatically (-mt-16) into the hero
+- Add a subtle white background card behind the content area
+- Place author as a centered byline below the image
 
-Paragraph text flows with comfortable
-reading rhythm and proper margins...
+### Part 3: Simplified, Elegant Layout
 
-1 ● First numbered item with styled
-    counter badge in primary color
+```typescript
+{/* Article Hero - Redesigned */}
+<section className="bg-gradient-to-b from-primary via-primary to-primary/95 pt-8 pb-32 md:pb-40">
+  <div className="container-narrow text-center">
+    <Badge variant="secondary" className="mb-6">{post.category}</Badge>
     
-2 ● Second numbered item properly
-    spaced from the first
+    <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6 leading-tight">
+      {post.title}
+    </h1>
+    
+    {/* Meta info - simplified, centered */}
+    <div className="flex justify-center items-center gap-4 text-primary-foreground/70 text-sm">
+      <span className="flex items-center gap-2">
+        <Calendar className="h-4 w-4" />
+        {formattedDate}
+      </span>
+      <span>•</span>
+      <span className="flex items-center gap-2">
+        <Clock className="h-4 w-4" />
+        {calculatedReadTime}
+      </span>
+    </div>
+  </div>
+</section>
 
-• Bullet point with primary-colored
-  marker and proper indentation
+{/* Featured Image - Pulled up into hero with proper spacing */}
+{post.featured_image_url && (
+  <section className="bg-background">
+    <div className="container-narrow -mt-20 md:-mt-28">
+      <figure className="rounded-2xl overflow-hidden shadow-2xl border-4 border-background">
+        <img src={post.featured_image_url} alt={post.title} className="w-full h-64 md:h-96 object-cover" />
+      </figure>
+      
+      {/* Author byline below image */}
+      <div className="flex justify-center items-center gap-3 mt-6">
+        <Avatar className="h-10 w-10">
+          <AvatarFallback className="bg-accent text-accent-foreground font-semibold text-sm">
+            LoD
+          </AvatarFallback>
+        </Avatar>
+        <div className="text-sm">
+          <span className="font-medium text-foreground">LoD Contributor</span>
+          <span className="text-muted-foreground"> • Consumer Rights Expert</span>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
 ```
 
-### Featured Image Treatment
+### Part 4: Update Author Bio Section
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│                    [FEATURED IMAGE]                         │
-│                  Full-width, rounded-xl                     │
-│                  shadow-elevated styling                    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-           ↑ Pulls up into header area with -mt-12
+Replace the author bio at the bottom of articles:
+
+```typescript
+<div className="mt-12 p-8 bg-muted/50 rounded-2xl border border-border">
+  <div className="flex items-start gap-5">
+    <Avatar className="h-16 w-16 border-2 border-primary/20">
+      <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
+        LoD
+      </AvatarFallback>
+    </Avatar>
+    <div className="flex-1">
+      <p className="text-sm text-muted-foreground mb-1">Written by</p>
+      <h3 className="font-serif text-xl font-bold text-foreground mb-2">LoD Contributor</h3>
+      <p className="text-muted-foreground leading-relaxed">
+        Our team of consumer rights specialists at Letter Of Dispute (LoD) help UK consumers 
+        navigate disputes with clear, actionable guidance backed by knowledge of the 
+        Consumer Rights Act 2015 and related regulations.
+      </p>
+    </div>
+  </div>
+</div>
 ```
 
-### Middle Image Placement
+### Part 5: Update JSON-LD Schema
 
-```
-   [Content paragraph 1]
-   [Content paragraph 2]
-   [Content paragraph 3]
-   
-   ┌─────────────────────────────────────┐
-   │                                     │
-   │        [MIDDLE IMAGE]               │
-   │     my-10 rounded-xl shadow         │
-   │                                     │
-   └─────────────────────────────────────┘
-   
-   [Content paragraph 4]
-   [Content paragraph 5]
-   ...
+Change the author in structured data:
+
+```typescript
+"author": {
+  "@type": "Person",
+  "name": "LoD Contributor"
+}
 ```
 
 ---
@@ -226,26 +164,23 @@ reading rhythm and proper margins...
 
 | File | Changes |
 |------|---------|
-| `src/index.css` | Enhanced prose styles for H2, H3, ol, ul, li with proper spacing and visual accents |
-| `src/pages/ArticlePage.tsx` | Smart image injection, reading progress bar, improved layout, author section, fixed schema branding |
+| `src/pages/ArticlePage.tsx` | Redesign hero layout, move author below image, use "LoD Contributor" everywhere, increase hero padding, update author bio section |
 
 ---
 
-## Expected Results
+## Visual Comparison
 
-### Before (current state)
-- Headings blend into content
-- Lists feel cramped with no visual separation
-- Middle image doesn't appear
-- Generic, blog-like appearance
-- Wrong branding in schema
+### Before (Current)
+- Blue hero with author avatar + name inside
+- Featured image with small `-mt-10` overlap
+- "mario.smode" author name visible
+- Cramped, image feels "glued"
 
-### After (enhanced)
-- Clear visual hierarchy with bordered headings
-- Spacious, numbered lists with styled counters
-- Middle images appear even in legacy content
-- Magazine-quality, premium reading experience
-- Correct "Letter Of Dispute" branding throughout
-- Reading progress indicator for engagement
-- Author bio adds credibility and trust
+### After (Redesigned)
+- Clean, centered blue hero with title + meta only
+- Featured image with dramatic `-mt-20` overlap
+- Author byline centered below image
+- "LoD Contributor" as branded author
+- More visual breathing room
+- Professional, polished appearance
 
