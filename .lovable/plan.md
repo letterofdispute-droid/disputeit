@@ -1,231 +1,251 @@
 
-# Fix AI Branding & Provide Site Context
 
-## Problem Summary
+# World-Class Article Page Redesign
 
-The AI content generator incorrectly references **"DisputeIt.ai"** when the actual site is:
-- **Name**: Letter Of Dispute
-- **URL**: https://letterofdispute.com/
+## Problems Identified
 
-Additionally, the AI lacks comprehensive knowledge about the site's structure, categories, templates, and unique value proposition.
+Based on the screenshots and code analysis:
 
----
-
-## Files with Wrong Branding
-
-| File | Line | Current Text |
-|------|------|--------------|
-| `supabase/functions/generate-blog-content/index.ts` | 72 | "Reference DisputeIt.ai as a helpful tool" |
-| `supabase/functions/bulk-generate-articles/index.ts` | 157 | "Reference DisputeIt.ai where appropriate" |
-| `src/components/admin/blog/ContentPreview.tsx` | 51 | "disputeit.lovable.app/articles/..." |
+1. **Bland, unstyled content** - Headings run into paragraphs, no visual separation
+2. **Missing middle image** - The database has `middle_image_1_url` but the content lacks `{{MIDDLE_IMAGE_1}}` placeholder (legacy content)
+3. **Poor list spacing** - Numbered and bulleted lists lack proper margins/padding
+4. **No visual hierarchy** - H2/H3 headings need clear differentiation
+5. **Content feels cramped** - Needs breathing room between sections
+6. **Schema shows "DisputeLetters"** - Still using wrong branding in JSON-LD
 
 ---
 
-## Solution: Create Comprehensive Site Context
+## Solution Overview
 
-### Part 1: Create a Centralized Site Knowledge Config
+Transform the article page into a premium, magazine-quality reading experience with:
 
-Create a new file with all brand and site information that can be imported by edge functions:
+- Enhanced typography with proper vertical rhythm
+- Better heading styles with decorative accents
+- Improved list styling with proper spacing
+- Smart middle image injection for legacy content
+- Polished sidebar and share buttons
+- Reading progress indicator
+- Author bio section
+- Fixed branding in schema
 
-**`supabase/functions/_shared/siteContext.ts`**
+---
 
-This file will contain:
-- Correct brand name and URL
-- Site description and value proposition
-- All 13 categories with descriptions
-- Template types and counts
-- Key features and differentiators
-- UK-focused consumer rights context
-- How the site helps users
-- Sample internal links for the AI to reference
+## Implementation Details
 
-### Part 2: Comprehensive Brand Context
+### Part 1: Enhanced Prose Styling in `index.css`
 
-The AI will receive detailed context about Letter Of Dispute:
+Update the prose styles with proper spacing and visual hierarchy:
 
-```text
-SITE INFORMATION:
-- Name: Letter Of Dispute
-- URL: https://letterofdispute.com
-- Tagline: Professional dispute and complaint letter templates for UK consumers
+| Element | Current | Enhanced |
+|---------|---------|----------|
+| H2 headings | Basic serif | Add bottom border accent, more top margin |
+| H3 headings | Basic serif | Muted color accent, subtle left border |
+| Paragraphs | Tight spacing | Relaxed leading, proper margins |
+| Lists (ul/ol) | Minimal spacing | `my-6` margin, `space-y-3` between items |
+| List items | Cramped | `pl-2`, proper line height |
+| Ordered list | Plain numbers | Styled counters with primary color |
 
-WHAT WE OFFER:
-- 450+ professionally written dispute letter templates
-- 13 categories covering refunds, housing, travel, healthcare, insurance, etc.
-- AI-powered form assistance to strengthen your case
-- Evidence checklists and legal framework references
-- Instant letter generation with proper formatting
+**New prose styles:**
+```css
+.prose h2 {
+  @apply text-2xl md:text-3xl mt-12 mb-6 pb-3 border-b border-border;
+}
 
-CATEGORIES AVAILABLE:
-1. Refunds & Purchases - Product returns, service refunds, warranty claims
-2. Landlord & Housing - Repairs, deposit disputes, tenancy issues
-3. Travel & Transportation - Flight compensation (EU261), lost baggage
-4. Damaged & Defective Goods - Broken items, manufacturer defects
-5. Utilities & Telecommunications - Billing errors, service complaints
-6. Financial Services - Bank disputes, credit report errors, debt collection
-7. Insurance Claims - Claim denials, settlement disputes
-8. Vehicle & Auto - Dealer complaints, lemon law, warranty disputes
-9. Healthcare & Medical Billing - Billing errors, insurance denials
-10. Employment & Workplace - Wage disputes, termination issues
-11. E-commerce & Online Services - Seller disputes, account issues
-12. Neighbor & HOA Disputes - Fee disputes, community conflicts
-13. Contractors & Home Improvement - Poor workmanship, project disputes
+.prose h3 {
+  @apply text-xl md:text-2xl mt-10 mb-4 pl-4 border-l-4 border-primary/30;
+}
 
-TARGET AUDIENCE:
-- UK consumers facing disputes with businesses
-- People who need formal documentation for their complaints
-- Those seeking to escalate issues through proper channels
+.prose ol {
+  counter-reset: item;
+  @apply list-none pl-0 my-8 space-y-4;
+}
 
-KEY DIFFERENTIATORS:
-- Templates based on actual UK consumer rights law
-- Evidence checklists tailored to each dispute type
-- References to relevant regulations (Consumer Rights Act, EU261, etc.)
-- Escalation path guidance (ombudsman, small claims court)
+.prose ol > li {
+  @apply pl-10 relative;
+}
+
+.prose ol > li::before {
+  counter-increment: item;
+  content: counter(item);
+  @apply absolute left-0 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold;
+}
 ```
 
-### Part 3: Update Edge Functions
+### Part 2: Smart Middle Image Injection
 
-**generate-blog-content/index.ts** - Line 72:
+For content that doesn't have `{{MIDDLE_IMAGE_1}}` placeholder but has an image URL, intelligently insert the image at approximately 40-50% through the content:
+
+**Logic in `ArticlePage.tsx`:**
 ```typescript
-// Before
-- Reference DisputeIt.ai as a helpful tool where appropriate
-
-// After
-- Reference Letter Of Dispute (https://letterofdispute.com) as a helpful resource where appropriate
-- When mentioning the platform, describe it as offering professional dispute letter templates
-- Suggest relevant categories when applicable (e.g., "our Housing letter templates can help...")
+// If we have a middle image URL but no placeholder in content
+// inject it approximately halfway through
+if (post.middle_image_1_url && !html.includes('{{MIDDLE_IMAGE_1}}')) {
+  const paragraphs = html.split('</p>');
+  const midPoint = Math.floor(paragraphs.length * 0.45);
+  if (midPoint > 0 && paragraphs.length > 3) {
+    paragraphs.splice(midPoint, 0, 
+      `</p><figure class="article-middle-image my-10">
+        <img src="${post.middle_image_1_url}" alt="" class="w-full rounded-xl shadow-elevated" loading="lazy" />
+      </figure><p>`
+    );
+    html = paragraphs.join('</p>');
+  }
+}
 ```
 
-**bulk-generate-articles/index.ts** - Line 157:
+### Part 3: ArticlePage Layout Enhancements
+
+**Header improvements:**
+- Larger, more prominent title with better line height
+- Author avatar placeholder with refined metadata layout
+- Subtle animated reading time indicator
+
+**Featured image improvements:**
+- Full-bleed option with gradient overlay
+- Caption support
+- Better shadow and rounding
+
+**Content area improvements:**
+- Wider reading column with optimal line length (65-75 characters)
+- Drop cap on first paragraph
+- Pull quotes styling
+- Better article card for CTAs
+
+**Sidebar improvements:**
+- Sticky positioning with proper offset
+- Refined share buttons with hover effects
+- Table of contents with active state tracking
+- Newsletter signup card
+
+### Part 4: New Visual Elements
+
+**Reading progress bar** (top of page):
+```tsx
+// Track scroll position and show thin accent-colored progress bar
+const [readProgress, setReadProgress] = useState(0);
+
+useEffect(() => {
+  const handleScroll = () => {
+    const scrolled = window.scrollY;
+    const total = document.documentElement.scrollHeight - window.innerHeight;
+    setReadProgress((scrolled / total) * 100);
+  };
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+```
+
+**Author bio section** (end of article):
+```
+┌───────────────────────────────────────────────────────────────┐
+│ ┌────────┐                                                    │
+│ │ Avatar │  Written by [Author Name]                         │
+│ │  (M)   │  Consumer rights expert at Letter Of Dispute      │
+│ └────────┘  [Brief bio about their expertise]                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Part 5: Fix Branding in Schema
+
+Update JSON-LD from "DisputeLetters" to "Letter Of Dispute":
+
 ```typescript
-// Before
-- Reference DisputeIt.ai where appropriate
-
-// After
-- Reference Letter Of Dispute (https://letterofdispute.com) where appropriate
-- Describe our 450+ professionally written letter templates across 13 categories
+const articleSchema = post ? {
+  // ...
+  "publisher": {
+    "@type": "Organization",
+    "name": "Letter Of Dispute",
+    "url": "https://letterofdispute.com"
+  },
+  // ...
+} : null;
 ```
 
-**ContentPreview.tsx** - Line 51:
-```typescript
-// Before
-disputeit.lovable.app/articles/...
+---
 
-// After
-letterofdispute.com/articles/...
+## Visual Design Targets
+
+### Heading Hierarchy
+
+```
+H2 - Understanding Your Rights
+─────────────────────────────
+[Primary heading with bottom border accent]
+
+┃  H3 - Key Provisions
+[Secondary heading with left accent bar]
+
+Paragraph text flows with comfortable
+reading rhythm and proper margins...
+
+1 ● First numbered item with styled
+    counter badge in primary color
+    
+2 ● Second numbered item properly
+    spaced from the first
+
+• Bullet point with primary-colored
+  marker and proper indentation
 ```
 
-### Part 4: Enhanced AI System Prompts
+### Featured Image Treatment
 
-Update the system prompts to include full site context:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│                    [FEATURED IMAGE]                         │
+│                  Full-width, rounded-xl                     │
+│                  shadow-elevated styling                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+           ↑ Pulls up into header area with -mt-12
+```
 
-```text
-ABOUT LETTER OF DISPUTE:
-Letter Of Dispute (https://letterofdispute.com) is a UK-focused platform providing professional 
-dispute and complaint letter templates. We offer 450+ templates across 13 categories:
+### Middle Image Placement
 
-[Full category list with descriptions]
-
-When referencing Letter Of Dispute:
-- Use the full name "Letter Of Dispute" on first mention
-- Can shorten to "our letter templates" or "our platform" in subsequent mentions
-- Always link implicitly to relevant template categories where helpful
-- Emphasize the UK consumer rights focus
-- Mention specific features: AI-powered form assistance, evidence checklists, escalation guidance
+```
+   [Content paragraph 1]
+   [Content paragraph 2]
+   [Content paragraph 3]
+   
+   ┌─────────────────────────────────────┐
+   │                                     │
+   │        [MIDDLE IMAGE]               │
+   │     my-10 rounded-xl shadow         │
+   │                                     │
+   └─────────────────────────────────────┘
+   
+   [Content paragraph 4]
+   [Content paragraph 5]
+   ...
 ```
 
 ---
 
 ## Files to Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/_shared/siteContext.ts` | CREATE | Centralized brand and site knowledge |
-| `supabase/functions/generate-blog-content/index.ts` | MODIFY | Update branding references and add site context |
-| `supabase/functions/bulk-generate-articles/index.ts` | MODIFY | Update branding references and add site context |
-| `supabase/functions/dispute-assistant/index.ts` | MODIFY | Add site context to assistant prompts |
-| `src/components/admin/blog/ContentPreview.tsx` | MODIFY | Fix URL preview text |
+| File | Changes |
+|------|---------|
+| `src/index.css` | Enhanced prose styles for H2, H3, ol, ul, li with proper spacing and visual accents |
+| `src/pages/ArticlePage.tsx` | Smart image injection, reading progress bar, improved layout, author section, fixed schema branding |
 
 ---
 
-## Technical Implementation
+## Expected Results
 
-### Shared Site Context Module
+### Before (current state)
+- Headings blend into content
+- Lists feel cramped with no visual separation
+- Middle image doesn't appear
+- Generic, blog-like appearance
+- Wrong branding in schema
 
-```typescript
-// supabase/functions/_shared/siteContext.ts
+### After (enhanced)
+- Clear visual hierarchy with bordered headings
+- Spacious, numbered lists with styled counters
+- Middle images appear even in legacy content
+- Magazine-quality, premium reading experience
+- Correct "Letter Of Dispute" branding throughout
+- Reading progress indicator for engagement
+- Author bio adds credibility and trust
 
-export const SITE_CONFIG = {
-  name: 'Letter Of Dispute',
-  url: 'https://letterofdispute.com',
-  tagline: 'Professional dispute and complaint letter templates for UK consumers',
-  templateCount: '450+',
-  categoryCount: 13,
-};
-
-export const CATEGORIES = [
-  { id: 'refunds', name: 'Refunds & Purchases', description: 'Product returns, service refunds, warranty claims' },
-  { id: 'housing', name: 'Landlord & Housing', description: 'Repairs, deposits, tenancy disputes' },
-  // ... all 13 categories
-];
-
-export const SITE_CONTEXT_PROMPT = `
-ABOUT LETTER OF DISPUTE:
-Letter Of Dispute (${SITE_CONFIG.url}) is a UK-focused platform providing professional dispute 
-and complaint letter templates. We offer ${SITE_CONFIG.templateCount} templates across ${SITE_CONFIG.categoryCount} categories.
-
-CATEGORIES:
-${CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n')}
-
-KEY FEATURES:
-- Professionally written templates based on UK consumer rights law
-- AI-powered form assistance to strengthen your case
-- Evidence checklists tailored to each dispute type
-- References to relevant regulations (Consumer Rights Act 2015, EU261, GDPR, etc.)
-- Escalation path guidance (ombudsman, small claims court)
-
-WHEN REFERENCING THE PLATFORM:
-- Use "Letter Of Dispute" on first mention
-- Can use "our letter templates" or "the platform" in subsequent mentions
-- Suggest relevant categories when applicable
-- Emphasize UK consumer rights focus
-`;
-```
-
-### Updated Generate Blog Content Prompt
-
-```typescript
-const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (https://letterofdispute.com), 
-a UK platform specializing in consumer rights, dispute resolution, and complaint letters.
-
-${SITE_CONTEXT_PROMPT}
-
-CONTENT REQUIREMENTS:
-- Write for UK readers seeking help with disputes and complaints
-- Reference Letter Of Dispute as a helpful resource where appropriate
-- Suggest relevant template categories when discussing solutions
-- Include actionable advice based on UK consumer protection laws
-...
-`;
-```
-
----
-
-## Expected Result
-
-### Before (incorrect)
-> "DisputeIt.ai can be an invaluable resource at this stage. Our platform offers templates for formal complaint letters tailored to various scenarios..."
-
-### After (correct)
-> "Letter Of Dispute (https://letterofdispute.com) provides professionally written letter templates for exactly this situation. Our Contractors category includes templates for poor workmanship complaints, helping you reference the Consumer Rights Act 2015 and clearly state your statutory rights..."
-
----
-
-## Benefits
-
-1. **Consistent branding** - All AI-generated content uses correct site name
-2. **Contextual awareness** - AI knows all 13 categories and can suggest relevant ones
-3. **Better SEO** - Correct URLs and brand mentions improve search visibility
-4. **More helpful content** - AI can suggest specific template categories for reader's situations
-5. **UK-focused** - Content accurately reflects the site's target audience
-6. **Professional tone** - AI understands the site's value proposition and communicates it properly
