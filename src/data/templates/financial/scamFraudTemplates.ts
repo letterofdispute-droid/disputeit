@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Electronic Fund Transfer Act', approvedPhrases: ['Under Regulation E', 'In accordance with EFTA protections'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Contingent Reimbursement Model Code', approvedPhrases: ['Under the CRM Code', 'In accordance with FCA fraud protection rules'] },
   { code: 'EU', name: 'European Union', legalReference: 'Payment Services Directive', approvedPhrases: ['Under PSD2 fraud protections', 'In accordance with EU payment regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'Electronic Fund Transfer Act', approvedPhrases: ['Under Regulation E', 'In accordance with EFTA protections'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable fraud protection regulations'] },
 ];
 

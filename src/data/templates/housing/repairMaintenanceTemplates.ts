@@ -25,7 +25,7 @@ export const repairMaintenanceTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name (Tenant)', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Property Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'City', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Postcode', type: 'text', required: true, impactLevel: 'important' },
+  { id: 'propertyZipCode', label: 'ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'leakLocation', label: 'Leak Location', type: 'text', required: true, placeholder: 'e.g., Master bedroom ceiling', impactLevel: 'critical', evidenceHint: 'Be specific about which room and area' },
       { id: 'leakDescription', label: 'Leak Description', type: 'textarea', required: true, placeholder: 'Describe the leak and any damage', impactLevel: 'critical', aiEnhanced: true, evidenceHint: 'Note size, frequency, and any secondary damage' },
       { id: 'dateDiscovered', label: 'Date Discovered', type: 'date', required: true, impactLevel: 'critical' },

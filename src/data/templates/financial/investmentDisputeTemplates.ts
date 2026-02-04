@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Securities Exchange Act', approvedPhrases: ['Under SEC regulations', 'In accordance with FINRA rules'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'FCA Conduct of Business Sourcebook', approvedPhrases: ['Under FCA COBS rules', 'In accordance with UK financial regulations'] },
   { code: 'EU', name: 'European Union', legalReference: 'MiFID II', approvedPhrases: ['Under MiFID II regulations', 'In accordance with EU investor protection rules'] },
-  { code: 'US', name: 'United States', legalReference: 'Securities Exchange Act', approvedPhrases: ['Under SEC regulations', 'In accordance with FINRA rules'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable investment regulations'] },
 ];
 

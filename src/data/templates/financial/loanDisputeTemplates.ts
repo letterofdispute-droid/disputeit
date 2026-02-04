@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Truth in Lending Act', approvedPhrases: ['Under TILA', 'In accordance with applicable lending laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Financial Conduct Authority Rules', approvedPhrases: ['Under FCA regulations', 'In accordance with UK financial law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Consumer Credit Directive', approvedPhrases: ['Under EU consumer credit regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Truth in Lending Act', approvedPhrases: ['Under TILA', 'In accordance with applicable lending laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable lending regulations'] },
 ];
 

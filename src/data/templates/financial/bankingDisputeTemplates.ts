@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Fair Credit Reporting Act, CFPB Regulations', approvedPhrases: ['Under the FCRA', 'In accordance with applicable financial laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Financial Conduct Authority Rules', approvedPhrases: ['Under FCA regulations', 'In accordance with UK financial law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Payment Services Directive', approvedPhrases: ['Under EU financial regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Fair Credit Reporting Act', approvedPhrases: ['Under the FCRA', 'In accordance with applicable financial laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable financial regulations'] },
 ];
 

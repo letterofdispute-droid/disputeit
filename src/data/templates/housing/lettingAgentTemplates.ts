@@ -26,7 +26,7 @@ export const lettingAgentTemplates: LetterTemplate[] = [
       { id: 'tenantName', label: 'Your Name', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyAddressLine1', label: 'Property Address', type: 'text', required: true, impactLevel: 'critical' },
       { id: 'propertyCity', label: 'City', type: 'text', required: true, impactLevel: 'important' },
-      { id: 'propertyPostcode', label: 'Postcode', type: 'text', required: true, impactLevel: 'important' },
+      { id: 'propertyZipCode', label: 'ZIP Code', type: 'text', required: true, impactLevel: 'important' },
       { id: 'complaintType', label: 'Complaint Type', type: 'select', options: ['Poor communication', 'Delayed repairs', 'Unlawful fees', 'Deposit issues', 'Failure to act', 'Misleading information', 'Other'], required: true, impactLevel: 'critical' },
       { id: 'complaintDetails', label: 'Complaint Details', type: 'textarea', required: true, impactLevel: 'critical', aiEnhanced: true, evidenceHint: 'Include dates, names of staff, and reference numbers' },
     ],

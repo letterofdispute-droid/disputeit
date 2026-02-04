@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Fair Labor Standards Act', approvedPhrases: ['Under the FLSA', 'In accordance with federal employment law'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Employment Rights Act 1996', approvedPhrases: ['Under the Employment Rights Act', 'In accordance with UK employment law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Working Time Directive', approvedPhrases: ['Under EU employment law', 'In accordance with workers rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Fair Labor Standards Act', approvedPhrases: ['Under the FLSA', 'In accordance with federal employment law'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable employment standards'] },
 ];
 
