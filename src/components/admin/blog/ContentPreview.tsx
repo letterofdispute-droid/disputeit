@@ -48,7 +48,7 @@ export function ContentPreview({ content }: ContentPreviewProps) {
               {content.seo_title}
             </p>
             <p className="text-xs text-green-600">
-              disputeit.lovable.app/articles/...
+              letterofdispute.com/articles/...
             </p>
             <p className="text-xs text-muted-foreground line-clamp-2">
               {content.seo_description}

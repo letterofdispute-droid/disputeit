@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SITE_CONFIG, CATEGORIES } from "../_shared/siteContext.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,9 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
   empathetic_supportive: "Write with understanding and compassion for the reader's frustrations.",
   action_oriented: "Write in a direct, practical style focused on clear next steps.",
 };
+
+// Build category context for the AI
+const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -138,7 +142,24 @@ serve(async (req) => {
 
         const plan = item.content_plans;
         
-        const systemPrompt = `You are an expert SEO content writer specializing in consumer rights and dispute resolution.
+        // Find relevant category info
+        const categoryInfo = CATEGORIES.find(c => c.id === plan.category_id);
+        
+        // Randomly decide on 1 or 2 middle images
+        const useTwoMiddleImages = Math.random() < 0.5;
+        const middleImageInstructions = useTwoMiddleImages
+          ? `7. Include TWO image placeholders:
+   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 33% through the content
+   - Insert {{MIDDLE_IMAGE_2}} on its own line at approximately 66% through the content`
+          : `7. Include ONE image placeholder:
+   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
+        
+        const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
+a UK platform specializing in consumer rights, dispute resolution, and complaint letters.
+
+ABOUT LETTER OF DISPUTE:
+We provide ${SITE_CONFIG.templateCount} professionally written dispute letter templates across ${SITE_CONFIG.categoryCount} categories:
+${CATEGORY_CONTEXT}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks
@@ -146,15 +167,17 @@ CRITICAL OUTPUT REQUIREMENTS:
 3. Use these HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>
 4. NEVER use <h1> tags
 5. NEVER include "Conclusion", "FAQ", "TL;DR" sections
-6. Include {{MIDDLE_IMAGE}} placeholder approximately 40-50% through content
+6. Use British English spelling throughout
+${middleImageInstructions}
 
 CONTENT REQUIREMENTS:
 - Write approximately ${wordCount} words
 - ${toneInstruction}
 - Naturally incorporate the provided keywords 2-3+ times each
-- Write for UK readers seeking help with disputes
+- Write for UK readers seeking help with disputes and complaints
 - Include actionable advice and practical steps
-- Reference DisputeIt.ai where appropriate
+- Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
+${categoryInfo ? `- This article relates to our ${categoryInfo.name} category` : ''}
 
 SEO REQUIREMENTS:
 - seo_title: 50-60 characters with primary keyword
@@ -175,7 +198,7 @@ Respond with ONLY this JSON:
   "seo_title": "SEO title here",
   "seo_description": "Meta description here",
   "excerpt": "Blog listing excerpt here",
-  "content": "<h2>First Section</h2><p>Content...</p>{{MIDDLE_IMAGE}}<h2>Second Section</h2><p>More...</p>",
+  "content": "<h2>First Section</h2><p>Content...</p>{{MIDDLE_IMAGE_1}}<h2>Second Section</h2><p>More...</p>",
   "suggested_tags": ["tag1", "tag2", "tag3"]
 }`;
 

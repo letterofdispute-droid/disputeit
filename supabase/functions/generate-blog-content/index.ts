@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES } from "../_shared/siteContext.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,6 +44,11 @@ serve(async (req) => {
     const keywordList = keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
     const targetWordCount = requestedWordCount || 1500;
 
+    // Find relevant category for context
+    const relevantCategory = categorySlug 
+      ? CATEGORIES.find(c => c.id === categorySlug)
+      : null;
+
     // Randomly decide on 1 or 2 middle images
     const useTwoMiddleImages = Math.random() < 0.5;
     const middleImageInstructions = useTwoMiddleImages
@@ -52,7 +58,7 @@ serve(async (req) => {
       : `6. Include ONE image placeholder:
    - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
 
-    const systemPrompt = `You are an expert SEO content writer specializing in consumer rights, dispute resolution, and complaint letters. Your task is to generate high-quality, SEO-optimized blog articles.
+    const systemPrompt = `${BLOG_WRITER_CONTEXT}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks, no explanations
@@ -67,9 +73,10 @@ CONTENT REQUIREMENTS:
 - ${toneInstruction}
 - Naturally incorporate the primary keywords 2-3+ times each throughout the article
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords
-- Write for readers in the UK who need help with disputes and complaints
+- Write for UK readers who need help with disputes and complaints
 - Include actionable advice and practical steps
-- Reference DisputeIt.ai as a helpful tool where appropriate
+- Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
+${relevantCategory ? `- This article relates to our ${relevantCategory.name} category (${relevantCategory.description})` : ''}
 
 SEO REQUIREMENTS:
 - seo_title: 50-60 characters, include primary keyword near the beginning
@@ -87,7 +94,7 @@ Respond with ONLY this JSON structure (no markdown code blocks):
   "seo_title": "SEO optimized title (50-60 chars)",
   "seo_description": "Meta description (150-160 chars)",
   "excerpt": "Blog listing excerpt (150-200 chars)",
-  "content": "<h2>First Section</h2><p>Content here...</p>{{MIDDLE_IMAGE}}<h2>Second Section</h2><p>More content...</p>",
+  "content": "<h2>First Section</h2><p>Content here...</p>{{MIDDLE_IMAGE_1}}<h2>Second Section</h2><p>More content...</p>",
   "suggested_category": "category-slug",
   "suggested_tags": ["tag1", "tag2", "tag3"],
   "lsi_keywords": ["keyword1", "keyword2", "keyword3"]
