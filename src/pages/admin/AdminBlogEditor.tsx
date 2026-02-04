@@ -123,7 +123,7 @@ const AdminBlogEditor = () => {
         setSlug(data.slug);
         setContent(data.content || '');
         setExcerpt(data.excerpt || '');
-        setCategory(data.category || '');
+        setCategory(data.category_slug || '');
         setTags(data.tags || []);
         setStatus(data.status);
         setIsFeatured(data.featured || false);
@@ -150,12 +150,13 @@ const AdminBlogEditor = () => {
 
     setIsSaving(true);
     try {
+      const categoryName = availableCategories.find(c => c.slug === category)?.name || category;
       const postData = {
         title,
         slug,
         content,
         excerpt,
-        category,
+        category: categoryName,
         category_slug: category,
         tags,
         status: publishStatus || status,
