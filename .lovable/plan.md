@@ -80,27 +80,34 @@ This affects how default jurisdiction is selected.
 | solicitor | attorney/lawyer | ✅ Done |
 | ombudsman | state agency / commissioner | ✅ Done |
 
-### Phase 4: Legal Reference Priority
+### Phase 4: Legal Reference Priority ✅ COMPLETED
 
-Reorder legal references to prioritize US laws:
-- FTC Act
-- State Consumer Protection Laws
-- Magnuson-Moss Warranty Act
-- Fair Credit Reporting Act (FCRA)
-- Fair Debt Collection Practices Act (FDCPA)
-- State Lemon Laws
+Reordered legal references to prioritize US laws:
 
-### Phase 5: Category Knowledge Updates
+| Law/Regulation | Status |
+|----------------|--------|
+| FTC Act | ✅ Added to consumer categories |
+| State Consumer Protection Laws | ✅ Primary reference |
+| Magnuson-Moss Warranty Act | ✅ Added to Refunds/Warranty sections |
+| Fair Credit Reporting Act (FCRA) | ✅ Already prioritized in Financial |
+| Fair Debt Collection Practices Act (FDCPA) | ✅ Already prioritized in Financial |
+| State Lemon Laws | ✅ Referenced in Vehicle category |
+| Implied Warranty of Habitability | ✅ Moved to first position in Housing |
+
+### Phase 5: Category Knowledge Updates ✅ COMPLETED
 
 **File: `src/data/categoryKnowledge.ts`**
 
-- Reorder `regulatoryBodies` arrays to put US bodies first
-- Update escalation paths to prioritize US agencies:
-  - FTC
-  - State Attorney General
-  - Better Business Bureau
-  - State Insurance Commissioner
-  - CFPB (Consumer Financial Protection Bureau)
+| Category | Changes |
+|----------|---------|
+| Travel | ✅ US DOT and FAA first in regulatoryBodies |
+| Insurance | ✅ State Insurance Commissioner and NAIC first |
+| Housing | ✅ Local Housing Authority and HUD first, US regulations prioritized |
+| Utilities | ✅ FCC and State PUC added first |
+| Employment | ✅ EEOC, DOL, NLRB first in regulatoryBodies |
+| Contractors | ✅ US escalation paths (licensing board, BBB) |
+| Refunds | ✅ Magnuson-Moss and State Consumer Protection Laws added |
+| Financial | ✅ CFPB and FTC already first |
 
 ---
 

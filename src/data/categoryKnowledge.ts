@@ -48,7 +48,8 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Submit claims within the airline\'s deadline (usually 7-21 days)',
     ],
     regulatoryBodies: [
-      { name: 'US Department of Transportation', jurisdiction: 'US', website: 'https://www.transportation.gov' },
+      { name: 'US Department of Transportation (DOT)', jurisdiction: 'US', website: 'https://www.transportation.gov' },
+      { name: 'Federal Aviation Administration (FAA)', jurisdiction: 'US', website: 'https://www.faa.gov' },
       { name: 'UK Civil Aviation Authority (CAA)', jurisdiction: 'UK', website: 'https://www.caa.co.uk' },
       { name: 'European Consumer Centre', jurisdiction: 'EU', website: 'https://ec.europa.eu/consumers' },
     ],
@@ -97,7 +98,7 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
           'Reference specific EU261 articles for stronger claims',
         ],
         typicalTimeline: '4-8 weeks for initial response, up to 6 months if escalated',
-        escalationPath: ['Airline customer service', 'National Enforcement Body', 'Alternative Dispute Resolution', 'Small claims court'],
+        escalationPath: ['Airline customer service', 'Department of Transportation complaint', 'Credit card chargeback', 'Small claims court'],
       },
       'Lost/Delayed Baggage': {
         regulations: [
@@ -148,6 +149,7 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
     ],
     regulatoryBodies: [
       { name: 'State Insurance Commissioner', jurisdiction: 'US' },
+      { name: 'National Association of Insurance Commissioners (NAIC)', jurisdiction: 'US', website: 'https://www.naic.org' },
       { name: 'Financial Ombudsman Service', jurisdiction: 'UK', website: 'https://www.financial-ombudsman.org.uk' },
       { name: 'EIOPA', jurisdiction: 'EU' },
     ],
@@ -235,22 +237,13 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
     ],
     regulatoryBodies: [
       { name: 'Local Housing Authority', jurisdiction: 'US' },
+      { name: 'HUD (Department of Housing and Urban Development)', jurisdiction: 'US', website: 'https://www.hud.gov' },
       { name: 'Housing Ombudsman', jurisdiction: 'UK' },
       { name: 'Tenancy Deposit Scheme', jurisdiction: 'UK' },
     ],
     subcategories: {
       'Repairs & Maintenance': {
         regulations: [
-          {
-            name: 'Landlord and Tenant Act 1985',
-            description: 'Sets landlord repair obligations in UK',
-            jurisdiction: 'UK',
-            keyPoints: [
-              'Landlord must keep structure and exterior in repair',
-              'Must maintain heating, water, and sanitation',
-              'Must respond in reasonable time once notified',
-            ],
-          },
           {
             name: 'Implied Warranty of Habitability',
             description: 'US doctrine requiring livable conditions',
@@ -259,6 +252,17 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
               'Property must be fit for human habitation',
               'Includes working plumbing, heating, electricity',
               'Tenants may have rent withholding rights if violated',
+              'Varies by state - some require written notice first',
+            ],
+          },
+          {
+            name: 'Landlord and Tenant Act 1985',
+            description: 'Sets landlord repair obligations in UK',
+            jurisdiction: 'UK',
+            keyPoints: [
+              'Landlord must keep structure and exterior in repair',
+              'Must maintain heating, water, and sanitation',
+              'Must respond in reasonable time once notified',
             ],
           },
         ],
@@ -281,7 +285,7 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
           'Document impact on your health or daily life',
         ],
         typicalTimeline: 'Urgent repairs: 24-48 hours. Non-urgent: 14-28 days.',
-        escalationPath: ['Written request to landlord', 'Formal complaint', 'Environmental Health (UK)', 'Housing Ombudsman', 'Court action'],
+        escalationPath: ['Written request to landlord', 'Local code enforcement', 'State tenant rights organization', 'Housing authority', 'Small claims court'],
       },
       'Deposit Disputes': {
         requiredEvidence: [
@@ -333,7 +337,7 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
           'Check if contractor is licensed and insured',
           'Consider mediation before legal action',
         ],
-        escalationPath: ['Direct negotiation', 'Trading Standards', 'Industry body (if member)', 'Mediation', 'Small claims court'],
+        escalationPath: ['Direct negotiation', 'State contractor licensing board', 'Better Business Bureau', 'Mediation', 'Small claims court'],
       },
       'Abandoned Work': {
         requiredEvidence: [
@@ -575,6 +579,8 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Compare prices regularly and switch if better deal available',
     ],
     regulatoryBodies: [
+      { name: 'Federal Communications Commission (FCC)', jurisdiction: 'US', website: 'https://www.fcc.gov' },
+      { name: 'State Public Utilities Commission', jurisdiction: 'US' },
       { name: 'Ofgem', jurisdiction: 'UK' },
       { name: 'Ofcom', jurisdiction: 'UK' },
       { name: 'Energy Ombudsman', jurisdiction: 'UK' },
@@ -648,10 +654,11 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Seek legal advice for serious issues',
     ],
     regulatoryBodies: [
+      { name: 'Equal Employment Opportunity Commission (EEOC)', jurisdiction: 'US', website: 'https://www.eeoc.gov' },
+      { name: 'Department of Labor (DOL)', jurisdiction: 'US', website: 'https://www.dol.gov' },
+      { name: 'National Labor Relations Board (NLRB)', jurisdiction: 'US', website: 'https://www.nlrb.gov' },
       { name: 'ACAS', jurisdiction: 'UK' },
       { name: 'Employment Tribunal', jurisdiction: 'UK' },
-      { name: 'EEOC', jurisdiction: 'US' },
-      { name: 'Department of Labor', jurisdiction: 'US' },
     ],
     subcategories: {
       'Unpaid Wages': {
@@ -668,7 +675,7 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
           'Reference specific contract terms or legal requirements',
           'Set clear deadline for payment',
         ],
-        escalationPath: ['Written request to employer', 'ACAS Early Conciliation (UK)', 'Employment Tribunal', 'Small claims court'],
+        escalationPath: ['Written request to employer', 'State labor department', 'Department of Labor Wage and Hour Division', 'EEOC (if discrimination)', 'Small claims court'],
       },
     },
   },
@@ -685,6 +692,27 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
     subcategories: {
       'Faulty Goods': {
         regulations: [
+          {
+            name: 'Magnuson-Moss Warranty Act',
+            description: 'US federal law governing warranties',
+            jurisdiction: 'US',
+            keyPoints: [
+              'Requires clear disclosure of warranty terms',
+              'Allows consumers to sue for breach of warranty',
+              'Covers both express and implied warranties',
+              'Attorney fees may be recoverable',
+            ],
+          },
+          {
+            name: 'State Consumer Protection Laws',
+            description: 'State laws providing additional consumer protections',
+            jurisdiction: 'US',
+            keyPoints: [
+              'Many states have implied warranty of merchantability',
+              'Products must be fit for ordinary purpose',
+              'Remedies vary by state',
+            ],
+          },
           {
             name: 'Consumer Rights Act 2015',
             description: 'UK law on goods quality and remedies',
