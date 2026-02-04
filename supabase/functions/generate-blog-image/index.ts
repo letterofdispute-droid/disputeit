@@ -61,22 +61,30 @@ serve(async (req) => {
     const data = await response.json();
     console.log('AI response received');
 
-    // Extract image from response
-    const content = data.choices[0]?.message?.content;
+    // Extract image from response - handle both formats
+    const message = data.choices[0]?.message;
+    let base64Data: string | null = null;
     
-    if (!content || !Array.isArray(content)) {
-      console.error('Unexpected response format:', JSON.stringify(data));
-      throw new Error('No image generated');
+    // Format 1: images array (newer format)
+    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+      const imagePart = message.images.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
+    }
+    
+    // Format 2: content array (older format)
+    if (!base64Data && message?.content && Array.isArray(message.content)) {
+      const imagePart = message.content.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
     }
 
-    // Find the image part in the response
-    const imagePart = content.find((part: any) => part.type === 'image_url');
-    if (!imagePart?.image_url?.url) {
-      console.error('No image URL in response:', JSON.stringify(content));
-      throw new Error('No image URL in response');
+    if (!base64Data) {
+      console.error('No image URL in response:', JSON.stringify(data));
+      throw new Error('No image generated - check response format');
     }
-
-    const base64Data = imagePart.image_url.url;
     
     // Extract the actual base64 data (remove data:image/...;base64, prefix if present)
     const base64Match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);

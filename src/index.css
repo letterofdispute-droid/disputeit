@@ -166,6 +166,83 @@
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-accent);
   }
+
+  /* Enhanced prose styling for articles */
+  .prose blockquote {
+    @apply border-l-4 border-primary/30 pl-6 italic my-6 bg-muted/30 py-4 pr-4 rounded-r-lg;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose blockquote p {
+    @apply mb-0;
+  }
+
+  .prose ul {
+    @apply list-disc pl-6 my-4 space-y-2;
+  }
+
+  .prose ol {
+    @apply list-decimal pl-6 my-4 space-y-2;
+  }
+
+  .prose li {
+    @apply leading-relaxed;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose li::marker {
+    color: hsl(var(--primary));
+  }
+
+  .prose code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+    color: hsl(var(--foreground));
+  }
+
+  .prose pre {
+    @apply bg-muted p-4 rounded-lg overflow-x-auto my-6;
+  }
+
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .prose hr {
+    @apply my-8 border-border;
+  }
+
+  .prose strong,
+  .prose b {
+    @apply font-semibold;
+    color: hsl(var(--foreground));
+  }
+
+  .prose table {
+    @apply w-full my-6 border-collapse;
+  }
+
+  .prose th {
+    @apply bg-muted px-4 py-2 text-left font-semibold border border-border;
+    color: hsl(var(--foreground));
+  }
+
+  .prose td {
+    @apply px-4 py-2 border border-border;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose figure {
+    @apply my-6;
+  }
+
+  .prose figcaption {
+    @apply text-center text-sm mt-2;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .prose img {
+    @apply rounded-lg my-6;
+  }
 }
 
 @layer utilities {

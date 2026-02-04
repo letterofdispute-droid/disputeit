@@ -1,9 +1,18 @@
-import { useState, useRef } from 'react';
-import { ImageIcon, Upload, Sparkles, Loader2, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ImageIcon, Upload, RefreshCw, Loader2, X, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+
+interface SuggestedImage {
+  url: string;
+  thumbnail_url: string;
+  alt_text: string;
+  photographer: string;
+  pixabay_id: number;
+}
 
 interface FeaturedImageUploaderProps {
   imageUrl: string;
@@ -19,9 +28,84 @@ const FeaturedImageUploader = ({
   excerpt,
 }: FeaturedImageUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestedImages, setSuggestedImages] = useState<SuggestedImage[]>([]);
+  const [imageOffset, setImageOffset] = useState(0);
+  const [selectedUrl, setSelectedUrl] = useState(imageUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Track if we've already fetched for this title
+  const [lastFetchedTitle, setLastFetchedTitle] = useState('');
+
+  // Auto-fetch images when title changes (with debounce)
+  useEffect(() => {
+    if (title && title.length > 10 && title !== lastFetchedTitle && !imageUrl) {
+      const timer = setTimeout(() => {
+        fetchSuggestedImages();
+        setLastFetchedTitle(title);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [title]);
+
+  const fetchSuggestedImages = async (offset = 0) => {
+    if (!title) {
+      toast({
+        title: 'Title required',
+        description: 'Please add a title to get image suggestions.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoadingImages(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-images', {
+        body: { 
+          topic: title, 
+          keywords: excerpt,
+          count: 4,
+          offset 
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.images && data.images.length > 0) {
+        setSuggestedImages(data.images);
+        setImageOffset(offset);
+      } else {
+        toast({
+          title: 'No images found',
+          description: 'Try modifying the title for better results.',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      toast({
+        title: 'Failed to fetch images',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  const handleFindMore = () => {
+    fetchSuggestedImages(imageOffset + 4);
+  };
+
+  const handleSelectImage = (url: string) => {
+    setSelectedUrl(url);
+    onImageChange(url);
+    toast({
+      title: 'Image selected',
+      description: 'Featured image has been set.',
+    });
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,6 +139,7 @@ const FeaturedImageUploader = ({
         .getPublicUrl(fileName);
 
       onImageChange(publicUrl);
+      setSelectedUrl(publicUrl);
       toast({
         title: 'Image uploaded',
         description: 'Featured image has been uploaded successfully.',
@@ -94,16 +179,17 @@ const FeaturedImageUploader = ({
 
       if (data.imageUrl) {
         onImageChange(data.imageUrl);
+        setSelectedUrl(data.imageUrl);
         toast({
           title: 'Image generated',
-          description: 'Featured image has been generated successfully.',
+          description: 'AI-generated featured image has been set.',
         });
       }
     } catch (error) {
       console.error('Error generating image:', error);
       toast({
         title: 'Generation failed',
-        description: 'Failed to generate image. Please try again.',
+        description: 'Failed to generate image. Try selecting from Pixabay instead.',
         variant: 'destructive',
       });
     } finally {
@@ -113,6 +199,7 @@ const FeaturedImageUploader = ({
 
   const handleRemoveImage = () => {
     onImageChange('');
+    setSelectedUrl('');
   };
 
   return (
@@ -121,6 +208,7 @@ const FeaturedImageUploader = ({
         <CardTitle className="text-sm font-medium">Featured Image</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Current selected image or placeholder */}
         {imageUrl ? (
           <div className="relative group">
             <img
@@ -136,15 +224,88 @@ const FeaturedImageUploader = ({
             </button>
           </div>
         ) : (
-          <div className="w-full h-32 bg-muted/30 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-            <div className="text-center">
-              <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-1" />
-              <span className="text-xs text-muted-foreground">No image set</span>
-            </div>
-          </div>
+          <>
+            {/* Image suggestions grid */}
+            {suggestedImages.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {suggestedImages.map((img) => (
+                  <button
+                    key={img.pixabay_id}
+                    onClick={() => handleSelectImage(img.url)}
+                    className={cn(
+                      "relative aspect-video rounded-lg overflow-hidden border-2 transition-all hover:ring-2 hover:ring-accent/50",
+                      selectedUrl === img.url 
+                        ? "border-accent ring-2 ring-accent" 
+                        : "border-border"
+                    )}
+                  >
+                    <img
+                      src={img.thumbnail_url}
+                      alt={img.alt_text}
+                      className="w-full h-full object-cover"
+                    />
+                    {selectedUrl === img.url && (
+                      <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
+                        <Check className="h-6 w-6 text-accent-foreground bg-accent rounded-full p-1" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                      <span className="text-[10px] text-white truncate block">
+                        by {img.photographer}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full h-32 bg-muted/30 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+                <div className="text-center">
+                  <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-1" />
+                  <span className="text-xs text-muted-foreground">
+                    {title ? 'Loading suggestions...' : 'Add title to get suggestions'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
+        {/* Action buttons */}
         <div className="flex gap-2">
+          {!imageUrl && suggestedImages.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFindMore}
+              disabled={isLoadingImages}
+              className="flex-1 h-8 text-xs"
+            >
+              {isLoadingImages ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Find More
+            </Button>
+          )}
+          
+          {!imageUrl && suggestedImages.length === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchSuggestedImages()}
+              disabled={isLoadingImages || !title}
+              className="flex-1 h-8 text-xs"
+            >
+              {isLoadingImages ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <ImageIcon className="h-3 w-3 mr-1" />
+              )}
+              Find Images
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -159,11 +320,12 @@ const FeaturedImageUploader = ({
             )}
             Upload
           </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleGenerateImage}
-            disabled={isGenerating}
+            disabled={isGenerating || !title}
             className="flex-1 h-8 text-xs"
           >
             {isGenerating ? (
@@ -171,7 +333,7 @@ const FeaturedImageUploader = ({
             ) : (
               <Sparkles className="h-3 w-3 mr-1" />
             )}
-            AI Generate
+            AI Gen
           </Button>
         </div>
 

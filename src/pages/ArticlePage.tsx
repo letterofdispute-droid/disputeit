@@ -181,8 +181,8 @@ const ArticlePage = () => {
     }
     
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre'],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel'],
+      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel', 'style', 'colspan', 'rowspan'],
     });
   }, [post?.content]);
 

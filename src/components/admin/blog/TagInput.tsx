@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface TagInputProps {
   tags: string[];
   onChange: (tags: string[]) => void;
+  title?: string;
+  content?: string;
 }
 
 interface BlogTag {
@@ -17,10 +21,12 @@ interface BlogTag {
   slug: string;
 }
 
-const TagInput = ({ tags, onChange }: TagInputProps) => {
+const TagInput = ({ tags, onChange, title, content }: TagInputProps) => {
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<BlogTag[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -76,6 +82,62 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
     }
   };
 
+  const handleAISuggest = async () => {
+    if (!title) {
+      toast({
+        title: 'Title required',
+        description: 'Please add a title before using AI suggestion.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSuggesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-category-tags', {
+        body: {
+          title,
+          content,
+          availableCategories: [], // Not needed for tags
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.suggestedTags && data.suggestedTags.length > 0) {
+        // Add new tags that don't already exist
+        const newTags = data.suggestedTags.filter(
+          (tag: string) => !tags.includes(tag.toLowerCase())
+        );
+        
+        if (newTags.length > 0) {
+          // Add each tag to database if needed and to the list
+          for (const tag of newTags) {
+            await handleAddTag(tag);
+          }
+          toast({
+            title: 'Tags suggested',
+            description: `Added ${newTags.length} tag${newTags.length > 1 ? 's' : ''}`,
+          });
+        } else {
+          toast({
+            title: 'No new tags',
+            description: 'Suggested tags already exist.',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error suggesting tags:', error);
+      toast({
+        title: 'Suggestion failed',
+        description: 'Failed to get AI tag suggestions.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   const filteredSuggestions = suggestions.filter(
     s => s.name.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(s.name.toLowerCase())
   );
@@ -83,7 +145,31 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Tags</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Tags</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleAISuggest}
+                  disabled={isSuggesting || !title}
+                  className="h-6 w-6"
+                >
+                  {isSuggesting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Suggest 2 tags with AI</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Current tags */}
@@ -149,7 +235,7 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Press Enter to add. Use AI SEO to get suggestions.
+          Press Enter to add. Click ✨ for AI suggestions.
         </p>
       </CardContent>
     </Card>
