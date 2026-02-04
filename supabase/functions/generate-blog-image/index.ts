@@ -28,9 +28,20 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate image prompt
+    // Generate image prompt - explicitly request realistic photography
     const imageStyle = style || 'modern, professional, clean';
-    const imagePrompt = `Create a professional blog header image for an article titled "${title}". ${excerpt ? `The article is about: ${excerpt}.` : ''} Style: ${imageStyle}, suitable for a consumer rights and legal advice website. The image should be visually appealing with subtle gradients or abstract elements. No text in the image. 16:9 aspect ratio, high quality.`;
+    const imagePrompt = `Generate a REALISTIC PHOTOGRAPH for a blog article titled "${title}". ${excerpt ? `The article is about: ${excerpt}.` : ''} 
+
+CRITICAL REQUIREMENTS:
+- Must be a REALISTIC PHOTOGRAPH, NOT an illustration, NOT clipart, NOT a vector graphic, NOT a cartoon, NOT an icon
+- Should look like a professional stock photo taken with a real camera
+- Include real people, real objects, or real environments relevant to the topic
+- Professional lighting, natural colors, photorealistic quality
+- Style: ${imageStyle}, suitable for a consumer rights and legal advice website
+- No text overlays in the image
+- 16:9 aspect ratio, high resolution, professional stock photo quality
+
+Think: What would a professional stock photographer capture for this topic?`;
 
     console.log('Generating image with prompt:', imagePrompt);
 
