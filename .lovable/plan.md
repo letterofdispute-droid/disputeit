@@ -1,168 +1,117 @@
 
+# Fix: Remove UK References from Content Generation
 
-# Google reCAPTCHA Integration
+## Problem Identified
 
-## Domains to Add in Google reCAPTCHA Console
+The screenshot shows "UK construction dispute help" appearing as a keyword in your content cluster. This is happening because `generate-content-plan/index.ts` contains multiple explicit UK references that override your US-first site context:
 
-You need to add the following domains in the [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin):
+| Line | UK Reference |
+|------|--------------|
+| 50 | `'UK {topic} Laws: What Protects You'` - title variation |
+| 172 | `'NHS'` - UK healthcare term |
+| 270 | `"You are a UK-based SEO content strategist"` - system prompt |
+| 284 | `"Include UK-specific references where relevant (Consumer Rights Act, etc.)"` |
+| 299 | `'UK Consumer Rights After Shoddy Construction Work'` - example |
+| 334 | `"UK-specific term 5"` - keyword instruction |
 
-| Domain | Purpose |
-|--------|---------|
-| `disputeit.lovable.app` | Production/Published URL |
-| `id-preview--ff184904-311c-4792-8699-deb3dd5fdbf1.lovable.app` | Lovable Preview URL |
-| `localhost` | Local development (optional) |
-
-**Important**: If you have a custom domain (e.g., `disputeletters.com`), add that as well.
-
----
-
-## Implementation Overview
-
-We will use **reCAPTCHA v3** (invisible, score-based) for a seamless user experience. This protects forms without requiring users to click checkboxes or solve puzzles.
-
-### Forms to Protect
-
-| Form | Page | Priority |
-|------|------|----------|
-| Login | `/login` | High |
-| Signup | `/signup` | High |
-| Forgot Password | `/forgot-password` | High |
-| Contact Form | `/contact` | Medium |
+The shared `siteContext.ts` file is already correctly configured for US focus, but the content plan generator overrides it with UK-specific instructions.
 
 ---
 
-## Technical Implementation
+## Solution
 
-### 1. Install reCAPTCHA Package
-
-```bash
-npm install react-google-recaptcha-v3
-```
-
-### 2. Create reCAPTCHA Hook
-
-Create a reusable hook `src/hooks/useRecaptcha.ts` to execute reCAPTCHA verification:
-
-```typescript
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
-import { useCallback } from 'react';
-
-export const useRecaptcha = () => {
-  const { executeRecaptcha } = useGoogleReCaptcha();
-
-  const verifyRecaptcha = useCallback(async (action: string) => {
-    if (!executeRecaptcha) {
-      console.warn('reCAPTCHA not ready');
-      return null;
-    }
-    return await executeRecaptcha(action);
-  }, [executeRecaptcha]);
-
-  return { verifyRecaptcha };
-};
-```
-
-### 3. Wrap App with Provider
-
-Update `src/main.tsx` to include the reCAPTCHA provider:
-
-```typescript
-import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
-
-<GoogleReCaptchaProvider 
-  reCaptchaKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || ''}
->
-  <App />
-</GoogleReCaptchaProvider>
-```
-
-### 4. Create Backend Verification Edge Function
-
-Create `supabase/functions/verify-recaptcha/index.ts` to validate tokens server-side:
-
-```typescript
-// Calls Google's siteverify API
-// Returns { success: boolean, score: number }
-// Reject if score < 0.5 (likely bot)
-```
-
-### 5. Update Protected Forms
-
-Each form will:
-1. Get reCAPTCHA token before submission
-2. Send token to edge function for verification
-3. Only proceed if verification passes
+Update `supabase/functions/generate-content-plan/index.ts` to align with the US-first strategy documented in your site context.
 
 ---
 
-## Files to Create
+## Changes Required
 
-| File | Purpose |
-|------|---------|
-| `src/hooks/useRecaptcha.ts` | Reusable reCAPTCHA hook |
-| `supabase/functions/verify-recaptcha/index.ts` | Server-side token verification |
+### 1. Fix Article Type Variations (Line 50)
+
+**Before:**
+```javascript
+'UK {topic} Laws: What Protects You'
+```
+
+**After:**
+```javascript
+'US {topic} Laws: Your Rights Under Federal and State Law'
+```
+
+### 2. Fix Category Language - Healthcare (Line 172)
+
+**Before:**
+```javascript
+healthcare: {
+  terms: ['NHS', 'treatment', 'appointment', 'referral', 'complaint', 'care'],
+```
+
+**After:**
+```javascript
+healthcare: {
+  terms: ['insurance', 'treatment', 'appointment', 'provider', 'complaint', 'care'],
+```
+
+### 3. Fix System Prompt (Lines 270-300)
+
+**Before:**
+```javascript
+const systemPrompt = `You are a UK-based SEO content strategist...
+...Include UK-specific references where relevant (Consumer Rights Act, etc.)
+...GOOD EXAMPLES:
+- "UK Consumer Rights After Shoddy Construction Work"
+```
+
+**After:**
+```javascript
+const systemPrompt = `You are a US-based SEO content strategist...
+...Include US-specific references where relevant (FTC Act, Magnuson-Moss Warranty Act, state consumer protection laws, etc.)
+...GOOD EXAMPLES:
+- "Your Rights Under State Consumer Protection Laws After Shoddy Work"
+```
+
+### 4. Fix Keyword Instructions (Line 334)
+
+**Before:**
+```javascript
+"keywords": ["long-tail keyword 1", "natural search phrase 2", "question keyword 3", "action keyword 4", "UK-specific term 5"]
+```
+
+**After:**
+```javascript
+"keywords": ["long-tail keyword 1", "natural search phrase 2", "question keyword 3", "action keyword 4", "US consumer rights term 5"]
+```
+
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/main.tsx` | Add GoogleReCaptchaProvider wrapper |
-| `src/pages/LoginPage.tsx` | Add reCAPTCHA verification on submit |
-| `src/pages/SignupPage.tsx` | Add reCAPTCHA verification on submit |
-| `src/pages/ForgotPasswordPage.tsx` | Add reCAPTCHA verification on submit |
-| `src/pages/ContactPage.tsx` | Add reCAPTCHA verification on submit |
+| `supabase/functions/generate-content-plan/index.ts` | Replace all UK references with US equivalents |
 
 ---
 
-## Secret Configuration
+## Verification
 
-You will need to provide:
-
-| Secret | Where to Store | Description |
-|--------|----------------|-------------|
-| `VITE_RECAPTCHA_SITE_KEY` | Frontend env | Public site key (safe to expose) |
-| `RECAPTCHA_SECRET_KEY` | Backend secrets | Private key for server verification |
+After deployment:
+1. Create a new content plan for any template
+2. Verify all generated titles and keywords reference US laws/terminology
+3. Confirm no UK-specific terms appear in the queue
 
 ---
 
-## reCAPTCHA Setup Steps (Google Console)
+## Technical Details
 
-1. Go to [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin/create)
-2. Register a new site:
-   - **Label**: DisputeLetters
-   - **reCAPTCHA type**: reCAPTCHA v3
-   - **Domains**: Add the domains listed above
-3. Copy the **Site Key** (for frontend)
-4. Copy the **Secret Key** (for backend)
+The root cause is that while `siteContext.ts` correctly establishes US focus, the `generate-content-plan` function was written with hardcoded UK references that bypass the shared context. This fix aligns the content planner with your established US-first strategy.
 
----
+### US References to Use Instead
 
-## Flow Diagram
-
-```text
-User submits form
-       |
-       v
-[Get reCAPTCHA token (frontend)]
-       |
-       v
-[Send token + form data to Edge Function]
-       |
-       v
-[Edge Function calls Google siteverify API]
-       |
-       +---> Score >= 0.5 --> Proceed with action
-       |
-       +---> Score < 0.5 --> Reject (likely bot)
-```
-
----
-
-## Security Notes
-
-- reCAPTCHA v3 runs invisibly and assigns a score (0.0 to 1.0)
-- Scores near 1.0 indicate human, near 0.0 indicate bot
-- We'll use 0.5 as the threshold (adjustable)
-- Server-side verification is mandatory - never trust frontend-only checks
-- The site key is public; only the secret key must be protected
-
+| UK Term | US Replacement |
+|---------|----------------|
+| Consumer Rights Act | FTC Act, Magnuson-Moss Warranty Act |
+| UK | US, United States |
+| NHS | Medicare, insurance provider, healthcare system |
+| Trading Standards | State Attorney General, FTC |
+| Ofcom | FCC |
+| Financial Ombudsman | CFPB |
