@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SITE_CONFIG, CATEGORIES } from "../_shared/siteContext.ts";
 
 const corsHeaders = {
@@ -25,8 +25,113 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
   action_oriented: "Write in a direct, practical style focused on clear next steps.",
 };
 
+// Map template categories to blog categories
+const CATEGORY_MAP: Record<string, { slug: string; name: string }> = {
+  'refunds': { slug: 'consumer-rights', name: 'Consumer Rights' },
+  'damaged-goods': { slug: 'consumer-rights', name: 'Consumer Rights' },
+  'ecommerce': { slug: 'consumer-rights', name: 'Consumer Rights' },
+  'housing': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'hoa': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'contractors': { slug: 'contractors', name: 'Contractors' },
+  'financial': { slug: 'legal-tips', name: 'Legal Tips' },
+  'insurance': { slug: 'legal-tips', name: 'Legal Tips' },
+  'employment': { slug: 'consumer-rights', name: 'Consumer Rights' },
+  'travel': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'vehicle': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'utilities': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'healthcare': { slug: 'consumer-rights', name: 'Consumer Rights' },
+};
+
+function mapToBlogCategory(templateCategory: string): { slug: string; name: string } {
+  return CATEGORY_MAP[templateCategory] || { slug: 'consumer-rights', name: 'Consumer Rights' };
+}
+
 // Build category context for the AI
 const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n');
+
+// Generate SEO-friendly alt text for an image
+function generateAltText(searchQuery: string, articleTitle: string): string {
+  const cleanTitle = articleTitle.replace(/['"]/g, '').substring(0, 60);
+  return `${cleanTitle} - ${searchQuery}`.substring(0, 125);
+}
+
+// Fetch image from Pixabay, download, and upload to Supabase storage
+async function fetchAndUploadImage(
+  supabase: SupabaseClient,
+  searchQuery: string,
+  storagePath: string,
+  articleTitle: string
+): Promise<{ url: string | null; altText: string | null }> {
+  try {
+    const pixabayKey = Deno.env.get('PIXABAY_API_KEY');
+    if (!pixabayKey) {
+      console.log('PIXABAY_API_KEY not configured, skipping image');
+      return { url: null, altText: null };
+    }
+
+    // Clean and prepare search query
+    const cleanQuery = searchQuery
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(w => w.length > 2)
+      .slice(0, 4)
+      .join(' ');
+
+    // Search Pixabay with random offset for variety
+    const randomOffset = Math.floor(Math.random() * 20);
+    const url = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(cleanQuery)}&image_type=photo&orientation=horizontal&per_page=30&safesearch=true`;
+    
+    console.log(`Searching Pixabay for: "${cleanQuery}"`);
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.hits?.length) {
+      console.log(`No Pixabay results for: "${cleanQuery}"`);
+      return { url: null, altText: null };
+    }
+    
+    // Pick random image from results for variety
+    const randomIndex = Math.min(randomOffset, data.hits.length - 1);
+    const hit = data.hits[randomIndex];
+    
+    console.log(`Selected Pixabay image: ${hit.id}`);
+    
+    // Download the image
+    const imageResponse = await fetch(hit.largeImageURL);
+    if (!imageResponse.ok) {
+      console.error(`Failed to download image: ${imageResponse.status}`);
+      return { url: null, altText: null };
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('blog-images')
+      .upload(`${storagePath}.jpg`, imageBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+    
+    if (uploadError) {
+      console.error(`Upload error: ${uploadError.message}`);
+      return { url: null, altText: null };
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(`${storagePath}.jpg`);
+    
+    const altText = generateAltText(cleanQuery, articleTitle);
+    
+    console.log(`Uploaded image to: ${urlData.publicUrl}`);
+    return { url: urlData.publicUrl, altText };
+  } catch (error) {
+    console.error('Error fetching/uploading image:', error);
+    return { url: null, altText: null };
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,20 +155,20 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
     
-    // Use service role for database operations
+    // Use service role for database and storage operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify admin access
     const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claims?.claims) {
+    const { data: claims, error: claimsError } = await supabase.auth.getUser(token);
+    if (claimsError || !claims?.user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
         status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
     
-    const userId = claims.claims.sub as string;
+    const userId = claims.user.id;
     const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: userId });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { 
@@ -145,6 +250,9 @@ serve(async (req) => {
         // Find relevant category info
         const categoryInfo = CATEGORIES.find(c => c.id === plan.category_id);
         
+        // Map to blog category
+        const blogCategory = mapToBlogCategory(plan.category_id);
+        
         // Randomly decide on 1 or 2 middle images
         const useTwoMiddleImages = Math.random() < 0.5;
         const middleImageInstructions = useTwoMiddleImages
@@ -155,7 +263,7 @@ serve(async (req) => {
    - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
         
         const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
-a UK platform specializing in consumer rights, dispute resolution, and complaint letters.
+a US platform specializing in consumer rights, dispute resolution, and complaint letters.
 
 ABOUT LETTER OF DISPUTE:
 We provide ${SITE_CONFIG.templateCount} professionally written dispute letter templates across ${SITE_CONFIG.categoryCount} categories:
@@ -167,14 +275,14 @@ CRITICAL OUTPUT REQUIREMENTS:
 3. Use these HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>
 4. NEVER use <h1> tags
 5. NEVER include "Conclusion", "FAQ", "TL;DR" sections
-6. Use British English spelling throughout
+6. Use American English spelling throughout
 ${middleImageInstructions}
 
 CONTENT REQUIREMENTS:
 - Write approximately ${wordCount} words
 - ${toneInstruction}
 - Naturally incorporate the provided keywords 2-3+ times each
-- Write for UK readers seeking help with disputes and complaints
+- Write for US readers seeking help with disputes and complaints
 - Include actionable advice and practical steps
 - Reference Letter Of Dispute (${SITE_CONFIG.url}) as a helpful resource where appropriate
 ${categoryInfo ? `- This article relates to our ${categoryInfo.name} category` : ''}
@@ -255,7 +363,49 @@ Respond with ONLY this JSON:
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
 
-        // Create blog post
+        // === AUTO-FETCH IMAGES ===
+        console.log(`Fetching images for: ${parsedContent.title}`);
+        
+        // 1. Featured image - use title for best relevance
+        const { url: featuredImageUrl } = await fetchAndUploadImage(
+          supabaseAdmin,
+          parsedContent.title,
+          `articles/${slug}-featured`,
+          parsedContent.title
+        );
+
+        // 2. Check for middle image placeholders and fetch if needed
+        const hasMiddleImage1 = parsedContent.content.includes('{{MIDDLE_IMAGE_1}}');
+        const hasMiddleImage2 = parsedContent.content.includes('{{MIDDLE_IMAGE_2}}');
+
+        let middleImage1Url: string | null = null;
+        let middleImage2Url: string | null = null;
+
+        if (hasMiddleImage1) {
+          // Use category + first keyword for variety
+          const searchTerm1 = `${plan.category_id} ${item.suggested_keywords?.[0] || 'dispute'}`;
+          const { url } = await fetchAndUploadImage(
+            supabaseAdmin,
+            searchTerm1,
+            `articles/${slug}-middle1`,
+            parsedContent.title
+          );
+          middleImage1Url = url;
+        }
+
+        if (hasMiddleImage2) {
+          // Use second keyword or template name for more variety
+          const searchTerm2 = item.suggested_keywords?.[1] || plan.template_name;
+          const { url } = await fetchAndUploadImage(
+            supabaseAdmin,
+            searchTerm2,
+            `articles/${slug}-middle2`,
+            parsedContent.title
+          );
+          middleImage2Url = url;
+        }
+
+        // Create blog post with images and correct blog category
         const { data: blogPost, error: postError } = await supabaseAdmin
           .from('blog_posts')
           .insert({
@@ -265,11 +415,14 @@ Respond with ONLY this JSON:
             excerpt: parsedContent.excerpt,
             meta_title: parsedContent.seo_title,
             meta_description: parsedContent.seo_description,
-            category: plan.category_id.charAt(0).toUpperCase() + plan.category_id.slice(1),
-            category_slug: plan.category_id,
+            category: blogCategory.name,
+            category_slug: blogCategory.slug,
             tags: parsedContent.suggested_tags?.slice(0, 3) || [],
             read_time: readTime,
             status: 'draft',
+            featured_image_url: featuredImageUrl,
+            middle_image_1_url: middleImage1Url,
+            middle_image_2_url: middleImage2Url,
             related_templates: [plan.template_slug],
             content_plan_id: item.plan_id,
             article_type: item.article_type,
@@ -292,10 +445,10 @@ Respond with ONLY this JSON:
           .eq('id', item.id);
 
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
-        console.log(`Successfully generated: ${blogPost.title}`);
+        console.log(`Successfully generated: ${blogPost.title} (with ${featuredImageUrl ? 'featured' : 'no featured'} image)`);
 
         // Small delay between generations to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
       } catch (error) {
         console.error(`Failed to generate article for queue item ${item.id}:`, error);

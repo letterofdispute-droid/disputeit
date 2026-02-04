@@ -4,9 +4,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, Search, Edit, Trash2, Eye, 
-  MoreHorizontal, Calendar, Loader2, Sparkles
+  MoreHorizontal, Calendar, Loader2, Sparkles, CheckSquare
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,6 +15,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -40,11 +48,22 @@ interface BlogPost {
   title: string;
   slug: string;
   category: string;
+  category_slug: string;
   status: string;
   author: string;
   created_at: string;
   views: number;
 }
+
+// Blog categories available in the system
+const BLOG_CATEGORIES = [
+  { slug: 'consumer-rights', name: 'Consumer Rights' },
+  { slug: 'complaint-guides', name: 'Complaint Guides' },
+  { slug: 'contractors', name: 'Contractors' },
+  { slug: 'legal-tips', name: 'Legal Tips' },
+  { slug: 'industry-news', name: 'Industry News' },
+  { slug: 'success-stories', name: 'Success Stories' },
+];
 
 const AdminBlog = () => {
   const navigate = useNavigate();
@@ -52,7 +71,12 @@ const AdminBlog = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkPublishing, setIsBulkPublishing] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -99,11 +123,89 @@ const AdminBlog = () => {
     setDeletingPostId(null);
   };
 
+  const handleBulkPublish = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsBulkPublishing(true);
+    const { error } = await supabase
+      .from('blog_posts')
+      .update({ 
+        status: 'published', 
+        published_at: new Date().toISOString() 
+      })
+      .in('id', Array.from(selectedIds));
+
+    if (error) {
+      toast({
+        title: 'Error publishing posts',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Posts published',
+        description: `Successfully published ${selectedIds.size} posts.`,
+      });
+      setSelectedIds(new Set());
+      fetchPosts();
+    }
+    setIsBulkPublishing(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsBulkDeleting(true);
+    const { error } = await supabase
+      .from('blog_posts')
+      .delete()
+      .in('id', Array.from(selectedIds));
+
+    if (error) {
+      toast({
+        title: 'Error deleting posts',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Posts deleted',
+        description: `Successfully deleted ${selectedIds.size} posts.`,
+      });
+      setSelectedIds(new Set());
+      fetchPosts();
+    }
+    setIsBulkDeleting(false);
+    setShowBulkDeleteDialog(false);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredPosts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPosts.map(p => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesCategory = categoryFilter === 'all' || post.category_slug === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // Count drafts for quick action
+  const draftCount = posts.filter(p => p.status === 'draft').length;
 
   if (isLoading) {
     return (
@@ -119,7 +221,12 @@ const AdminBlog = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="font-serif text-3xl font-bold text-foreground">Blog Posts</h1>
-          <p className="text-muted-foreground">Manage your blog content</p>
+          <p className="text-muted-foreground">
+            Manage your blog content
+            {draftCount > 0 && (
+              <span className="ml-2 text-amber-600">• {draftCount} drafts</span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate('/admin/blog/generate')}>
@@ -132,6 +239,52 @@ const AdminBlog = () => {
           </Button>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <Card className="mb-4 border-primary/50 bg-primary/5">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <span className="font-medium">{selectedIds.size} selected</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteDialog(true)}
+                  disabled={isBulkDeleting}
+                >
+                  {isBulkDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  Delete
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBulkPublish}
+                  disabled={isBulkPublishing}
+                >
+                  {isBulkPublishing ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : null}
+                  Publish Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card className="mb-6">
@@ -146,24 +299,40 @@ const AdminBlog = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {BLOG_CATEGORIES.map(cat => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button 
                 variant={statusFilter === 'all' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('all')}
+                size="sm"
               >
                 All
               </Button>
               <Button 
                 variant={statusFilter === 'published' ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter('published')}
+                size="sm"
               >
                 Published
               </Button>
               <Button 
                 variant={statusFilter === 'draft' ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter('draft')}
+                size="sm"
               >
-                Draft
+                Drafts ({draftCount})
               </Button>
             </div>
           </div>
@@ -177,6 +346,12 @@ const AdminBlog = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.size === filteredPosts.length && filteredPosts.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="w-[40%]">Title</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
@@ -187,7 +362,13 @@ const AdminBlog = () => {
               </TableHeader>
               <TableBody>
                 {filteredPosts.map((post) => (
-                  <TableRow key={post.id}>
+                  <TableRow key={post.id} data-selected={selectedIds.has(post.id) ? 'true' : undefined} className={selectedIds.has(post.id) ? 'bg-muted' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(post.id)}
+                        onCheckedChange={() => toggleSelect(post.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{post.title}</p>
@@ -222,7 +403,7 @@ const AdminBlog = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category}/${post.slug || post.id}`, '_blank')}>
+                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category_slug}/${post.slug || post.id}`, '_blank')}>
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
@@ -247,11 +428,11 @@ const AdminBlog = () => {
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {searchQuery || statusFilter !== 'all' 
+                {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
                   ? 'No posts match your filters' 
                   : 'No blog posts yet'}
               </p>
-              {!searchQuery && statusFilter === 'all' && (
+              {!searchQuery && statusFilter === 'all' && categoryFilter === 'all' && (
                 <Button variant="accent" onClick={() => navigate('/admin/blog/new')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Post
@@ -262,7 +443,7 @@ const AdminBlog = () => {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Single Post Dialog */}
       <AlertDialog open={!!deletingPostId} onOpenChange={() => setDeletingPostId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -278,6 +459,27 @@ const AdminBlog = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} Blog Posts</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.size} blog posts? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete {selectedIds.size} Posts
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
