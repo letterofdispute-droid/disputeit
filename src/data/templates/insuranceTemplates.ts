@@ -13,9 +13,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Insurance Act 2015', approvedPhrases: ['Under the Insurance Act 2015', 'In accordance with FCA regulations'] },
   { code: 'EU', name: 'European Union', legalReference: 'Insurance Distribution Directive', approvedPhrases: ['Under EU insurance regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable insurance standards'] },
 ];
 

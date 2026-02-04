@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'DOT Consumer Protection Rules', approvedPhrases: ['Under DOT regulations', 'In accordance with applicable consumer protection laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
   { code: 'EU', name: 'European Union', legalReference: 'EU Regulation 261/2004', approvedPhrases: ['Under EU Regulation 261/2004', 'In accordance with EU passenger rights'] },
-  { code: 'US', name: 'United States', legalReference: 'DOT Consumer Protection Rules', approvedPhrases: ['Under DOT regulations', 'In accordance with applicable consumer protection laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 

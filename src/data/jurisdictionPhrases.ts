@@ -31,6 +31,190 @@ export interface JurisdictionCategoryPhrases {
 
 export const jurisdictions: JurisdictionPhrase[] = [
   {
+    code: 'US',
+    name: 'United States',
+    flagEmoji: '🇺🇸',
+    categories: {
+      consumer: {
+        legalReference: 'FTC Act, state consumer protection laws',
+        timeframes: {
+          standard: '30 days',
+          urgent: '10 days',
+        },
+        phrases: {
+          neutral: [
+            'I am writing to request a resolution regarding my purchase.',
+            'Under applicable consumer protection laws, I believe I am entitled to a remedy.',
+            'Please address this matter promptly.',
+          ],
+          firm: [
+            'I am formally notifying you of this issue and requesting appropriate action.',
+            'I expect this matter to be resolved in accordance with your stated policies and applicable law.',
+            'Please provide a written response within a reasonable timeframe.',
+          ],
+          final: [
+            'If this matter is not resolved within 30 days, I will consider filing a complaint with the appropriate agencies.',
+            'I may file complaints with the FTC, state Attorney General, and/or Better Business Bureau.',
+            'This is my final attempt to resolve this matter before pursuing external remedies.',
+          ],
+        },
+        escalationPaths: [
+          'Federal Trade Commission (FTC)',
+          'State Attorney General Consumer Protection Division',
+          'Better Business Bureau (BBB)',
+          'Small Claims Court',
+        ],
+      },
+      housing: {
+        legalReference: 'Implied warranty of habitability, state landlord-tenant laws',
+        timeframes: {
+          standard: '14-30 days (varies by state)',
+          urgent: '24-72 hours for emergencies',
+        },
+        phrases: {
+          neutral: [
+            'I am writing to request repairs at my rental property.',
+            'Under the implied warranty of habitability, the property must be maintained in livable condition.',
+            'Please arrange for these repairs to be completed.',
+          ],
+          firm: [
+            'The current condition of the property may constitute a breach of habitability standards.',
+            'I am formally documenting this repair request and the date of notice.',
+            'Please confirm when repairs will be completed.',
+          ],
+          final: [
+            'If repairs are not made within the legally required timeframe, I may exercise remedies available under state law.',
+            'I may contact local housing authorities or pursue other remedies.',
+            'This is formal written notice as may be required by law before pursuing further action.',
+          ],
+        },
+        escalationPaths: [
+          'Local housing authority / code enforcement',
+          'State tenant rights organization',
+          'Legal aid society',
+          'Small Claims Court',
+        ],
+      },
+      travel: {
+        legalReference: 'DOT regulations, airline Contract of Carriage',
+        timeframes: {
+          standard: '60 days',
+          urgent: 'N/A',
+        },
+        phrases: {
+          neutral: [
+            'I am writing regarding disruption to my flight.',
+            'Please process my request for compensation or reimbursement.',
+            'I am requesting a resolution in accordance with your policies.',
+          ],
+          firm: [
+            'Under DOT regulations, airlines have certain obligations to passengers.',
+            'I am formally requesting compensation for this disruption.',
+            'Please respond to this claim within a reasonable timeframe.',
+          ],
+          final: [
+            'If this matter is not resolved, I will file a complaint with the Department of Transportation.',
+            'I may also pursue the matter through other available channels.',
+            'This is my final attempt to resolve this matter directly with the airline.',
+          ],
+        },
+        escalationPaths: [
+          'Department of Transportation (DOT) consumer complaint',
+          'Credit card chargeback',
+          'Small Claims Court',
+        ],
+      },
+      financial: {
+        legalReference: 'Fair Credit Reporting Act (FCRA), Fair Debt Collection Practices Act (FDCPA)',
+        timeframes: {
+          standard: '30-45 days',
+          urgent: '10 days for billing disputes',
+        },
+        phrases: {
+          neutral: [
+            'I am writing to dispute information on my account.',
+            'Please investigate this matter and provide a response.',
+            'I believe there may be an error that needs correction.',
+          ],
+          firm: [
+            'Under the Fair Credit Reporting Act, I am entitled to accurate reporting.',
+            'I am formally disputing this information and request investigation.',
+            'Please provide written confirmation of the results of your investigation.',
+          ],
+          final: [
+            'If this matter is not resolved, I will file complaints with the CFPB and FTC.',
+            'I am prepared to pursue all remedies available under federal law.',
+            'This serves as formal notice under applicable consumer protection statutes.',
+          ],
+        },
+        escalationPaths: [
+          'Consumer Financial Protection Bureau (CFPB)',
+          'Federal Trade Commission (FTC)',
+          'State Attorney General',
+          'State banking regulator',
+        ],
+      },
+      insurance: {
+        legalReference: 'State insurance regulations',
+        timeframes: {
+          standard: '30-45 days (varies by state)',
+          urgent: 'N/A',
+        },
+        phrases: {
+          neutral: [
+            'I am writing to appeal the decision on my insurance claim.',
+            'I believe this claim warrants reconsideration.',
+            'Please review my claim with the additional information provided.',
+          ],
+          firm: [
+            'I am formally disputing this claim denial.',
+            'Please provide a detailed explanation of the basis for this decision.',
+            'I request a complete review of my claim file.',
+          ],
+          final: [
+            'If this matter is not resolved, I will file a complaint with the state insurance commissioner.',
+            'I am prepared to pursue all available remedies.',
+            'This is my final appeal before seeking external resolution.',
+          ],
+        },
+        escalationPaths: [
+          'State Insurance Commissioner / Department of Insurance',
+          'State Attorney General',
+          'Legal counsel for bad faith claims',
+        ],
+      },
+      debtCollection: {
+        legalReference: 'Fair Debt Collection Practices Act (FDCPA)',
+        timeframes: {
+          standard: '30 days for debt validation',
+          urgent: 'N/A',
+        },
+        phrases: {
+          neutral: [
+            'I am writing to request validation of this debt.',
+            'Please provide documentation supporting this claim.',
+            'I am exercising my rights under the FDCPA.',
+          ],
+          firm: [
+            'Under the Fair Debt Collection Practices Act, I am entitled to debt validation.',
+            'Please cease collection activities until validation is provided.',
+            'I am formally disputing this debt.',
+          ],
+          final: [
+            'If validation is not provided, I request that all collection activities cease.',
+            'I will report FDCPA violations to the FTC and CFPB.',
+            'This constitutes formal written notice under the FDCPA.',
+          ],
+        },
+        escalationPaths: [
+          'Consumer Financial Protection Bureau (CFPB)',
+          'Federal Trade Commission (FTC)',
+          'State Attorney General',
+        ],
+      },
+    },
+  },
+  {
     code: 'UK',
     name: 'United Kingdom',
     flagEmoji: '🇬🇧',
@@ -327,190 +511,6 @@ export const jurisdictions: JurisdictionPhrase[] = [
         escalationPaths: [
           'Insurance ombudsman (where available)',
           'National insurance supervision authority',
-        ],
-      },
-    },
-  },
-  {
-    code: 'US',
-    name: 'United States',
-    flagEmoji: '🇺🇸',
-    categories: {
-      consumer: {
-        legalReference: 'FTC Act, state consumer protection laws',
-        timeframes: {
-          standard: '30 days',
-          urgent: '10 days',
-        },
-        phrases: {
-          neutral: [
-            'I am writing to request a resolution regarding my purchase.',
-            'Under applicable consumer protection laws, I believe I am entitled to a remedy.',
-            'Please address this matter promptly.',
-          ],
-          firm: [
-            'I am formally notifying you of this issue and requesting appropriate action.',
-            'I expect this matter to be resolved in accordance with your stated policies and applicable law.',
-            'Please provide a written response within a reasonable timeframe.',
-          ],
-          final: [
-            'If this matter is not resolved within 30 days, I will consider filing a complaint with the appropriate agencies.',
-            'I may file complaints with the FTC, state Attorney General, and/or Better Business Bureau.',
-            'This is my final attempt to resolve this matter before pursuing external remedies.',
-          ],
-        },
-        escalationPaths: [
-          'Federal Trade Commission (FTC)',
-          'State Attorney General Consumer Protection Division',
-          'Better Business Bureau (BBB)',
-          'Small Claims Court',
-        ],
-      },
-      housing: {
-        legalReference: 'Implied warranty of habitability, state landlord-tenant laws',
-        timeframes: {
-          standard: '14-30 days (varies by state)',
-          urgent: '24-72 hours for emergencies',
-        },
-        phrases: {
-          neutral: [
-            'I am writing to request repairs at my rental property.',
-            'Under the implied warranty of habitability, the property must be maintained in livable condition.',
-            'Please arrange for these repairs to be completed.',
-          ],
-          firm: [
-            'The current condition of the property may constitute a breach of habitability standards.',
-            'I am formally documenting this repair request and the date of notice.',
-            'Please confirm when repairs will be completed.',
-          ],
-          final: [
-            'If repairs are not made within the legally required timeframe, I may exercise remedies available under state law.',
-            'I may contact local housing authorities or pursue other remedies.',
-            'This is formal written notice as may be required by law before pursuing further action.',
-          ],
-        },
-        escalationPaths: [
-          'Local housing authority / code enforcement',
-          'State tenant rights organization',
-          'Legal aid society',
-          'Small Claims Court',
-        ],
-      },
-      travel: {
-        legalReference: 'DOT regulations, airline Contract of Carriage',
-        timeframes: {
-          standard: '60 days',
-          urgent: 'N/A',
-        },
-        phrases: {
-          neutral: [
-            'I am writing regarding disruption to my flight.',
-            'Please process my request for compensation or reimbursement.',
-            'I am requesting a resolution in accordance with your policies.',
-          ],
-          firm: [
-            'Under DOT regulations, airlines have certain obligations to passengers.',
-            'I am formally requesting compensation for this disruption.',
-            'Please respond to this claim within a reasonable timeframe.',
-          ],
-          final: [
-            'If this matter is not resolved, I will file a complaint with the Department of Transportation.',
-            'I may also pursue the matter through other available channels.',
-            'This is my final attempt to resolve this matter directly with the airline.',
-          ],
-        },
-        escalationPaths: [
-          'Department of Transportation (DOT) consumer complaint',
-          'Credit card chargeback',
-          'Small Claims Court',
-        ],
-      },
-      financial: {
-        legalReference: 'Fair Credit Reporting Act (FCRA), Fair Debt Collection Practices Act (FDCPA)',
-        timeframes: {
-          standard: '30-45 days',
-          urgent: '10 days for billing disputes',
-        },
-        phrases: {
-          neutral: [
-            'I am writing to dispute information on my account.',
-            'Please investigate this matter and provide a response.',
-            'I believe there may be an error that needs correction.',
-          ],
-          firm: [
-            'Under the Fair Credit Reporting Act, I am entitled to accurate reporting.',
-            'I am formally disputing this information and request investigation.',
-            'Please provide written confirmation of the results of your investigation.',
-          ],
-          final: [
-            'If this matter is not resolved, I will file complaints with the CFPB and FTC.',
-            'I am prepared to pursue all remedies available under federal law.',
-            'This serves as formal notice under applicable consumer protection statutes.',
-          ],
-        },
-        escalationPaths: [
-          'Consumer Financial Protection Bureau (CFPB)',
-          'Federal Trade Commission (FTC)',
-          'State Attorney General',
-          'State banking regulator',
-        ],
-      },
-      insurance: {
-        legalReference: 'State insurance regulations',
-        timeframes: {
-          standard: '30-45 days (varies by state)',
-          urgent: 'N/A',
-        },
-        phrases: {
-          neutral: [
-            'I am writing to appeal the decision on my insurance claim.',
-            'I believe this claim warrants reconsideration.',
-            'Please review my claim with the additional information provided.',
-          ],
-          firm: [
-            'I am formally disputing this claim denial.',
-            'Please provide a detailed explanation of the basis for this decision.',
-            'I request a complete review of my claim file.',
-          ],
-          final: [
-            'If this matter is not resolved, I will file a complaint with the state insurance commissioner.',
-            'I am prepared to pursue all available remedies.',
-            'This is my final appeal before seeking external resolution.',
-          ],
-        },
-        escalationPaths: [
-          'State Insurance Commissioner / Department of Insurance',
-          'State Attorney General',
-          'Legal counsel for bad faith claims',
-        ],
-      },
-      debtCollection: {
-        legalReference: 'Fair Debt Collection Practices Act (FDCPA)',
-        timeframes: {
-          standard: '30 days for debt validation',
-          urgent: 'N/A',
-        },
-        phrases: {
-          neutral: [
-            'I am writing to request validation of this debt.',
-            'Please provide documentation supporting this claim.',
-            'I am exercising my rights under the FDCPA.',
-          ],
-          firm: [
-            'Under the Fair Debt Collection Practices Act, I am entitled to debt validation.',
-            'Please cease collection activities until validation is provided.',
-            'I am formally disputing this debt.',
-          ],
-          final: [
-            'If validation is not provided, I request that all collection activities cease.',
-            'I will report FDCPA violations to the FTC and CFPB.',
-            'This constitutes formal written notice under the FDCPA.',
-          ],
-        },
-        escalationPaths: [
-          'Consumer Financial Protection Bureau (CFPB)',
-          'Federal Trade Commission (FTC)',
-          'State Attorney General',
         ],
       },
     },

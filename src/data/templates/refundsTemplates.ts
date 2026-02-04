@@ -13,6 +13,12 @@ const standardPricing = [
 
 const standardJurisdictions = [
   {
+    code: 'US',
+    name: 'United States',
+    legalReference: 'FTC Act, State Consumer Protection Laws',
+    approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'],
+  },
+  {
     code: 'UK',
     name: 'United Kingdom',
     legalReference: 'Consumer Rights Act 2015',
@@ -23,11 +29,6 @@ const standardJurisdictions = [
     name: 'European Union',
     legalReference: 'Consumer Rights Directive',
     approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'],
-  },
-  {
-    code: 'US',
-    name: 'United States',
-    approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'],
   },
   {
     code: 'INTL',

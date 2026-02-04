@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Fair Housing Act', approvedPhrases: ['Under the implied warranty of habitability', 'In accordance with applicable housing laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Housing Act 2004', approvedPhrases: ['Under the Housing Act 2004', 'In accordance with UK housing law'] },
   { code: 'EU', name: 'European Union', legalReference: 'EU Consumer Rights Directive', approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Fair Housing Act', approvedPhrases: ['Under the implied warranty of habitability', 'In accordance with applicable housing laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable housing standards'] },
 ];
 

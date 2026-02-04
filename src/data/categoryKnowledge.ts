@@ -48,9 +48,9 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Submit claims within the airline\'s deadline (usually 7-21 days)',
     ],
     regulatoryBodies: [
+      { name: 'US Department of Transportation', jurisdiction: 'US', website: 'https://www.transportation.gov' },
       { name: 'UK Civil Aviation Authority (CAA)', jurisdiction: 'UK', website: 'https://www.caa.co.uk' },
       { name: 'European Consumer Centre', jurisdiction: 'EU', website: 'https://ec.europa.eu/consumers' },
-      { name: 'US Department of Transportation', jurisdiction: 'US', website: 'https://www.transportation.gov' },
     ],
     subcategories: {
       'Flight Delays & Cancellations': {
@@ -147,8 +147,8 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Note the names of everyone you speak with and when',
     ],
     regulatoryBodies: [
-      { name: 'Financial Ombudsman Service', jurisdiction: 'UK', website: 'https://www.financial-ombudsman.org.uk' },
       { name: 'State Insurance Commissioner', jurisdiction: 'US' },
+      { name: 'Financial Ombudsman Service', jurisdiction: 'UK', website: 'https://www.financial-ombudsman.org.uk' },
       { name: 'EIOPA', jurisdiction: 'EU' },
     ],
     subcategories: {
@@ -234,8 +234,8 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Keep copies of your lease and all amendments',
     ],
     regulatoryBodies: [
+      { name: 'Local Housing Authority', jurisdiction: 'US' },
       { name: 'Housing Ombudsman', jurisdiction: 'UK' },
-      { name: 'Local Housing Authority', jurisdiction: 'UK/US' },
       { name: 'Tenancy Deposit Scheme', jurisdiction: 'UK' },
     ],
     subcategories: {
@@ -363,9 +363,10 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       'Check your credit report regularly',
     ],
     regulatoryBodies: [
+      { name: 'Consumer Financial Protection Bureau', jurisdiction: 'US' },
+      { name: 'Federal Trade Commission', jurisdiction: 'US' },
       { name: 'Financial Conduct Authority', jurisdiction: 'UK' },
       { name: 'Financial Ombudsman Service', jurisdiction: 'UK' },
-      { name: 'Consumer Financial Protection Bureau', jurisdiction: 'US' },
     ],
     subcategories: {
       'Unauthorized Transactions': {

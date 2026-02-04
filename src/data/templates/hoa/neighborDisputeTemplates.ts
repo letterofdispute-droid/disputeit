@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State Nuisance Laws', approvedPhrases: ['Under state nuisance regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Environmental Protection Act 1990', approvedPhrases: ['Under the Environmental Protection Act', 'In accordance with UK nuisance law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Property Law Principles', approvedPhrases: ['Under applicable property law', 'In accordance with community regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'State Nuisance Laws', approvedPhrases: ['Under state nuisance regulations', 'In accordance with our CC&Rs'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable property standards'] },
 ];
 

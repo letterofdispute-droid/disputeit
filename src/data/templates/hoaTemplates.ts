@@ -12,9 +12,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Leasehold Reform Act', approvedPhrases: ['Under leasehold regulations', 'In accordance with the lease terms'] },
   { code: 'EU', name: 'European Union', legalReference: 'Property Law Principles', approvedPhrases: ['Under applicable property law', 'In accordance with community regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable property standards'] },
 ];
 
