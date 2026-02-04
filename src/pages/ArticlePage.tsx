@@ -10,7 +10,8 @@ import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import lodIconImg from '@/assets/ld-logo-icon.svg';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import RelatedTemplatesCTA from '@/components/article/RelatedTemplatesCTA';
@@ -432,6 +433,7 @@ const ArticlePage = () => {
               <div className="mt-12 p-8 bg-muted/50 rounded-2xl border border-border">
                 <div className="flex items-start gap-5">
                   <Avatar className="h-16 w-16 border-2 border-primary/20">
+                    <AvatarImage src={lodIconImg} alt="LoD Logo" />
                     <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                       {authorInitials}
                     </AvatarFallback>
