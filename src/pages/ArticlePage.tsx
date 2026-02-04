@@ -6,7 +6,7 @@ import SEOHead from '@/components/SEOHead';
 import { getBlogPostBySlug, getBlogPostsByCategory } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen, List } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen, List, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -361,6 +361,11 @@ const ArticlePage = () => {
             
             {/* Left: Text Content */}
             <div className="order-2 md:order-1">
+              {/* Category Badge */}
+              <Badge variant="outline" className="mb-4 border-white/30 text-white/90 bg-white/10 backdrop-blur-sm">
+                {formatCategoryName(post.category_slug)}
+              </Badge>
+              
               <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
                 {post.title}
               </h1>
@@ -398,28 +403,21 @@ const ArticlePage = () => {
               </div>
             </div>
             
-            {/* Right: Featured Image Card */}
+            {/* Right: Featured Image */}
             <div className="order-1 md:order-2">
-              {post.featured_image_url ? <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-2xl">
-                  {/* Card Header */}
-                  <div className="p-6 pb-4">
-                    <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
-                      {formatCategoryName(post.category_slug)}
-                    </Badge>
-                    <h2 className="font-serif text-xl md:text-2xl font-bold text-foreground leading-snug line-clamp-3">
-                      {post.title}
-                    </h2>
-                  </div>
-                  {/* Featured Image */}
-                  <img src={post.featured_image_url} alt={post.title} className="w-full h-48 md:h-64 object-cover" />
-                </div> : <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 shadow-2xl">
-                  <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
-                    {formatCategoryName(post.category_slug)}
-                  </Badge>
-                  <h2 className="font-serif text-2xl font-bold text-foreground">
-                    {post.title}
-                  </h2>
-                </div>}
+              {post.featured_image_url ? (
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                  <img 
+                    src={post.featured_image_url} 
+                    alt={post.title} 
+                    className="w-full h-64 md:h-80 object-cover" 
+                  />
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl h-64 md:h-80 flex items-center justify-center">
+                  <FileText className="h-16 w-16 text-white/30" />
+                </div>
+              )}
             </div>
             
           </div>
