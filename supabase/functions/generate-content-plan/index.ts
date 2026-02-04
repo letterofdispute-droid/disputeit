@@ -178,6 +178,33 @@ const CATEGORY_LANGUAGE: Record<string, { terms: string[]; tone: string }> = {
   },
 };
 
+// Retry helper for transient network errors
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const isTransient = error instanceof Error && 
+        (error.message.includes('connection reset') || 
+         error.message.includes('connection error') ||
+         error.message.includes('timeout'));
+      
+      if (!isTransient || attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`Attempt ${attempt} failed, retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+  throw lastError;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -397,23 +424,26 @@ Return JSON:
 
     console.log(`Validated ${validatedArticles.length} unique titles from ${generatedArticles.length} generated`);
 
-    // Create the content plan
-    const { data: plan, error: planError } = await supabase
-      .from('content_plans')
-      .insert({
-        template_slug: templateSlug,
-        template_name: templateName,
-        category_id: categoryId,
-        subcategory_slug: subcategorySlug,
-        value_tier: valueTier,
-        target_article_count: tierConfig.articleCount,
-      })
-      .select()
-      .single();
-
-    if (planError) {
-      throw new Error(`Failed to create plan: ${planError.message}`);
-    }
+    // Create the content plan with retry for transient errors
+    const plan = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('content_plans')
+        .insert({
+          template_slug: templateSlug,
+          template_name: templateName,
+          category_id: categoryId,
+          subcategory_slug: subcategorySlug,
+          value_tier: valueTier,
+          target_article_count: tierConfig.articleCount,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(`Failed to create plan: ${error.message}`);
+      }
+      return data;
+    });
 
     // Create queue items for each article
     const queueItems = validatedArticles.map((article: any, index: number) => {
@@ -428,16 +458,19 @@ Return JSON:
       };
     });
 
-    const { data: queuedItems, error: queueError } = await supabase
-      .from('content_queue')
-      .insert(queueItems)
-      .select();
+    const queuedItems = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('content_queue')
+        .insert(queueItems)
+        .select();
 
-    if (queueError) {
-      // Rollback plan if queue insert fails
-      await supabase.from('content_plans').delete().eq('id', plan.id);
-      throw new Error(`Failed to create queue items: ${queueError.message}`);
-    }
+      if (error) {
+        // Rollback plan if queue insert fails
+        await supabase.from('content_plans').delete().eq('id', plan.id);
+        throw new Error(`Failed to create queue items: ${error.message}`);
+      }
+      return data;
+    });
 
     console.log(`Created plan ${plan.id} with ${queuedItems.length} diverse queued articles`);
 
