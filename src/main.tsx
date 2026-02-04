@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import App from './App.tsx'
 import './index.css'
 
@@ -36,9 +37,16 @@ initGTM();
 
 const container = document.getElementById("root");
 
+// Get reCAPTCHA site key from environment
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
+
 if (container) {
   const root = createRoot(container);
-  root.render(<App />);
+  root.render(
+    <GoogleReCaptchaProvider reCaptchaKey={recaptchaSiteKey}>
+      <App />
+    </GoogleReCaptchaProvider>
+  );
   
   // Remove loading overlay after React mounts
   requestAnimationFrame(() => {

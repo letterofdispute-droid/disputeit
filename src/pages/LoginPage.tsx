@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { lovable } from '@/integrations/lovable';
 import { trackLoginComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
@@ -21,10 +22,23 @@ const LoginPage = () => {
   const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { verifyRecaptcha } = useRecaptcha();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Verify reCAPTCHA first
+    const recaptchaResult = await verifyRecaptcha('login');
+    if (!recaptchaResult.success) {
+      toast({
+        title: 'Verification failed',
+        description: recaptchaResult.error || 'Please try again.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signIn(email, password);
 

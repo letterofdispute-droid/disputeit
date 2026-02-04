@@ -11,6 +11,7 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { lovable } from '@/integrations/lovable';
 import { trackSignupStarted, trackSignupComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
@@ -32,6 +33,7 @@ const SignupPage = () => {
   const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { verifyRecaptcha } = useRecaptcha();
 
   useEffect(() => {
     trackSignupStarted();
@@ -50,6 +52,18 @@ const SignupPage = () => {
     }
 
     setIsLoading(true);
+
+    // Verify reCAPTCHA first
+    const recaptchaResult = await verifyRecaptcha('signup');
+    if (!recaptchaResult.success) {
+      toast({
+        title: 'Verification failed',
+        description: recaptchaResult.error || 'Please try again.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signUp(email, password, firstName, lastName);
 
