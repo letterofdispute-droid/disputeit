@@ -3,14 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import DOMPurify from 'dompurify';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
-import { getBlogPostBySlug, getBlogPostsByCategory, blogPosts as staticBlogPosts } from '@/data/blogPosts';
+import { getBlogPostBySlug, getBlogPostsByCategory } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState, useMemo } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import RelatedTemplatesCTA from '@/components/article/RelatedTemplatesCTA';
 
@@ -37,6 +38,20 @@ interface BlogPost {
 const ArticlePage = () => {
   const { category, slug } = useParams<{ category: string; slug: string }>();
   const [copied, setCopied] = useState(false);
+  const [readProgress, setReadProgress] = useState(0);
+
+  // Reading progress tracker
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      if (total > 0) {
+        setReadProgress(Math.min((scrolled / total) * 100, 100));
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch from database first, fall back to static data
   const { data: dbPost, isLoading: dbLoading } = useQuery({
@@ -128,12 +143,10 @@ const ArticlePage = () => {
   // Generate table of contents from headings
   const tableOfContents = useMemo(() => {
     if (!post?.content) return [];
-    const headingRegex = /<h([23])[^>]*>([^<]+)<\/h[23]>|^##\s+(.+)$|^###\s+(.+)$/gm;
     const toc: { level: number; text: string; id: string }[] = [];
     
-    // Also check for markdown-style headings
+    // Check for markdown-style headings
     const markdownH2 = post.content.match(/^## .+$/gm) || [];
-    const markdownH3 = post.content.match(/^### .+$/gm) || [];
     
     markdownH2.forEach(h => {
       const text = h.replace(/^## /, '');
@@ -161,7 +174,7 @@ const ArticlePage = () => {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank');
   };
 
-  // Sanitize HTML content
+  // Sanitize HTML content with smart middle image injection
   const sanitizedContent = useMemo(() => {
     if (!post?.content) return '';
     
@@ -178,20 +191,47 @@ const ArticlePage = () => {
       .replace(/\n/g, '<br>');
     
     // Replace middle image placeholders with actual images
+    const hasPlaceholder1 = html.includes('{{MIDDLE_IMAGE_1}}');
+    const hasPlaceholder2 = html.includes('{{MIDDLE_IMAGE_2}}');
+
     if (post.middle_image_1_url) {
-      html = html.replace(
-        /{{MIDDLE_IMAGE_1}}/g,
-        `<figure class="my-8"><img src="${post.middle_image_1_url}" alt="" class="w-full rounded-xl shadow-md" loading="lazy" /></figure>`
-      );
+      if (hasPlaceholder1) {
+        html = html.replace(
+          /{{MIDDLE_IMAGE_1}}/g,
+          `<figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="" loading="lazy" /></figure>`
+        );
+      } else {
+        // Smart injection: insert image approximately 45% through the content
+        const paragraphs = html.split('</p>');
+        const midPoint = Math.floor(paragraphs.length * 0.45);
+        if (midPoint > 0 && paragraphs.length > 3) {
+          paragraphs.splice(midPoint, 0, 
+            `</p><figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="" loading="lazy" /></figure><p>`
+          );
+          html = paragraphs.join('</p>');
+        }
+      }
     } else {
       html = html.replace(/{{MIDDLE_IMAGE_1}}/g, '');
     }
 
     if (post.middle_image_2_url) {
-      html = html.replace(
-        /{{MIDDLE_IMAGE_2}}/g,
-        `<figure class="my-8"><img src="${post.middle_image_2_url}" alt="" class="w-full rounded-xl shadow-md" loading="lazy" /></figure>`
-      );
+      if (hasPlaceholder2) {
+        html = html.replace(
+          /{{MIDDLE_IMAGE_2}}/g,
+          `<figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="" loading="lazy" /></figure>`
+        );
+      } else if (post.middle_image_1_url) {
+        // Smart injection: insert second image approximately 75% through
+        const paragraphs = html.split('</p>');
+        const insertPoint = Math.floor(paragraphs.length * 0.75);
+        if (insertPoint > 0 && paragraphs.length > 5) {
+          paragraphs.splice(insertPoint, 0, 
+            `</p><figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="" loading="lazy" /></figure><p>`
+          );
+          html = paragraphs.join('</p>');
+        }
+      }
     } else {
       html = html.replace(/{{MIDDLE_IMAGE_2}}/g, '');
     }
@@ -210,7 +250,7 @@ const ArticlePage = () => {
     });
   }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url]);
 
-  // Generate Article JSON-LD schema
+  // Generate Article JSON-LD schema with correct branding
   const articleSchema = post ? {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -222,8 +262,12 @@ const ArticlePage = () => {
     },
     "publisher": {
       "@type": "Organization",
-      "name": "DisputeLetters",
-      "url": "https://disputeletters.com"
+      "name": "Letter Of Dispute",
+      "url": "https://letterofdispute.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://letterofdispute.com/ld-logo.svg"
+      }
     },
     "datePublished": post.published_at,
     "dateModified": post.published_at,
@@ -234,14 +278,21 @@ const ArticlePage = () => {
     }
   } : null;
 
+  // Get author initials for avatar
+  const authorInitials = useMemo(() => {
+    if (!post?.author) return 'LD';
+    return post.author.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }, [post?.author]);
+
   if (dbLoading) {
     return (
       <Layout>
-        <section className="bg-primary py-12 md:py-16">
+        <section className="bg-primary py-16 md:py-20">
           <div className="container-narrow">
-            <Skeleton className="h-8 w-32 mb-4 bg-primary-foreground/20" />
-            <Skeleton className="h-12 w-full mb-4 bg-primary-foreground/20" />
-            <Skeleton className="h-6 w-64 bg-primary-foreground/20" />
+            <Skeleton className="h-8 w-32 mb-6 bg-primary-foreground/20" />
+            <Skeleton className="h-14 w-full mb-4 bg-primary-foreground/20" />
+            <Skeleton className="h-14 w-3/4 mb-6 bg-primary-foreground/20" />
+            <Skeleton className="h-6 w-80 bg-primary-foreground/20" />
           </div>
         </section>
       </Layout>
@@ -255,7 +306,7 @@ const ArticlePage = () => {
   return (
     <Layout>
       <SEOHead 
-        title={post.meta_title || `${post.title} | DisputeLetters Blog`}
+        title={post.meta_title || `${post.title} | Letter Of Dispute`}
         description={post.meta_description || post.excerpt || ''}
         canonicalPath={`/articles/${post.category_slug}/${post.slug}`}
       />
@@ -265,19 +316,25 @@ const ArticlePage = () => {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       )}
 
+      {/* Reading Progress Bar */}
+      <div 
+        className="fixed top-0 left-0 h-1 bg-accent z-50 transition-all duration-150"
+        style={{ width: `${readProgress}%` }}
+      />
+
       {/* Breadcrumb */}
       <section className="bg-muted/50 py-4 border-b border-border">
         <div className="container-wide">
           <nav className="flex items-center gap-2 text-sm flex-wrap">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
+            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
               Home
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Link to="/articles" className="text-muted-foreground hover:text-foreground">
-              Blog
+            <Link to="/articles" className="text-muted-foreground hover:text-foreground transition-colors">
+              Articles
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Link to={`/articles/${post.category_slug}`} className="text-muted-foreground hover:text-foreground">
+            <Link to={`/articles/${post.category_slug}`} className="text-muted-foreground hover:text-foreground transition-colors">
               {post.category}
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -286,87 +343,160 @@ const ArticlePage = () => {
         </div>
       </section>
 
-      {/* Article Header */}
-      <section className="bg-primary py-12 md:py-16">
+      {/* Article Header - Premium Design */}
+      <section className="bg-gradient-to-b from-primary to-primary/95 py-16 md:py-20">
         <div className="container-narrow">
-          <Badge variant="secondary" className="mb-4">{post.category}</Badge>
-          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6 leading-tight">
+          <Badge variant="secondary" className="mb-6 text-sm px-4 py-1.5">{post.category}</Badge>
+          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl xl:text-[3.25rem] font-bold text-primary-foreground mb-8 leading-[1.15] tracking-tight">
             {post.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-6 text-primary-foreground/70">
-            <span className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {post.author}
-            </span>
-            <span className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })}
-            </span>
-            <span className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              {calculatedReadTime}
-            </span>
-            {post.views > 0 && (
+          
+          {/* Author & Meta Row */}
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 border-2 border-primary-foreground/20">
+                <AvatarFallback className="bg-accent text-accent-foreground font-semibold">
+                  {authorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-primary-foreground">{post.author}</p>
+                <p className="text-sm text-primary-foreground/60">Consumer Rights Expert</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-4 text-primary-foreground/70 text-sm">
               <span className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                {post.views.toLocaleString()} views
+                <Calendar className="h-4 w-4" />
+                {post.published_at && new Date(post.published_at).toLocaleDateString('en-GB', { 
+                  month: 'long', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })}
               </span>
-            )}
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {calculatedReadTime}
+              </span>
+              {post.views > 0 && (
+                <span className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  {post.views.toLocaleString()} views
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Image */}
+      {/* Featured Image - Elevated Design */}
       {post.featured_image_url && (
-        <section className="bg-background -mt-8">
-          <div className="container-narrow">
-            <img 
-              src={post.featured_image_url} 
-              alt={post.title}
-              className="w-full h-64 md:h-96 object-cover rounded-xl shadow-elevated"
-            />
+        <section className="bg-background">
+          <div className="container-narrow -mt-10">
+            <figure className="rounded-2xl overflow-hidden shadow-xl">
+              <img 
+                src={post.featured_image_url} 
+                alt={post.title}
+                className="w-full h-72 md:h-[28rem] object-cover"
+              />
+            </figure>
           </div>
         </section>
       )}
 
       {/* Article Content */}
       <section className="py-12 md:py-16 bg-background">
-        <div className="container-narrow">
-          <div className="flex gap-8">
+        <div className="container-wide">
+          <div className="flex gap-12">
             {/* Main Content */}
-            <article className="flex-1 prose prose-lg max-w-none prose-headings:font-serif prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
-              <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+            <article className="flex-1 max-w-3xl mx-auto lg:mx-0">
+              <div 
+                className="prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: sanitizedContent }} 
+              />
               
               {/* Related Templates CTA - Embedded in content */}
               {post.related_templates && post.related_templates.length > 0 && (
-                <RelatedTemplatesCTA 
-                  templateSlugs={post.related_templates} 
-                  categorySlug={post.category_slug}
-                />
+                <div className="mt-12">
+                  <RelatedTemplatesCTA 
+                    templateSlugs={post.related_templates} 
+                    categorySlug={post.category_slug}
+                  />
+                </div>
               )}
+
+              {/* Author Bio Section */}
+              <div className="mt-12 p-8 bg-muted/50 rounded-2xl border border-border">
+                <div className="flex items-start gap-5">
+                  <Avatar className="h-16 w-16 border-2 border-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
+                      {authorInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Written by</p>
+                    <h3 className="font-serif text-xl font-bold text-foreground mb-2">{post.author}</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Consumer rights specialist at Letter Of Dispute, helping UK consumers navigate disputes with clear, 
+                      actionable guidance backed by knowledge of the Consumer Rights Act 2015 and related regulations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Share Buttons */}
+              <div className="lg:hidden mt-8 p-6 bg-muted/50 rounded-xl border border-border">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Share2 className="h-4 w-4" />
+                  Share this article
+                </h3>
+                <div className="flex gap-3">
+                  <Button variant="outline" size="sm" onClick={handleShareTwitter} className="flex-1">
+                    <Twitter className="h-4 w-4 mr-2" /> Twitter
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleShareLinkedIn} className="flex-1">
+                    <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCopyLink} className="flex-1">
+                    {copied ? <Check className="h-4 w-4 mr-2 text-accent" /> : <Copy className="h-4 w-4 mr-2" />} 
+                    {copied ? 'Copied!' : 'Copy'}
+                  </Button>
+                </div>
+              </div>
             </article>
 
             {/* Sidebar with TOC and Share */}
-            <aside className="hidden lg:block w-64 shrink-0">
-              <div className="sticky top-24 space-y-6">
+            <aside className="hidden lg:block w-72 shrink-0">
+              <div className="sticky top-20 space-y-6">
                 {/* Share Buttons */}
-                <div className="p-4 bg-muted/50 rounded-xl">
-                  <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-                    <Share2 className="h-4 w-4" />
+                <div className="p-5 bg-card rounded-xl border border-border shadow-sm">
+                  <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Share2 className="h-4 w-4 text-primary" />
                     Share this article
                   </h3>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleShareTwitter}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleShareTwitter}
+                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
                       <Twitter className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleShareLinkedIn}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleShareLinkedIn}
+                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
                       <Linkedin className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleCopyLink}
+                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
                       {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -374,14 +504,17 @@ const ArticlePage = () => {
 
                 {/* Table of Contents */}
                 {tableOfContents.length > 0 && (
-                  <div className="p-4 bg-muted/50 rounded-xl">
-                    <h3 className="font-semibold text-sm text-foreground mb-3">Table of Contents</h3>
+                  <div className="p-5 bg-card rounded-xl border border-border shadow-sm">
+                    <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      In this article
+                    </h3>
                     <nav className="space-y-2">
                       {tableOfContents.map((item, index) => (
                         <a 
                           key={index}
                           href={`#${item.id}`}
-                          className={`block text-sm text-muted-foreground hover:text-primary transition-colors ${item.level === 3 ? 'pl-4' : ''}`}
+                          className={`block text-sm text-muted-foreground hover:text-primary transition-colors leading-relaxed ${item.level === 3 ? 'pl-4' : ''}`}
                         >
                           {item.text}
                         </a>
@@ -389,40 +522,40 @@ const ArticlePage = () => {
                     </nav>
                   </div>
                 )}
+
+                {/* CTA Card */}
+                <div className="p-5 bg-accent/10 rounded-xl border border-accent/20">
+                  <h3 className="font-serif font-bold text-foreground mb-2">
+                    Need a Letter Template?
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Create a professional dispute letter in minutes with our templates.
+                  </p>
+                  <Button variant="accent" size="sm" asChild className="w-full">
+                    <Link to="/#letters">
+                      Browse Templates
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </aside>
           </div>
 
-          {/* Mobile Share Buttons */}
-          <div className="lg:hidden mt-8 p-4 bg-muted/50 rounded-xl">
-            <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-              <Share2 className="h-4 w-4" />
-              Share this article
-            </h3>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleShareTwitter}>
-                <Twitter className="h-4 w-4 mr-2" /> Twitter
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleShareLinkedIn}>
-                <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                {copied ? <Check className="h-4 w-4 mr-2 text-accent" /> : <Copy className="h-4 w-4 mr-2" />} Copy Link
-              </Button>
-            </div>
-          </div>
-
-          {/* Article CTA */}
-          <div className="mt-12 p-8 bg-accent/10 rounded-2xl border border-accent/20 text-center">
-            <h3 className="font-serif text-xl font-bold text-foreground mb-3">
+          {/* Article CTA - Premium Design */}
+          <div className="mt-16 max-w-3xl mx-auto lg:mx-0 p-8 md:p-10 bg-gradient-to-br from-primary to-primary/90 rounded-2xl text-center">
+            <h3 className="font-serif text-2xl md:text-3xl font-bold text-primary-foreground mb-4">
               Ready to Write Your Letter?
             </h3>
-            <p className="text-muted-foreground mb-6">
-              Use our pre-validated templates to create a professional complaint letter in minutes.
+            <p className="text-primary-foreground/80 mb-8 max-w-lg mx-auto">
+              Use our professionally written templates to create a formal complaint letter backed by UK consumer rights law.
             </p>
-            <Button variant="accent" size="lg" asChild>
+            <Button 
+              size="lg" 
+              asChild 
+              className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold px-8"
+            >
               <Link to="/#letters">
-                Create Your Letter <ArrowRight className="h-5 w-5" />
+                Create Your Letter <ArrowRight className="h-5 w-5 ml-2" />
               </Link>
             </Button>
           </div>
@@ -431,14 +564,21 @@ const ArticlePage = () => {
 
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
-        <section className="py-12 md:py-16 bg-muted/30">
+        <section className="py-16 md:py-20 bg-muted/30">
           <div className="container-wide">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
-              Related Articles
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center justify-between mb-10">
+              <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+                Related Articles
+              </h2>
+              <Button variant="outline" asChild className="hidden sm:flex">
+                <Link to={`/articles/${post.category_slug}`}>
+                  View All <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {relatedPosts.map((relatedPost) => (
-                <Card key={relatedPost.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <Card key={relatedPost.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden border-border">
                   {relatedPost.featured_image_url && (
                     <div className="aspect-video overflow-hidden">
                       <img 
@@ -448,26 +588,36 @@ const ArticlePage = () => {
                       />
                     </div>
                   )}
-                  <CardHeader>
-                    <Badge variant="secondary" className="w-fit mb-2">
+                  <CardHeader className="pb-3">
+                    <Badge variant="secondary" className="w-fit mb-2 text-xs">
                       {relatedPost.category}
                     </Badge>
-                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
-                      <Link to={`/articles/${relatedPost.category_slug}/${relatedPost.slug}`}>
-                        {relatedPost.title}
-                      </Link>
-                    </CardTitle>
+                    <Link 
+                      to={`/articles/${relatedPost.category_slug}/${relatedPost.slug}`}
+                      className="font-serif text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug"
+                    >
+                      {relatedPost.title}
+                    </Link>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {relatedPost.read_time || '5 min read'}
-                      </span>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                      {relatedPost.excerpt}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{relatedPost.author}</span>
+                      <span>•</span>
+                      <span>{relatedPost.read_time || '5 min read'}</span>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+            </div>
+            <div className="mt-8 text-center sm:hidden">
+              <Button variant="outline" asChild>
+                <Link to={`/articles/${post.category_slug}`}>
+                  View All Articles <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
