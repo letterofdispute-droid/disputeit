@@ -56,6 +56,59 @@ function generateAltText(searchQuery: string, articleTitle: string): string {
   return `${cleanTitle} - ${searchQuery}`.substring(0, 125);
 }
 
+// Extract visual keywords from article title/category using AI
+async function extractVisualKeywords(
+  apiKey: string,
+  title: string,
+  category: string
+): Promise<string> {
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          {
+            role: 'system',
+            content: `Extract 3-4 visual keywords for a stock photo search.
+Focus on photographable scenes: people, objects, settings.
+
+Examples:
+- "How to Write a Credit Card Dispute Letter" → "person typing letter computer frustrated"
+- "Landlord Repair Complaint Guide" → "broken appliance apartment maintenance worker"
+- "Insurance Claim Denial Appeal" → "person phone documents stressed paperwork"
+- "Product Refund Request Tips" → "customer service desk returning package"
+
+Return ONLY keywords, no punctuation, no explanation.`
+          },
+          {
+            role: 'user',
+            content: `Article: "${title}" (Category: ${category})`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 30,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const keywords = data.choices[0]?.message?.content?.trim();
+      if (keywords) {
+        console.log(`Extracted visual keywords for "${title}": ${keywords}`);
+        return keywords;
+      }
+    }
+  } catch (e) {
+    console.log('Visual keyword extraction failed, using title:', e);
+  }
+  return title;
+}
+
 // Fetch image from Pixabay, download, and upload to Supabase storage
 async function fetchAndUploadImage(
   supabase: SupabaseClient,
@@ -369,13 +422,18 @@ Respond with ONLY this JSON:
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
 
-        // === AUTO-FETCH IMAGES ===
+        // === AUTO-FETCH IMAGES WITH AI-EXTRACTED KEYWORDS ===
         console.log(`Fetching images for: ${parsedContent.title}`);
         
-        // 1. Featured image - use title for best relevance
+        // 1. Featured image - use AI-extracted visual keywords
+        const featuredSearchTerm = await extractVisualKeywords(
+          apiKey,
+          parsedContent.title,
+          plan.category_id
+        );
         const { url: featuredImageUrl } = await fetchAndUploadImage(
           supabaseAdmin,
-          parsedContent.title,
+          featuredSearchTerm,
           `articles/${slug}-featured`,
           parsedContent.title
         );
@@ -388,11 +446,15 @@ Respond with ONLY this JSON:
         let middleImage2Url: string | null = null;
 
         if (hasMiddleImage1) {
-          // Use category + first keyword for variety
-          const searchTerm1 = `${plan.category_id} ${item.suggested_keywords?.[0] || 'dispute'}`;
+          // Use AI to extract visual keywords for middle image
+          const middleSearchTerm1 = await extractVisualKeywords(
+            apiKey,
+            `${item.suggested_keywords?.[0] || plan.template_name} consumer help`,
+            plan.category_id
+          );
           const { url } = await fetchAndUploadImage(
             supabaseAdmin,
-            searchTerm1,
+            middleSearchTerm1,
             `articles/${slug}-middle1`,
             parsedContent.title
           );
@@ -400,11 +462,15 @@ Respond with ONLY this JSON:
         }
 
         if (hasMiddleImage2) {
-          // Use second keyword or template name for more variety
-          const searchTerm2 = item.suggested_keywords?.[1] || plan.template_name;
+          // Use different keywords for second middle image
+          const middleSearchTerm2 = await extractVisualKeywords(
+            apiKey,
+            `${item.suggested_keywords?.[1] || 'dispute resolution'} advice`,
+            plan.category_id
+          );
           const { url } = await fetchAndUploadImage(
             supabaseAdmin,
-            searchTerm2,
+            middleSearchTerm2,
             `articles/${slug}-middle2`,
             parsedContent.title
           );

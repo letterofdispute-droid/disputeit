@@ -46,24 +46,8 @@ serve(async (req) => {
       throw new Error('PIXABAY_API_KEY is not configured');
     }
 
-    // Step 1: Use AI to extract visual keywords from topic with variety
+    // Step 1: Use AI to extract visual keywords from topic
     let searchQuery = topic;
-    
-    // Random perspectives to add variety to image searches
-    const searchPerspectives = [
-      'Focus on people and human elements related to this topic',
-      'Focus on abstract concepts and symbolic imagery',
-      'Focus on professional business settings',
-      'Focus on everyday life situations',
-      'Focus on close-up details and textures',
-      'Focus on wide environmental shots',
-      'Focus on modern and contemporary imagery',
-      'Focus on emotional and expressive scenes',
-      'Focus on minimalist and clean compositions',
-      'Focus on dynamic action and movement',
-    ];
-    
-    const randomPerspective = searchPerspectives[Math.floor(Math.random() * searchPerspectives.length)];
     
     if (lovableKey) {
       try {
@@ -78,14 +62,25 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `You extract creative visual keywords for stock photo searches. ${randomPerspective}. Return only 3-5 unique, specific visual keywords separated by spaces. Be creative and varied - avoid generic terms like "business" or "professional". No explanations, no punctuation, just keywords.`
+                content: `You extract the most relevant visual keywords for finding stock photos.
+Given a topic about consumer disputes or complaints, identify 3-4 keywords that describe REAL, PHOTOGRAPHABLE scenes related to this topic.
+
+Examples:
+- "Credit card dispute letter" → "frustrated person computer credit card documents"
+- "Landlord repair complaint" → "broken appliance apartment maintenance worker"
+- "Product refund request" → "customer service desk returning package receipt"
+- "Insurance claim denial" → "person phone documents stressed paperwork"
+- "HOA violation appeal" → "homeowner reading letter mailbox house"
+
+Focus on: people in relevant situations, objects being discussed, settings where this situation occurs.
+Return ONLY the keywords, no explanation, no punctuation.`
               },
               {
                 role: 'user',
                 content: `Extract visual keywords for finding stock photos about: "${topic}"${keywords ? `. Related keywords: ${keywords}` : ''}`
               }
             ],
-            temperature: 0.8,
+            temperature: 0.3,
             max_tokens: 50,
           }),
         });
@@ -101,18 +96,15 @@ serve(async (req) => {
         console.log('AI keyword extraction failed, using topic directly:', e);
       }
     }
-    
-    // Add random offset to get different results from the same query
-    const randomOffset = Math.floor(Math.random() * 20);
 
     // Truncate to 100 chars (Pixabay limit)
     searchQuery = searchQuery.substring(0, 100);
-    console.log('Searching Pixabay for:', searchQuery, 'with perspective:', randomPerspective);
+    console.log('Searching Pixabay for:', searchQuery);
 
-    // Step 2: Search Pixabay with random offset for variety
-    const fetchCount = Math.min(count + randomOffset + 10, 50);
+    // Step 2: Search Pixabay
+    const fetchCount = Math.min(count + 10, 50);
     const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(searchQuery)}&image_type=photo&orientation=horizontal&per_page=${fetchCount}&safesearch=true`;
-    
+
     const pixabayResponse = await fetch(pixabayUrl);
     
     if (!pixabayResponse.ok) {
@@ -127,8 +119,8 @@ serve(async (req) => {
     // Step 3: Generate alt text and score relevance using AI
     const images: ImageResult[] = [];
 
-    // Apply random offset and count limits for variety
-    const slicedHits = hits.slice(randomOffset, randomOffset + count);
+    // Take top results (now better filtered by AI keywords)
+    const slicedHits = hits.slice(0, count);
 
     for (const hit of slicedHits) {
       let altText = `${topic} - professional stock photo`;
@@ -169,13 +161,24 @@ serve(async (req) => {
         }
       }
 
-      // Simple relevance scoring based on tag matching
-      const topicWords = topic.toLowerCase().split(/\s+/);
-      const tagWords = hit.tags.toLowerCase().split(',').map(t => t.trim());
-      const matchCount = topicWords.filter((word: string) => 
-        tagWords.some((tag: string) => tag.includes(word) || word.includes(tag))
-      ).length;
-      relevanceScore = Math.min(100, 60 + (matchCount * 15));
+      // Weighted relevance scoring
+      const topicWords = topic.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      const tagString = hit.tags.toLowerCase();
+      
+      // Score based on: topic word matches + consumer-relevant tag boosts
+      let score = 50;
+      for (const word of topicWords) {
+        if (tagString.includes(word)) score += 12;
+      }
+      
+      // Boost for consumer/dispute related tags that indicate professional, relevant imagery
+      const relevantTags = ['document', 'paper', 'office', 'person', 'customer', 
+        'service', 'computer', 'phone', 'letter', 'writing', 'business', 'desk',
+        'contract', 'signature', 'professional', 'meeting', 'discussion'];
+      for (const tag of relevantTags) {
+        if (tagString.includes(tag)) score += 5;
+      }
+      relevanceScore = Math.min(100, score);
 
       images.push({
         url: hit.largeImageURL,
