@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Mail, MessageSquare, Clock, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { supabase } from '@/integrations/supabase/client';
 
 const contactMethods = [
   {
@@ -57,8 +58,20 @@ const ContactPage = () => {
       return;
     }
 
-    // Simulate form submission (you can integrate with an edge function here)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Send email via edge function
+    const { data, error } = await supabase.functions.invoke('send-contact-email', {
+      body: { name, email, subject, message }
+    });
+
+    if (error) {
+      toast({
+        title: 'Failed to send message',
+        description: error.message || 'Please try again later.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     setIsSuccess(true);
     toast({
