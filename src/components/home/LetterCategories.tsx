@@ -9,23 +9,26 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = ({ category }: CategoryCardProps) => {
-  const { imageUrl, isLoading } = useCategoryImage(
+  const { imageUrl, altText, isLoading } = useCategoryImage(
     category.id,
     category.imageKeywords[0],
-    'category-card'
+    'category-card',
+    category.name
   );
 
   return (
     <Link
       to={`/templates/${category.id}`}
       className="group block"
+      aria-label={`${category.name} letter templates`}
     >
       <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-elevated hover:-translate-y-1">
         {/* Background Image */}
         {imageUrl && (
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-            style={{ backgroundImage: `url(${imageUrl})` }}
+          <img 
+            src={imageUrl}
+            alt={altText || `${category.name} category`}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
         

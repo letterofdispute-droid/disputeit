@@ -11,6 +11,7 @@ interface PixabayHit {
   webformatURL: string;
   largeImageURL: string;
   previewURL: string;
+  tags: string;
 }
 
 interface PixabayResponse {
@@ -27,7 +28,24 @@ interface CategoryImage {
   large_url: string;
   pixabay_id: string;
   search_query: string;
+  alt_text: string;
   expires_at: string;
+}
+
+// Generate SEO-friendly alt text
+function generateAltText(categoryName: string, searchQuery: string, tags: string): string {
+  // Use Pixabay tags if available, otherwise fall back to search query
+  const descriptor = tags ? tags.split(',')[0].trim() : searchQuery;
+  return `${categoryName} - ${descriptor} imagery`;
+}
+
+// Download image from URL and return as ArrayBuffer
+async function downloadImage(url: string): Promise<ArrayBuffer> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.status}`);
+  }
+  return await response.arrayBuffer();
 }
 
 Deno.serve(async (req) => {
@@ -37,7 +55,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { categoryId, contextKey = "default", searchQuery, forceRefresh = false } = await req.json();
+    const { categoryId, categoryName, contextKey = "default", searchQuery, forceRefresh = false } = await req.json();
 
     if (!categoryId || !searchQuery) {
       return new Response(
@@ -104,8 +122,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Pick first result (could randomize for variety)
+    // Pick first result
     const hit = pixabayData.hits[0];
+    
+    // Download the image
+    console.log(`Downloading image from Pixabay...`);
+    const imageBuffer = await downloadImage(hit.largeImageURL);
+    
+    // Generate storage paths
+    const storagePath = `categories/${categoryId}/${contextKey}.jpg`;
+    const thumbnailPath = `categories/${categoryId}/${contextKey}-thumb.jpg`;
+    
+    // Upload main image to storage
+    console.log(`Uploading to storage: ${storagePath}`);
+    const { error: uploadError } = await supabase.storage
+      .from("blog-images")
+      .upload(storagePath, imageBuffer, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw new Error(`Failed to upload image: ${uploadError.message}`);
+    }
+
+    // Download and upload thumbnail
+    const thumbnailBuffer = await downloadImage(hit.previewURL);
+    await supabase.storage
+      .from("blog-images")
+      .upload(thumbnailPath, thumbnailBuffer, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    // Get public URLs
+    const { data: { publicUrl: imageUrl } } = supabase.storage
+      .from("blog-images")
+      .getPublicUrl(storagePath);
+    
+    const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+      .from("blog-images")
+      .getPublicUrl(thumbnailPath);
+
+    // Generate alt text
+    const displayName = categoryName || categoryId.split('-').map((w: string) => 
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+    const altText = generateAltText(displayName, searchQuery, hit.tags);
 
     // Delete old cached images for this category/context
     await supabase
@@ -114,16 +178,17 @@ Deno.serve(async (req) => {
       .eq("category_id", categoryId)
       .eq("context_key", contextKey);
 
-    // Insert new cached image
+    // Insert new cached image with permanent URLs
     const newImage = {
       category_id: categoryId,
       context_key: contextKey,
-      image_url: hit.webformatURL,
-      thumbnail_url: hit.previewURL,
-      large_url: hit.largeImageURL,
+      image_url: imageUrl,
+      thumbnail_url: thumbnailUrl,
+      large_url: imageUrl, // Same as image_url since we're using the large version
       pixabay_id: String(hit.id),
       search_query: searchQuery,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      alt_text: altText,
+      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year since self-hosted
     };
 
     const { data: insertedImage, error: insertError } = await supabase
@@ -141,6 +206,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log(`Successfully uploaded and cached image for ${categoryId}/${contextKey}`);
+    
     return new Response(
       JSON.stringify({ image: insertedImage, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
