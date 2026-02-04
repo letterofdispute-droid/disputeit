@@ -47,7 +47,7 @@ const ARTICLE_TYPES = [
       'What {entity} Won\'t Tell You About {topic}',
       'Your {topic} Rights Explained',
       'The Consumer Rights You Didn\'t Know You Had',
-      'UK {topic} Laws: What Protects You',
+      'US {topic} Laws: Your Rights Under Federal and State Law',
     ],
   },
   { 
@@ -169,7 +169,7 @@ const CATEGORY_LANGUAGE: Record<string, { terms: string[]; tone: string }> = {
     tone: 'professional and supportive',
   },
   healthcare: {
-    terms: ['NHS', 'treatment', 'appointment', 'referral', 'complaint', 'care'],
+    terms: ['insurance', 'treatment', 'appointment', 'provider', 'complaint', 'care'],
     tone: 'compassionate and clear',
   },
   hoa: {
@@ -267,7 +267,7 @@ serve(async (req) => {
       tone: 'helpful and professional',
     };
 
-    const systemPrompt = `You are a UK-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN—never templated or formulaic.
+    const systemPrompt = `You are a US-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN—never templated or formulaic.
 
 CRITICAL DIVERSITY RULES:
 1. Each title must feel like it was written by a different person
@@ -280,7 +280,7 @@ CRITICAL DIVERSITY RULES:
    - Emotional: "Fed Up? Here's What Actually Works"
 4. Mix title lengths: some punchy (5-7 words), some descriptive (10-12 words)
 5. Use natural language people actually type into Google
-6. Include UK-specific references where relevant (Consumer Rights Act, etc.)
+6. Include US-specific references where relevant (FTC Act, Magnuson-Moss Warranty Act, state consumer protection laws, etc.)
 
 ANTI-PATTERN RULES:
 - Never repeat the exact template name in titles
@@ -294,9 +294,9 @@ BAD EXAMPLES (too templated):
 - "Your Rights: Poor Workmanship - What Contractors Won't Tell You"
 
 GOOD EXAMPLES (diverse & human):
-- "What to Do When Your Builder's Work Falls Apart"
-- "The 7 Excuses Dodgy Builders Use (And How to Fight Back)"
-- "UK Consumer Rights After Shoddy Construction Work"
+- "What to Do When Your Contractor's Work Falls Apart"
+- "The 7 Excuses Shady Contractors Use (And How to Fight Back)"
+- "Your Rights Under State Consumer Protection Laws After Shoddy Work"
 
 Output valid JSON only.`;
 
@@ -331,7 +331,7 @@ Return JSON:
     {
       "type": "article-type-id",
       "title": "Unique, human-crafted SEO title",
-      "keywords": ["long-tail keyword 1", "natural search phrase 2", "question keyword 3", "action keyword 4", "UK-specific term 5"]
+      "keywords": ["long-tail keyword 1", "natural search phrase 2", "question keyword 3", "action keyword 4", "US consumer rights term 5"]
     }
   ]
 }`;
