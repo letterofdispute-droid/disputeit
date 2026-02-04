@@ -74,6 +74,13 @@ const ArticlesPage = () => {
       }));
 
   const categories = dbCategories && dbCategories.length > 0 ? dbCategories : blogCategories;
+  
+  // Helper to get category display name from slug
+  const getCategoryName = (post: BlogPost) => {
+    const cat = categories.find(c => c.slug === post.category_slug);
+    return cat?.name || post.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
   const featuredPosts = posts.filter(post => post.featured);
   const regularPosts = posts.filter(post => !post.featured);
 
@@ -174,7 +181,7 @@ const ArticlesPage = () => {
                   )}
                   <CardHeader>
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary">{post.category}</Badge>
+                      <Badge variant="secondary">{getCategoryName(post)}</Badge>
                       <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
                         Featured
                       </Badge>
@@ -247,7 +254,7 @@ const ArticlesPage = () => {
                   )}
                   <CardHeader>
                     <Badge variant="secondary" className="w-fit mb-2">
-                      {post.category}
+                      {getCategoryName(post)}
                     </Badge>
                     <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
                       <Link to={`/articles/${post.category_slug}/${post.slug}`}>
