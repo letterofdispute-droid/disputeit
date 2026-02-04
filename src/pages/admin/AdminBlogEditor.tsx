@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,9 @@ const AdminBlogEditor = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSuggesting, setIsAutoSuggesting] = useState(false);
+  const hasAutoSuggested = useRef(false);
+  const [availableCategories, setAvailableCategories] = useState<Array<{ slug: string; name: string }>>([]);
 
   // Post data
   const [title, setTitle] = useState('');
@@ -39,6 +42,15 @@ const AdminBlogEditor = () => {
   const [metaDescription, setMetaDescription] = useState('');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
 
+  // Fetch categories for auto-suggest
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('blog_categories').select('slug, name');
+      if (data) setAvailableCategories(data);
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     if (isEditing) {
       fetchPost();
@@ -50,6 +62,47 @@ const AdminBlogEditor = () => {
       setSlug(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
     }
   }, [title, isEditing]);
+
+  // Auto-suggest category and tags when content is available
+  useEffect(() => {
+    if (hasAutoSuggested.current || isLoading) return;
+    if (title.length < 10 || content.length < 50) return;
+    if (category && tags.length > 0) return;
+    if (availableCategories.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      hasAutoSuggested.current = true;
+      setIsAutoSuggesting(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('suggest-category-tags', {
+          body: { title, content, excerpt, availableCategories }
+        });
+
+        if (error) throw error;
+
+        let filled = false;
+        if (!category && data?.suggestedCategory) {
+          setCategory(data.suggestedCategory);
+          filled = true;
+        }
+        if (tags.length === 0 && data?.suggestedTags?.length > 0) {
+          setTags(data.suggestedTags.slice(0, 2));
+          filled = true;
+        }
+
+        if (filled) {
+          toast({ title: '✨ AI filled in category & tags' });
+        }
+      } catch (e) {
+        console.error('Auto-suggest failed:', e);
+      } finally {
+        setIsAutoSuggesting(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [title, content, excerpt, category, tags.length, isLoading, availableCategories]);
 
   const fetchPost = async () => {
     setIsLoading(true);
@@ -217,6 +270,12 @@ const AdminBlogEditor = () => {
             scheduledAt={scheduledAt}
             onScheduledAtChange={setScheduledAt}
           />
+          {isAutoSuggesting && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
+              <Sparkles className="h-4 w-4 animate-pulse text-primary" />
+              AI analyzing content...
+            </div>
+          )}
           <CategorySelect value={category} onChange={setCategory} title={title} content={content} />
           <TagInput tags={tags} onChange={setTags} title={title} content={content} />
           <FeaturedImageUploader
