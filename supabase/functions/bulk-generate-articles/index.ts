@@ -109,7 +109,177 @@ Return ONLY keywords, no punctuation, no explanation.`
   return title;
 }
 
-// Fetch image from Pixabay, download, and upload to Supabase storage
+// Use AI vision to analyze candidate images and pick the best one for the topic
+async function selectBestImageWithVision(
+  apiKey: string,
+  candidates: Array<{ url: string; largeUrl: string; tags: string; id: number }>,
+  articleTitle: string,
+  category: string
+): Promise<{ url: string; id: number } | null> {
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return { url: candidates[0].largeUrl, id: candidates[0].id };
+
+  try {
+    // Prepare image descriptions for the vision model
+    const imageDescriptions = candidates.map((c, i) => 
+      `Image ${i + 1}: Tags: ${c.tags}`
+    ).join('\n');
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an image selector for a consumer rights blog. 
+Pick the BEST image for an article's featured image.
+
+Consider:
+1. Relevance to the article topic
+2. Professional appearance suitable for a blog header
+3. Human elements (people in relevant situations are engaging)
+4. Avoid generic/abstract images when specific ones are available
+
+Respond with ONLY the image number (1, 2, 3, etc.) - nothing else.`
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Article: "${articleTitle}" (Category: ${category})\n\nCandidate images:\n${imageDescriptions}\n\nWhich image number is best for this article's featured image?`
+              },
+              ...candidates.slice(0, 5).map(c => ({
+                type: 'image_url',
+                image_url: { url: c.url }
+              }))
+            ]
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 10,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const choice = data.choices[0]?.message?.content?.trim();
+      const imageIndex = parseInt(choice, 10) - 1;
+      
+      if (!isNaN(imageIndex) && imageIndex >= 0 && imageIndex < candidates.length) {
+        console.log(`Vision AI selected image ${imageIndex + 1} for "${articleTitle}"`);
+        return { url: candidates[imageIndex].largeUrl, id: candidates[imageIndex].id };
+      }
+    }
+  } catch (e) {
+    console.log('Vision analysis failed, using first candidate:', e);
+  }
+  
+  // Fallback to first candidate
+  return { url: candidates[0].largeUrl, id: candidates[0].id };
+}
+
+// Fetch image from Pixabay with vision analysis for featured images
+async function fetchAndUploadFeaturedImage(
+  supabase: SupabaseClient,
+  apiKey: string,
+  searchQuery: string,
+  storagePath: string,
+  articleTitle: string,
+  category: string
+): Promise<{ url: string | null; altText: string | null }> {
+  try {
+    const pixabayKey = Deno.env.get('PIXABAY_API_KEY');
+    if (!pixabayKey) {
+      console.log('PIXABAY_API_KEY not configured, skipping image');
+      return { url: null, altText: null };
+    }
+
+    // Clean and prepare search query
+    const cleanQuery = searchQuery
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(w => w.length > 2)
+      .slice(0, 4)
+      .join(' ');
+
+    // Search Pixabay for multiple candidates
+    const url = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(cleanQuery)}&image_type=photo&orientation=horizontal&per_page=10&safesearch=true`;
+    
+    console.log(`Searching Pixabay for featured image: "${cleanQuery}"`);
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.hits?.length) {
+      console.log(`No Pixabay results for: "${cleanQuery}"`);
+      return { url: null, altText: null };
+    }
+
+    // Prepare candidates for vision analysis
+    const candidates = data.hits.slice(0, 5).map((hit: any) => ({
+      url: hit.webformatURL, // Use smaller thumbnail for vision analysis
+      largeUrl: hit.largeImageURL,
+      tags: hit.tags,
+      id: hit.id
+    }));
+
+    // Use vision AI to pick the best image
+    const selected = await selectBestImageWithVision(
+      apiKey,
+      candidates,
+      articleTitle,
+      category
+    );
+
+    if (!selected) {
+      return { url: null, altText: null };
+    }
+
+    console.log(`Vision selected Pixabay image: ${selected.id}`);
+    
+    // Download the selected image
+    const imageResponse = await fetch(selected.url);
+    if (!imageResponse.ok) {
+      console.error(`Failed to download image: ${imageResponse.status}`);
+      return { url: null, altText: null };
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('blog-images')
+      .upload(`${storagePath}.jpg`, imageBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+    
+    if (uploadError) {
+      console.error(`Upload error: ${uploadError.message}`);
+      return { url: null, altText: null };
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(`${storagePath}.jpg`);
+    
+    const altText = generateAltText(cleanQuery, articleTitle);
+    
+    console.log(`Uploaded featured image to: ${urlData.publicUrl}`);
+    return { url: urlData.publicUrl, altText };
+  } catch (error) {
+    console.error('Error fetching/uploading featured image:', error);
+    return { url: null, altText: null };
+  }
+}
+
+// Fetch image from Pixabay, download, and upload to Supabase storage (for middle images - no vision)
 async function fetchAndUploadImage(
   supabase: SupabaseClient,
   searchQuery: string,
@@ -422,20 +592,22 @@ Respond with ONLY this JSON:
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
 
-        // === AUTO-FETCH IMAGES WITH AI-EXTRACTED KEYWORDS ===
+        // === AUTO-FETCH IMAGES WITH AI VISION FOR FEATURED IMAGE ===
         console.log(`Fetching images for: ${parsedContent.title}`);
         
-        // 1. Featured image - use AI-extracted visual keywords
+        // 1. Featured image - use AI vision analysis to pick the best one
         const featuredSearchTerm = await extractVisualKeywords(
           apiKey,
           parsedContent.title,
           plan.category_id
         );
-        const { url: featuredImageUrl } = await fetchAndUploadImage(
+        const { url: featuredImageUrl } = await fetchAndUploadFeaturedImage(
           supabaseAdmin,
+          apiKey,
           featuredSearchTerm,
           `articles/${slug}-featured`,
-          parsedContent.title
+          parsedContent.title,
+          plan.category_id
         );
 
         // 2. Check for middle image placeholders and fetch if needed
