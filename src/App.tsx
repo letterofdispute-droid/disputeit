@@ -32,6 +32,7 @@ import DisclaimerPage from "./pages/DisclaimerPage";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import SEODashboard from "./pages/admin/SEODashboard";
 import AdminBlog from "./pages/admin/AdminBlog";
 import AdminBlogEditor from "./pages/admin/AdminBlogEditor";
 import AIBlogGenerator from "./pages/admin/AIBlogGenerator";
@@ -95,6 +96,7 @@ const App = () => (
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
             <Route index element={<AdminDashboard />} />
+            <Route path="seo" element={<SEODashboard />} />
             <Route path="blog" element={<AdminBlog />} />
             <Route path="blog/new" element={<AdminBlogEditor />} />
             <Route path="blog/generate" element={<AIBlogGenerator />} />

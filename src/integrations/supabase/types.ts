@@ -70,11 +70,13 @@ export type Database = {
       }
       blog_posts: {
         Row: {
+          article_type: string | null
           author: string
           author_id: string | null
           category: string
           category_slug: string
           content: string
+          content_plan_id: string | null
           created_at: string
           excerpt: string | null
           featured: boolean
@@ -84,6 +86,7 @@ export type Database = {
           meta_title: string | null
           published_at: string | null
           read_time: string | null
+          related_templates: string[] | null
           scheduled_at: string | null
           slug: string
           status: string
@@ -93,11 +96,13 @@ export type Database = {
           views: number
         }
         Insert: {
+          article_type?: string | null
           author?: string
           author_id?: string | null
           category: string
           category_slug: string
           content: string
+          content_plan_id?: string | null
           created_at?: string
           excerpt?: string | null
           featured?: boolean
@@ -107,6 +112,7 @@ export type Database = {
           meta_title?: string | null
           published_at?: string | null
           read_time?: string | null
+          related_templates?: string[] | null
           scheduled_at?: string | null
           slug: string
           status?: string
@@ -116,11 +122,13 @@ export type Database = {
           views?: number
         }
         Update: {
+          article_type?: string | null
           author?: string
           author_id?: string | null
           category?: string
           category_slug?: string
           content?: string
+          content_plan_id?: string | null
           created_at?: string
           excerpt?: string | null
           featured?: boolean
@@ -130,6 +138,7 @@ export type Database = {
           meta_title?: string | null
           published_at?: string | null
           read_time?: string | null
+          related_templates?: string[] | null
           scheduled_at?: string | null
           slug?: string
           status?: string
@@ -145,6 +154,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blog_posts_content_plan_id_fkey"
+            columns: ["content_plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -211,6 +227,102 @@ export type Database = {
         }
         Relationships: []
       }
+      content_plans: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          subcategory_slug: string | null
+          target_article_count: number
+          template_name: string
+          template_slug: string
+          updated_at: string
+          value_tier: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          subcategory_slug?: string | null
+          target_article_count?: number
+          template_name: string
+          template_slug: string
+          updated_at?: string
+          value_tier?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          subcategory_slug?: string | null
+          target_article_count?: number
+          template_name?: string
+          template_slug?: string
+          updated_at?: string
+          value_tier?: string
+        }
+        Relationships: []
+      }
+      content_queue: {
+        Row: {
+          article_type: string
+          blog_post_id: string | null
+          created_at: string
+          error_message: string | null
+          generated_at: string | null
+          id: string
+          plan_id: string | null
+          priority: number | null
+          published_at: string | null
+          status: string
+          suggested_keywords: string[] | null
+          suggested_title: string
+        }
+        Insert: {
+          article_type: string
+          blog_post_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          plan_id?: string | null
+          priority?: number | null
+          published_at?: string | null
+          status?: string
+          suggested_keywords?: string[] | null
+          suggested_title: string
+        }
+        Update: {
+          article_type?: string
+          blog_post_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          plan_id?: string | null
+          priority?: number | null
+          published_at?: string | null
+          status?: string
+          suggested_keywords?: string[] | null
+          suggested_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_queue_blog_post_id_fkey"
+            columns: ["blog_post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_queue_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       letter_purchases: {
         Row: {
           amount_cents: number
@@ -264,6 +376,59 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      link_suggestions: {
+        Row: {
+          anchor_text: string
+          applied_at: string | null
+          context_snippet: string | null
+          created_at: string
+          id: string
+          insert_position: number | null
+          relevance_score: number | null
+          source_post_id: string
+          status: string
+          target_slug: string
+          target_title: string
+          target_type: string
+        }
+        Insert: {
+          anchor_text: string
+          applied_at?: string | null
+          context_snippet?: string | null
+          created_at?: string
+          id?: string
+          insert_position?: number | null
+          relevance_score?: number | null
+          source_post_id: string
+          status?: string
+          target_slug: string
+          target_title: string
+          target_type: string
+        }
+        Update: {
+          anchor_text?: string
+          applied_at?: string | null
+          context_snippet?: string | null
+          created_at?: string
+          id?: string
+          insert_position?: number | null
+          relevance_score?: number | null
+          source_post_id?: string
+          status?: string
+          target_slug?: string
+          target_title?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_suggestions_source_post_id_fkey"
+            columns: ["source_post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pages: {
         Row: {
