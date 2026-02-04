@@ -7,6 +7,7 @@ import { inferSubcategory } from '@/data/subcategoryMappings';
 import LetterGenerator from '@/components/letter/LetterGenerator';
 import SEOContent from '@/components/letter/SEOContent';
 import RelatedTemplates from '@/components/letter/RelatedTemplates';
+import RelatedArticles from '@/components/letter/RelatedArticles';
 import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
@@ -268,6 +269,13 @@ const LetterPage = () => {
 
       {/* Category-Specific FAQ Section with FAQPage Schema */}
       <TemplateFAQ template={template} categoryName={category.name} />
+
+      {/* Related Articles from Blog - Bidirectional SEO Linking */}
+      <RelatedArticles 
+        templateSlug={template.slug}
+        categorySlug={categoryId!}
+        maxItems={4}
+      />
 
       {/* Related Templates - Enhanced Component */}
       <RelatedTemplates
