@@ -6,7 +6,7 @@ import SEOHead from '@/components/SEOHead';
 import { getBlogPostBySlug, getBlogPostsByCategory } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +43,15 @@ const ArticlePage = () => {
   }>();
   const [copied, setCopied] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
+  const [activeHeading, setActiveHeading] = useState<string>('');
+
+  // Convert category slug to display name
+  const formatCategoryName = (categorySlug: string): string => {
+    return categorySlug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   // Reading progress tracker
   useEffect(() => {
@@ -158,8 +167,43 @@ const ArticlePage = () => {
         id: text.toLowerCase().replace(/\s+/g, '-')
       });
     });
+
+    // Also check for HTML headings
+    const htmlH2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
+    let match;
+    while ((match = htmlH2Regex.exec(post.content)) !== null) {
+      const text = match[1].replace(/<[^>]*>/g, ''); // Strip any inner HTML
+      const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      if (!toc.find(t => t.id === id)) {
+        toc.push({ level: 2, text, id });
+      }
+    }
+    
     return toc;
   }, [post]);
+
+  // Intersection Observer for active heading tracking
+  useEffect(() => {
+    if (tableOfContents.length === 0) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveHeading(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-100px 0px -70% 0px' }
+    );
+
+    tableOfContents.forEach((item) => {
+      const element = document.getElementById(item.id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [tableOfContents]);
 
   // Share functionality
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -302,7 +346,7 @@ const ArticlePage = () => {
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <Link to={`/articles/${post.category_slug}`} className="text-muted-foreground hover:text-foreground transition-colors">
-              {post.category}
+              {formatCategoryName(post.category_slug)}
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <span className="text-foreground font-medium truncate max-w-[200px]">{post.title}</span>
@@ -311,7 +355,7 @@ const ArticlePage = () => {
       </section>
 
       {/* Article Hero - Linearity-inspired split layout */}
-      <section className="bg-gradient-to-br from-[hsl(220,40%,12%)] via-[hsl(224,45%,8%)] to-[hsl(230,50%,4%)]">
+      <section className="bg-gradient-to-br from-[hsl(222,47%,15%)] via-[hsl(222,50%,10%)] to-[hsl(222,55%,5%)]">
         <div className="container-wide py-12 md:py-16 lg:py-20">
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
             
@@ -360,7 +404,7 @@ const ArticlePage = () => {
                   {/* Card Header */}
                   <div className="p-6 pb-4">
                     <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
-                      {post.category}
+                      {formatCategoryName(post.category_slug)}
                     </Badge>
                     <h2 className="font-serif text-xl md:text-2xl font-bold text-foreground leading-snug line-clamp-3">
                       {post.title}
@@ -370,7 +414,7 @@ const ArticlePage = () => {
                   <img src={post.featured_image_url} alt={post.title} className="w-full h-48 md:h-64 object-cover" />
                 </div> : <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 shadow-2xl">
                   <Badge variant="outline" className="mb-4 border-primary/30 text-primary bg-white">
-                    {post.category}
+                    {formatCategoryName(post.category_slug)}
                   </Badge>
                   <h2 className="font-serif text-2xl font-bold text-foreground">
                     {post.title}
@@ -381,6 +425,46 @@ const ArticlePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Left-side Table of Contents - Linearity Style */}
+      {tableOfContents.length > 0 && (
+        <aside className="hidden xl:block fixed left-8 top-1/2 -translate-y-1/2 w-56 z-40">
+          <div className="p-5 bg-card/95 backdrop-blur-sm rounded-xl border border-border shadow-lg">
+            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2 text-sm">
+              <List className="h-4 w-4 text-primary" />
+              In this article
+            </h3>
+            <nav className="relative">
+              {/* Vertical connecting line */}
+              <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
+              
+              <ul className="space-y-3">
+                {tableOfContents.map((item, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    {/* Dot indicator */}
+                    <span className={`relative z-10 mt-1.5 w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                      activeHeading === item.id 
+                        ? 'bg-primary border-primary' 
+                        : 'bg-background border-border'
+                    }`} />
+                    
+                    <a 
+                      href={`#${item.id}`}
+                      className={`text-sm leading-snug transition-colors ${
+                        activeHeading === item.id 
+                          ? 'text-foreground font-medium' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {item.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </aside>
+      )}
 
       {/* Article Content */}
       <section className="py-12 md:py-16 bg-background">
@@ -528,7 +612,7 @@ const ArticlePage = () => {
                     </div>}
                   <CardHeader className="pb-3">
                     <Badge variant="secondary" className="w-fit mb-2 text-xs">
-                      {relatedPost.category}
+                      {formatCategoryName(relatedPost.category_slug)}
                     </Badge>
                     <Link to={`/articles/${relatedPost.category_slug}/${relatedPost.slug}`} className="font-serif text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
                       {relatedPost.title}
