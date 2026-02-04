@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import RelatedTemplatesCTA from '@/components/article/RelatedTemplatesCTA';
 
 interface BlogPost {
   slug: string;
@@ -28,6 +29,7 @@ interface BlogPost {
   views: number;
   meta_title: string | null;
   meta_description: string | null;
+  related_templates: string[] | null;
 }
 
 const ArticlePage = () => {
@@ -90,6 +92,7 @@ const ArticlePage = () => {
     views: 0,
     meta_title: null,
     meta_description: null,
+    related_templates: null,
   } : null);
 
   const relatedPosts = dbRelatedPosts && dbRelatedPosts.length > 0 
@@ -313,6 +316,14 @@ const ArticlePage = () => {
             {/* Main Content */}
             <article className="flex-1 prose prose-lg max-w-none prose-headings:font-serif prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
               <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+              
+              {/* Related Templates CTA - Embedded in content */}
+              {post.related_templates && post.related_templates.length > 0 && (
+                <RelatedTemplatesCTA 
+                  templateSlugs={post.related_templates} 
+                  categorySlug={post.category_slug}
+                />
+              )}
             </article>
 
             {/* Sidebar with TOC and Share */}
@@ -332,7 +343,7 @@ const ArticlePage = () => {
                       <Linkedin className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
@@ -372,7 +383,7 @@ const ArticlePage = () => {
                 <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
               </Button>
               <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                {copied ? <Check className="h-4 w-4 mr-2 text-green-500" /> : <Copy className="h-4 w-4 mr-2" />} Copy Link
+                {copied ? <Check className="h-4 w-4 mr-2 text-accent" /> : <Copy className="h-4 w-4 mr-2" />} Copy Link
               </Button>
             </div>
           </div>
