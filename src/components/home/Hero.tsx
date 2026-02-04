@@ -2,17 +2,29 @@ import { useState } from 'react';
 import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
+import { trackAIAssistantOpen, trackBrowseTemplatesClick, trackCTAClick } from '@/hooks/useGTM';
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
+  const handleAssistantOpen = () => {
+    trackAIAssistantOpen();
+    setIsAssistantOpen(true);
+  };
+
   const handleBrowseClick = () => {
+    trackBrowseTemplatesClick('hero');
     const lettersSection = document.getElementById('letters');
     if (lettersSection) {
       lettersSection.scrollIntoView({ behavior: 'smooth' });
     } else {
       window.location.href = '/#letters';
     }
+  };
+
+  const handleStartDisputeClick = () => {
+    trackCTAClick('start_your_dispute', 'hero');
+    handleAssistantOpen();
   };
 
   return (
@@ -61,7 +73,7 @@ const Hero = () => {
           {/* AI Search Prompt */}
           <div className="animate-fade-up" style={{ animationDelay: '0.15s' }}>
             <button
-              onClick={() => setIsAssistantOpen(true)}
+              onClick={handleAssistantOpen}
               className="w-full max-w-xl mx-auto flex items-center gap-3 px-5 py-4 bg-primary-foreground/10 hover:bg-primary-foreground/15 border border-primary-foreground/20 rounded-xl text-left transition-all duration-300 group mb-6"
             >
               <Search className="h-5 w-5 text-primary-foreground/60 group-hover:text-accent transition-colors" />
@@ -77,7 +89,7 @@ const Hero = () => {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-            <Button variant="hero" size="xl" onClick={() => setIsAssistantOpen(true)}>
+            <Button variant="hero" size="xl" onClick={handleStartDisputeClick}>
               Start Your Dispute
               <ArrowRight className="h-5 w-5" />
             </Button>

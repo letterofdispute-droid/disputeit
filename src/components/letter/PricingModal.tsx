@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, CreditCard, FileText, FileEdit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { trackPricingModalOpen, trackCheckoutInitiated } from '@/hooks/useGTM';
 
 interface PricingModalProps {
   templateSlug: string;
@@ -43,7 +44,13 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    trackPricingModalOpen(templateSlug);
+  }, [templateSlug]);
+
   const handlePurchase = async (optionId: string) => {
+    const selectedOption = pricingOptions.find(o => o.id === optionId);
+    trackCheckoutInitiated(templateSlug, optionId, selectedOption?.price || 0);
     setIsLoading(optionId);
     
     try {

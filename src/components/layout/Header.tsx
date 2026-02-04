@@ -5,6 +5,7 @@ import { useState } from 'react';
 import MegaMenu from './MegaMenu';
 import { templateCategories } from '@/data/templateCategories';
 import { useAuth } from '@/hooks/useAuth';
+import { trackNavClick, trackCTAClick } from '@/hooks/useGTM';
 import {
   Sheet,
   SheetContent,
@@ -52,33 +53,36 @@ const Header = () => {
             {user ? (
               <>
                 {isAdmin && (
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('admin')}>
                     <Link to="/admin">
                       <Settings className="h-4 w-4 mr-2" />
                       Admin
                     </Link>
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('dashboard')}>
                   <Link to="/dashboard">
                     <User className="h-4 w-4 mr-2" />
                     Dashboard
                   </Link>
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <Button variant="outline" size="sm" onClick={() => {
+                  trackNavClick('sign_out');
+                  handleSignOut();
+                }}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('login')}>
                   <Link to="/login">
                     <User className="h-4 w-4 mr-2" />
                     Login
                   </Link>
                 </Button>
-                <Button variant="accent" size="sm" asChild>
+                <Button variant="accent" size="sm" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
                   <Link to="/#letters">Create Letter</Link>
                 </Button>
               </>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Check, Download, FileText, FileEdit, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { trackPurchaseComplete, trackDownloadPdf, trackDownloadDocx } from '@/hooks/useGTM';
 
 interface PurchaseData {
   id: string;
@@ -21,6 +22,7 @@ const PurchaseSuccessPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchase, setPurchase] = useState<PurchaseData | null>(null);
+  const purchaseTrackedRef = useRef(false);
 
   const sessionId = searchParams.get('session_id');
   const purchaseId = searchParams.get('purchase_id');
@@ -42,6 +44,17 @@ const PurchaseSuccessPage = () => {
 
         if (data?.success && data?.purchase) {
           setPurchase(data.purchase);
+          // Track purchase complete only once
+          if (!purchaseTrackedRef.current) {
+            purchaseTrackedRef.current = true;
+            const price = data.purchase.purchaseType === 'pdf-editable' ? 9.99 : 5.99;
+            trackPurchaseComplete(
+              data.purchase.templateSlug || 'unknown',
+              'unknown', // category not available in purchase data
+              data.purchase.purchaseType,
+              price
+            );
+          }
         } else {
           setError(data?.error || 'Payment verification failed');
         }
@@ -59,6 +72,8 @@ const PurchaseSuccessPage = () => {
   const downloadPdf = () => {
     if (!purchase?.pdfUrl) return;
     
+    trackDownloadPdf(purchase.templateName.replace(/\s+/g, '-').toLowerCase());
+    
     // Open the signed URL in a new tab to download
     const link = document.createElement('a');
     link.href = purchase.pdfUrl;
@@ -71,6 +86,8 @@ const PurchaseSuccessPage = () => {
 
   const downloadDocx = () => {
     if (!purchase?.docxUrl) return;
+    
+    trackDownloadDocx(purchase.templateName.replace(/\s+/g, '-').toLowerCase());
     
     // Open the signed URL in a new tab to download
     const link = document.createElement('a');

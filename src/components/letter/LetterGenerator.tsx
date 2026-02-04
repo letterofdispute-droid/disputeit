@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,6 +15,15 @@ import SmartField from './SmartField';
 import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
+import { 
+  trackLetterFormStart, 
+  trackLetterFormStep, 
+  trackLetterPreviewView, 
+  trackToneSelected,
+  trackJurisdictionSelected,
+  trackGenerateLetterClick 
+} from '@/hooks/useGTM';
+
 interface LetterGeneratorProps {
   template: LetterTemplate;
 }
@@ -29,6 +38,7 @@ const LetterGenerator = ({
   const [showPricing, setShowPricing] = useState(false);
   const [showEvidenceChecklist, setShowEvidenceChecklist] = useState(false);
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
+  const formStartedRef = useRef(false);
   const {
     suggestions,
     isLoading,
@@ -46,12 +56,18 @@ const LetterGenerator = ({
   const letterStrength = useMemo(() => {
     return assessLetterStrength(formData, template.fields);
   }, [formData, template.fields]);
+
   const handleInputChange = useCallback((fieldId: string, value: string) => {
+    // Track form start on first interaction
+    if (!formStartedRef.current && value.length > 0) {
+      formStartedRef.current = true;
+      trackLetterFormStart(template.slug);
+    }
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
     }));
-  }, []);
+  }, [template.slug]);
 
   // Handle AI suggestion request
   const handleRequestAiSuggestion = useCallback((fieldId: string, fieldValue: string) => {
@@ -147,7 +163,10 @@ const LetterGenerator = ({
                 {/* Tone Selection */}
                 <div className="space-y-3">
                   <Label>Letter Tone</Label>
-                  <RadioGroup value={selectedTone} onValueChange={v => setSelectedTone(v as typeof selectedTone)}>
+                  <RadioGroup value={selectedTone} onValueChange={v => {
+                    setSelectedTone(v as typeof selectedTone);
+                    trackToneSelected(template.slug, v);
+                  }}>
                     <div className="grid gap-3">
                       {template.tones.includes('neutral') && <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
                           <RadioGroupItem value="neutral" className="mt-0.5" />
@@ -177,7 +196,10 @@ const LetterGenerator = ({
                 {/* Jurisdiction Selection */}
                 <div className="space-y-3">
                   <Label>Your Location</Label>
-                  <Select value={selectedJurisdiction} onValueChange={setSelectedJurisdiction}>
+                  <Select value={selectedJurisdiction} onValueChange={(v) => {
+                    setSelectedJurisdiction(v);
+                    trackJurisdictionSelected(template.slug, v);
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -208,7 +230,10 @@ const LetterGenerator = ({
                 <LetterStrengthMeter strength={letterStrength} showDetails={false} />
 
                 {/* Preview Card */}
-                <div className="relative border border-border rounded-lg p-6 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => setShowPreview(true)}>
+                <div className="relative border border-border rounded-lg p-6 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => {
+                  trackLetterPreviewView(template.slug);
+                  setShowPreview(true);
+                }}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-medium text-foreground">Letter Preview</h4>
                     <Button variant="ghost" size="sm">
@@ -268,10 +293,16 @@ const LetterGenerator = ({
                   Back
                 </Button> : <div />}
 
-              {step < totalSteps ? <Button variant="accent" onClick={() => setStep(step + 1)}>
+              {step < totalSteps ? <Button variant="accent" onClick={() => {
+                  trackLetterFormStep(template.slug, step);
+                  setStep(step + 1);
+                }}>
                   Continue
                   <ChevronRight className="h-4 w-4 ml-2" />
-                </Button> : <Button variant="hero" onClick={() => setShowPricing(true)}>
+                </Button> : <Button variant="hero" onClick={() => {
+                  trackGenerateLetterClick(template.slug);
+                  setShowPricing(true);
+                }}>
                   Generate Letter
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>}

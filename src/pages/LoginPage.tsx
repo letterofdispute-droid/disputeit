@@ -11,6 +11,7 @@ import ldLogoIcon from '@/assets/ld-logo-icon.svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { lovable } from '@/integrations/lovable';
+import { trackLoginComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -34,6 +35,7 @@ const LoginPage = () => {
         variant: 'destructive',
       });
     } else {
+      trackLoginComplete('email');
       toast({
         title: 'Welcome back!',
         description: 'You have successfully signed in.',
@@ -46,6 +48,7 @@ const LoginPage = () => {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    trackGoogleAuthClick('login');
     
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,

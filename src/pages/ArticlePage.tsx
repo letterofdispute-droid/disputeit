@@ -15,6 +15,7 @@ import lodIconImg from '@/assets/ld-logo-icon.svg';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import RelatedTemplatesCTA from '@/components/article/RelatedTemplatesCTA';
+import { trackArticleView } from '@/hooks/useGTM';
 interface BlogPost {
   slug: string;
   title: string;
@@ -65,6 +66,13 @@ const ArticlePage = () => {
     });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Track article view
+  useEffect(() => {
+    if (slug && category) {
+      trackArticleView(slug, category);
+    }
+  }, [slug, category]);
 
   // Fetch from database first, fall back to static data
   const {

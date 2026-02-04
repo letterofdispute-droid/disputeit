@@ -18,6 +18,7 @@ import CategorySearch from '@/components/category/CategorySearch';
 import SubcategoryFilter from '@/components/category/SubcategoryFilter';
 import TemplateCard from '@/components/category/TemplateCard';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
+import { trackCategoryView } from '@/hooks/useGTM';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -44,20 +45,24 @@ const CategoryPage = () => {
     }
   }, [largeUrl]);
 
-  if (!category) {
-    return <Navigate to="/404" replace />;
-  }
+  // Track category view
+  useEffect(() => {
+    if (category) {
+      trackCategoryView(category.id, category.name);
+    }
+  }, [category?.id, category?.name]);
 
-  const IconComponent = category.icon;
+  const IconComponent = category?.icon;
 
   // Get subcategories for this category
   const subcategories = useMemo(() => 
-    getSubcategoriesForCategory(category.name), 
-    [category.name]
+    category ? getSubcategoriesForCategory(category.name) : [], 
+    [category?.name]
   );
 
   // Compute template subcategory info and counts
   const { templatesWithSubcategory, subcategoryCounts } = useMemo(() => {
+    if (!category) return { templatesWithSubcategory: [], subcategoryCounts: {} };
     const withSubcategory = templates.map(template => ({
       template,
       subcategoryInfo: inferSubcategory(template.id, category.name)
@@ -71,7 +76,7 @@ const CategoryPage = () => {
     });
 
     return { templatesWithSubcategory: withSubcategory, subcategoryCounts: counts };
-  }, [templates, category.name]);
+  }, [templates, category?.name]);
 
   // Filter templates based on search and subcategory
   const filteredTemplates = useMemo(() => {
@@ -94,6 +99,11 @@ const CategoryPage = () => {
       return true;
     });
   }, [templatesWithSubcategory, searchQuery, activeSubcategory]);
+
+  // Early return after all hooks
+  if (!category) {
+    return <Navigate to="/404" replace />;
+  }
 
   // Generate smart SEO metadata
   const seoTitle = `${category.name} Letter Templates - Free Professional Complaint Letters | Dispute Letters`;
