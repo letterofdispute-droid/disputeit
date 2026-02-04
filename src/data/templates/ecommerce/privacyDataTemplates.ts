@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'CCPA/CPRA', approvedPhrases: ['Under the California Consumer Privacy Act', 'In accordance with state privacy laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'UK GDPR & Data Protection Act 2018', approvedPhrases: ['Under the UK GDPR', 'In accordance with the Data Protection Act 2018'] },
   { code: 'EU', name: 'European Union', legalReference: 'General Data Protection Regulation (GDPR)', approvedPhrases: ['Under Article 15/17 of the GDPR', 'In accordance with my data subject rights'] },
-  { code: 'US', name: 'United States', legalReference: 'CCPA/CPRA', approvedPhrases: ['Under the California Consumer Privacy Act', 'In accordance with state privacy laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable data protection standards'] },
 ];
 
