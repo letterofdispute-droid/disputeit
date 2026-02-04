@@ -46,8 +46,24 @@ serve(async (req) => {
       throw new Error('PIXABAY_API_KEY is not configured');
     }
 
-    // Step 1: Use AI to extract visual keywords from topic
+    // Step 1: Use AI to extract visual keywords from topic with variety
     let searchQuery = topic;
+    
+    // Random perspectives to add variety to image searches
+    const searchPerspectives = [
+      'Focus on people and human elements related to this topic',
+      'Focus on abstract concepts and symbolic imagery',
+      'Focus on professional business settings',
+      'Focus on everyday life situations',
+      'Focus on close-up details and textures',
+      'Focus on wide environmental shots',
+      'Focus on modern and contemporary imagery',
+      'Focus on emotional and expressive scenes',
+      'Focus on minimalist and clean compositions',
+      'Focus on dynamic action and movement',
+    ];
+    
+    const randomPerspective = searchPerspectives[Math.floor(Math.random() * searchPerspectives.length)];
     
     if (lovableKey) {
       try {
@@ -62,14 +78,14 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'You extract visual keywords for stock photo searches. Return only 3-5 simple, visual keywords separated by spaces. No explanations, no punctuation, just keywords.'
+                content: `You extract creative visual keywords for stock photo searches. ${randomPerspective}. Return only 3-5 unique, specific visual keywords separated by spaces. Be creative and varied - avoid generic terms like "business" or "professional". No explanations, no punctuation, just keywords.`
               },
               {
                 role: 'user',
                 content: `Extract visual keywords for finding stock photos about: "${topic}"${keywords ? `. Related keywords: ${keywords}` : ''}`
               }
             ],
-            temperature: 0.3,
+            temperature: 0.8,
             max_tokens: 50,
           }),
         });
@@ -85,13 +101,16 @@ serve(async (req) => {
         console.log('AI keyword extraction failed, using topic directly:', e);
       }
     }
+    
+    // Add random offset to get different results from the same query
+    const randomOffset = Math.floor(Math.random() * 20);
 
     // Truncate to 100 chars (Pixabay limit)
     searchQuery = searchQuery.substring(0, 100);
-    console.log('Searching Pixabay for:', searchQuery);
+    console.log('Searching Pixabay for:', searchQuery, 'with perspective:', randomPerspective);
 
-    // Step 2: Search Pixabay (fetch extra for offset)
-    const fetchCount = Math.min(count + offset + 10, 50);
+    // Step 2: Search Pixabay with random offset for variety
+    const fetchCount = Math.min(count + randomOffset + 10, 50);
     const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(searchQuery)}&image_type=photo&orientation=horizontal&per_page=${fetchCount}&safesearch=true`;
     
     const pixabayResponse = await fetch(pixabayUrl);
@@ -108,8 +127,8 @@ serve(async (req) => {
     // Step 3: Generate alt text and score relevance using AI
     const images: ImageResult[] = [];
 
-    // Apply offset and count limits
-    const slicedHits = hits.slice(offset, offset + count);
+    // Apply random offset and count limits for variety
+    const slicedHits = hits.slice(randomOffset, randomOffset + count);
 
     for (const hit of slicedHits) {
       let altText = `${topic} - professional stock photo`;
