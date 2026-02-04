@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State consumer protection laws', approvedPhrases: ['Under state consumer protection laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'Services must be performed with reasonable care and skill'] },
   { code: 'EU', name: 'European Union', legalReference: 'Consumer Rights Directive', approvedPhrases: ['Under EU consumer protection regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'State consumer protection laws', approvedPhrases: ['Under state consumer protection laws'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 
