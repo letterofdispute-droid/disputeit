@@ -10,6 +10,7 @@ interface CategoryImage {
   large_url: string;
   pixabay_id: string;
   search_query: string;
+  alt_text?: string;
   expires_at: string;
 }
 
@@ -17,6 +18,7 @@ interface UseCategoryImageResult {
   imageUrl: string | null;
   thumbnailUrl: string | null;
   largeUrl: string | null;
+  altText: string | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -27,7 +29,8 @@ const imageCache = new Map<string, CategoryImage>();
 export function useCategoryImage(
   categoryId: string | undefined,
   searchQuery: string | undefined,
-  contextKey: string = 'default'
+  contextKey: string = 'default',
+  categoryName?: string
 ): UseCategoryImageResult {
   const [image, setImage] = useState<CategoryImage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,11 +71,11 @@ export function useCategoryImage(
           return;
         }
 
-        // Fetch from edge function if not cached
+        // Fetch from edge function if not cached (downloads & self-hosts the image)
         const { data, error: fetchError } = await supabase.functions.invoke(
           'fetch-category-images',
           {
-            body: { categoryId, contextKey, searchQuery },
+            body: { categoryId, categoryName, contextKey, searchQuery },
           }
         );
 
@@ -95,12 +98,13 @@ export function useCategoryImage(
     };
 
     fetchImage();
-  }, [categoryId, searchQuery, contextKey]);
+  }, [categoryId, searchQuery, contextKey, categoryName]);
 
   return {
     imageUrl: image?.image_url || null,
     thumbnailUrl: image?.thumbnail_url || null,
     largeUrl: image?.large_url || null,
+    altText: image?.alt_text || null,
     isLoading,
     error,
   };
@@ -108,7 +112,7 @@ export function useCategoryImage(
 
 // Utility to preload images for all categories
 export async function preloadCategoryImages(
-  categories: Array<{ id: string; imageKeywords: string[] }>
+  categories: Array<{ id: string; name: string; imageKeywords: string[] }>
 ): Promise<void> {
   const promises = categories.map(async (category) => {
     const searchQuery = category.imageKeywords[0];

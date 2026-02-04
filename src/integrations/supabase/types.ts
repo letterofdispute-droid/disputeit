@@ -193,6 +193,7 @@ export type Database = {
       }
       category_images: {
         Row: {
+          alt_text: string | null
           category_id: string
           context_key: string
           created_at: string
@@ -206,6 +207,7 @@ export type Database = {
           thumbnail_url: string
         }
         Insert: {
+          alt_text?: string | null
           category_id: string
           context_key?: string
           created_at?: string
@@ -219,6 +221,7 @@ export type Database = {
           thumbnail_url: string
         }
         Update: {
+          alt_text?: string | null
           category_id?: string
           context_key?: string
           created_at?: string
