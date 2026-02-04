@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Insurance Act 2015', approvedPhrases: ['Under the Insurance Act 2015', 'In accordance with FCA regulations'] },
   { code: 'EU', name: 'European Union', legalReference: 'Insurance Distribution Directive', approvedPhrases: ['Under EU insurance regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable insurance standards'] },
 ];
 
@@ -380,7 +380,7 @@ export const businessInsuranceTemplates: LetterTemplate[] = [
       { id: 'insurerAddress', label: 'Insurer Address', type: 'textarea', required: true, placeholder: 'Full address', impactLevel: 'important' },
       { id: 'insuredName', label: 'Insured Business/Professional Name', type: 'text', required: true, placeholder: 'Your business name', impactLevel: 'critical' },
       { id: 'policyNumber', label: 'Policy Number', type: 'text', required: true, placeholder: 'Policy number', validation: { format: 'policyNumber' }, impactLevel: 'critical' },
-      { id: 'professionType', label: 'Profession Type', type: 'text', required: true, placeholder: 'e.g., Accountant, Solicitor', impactLevel: 'important' },
+      { id: 'professionType', label: 'Profession Type', type: 'text', required: true, placeholder: 'e.g., Accountant, Attorney', impactLevel: 'important' },
       { id: 'claimantName', label: 'Name of Claimant', type: 'text', required: true, placeholder: 'Person/company making allegation', impactLevel: 'critical' },
       { id: 'allegationDate', label: 'Date Allegation Received', type: 'date', required: true, impactLevel: 'critical', helpText: 'Notify insurer promptly - delay could affect coverage' },
       { id: 'allegationSummary', label: 'Summary of Allegation', type: 'textarea', required: true, placeholder: 'What they are claiming', aiEnhanced: true, impactLevel: 'critical', evidenceHint: 'Attach the actual complaint letter if received in writing' },

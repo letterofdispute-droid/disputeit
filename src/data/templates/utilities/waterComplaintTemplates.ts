@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Safe Drinking Water Act', approvedPhrases: ['Under state utility regulations', 'In accordance with applicable water regulations'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Water Industry Act 1991', approvedPhrases: ['Under the Water Industry Act 1991', 'In accordance with Ofwat regulations'] },
   { code: 'EU', name: 'European Union', legalReference: 'EU Water Framework Directive', approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', legalReference: 'Safe Drinking Water Act', approvedPhrases: ['Under state utility regulations', 'In accordance with applicable water regulations'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 
@@ -54,7 +54,7 @@ export const waterComplaintTemplates: LetterTemplate[] = [
       { id: 'accountHolderName', label: 'Account Holder Name', type: 'text', required: true, placeholder: 'Name on the account', impactLevel: 'critical' },
       { id: 'accountNumber', label: 'Account Number', type: 'text', required: true, placeholder: 'Enter account number', impactLevel: 'critical' },
       { id: 'propertyAddress', label: 'Property Address', type: 'text', required: true, placeholder: 'Your address', impactLevel: 'important' },
-      { id: 'qualityIssue', label: 'Quality Issue', type: 'select', options: ['Discoloured water', 'Bad taste/smell', 'Cloudy water', 'Particles in water', 'Low pressure', 'Health concerns', 'Other'], required: true, impactLevel: 'critical' },
+      { id: 'qualityIssue', label: 'Quality Issue', type: 'select', options: ['Discolored water', 'Bad taste/smell', 'Cloudy water', 'Particles in water', 'Low pressure', 'Health concerns', 'Other'], required: true, impactLevel: 'critical' },
       { id: 'issueDescription', label: 'Issue Description', type: 'textarea', required: true, placeholder: 'Describe the problem in detail', impactLevel: 'important', evidenceHint: 'Take photos/videos of the water as evidence' },
       { id: 'issueStartDate', label: 'When Issue Started', type: 'date', required: true, impactLevel: 'important' },
       { id: 'healthImpact', label: 'Any Health Impact', type: 'textarea', required: false, placeholder: 'Any symptoms or health concerns', impactLevel: 'critical', evidenceHint: 'Seek medical attention if symptoms persist' },

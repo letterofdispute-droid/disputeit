@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'Truth in Lending Act', approvedPhrases: ['Under the Truth in Lending Act', 'Under TILA'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Credit Act 1974', approvedPhrases: ['Under the Consumer Credit Act 1974', 'Section 75 claim'] },
   { code: 'EU', name: 'European Union', legalReference: 'Consumer Credit Directive', approvedPhrases: ['Under EU consumer credit regulations'] },
-  { code: 'US', name: 'United States', legalReference: 'Truth in Lending Act', approvedPhrases: ['Under the Truth in Lending Act', 'Under TILA'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer credit law'] },
 ];
 

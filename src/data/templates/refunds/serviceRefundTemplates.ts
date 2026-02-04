@@ -7,9 +7,9 @@ const standardPricing = [
 ];
 
 const standardJurisdictions = [
+  { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
   { code: 'EU', name: 'European Union', legalReference: 'Consumer Rights Directive', approvedPhrases: ['Under EU consumer protection regulations', 'In accordance with my consumer rights'] },
-  { code: 'US', name: 'United States', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable consumer protection standards'] },
 ];
 
@@ -26,7 +26,7 @@ export const serviceRefundTemplates: LetterTemplate[] = [
     tones: ['neutral', 'firm', 'final'],
     fields: [
       { id: 'providerName', label: 'Service Provider Name', type: 'text', required: true, impactLevel: 'critical' },
-      { id: 'providerType', label: 'Type of Professional', type: 'select', required: true, options: ['Lawyer/Solicitor', 'Accountant', 'Consultant', 'Financial Advisor', 'Architect', 'Surveyor', 'Other'], impactLevel: 'critical' },
+      { id: 'providerType', label: 'Type of Professional', type: 'select', required: true, options: ['Lawyer/Attorney', 'Accountant', 'Consultant', 'Financial Advisor', 'Architect', 'Surveyor', 'Other'], impactLevel: 'critical' },
       { id: 'companyAddress', label: 'Provider Address', type: 'textarea', required: true, impactLevel: 'important' },
       { id: 'serviceDescription', label: 'Service Engaged', type: 'textarea', required: true, impactLevel: 'critical', aiEnhanced: true, evidenceHint: 'Include the specific scope of work agreed' },
       { id: 'engagementDate', label: 'Date Engaged', type: 'date', required: true, impactLevel: 'critical' },

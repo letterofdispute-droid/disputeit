@@ -152,7 +152,7 @@ export const travelTemplates: LetterTemplate[] = [
       { id: 'numberOfBags', label: 'Number of Bags Lost', type: 'text', required: true, placeholder: 'e.g., 1', impactLevel: 'critical' },
       { id: 'baggageType', label: 'Baggage Type', type: 'select', required: true, options: ['Checked suitcase', 'Checked holdall/duffel', 'Checked box/special item', 'Ski/sports equipment', 'Musical instrument', 'Other'], impactLevel: 'important' },
       { id: 'baggageBrand', label: 'Baggage Brand/Make', type: 'text', required: false, placeholder: 'e.g., Samsonite', impactLevel: 'helpful' },
-      { id: 'baggageColour', label: 'Baggage Colour', type: 'text', required: true, placeholder: 'e.g., Black with red tag', impactLevel: 'important' },
+      { id: 'baggageColor', label: 'Baggage Color', type: 'text', required: true, placeholder: 'e.g., Black with red tag', impactLevel: 'important' },
       { id: 'baggageSize', label: 'Baggage Size', type: 'select', required: true, options: ['Cabin size (under 56cm)', 'Medium (56-70cm)', 'Large (over 70cm)'], impactLevel: 'helpful' },
       { id: 'baggageWeight', label: 'Baggage Weight (approx)', type: 'text', required: false, placeholder: 'e.g., 20kg', impactLevel: 'helpful' },
       { id: 'baggageDistinguishing', label: 'Distinguishing Features', type: 'textarea', required: false, placeholder: 'Any stickers, straps, damage marks', impactLevel: 'helpful', aiEnhanced: true },
