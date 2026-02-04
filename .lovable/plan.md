@@ -69,16 +69,16 @@ New:     [US, UK, EU, INTL]
 
 This affects how default jurisdiction is selected.
 
-### Phase 3: Terminology Updates
+### Phase 3: Terminology Updates ✅ COMPLETED
 
-| British | American |
-|---------|----------|
-| Postcode | ZIP Code |
-| Neighbour | Neighbor |
-| colour | color |
-| favour | favor |
-| solicitor | attorney/lawyer |
-| ombudsman | state agency / commissioner |
+| British | American | Status |
+|---------|----------|--------|
+| Postcode | ZIP Code | ✅ Done |
+| Neighbour | Neighbor | ✅ Done |
+| colour | color | ✅ Done |
+| favour | favor | ✅ Done |
+| solicitor | attorney/lawyer | ✅ Done |
+| ombudsman | state agency / commissioner | ✅ Done |
 
 ### Phase 4: Legal Reference Priority
 
