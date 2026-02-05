@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useIsFetching } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,6 +43,9 @@ export function useContentQueue(planId?: string, categoryId?: string) {
   const queryClient = useQueryClient();
   const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
 
+  // Stale detection threshold: 10 minutes
+  const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+
   // Fetch queue items with optional filtering
   const { data: queueItems, isLoading, error, refetch } = useQuery({
     queryKey: ['content-queue', planId, categoryId],
@@ -73,8 +76,67 @@ export function useContentQueue(planId?: string, categoryId?: string) {
 
       return data as ContentQueueItem[];
     },
-    // Poll while generating for real-time updates
-    refetchInterval: generationProgress ? 3000 : false,
+    // Poll while generating or when there are generating items for real-time updates
+    refetchInterval: () => {
+      // Always poll if we have active generation
+      if (generationProgress) return 3000;
+      // Also poll if there are items in generating state (handles edge function timeouts)
+      return false; // Will be set dynamically via effect
+    },
+  });
+
+  // Dynamic polling for generating items
+  const hasGeneratingItems = queueItems?.some(item => item.status === 'generating');
+
+  // Re-run query periodically when there are generating items
+  useEffect(() => {
+    if (!hasGeneratingItems && !generationProgress) return;
+    
+    const interval = setInterval(() => {
+      refetch();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [hasGeneratingItems, generationProgress, refetch]);
+
+  // Get stale generating items (stuck for more than 10 minutes)
+  const getStaleGeneratingItems = useCallback(() => {
+    if (!queueItems) return [];
+    const thresholdTime = new Date(Date.now() - STALE_THRESHOLD_MS);
+    
+    return queueItems.filter(item => 
+      item.status === 'generating' && 
+      new Date(item.created_at) < thresholdTime
+    );
+  }, [queueItems]);
+
+  // Reset stale items mutation
+  const resetStaleMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('content_queue')
+        .update({ 
+          status: 'failed', 
+          error_message: 'Generation timed out - manually reset' 
+        })
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      toast({ 
+        title: 'Stale items reset', 
+        description: 'Items marked as failed. You can now retry them.' 
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to reset items',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Bulk generate articles with progress tracking
@@ -215,5 +277,9 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     getStats,
     getFailedIds,
     generationProgress,
+    getStaleGeneratingItems,
+    resetStaleItems: resetStaleMutation.mutate,
+    isResettingStale: resetStaleMutation.isPending,
+    hasGeneratingItems,
   };
 }

@@ -396,6 +396,22 @@ serve(async (req) => {
     // Use service role for database and storage operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    // Pre-clean stale generating items (stuck for more than 10 minutes)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: staleItems, error: staleError } = await supabaseAdmin
+      .from('content_queue')
+      .update({ 
+        status: 'failed', 
+        error_message: 'Previous generation timed out' 
+      })
+      .eq('status', 'generating')
+      .lt('created_at', tenMinutesAgo)
+      .select('id');
+    
+    if (!staleError && staleItems && staleItems.length > 0) {
+      console.log(`Cleaned up ${staleItems.length} stale generating items`);
+    }
+
     // Verify admin access
     const token = authHeader.replace('Bearer ', '');
     const { data: claims, error: claimsError } = await supabase.auth.getUser(token);
@@ -419,10 +435,14 @@ serve(async (req) => {
       planId, 
       categoryId, 
       queueItemIds,
-      batchSize = 5, 
+      batchSize = 3, // Reduced from 5 to prevent timeouts
       tone = 'expert_professional',
       wordCount = 1500,
     } = await req.json() as BulkGenerateRequest;
+
+    // Enforce maximum batch size to prevent edge function timeouts
+    const maxBatchSize = 3;
+    const effectiveBatchSize = Math.min(batchSize, maxBatchSize);
 
     // Build query for queue items
     let query = supabaseAdmin
@@ -438,7 +458,7 @@ serve(async (req) => {
       `)
       .eq('status', 'queued')
       .order('priority', { ascending: false })
-      .limit(batchSize);
+      .limit(effectiveBatchSize);
 
     if (queueItemIds && queueItemIds.length > 0) {
       query = query.in('id', queueItemIds);

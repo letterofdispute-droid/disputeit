@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2, Sparkles, RotateCcw, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Tooltip,
   TooltipContent,
@@ -40,7 +42,7 @@ export default function ClusterPlanner({
   existingPlan,
 }: ClusterPlannerProps) {
   const { generatePlan, isGeneratingPlan } = useContentPlans();
-  const { queueItems, bulkGenerate, isBulkGenerating, retryFailed, isRetrying } = useContentQueue(existingPlan?.id);
+  const { queueItems, bulkGenerate, isBulkGenerating, retryFailed, isRetrying, getStaleGeneratingItems, resetStaleItems, isResettingStale } = useContentQueue(existingPlan?.id);
   
   const [valueTier, setValueTier] = useState<ValueTier>(
     (existingPlan?.value_tier as ValueTier) || 'medium'
@@ -52,6 +54,22 @@ export default function ClusterPlanner({
   // Get queue items for this plan
   const planQueueItems = queueItems?.filter(q => q.plan_id === existingPlan?.id) || [];
   
+  // Detect stale items (stuck in generating for >10 minutes)
+  const staleItems = useMemo(() => {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    return planQueueItems.filter(item => {
+      if (item.status !== 'generating') return false;
+      return new Date(item.created_at) < tenMinutesAgo;
+    });
+  }, [planQueueItems]);
+
+  const handleMarkStaleAsFailed = () => {
+    const staleIds = staleItems.map(i => i.id);
+    if (staleIds.length > 0) {
+      resetStaleItems(staleIds);
+    }
+  };
+
   // Calculate stats
   const stats = {
     queued: planQueueItems.filter(i => i.status === 'queued').length,
@@ -186,6 +204,31 @@ export default function ClusterPlanner({
           </div>
 
           {/* Stats Bar - only show for existing plans with items */}
+          {/* Stale Items Warning */}
+          {staleItems.length > 0 && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  {staleItems.length} article{staleItems.length > 1 ? 's appear' : ' appears'} stuck (generating for 10+ min)
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkStaleAsFailed}
+                  disabled={isResettingStale}
+                  className="ml-4"
+                >
+                  {isResettingStale ? (
+                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Resetting...</>
+                  ) : (
+                    'Mark as failed & retry'
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {existingPlan && planQueueItems.length > 0 && (
             <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg text-sm">
               {stats.generated > 0 && (

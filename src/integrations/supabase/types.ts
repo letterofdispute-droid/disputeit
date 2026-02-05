@@ -657,6 +657,7 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
+      recover_stale_generating_items: { Args: never; Returns: undefined }
       revoke_role: {
         Args: {
           target_role: Database["public"]["Enums"]["app_role"]
