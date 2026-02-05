@@ -32,6 +32,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import DisclaimerPage from "./pages/DisclaimerPage";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
+import LetterEditorPage from "./pages/LetterEditorPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SEODashboard from "./pages/admin/SEODashboard";
@@ -88,6 +89,7 @@ const App = () => (
           <Route path="/guides" element={<GuidesPage />} />
           <Route path="/guides/:categoryId" element={<CategoryGuidePage />} />
           <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
+          <Route path="/letters/:purchaseId/edit" element={<LetterEditorPage />} />
           
           {/* Auth & Dashboard */}
           <Route path="/login" element={<LoginPage />} />

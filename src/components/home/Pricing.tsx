@@ -1,7 +1,6 @@
-import { Check, FileText, FileEdit, Infinity, ArrowRight } from 'lucide-react';
+import { Check, FileText, Edit, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { trackCTAClick } from '@/hooks/useGTM';
 
@@ -19,30 +18,16 @@ const options = [
     popular: false,
   },
   {
-    name: 'PDF + Editable',
+    name: 'PDF + Edit Access',
     price: '$14.99',
-    description: 'PDF plus an editable document',
-    icon: FileEdit,
+    description: 'PDF plus 30 days of in-app editing',
+    icon: Edit,
     features: [
       'Everything in PDF',
-      'Editable Word document',
-      'Make changes anytime',
+      '30 days in-app editing',
+      'Export to PDF anytime',
     ],
     popular: true,
-  },
-  {
-    name: 'Unlimited Monthly',
-    price: '$24.99',
-    priceDetail: '/month',
-    description: 'Create unlimited letters',
-    icon: Infinity,
-    features: [
-      'Unlimited letters',
-      'All formats included',
-      'Cancel anytime',
-    ],
-    popular: false,
-    isSubscription: true,
   },
 ];
 
@@ -66,7 +51,7 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {options.map((option) => {
             const Icon = option.icon;
             return (
@@ -92,14 +77,8 @@ const Pricing = () => {
                   <h3 className="font-semibold text-foreground mb-2">{option.name}</h3>
                   <div className="font-serif text-4xl font-bold text-foreground mb-1">
                     {option.price}
-                    {option.priceDetail && (
-                      <span className="text-base font-normal text-muted-foreground">{option.priceDetail}</span>
-                    )}
                   </div>
                   <p className="text-sm text-muted-foreground">{option.description}</p>
-                  {option.isSubscription && (
-                    <Badge variant="secondary" className="mt-2 text-xs">Best for multiple disputes</Badge>
-                  )}
                 </div>
 
                 <ul className="space-y-3 mb-6">
@@ -112,19 +91,25 @@ const Pricing = () => {
                 </ul>
 
                 <Button
-                  variant={option.popular ? 'accent' : option.isSubscription ? 'default' : 'outline'}
+                  variant={option.popular ? 'accent' : 'outline'}
                   className="w-full"
                   asChild
                   onClick={() => trackCTAClick(`pricing_${option.name.toLowerCase().replace(/\s+/g, '_')}`, 'pricing_section')}
                 >
-                  <Link to={option.isSubscription ? '/pricing' : '/#letters'}>
-                    {option.isSubscription ? 'Learn More' : 'Create Letter'}
-                    {option.isSubscription && <ArrowRight className="h-4 w-4 ml-1" />}
+                  <Link to="/#letters">
+                    Create Letter
                   </Link>
                 </Button>
               </Card>
             );
           })}
+        </div>
+
+        {/* Re-edit info */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Need to edit after 30 days? Unlock editing access again for just <span className="font-semibold text-foreground">$5.99</span>
+          </p>
         </div>
       </div>
     </section>

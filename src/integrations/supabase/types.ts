@@ -346,8 +346,11 @@ export type Database = {
           amount_cents: number
           created_at: string
           docx_url: string | null
+          edit_expires_at: string | null
           email: string
           id: string
+          last_edited_at: string | null
+          last_edited_content: string | null
           letter_content: string
           pdf_url: string | null
           purchase_type: string
@@ -363,8 +366,11 @@ export type Database = {
           amount_cents: number
           created_at?: string
           docx_url?: string | null
+          edit_expires_at?: string | null
           email: string
           id?: string
+          last_edited_at?: string | null
+          last_edited_content?: string | null
           letter_content: string
           pdf_url?: string | null
           purchase_type: string
@@ -380,8 +386,11 @@ export type Database = {
           amount_cents?: number
           created_at?: string
           docx_url?: string | null
+          edit_expires_at?: string | null
           email?: string
           id?: string
+          last_edited_at?: string | null
+          last_edited_content?: string | null
           letter_content?: string
           pdf_url?: string | null
           purchase_type?: string

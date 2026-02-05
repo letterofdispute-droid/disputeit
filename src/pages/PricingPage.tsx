@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -16,20 +15,15 @@ import {
   Check, 
   ArrowRight, 
   FileText, 
-  FileEdit, 
+  Edit, 
   Shield, 
   Lock, 
   RefreshCw,
   AlertTriangle,
   Scale,
   Bot,
-  X,
-  Infinity,
-  Loader2
+  X
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
 
 const options = [
   {
@@ -48,37 +42,20 @@ const options = [
     href: '/#letters',
   },
   {
-    name: 'PDF + Editable',
+    name: 'PDF + Edit Access',
     price: '$14.99',
     priceValue: 14.99,
-    description: 'PDF plus an editable Word document',
-    icon: FileEdit,
+    description: 'PDF plus 30 days of in-app editing',
+    icon: Edit,
     features: [
       'Everything in PDF Only',
-      'Editable Word document',
-      'Make changes anytime',
-      'Perfect for multiple disputes',
+      '30 days in-app editing',
+      'Export to PDF anytime',
+      'Make changes as needed',
     ],
-    cta: 'Get PDF + Editable',
+    cta: 'Get PDF + Edit Access',
     href: '/#letters',
     popular: true,
-  },
-  {
-    name: 'Unlimited Monthly',
-    price: '$24.99',
-    priceValue: 24.99,
-    priceDetail: '/month',
-    description: 'Unlimited letters for one monthly fee',
-    icon: Infinity,
-    features: [
-      'Unlimited letter generation',
-      'All formats included (PDF + Word)',
-      'Priority email support',
-      'Cancel anytime',
-    ],
-    cta: 'Go Unlimited',
-    isSubscription: true,
-    savings: 'Best for multiple disputes',
   },
 ];
 
@@ -138,12 +115,12 @@ const comparisons = [
 
 const faqs = [
   {
-    question: 'What\'s the difference between PDF and Editable?',
-    answer: 'The PDF option gives you a ready-to-send professional letter. The PDF + Editable option includes a Word document so you can make additional changes before sending. Choose Editable if you want to customize the letter or use it as a template for similar disputes.',
+    question: 'What\'s the difference between PDF and PDF + Edit Access?',
+    answer: 'The PDF option gives you a ready-to-send professional letter. The PDF + Edit Access option lets you edit your letter in our online editor for 30 days, making it easy to customize and update before sending.',
   },
   {
-    question: 'How does the Unlimited Monthly subscription work?',
-    answer: 'For $24.99/month, you can generate as many letters as you need. Each letter comes with both PDF and editable Word formats. You can cancel anytime, and your subscription will remain active until the end of your billing period.',
+    question: 'What happens after 30 days of edit access?',
+    answer: 'After 30 days, you can still download your last saved PDF. If you need to make more edits, you can unlock another 30 days for just $5.99.',
   },
   {
     question: 'Can I get a refund if I\'m not satisfied?',
@@ -151,7 +128,7 @@ const faqs = [
   },
   {
     question: 'Can I use the same letter for multiple disputes?',
-    answer: 'With the PDF + Editable option, you can modify the document as many times as you need for similar disputes. If you have multiple disputes, the Unlimited Monthly subscription is the most cost-effective option.',
+    answer: 'With the PDF + Edit Access option, you can modify the document as many times as you need for similar disputes during your 30-day access period.',
   },
   {
     question: 'Is my payment information secure?',
@@ -159,7 +136,7 @@ const faqs = [
   },
   {
     question: 'Do I need to create an account?',
-    answer: 'For one-time purchases, no account is required. However, an account is needed for the Unlimited Monthly subscription to track your subscription status. Creating an account also lets you access your purchase history and saved letters.',
+    answer: 'For one-time purchases, no account is required. However, creating an account lets you access your purchase history and saved letters from your dashboard.',
   },
   {
     question: 'How quickly can I get my letter?',
@@ -167,7 +144,7 @@ const faqs = [
   },
   {
     question: 'What if my dispute doesn\'t fit any template?',
-    answer: 'With 400+ templates across 13 categories, we cover most consumer situations. Try our AI assistant to describe your issue, and it will recommend the closest match. The Editable option lets you customize any template to fit your specific needs.',
+    answer: 'With 400+ templates across 13 categories, we cover most consumer situations. Try our AI assistant to describe your issue, and it will recommend the closest match. The Edit Access option lets you customize any template to fit your specific needs.',
   },
 ];
 
@@ -175,7 +152,7 @@ const faqs = [
 const productSchema = {
   "@context": "https://schema.org",
   "@type": "Product",
-  "name": "DisputeLetters - Professional Dispute Letter Templates",
+  "name": "Letter of Dispute - Professional Dispute Letter Templates",
   "description": "Create professional dispute and complaint letters in minutes. Pre-validated templates with correct legal tone and formatting.",
   "offers": [
     {
@@ -187,23 +164,10 @@ const productSchema = {
     },
     {
       "@type": "Offer",
-      "name": "PDF + Editable",
+      "name": "PDF + Edit Access",
       "price": "14.99",
       "priceCurrency": "USD",
       "availability": "https://schema.org/InStock"
-    },
-    {
-      "@type": "Offer",
-      "name": "Unlimited Monthly",
-      "price": "24.99",
-      "priceCurrency": "USD",
-      "availability": "https://schema.org/InStock",
-      "priceSpecification": {
-        "@type": "UnitPriceSpecification",
-        "price": "24.99",
-        "priceCurrency": "USD",
-        "billingDuration": "P1M"
-      }
     }
   ]
 };
@@ -223,51 +187,11 @@ const faqSchema = {
 };
 
 const PricingPage = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const handleSubscribe = async () => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in to subscribe to unlimited letters.',
-      });
-      navigate('/login', { state: { from: { pathname: '/pricing' } } });
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('create-subscription-checkout');
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (error) {
-      console.error('Subscription error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start subscription checkout';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <Layout>
       <SEOHead 
-        title="Pricing - Simple Per-Letter Pricing | DisputeLetters"
-        description="Create professional dispute letters from $9.99. No hidden fees. Per-letter or unlimited monthly subscription options available."
+        title="Pricing - Simple Per-Letter Pricing | Letter of Dispute"
+        description="Create professional dispute letters from $9.99. No hidden fees. Per-letter pricing with optional in-app editing."
         canonicalPath="/pricing"
       />
       <Helmet>
@@ -287,7 +211,7 @@ const PricingPage = () => {
               Simple, Transparent Pricing
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-6">
-              Pay per letter or go unlimited. No hidden fees, no surprises.
+              Pay per letter. No hidden fees, no surprises.
             </p>
             {/* Trust badges in hero */}
             <div className="flex flex-wrap justify-center gap-4 text-sm text-primary-foreground/70">
@@ -307,7 +231,7 @@ const PricingPage = () => {
       {/* Pricing Cards */}
       <section className="py-16 md:py-24 bg-background">
         <div className="container-wide">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             {options.map((option, index) => {
               const Icon = option.icon;
               return (
@@ -320,11 +244,6 @@ const PricingPage = () => {
                       <Badge className="bg-accent text-accent-foreground">Best Value</Badge>
                     </div>
                   )}
-                  {option.savings && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge variant="secondary">{option.savings}</Badge>
-                    </div>
-                  )}
                   <CardHeader className="text-center pb-4">
                     <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                       <Icon className="h-7 w-7 text-primary" />
@@ -332,9 +251,7 @@ const PricingPage = () => {
                     <CardTitle className="font-serif text-xl">{option.name}</CardTitle>
                     <div className="mt-4">
                       <span className="text-4xl font-bold text-foreground">{option.price}</span>
-                      <span className="text-muted-foreground">
-                        {option.priceDetail || ' / letter'}
-                      </span>
+                      <span className="text-muted-foreground"> / letter</span>
                     </div>
                     <CardDescription className="mt-2">{option.description}</CardDescription>
                   </CardHeader>
@@ -347,39 +264,31 @@ const PricingPage = () => {
                         </li>
                       ))}
                     </ul>
-                    {option.isSubscription ? (
-                      <Button 
-                        className="w-full" 
-                        variant="default"
-                        onClick={handleSubscribe}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : null}
-                        {isLoading ? 'Processing...' : option.cta}
-                        {!isLoading && <ArrowRight className="h-4 w-4 ml-1" />}
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full" 
-                        variant={option.popular ? 'accent' : 'outline'}
-                        asChild
-                      >
-                        <Link to={option.href || '/#letters'}>
-                          {option.cta}
-                          <ArrowRight className="h-4 w-4 ml-1" />
-                        </Link>
-                      </Button>
-                    )}
+                    <Button 
+                      className="w-full" 
+                      variant={option.popular ? 'accent' : 'outline'}
+                      asChild
+                    >
+                      <Link to={option.href || '/#letters'}>
+                        {option.cta}
+                        <ArrowRight className="h-4 w-4 ml-1" />
+                      </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
 
+          {/* Re-edit info */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Need to edit after 30 days? Unlock editing access again for just <span className="font-semibold text-foreground">$5.99</span>
+            </p>
+          </div>
+
           {/* Value Explanation */}
-          <div className="mt-12 max-w-2xl mx-auto text-center">
+          <div className="mt-8 max-w-2xl mx-auto text-center">
             <div className="inline-block px-6 py-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">What you're paying for:</span> Pre-validated letter templates, legal-safe phrasing, correct formatting, and the certainty that your letter won't hurt your case.
@@ -416,7 +325,7 @@ const PricingPage = () => {
         <div className="container-wide">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl font-bold text-foreground mb-4">
-              Why DisputeLetters?
+              Why Letter of Dispute?
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               See how we compare to the alternatives.
