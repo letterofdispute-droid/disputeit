@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, FileEdit, Download, Loader2 } from 'lucide-react';
+import { FileText, Edit, Download, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import EditAccessBadge from '@/components/letter/EditAccessBadge';
 
 interface Purchase {
   id: string;
@@ -13,6 +14,7 @@ interface Purchase {
   amount_cents: number;
   created_at: string;
   status: string;
+  edit_expires_at?: string | null;
 }
 
 interface PurchasedLetterCardProps {
@@ -21,10 +23,10 @@ interface PurchasedLetterCardProps {
 }
 
 const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCardProps) => {
-  const [isDownloading, setIsDownloading] = useState<'pdf' | 'docx' | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleDownload = async (type: 'pdf' | 'docx') => {
-    setIsDownloading(type);
+  const handleDownload = async () => {
+    setIsDownloading(true);
     
     try {
       const { data, error } = await supabase.functions.invoke('regenerate-letter-urls', {
@@ -37,16 +39,14 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         throw new Error(data?.error || 'Failed to generate download URL');
       }
 
-      const url = type === 'pdf' ? data.pdfUrl : data.docxUrl;
-      
-      if (!url) {
-        throw new Error(`${type.toUpperCase()} not available for this purchase`);
+      if (!data.pdfUrl) {
+        throw new Error('PDF not available for this purchase');
       }
 
       // Open the download URL
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${purchase.template_name.replace(/\s+/g, '-').toLowerCase()}.${type}`;
+      link.href = data.pdfUrl;
+      link.download = `${purchase.template_name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();
@@ -54,7 +54,7 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
 
       toast({
         title: 'Download started',
-        description: `Your ${type.toUpperCase()} is being downloaded.`,
+        description: 'Your PDF is being downloaded.',
       });
     } catch (err) {
       console.error('Download error:', err);
@@ -64,7 +64,7 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         variant: 'destructive',
       });
     } finally {
-      setIsDownloading(null);
+      setIsDownloading(false);
     }
   };
 
@@ -80,6 +80,8 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
     });
   };
 
+  const hasEditAccess = purchase.purchase_type === 'pdf-editable';
+
   if (featured) {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -89,22 +91,26 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
           </div>
           <div>
             <h4 className="font-semibold text-foreground text-lg">{purchase.template_name}</h4>
-            <p className="text-sm text-muted-foreground">
-              {purchase.purchase_type === 'pdf-editable' ? 'PDF + Editable Word' : 'PDF Only'} 
-              {' • '}Purchased {formatDate(purchase.created_at)}
-            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{purchase.purchase_type === 'pdf-editable' ? 'PDF + Edit Access' : 'PDF Only'}</span>
+              <span>•</span>
+              <span>Purchased {formatDate(purchase.created_at)}</span>
+            </div>
+            {hasEditAccess && purchase.edit_expires_at && (
+              <EditAccessBadge expiresAt={purchase.edit_expires_at} className="mt-1" />
+            )}
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <Button 
-            variant="accent" 
+            variant="outline" 
             size="lg"
-            onClick={() => handleDownload('pdf')}
-            disabled={isDownloading !== null}
+            onClick={handleDownload}
+            disabled={isDownloading}
             className="gap-2"
           >
-            {isDownloading === 'pdf' ? (
+            {isDownloading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
@@ -114,22 +120,17 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
             )}
           </Button>
           
-          {purchase.purchase_type === 'pdf-editable' && (
+          {hasEditAccess && (
             <Button 
-              variant="outline" 
+              variant="accent" 
               size="lg"
-              onClick={() => handleDownload('docx')}
-              disabled={isDownloading !== null}
+              asChild
               className="gap-2"
             >
-              {isDownloading === 'docx' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <FileEdit className="h-4 w-4" />
-                  Word Doc
-                </>
-              )}
+              <Link to={`/letters/${purchase.id}/edit`}>
+                <Edit className="h-4 w-4" />
+                Edit Letter
+              </Link>
             </Button>
           )}
         </div>
@@ -145,11 +146,16 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         </div>
         <div>
           <h4 className="font-medium text-foreground">{purchase.template_name}</h4>
-          <p className="text-sm text-muted-foreground">
-            {purchase.purchase_type === 'pdf-editable' ? 'PDF + Editable' : 'PDF Only'} 
-            {' • '}{formatPrice(purchase.amount_cents)} 
-            {' • '}Purchased {formatDate(purchase.created_at)}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>{purchase.purchase_type === 'pdf-editable' ? 'PDF + Edit' : 'PDF Only'}</span>
+            <span>•</span>
+            <span>{formatPrice(purchase.amount_cents)}</span>
+            <span>•</span>
+            <span>Purchased {formatDate(purchase.created_at)}</span>
+          </div>
+          {hasEditAccess && purchase.edit_expires_at && (
+            <EditAccessBadge expiresAt={purchase.edit_expires_at} className="mt-1" />
+          )}
         </div>
       </div>
       
@@ -161,10 +167,10 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => handleDownload('pdf')}
-          disabled={isDownloading !== null}
+          onClick={handleDownload}
+          disabled={isDownloading}
         >
-          {isDownloading === 'pdf' ? (
+          {isDownloading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
@@ -174,21 +180,16 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
           )}
         </Button>
         
-        {purchase.purchase_type === 'pdf-editable' && (
+        {hasEditAccess && (
           <Button 
-            variant="outline" 
+            variant="accent" 
             size="sm"
-            onClick={() => handleDownload('docx')}
-            disabled={isDownloading !== null}
+            asChild
           >
-            {isDownloading === 'docx' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <FileEdit className="h-4 w-4 mr-1" />
-                Word
-              </>
-            )}
+            <Link to={`/letters/${purchase.id}/edit`}>
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Link>
           </Button>
         )}
       </div>

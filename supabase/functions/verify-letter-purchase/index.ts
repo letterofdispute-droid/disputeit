@@ -75,12 +75,18 @@ serve(async (req) => {
     // Update purchase status and email
     const customerEmail = session.customer_details?.email || purchase.email;
     
+    // For pdf-editable, set edit_expires_at to 30 days from now
+    const editExpiresAt = purchase.purchase_type === 'pdf-editable' 
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+    
     const { error: updateError } = await supabaseClient
       .from("letter_purchases")
       .update({
         status: "completed",
         email: customerEmail,
         stripe_payment_intent_id: session.payment_intent as string,
+        edit_expires_at: editExpiresAt,
       })
       .eq("id", purchaseId);
 
@@ -89,9 +95,7 @@ serve(async (req) => {
       throw new Error("Failed to update purchase");
     }
 
-    // Generate documents using the generate-letter-documents function
-    const generateDocx = purchase.purchase_type === "pdf-editable";
-    
+    // Generate PDF document only (no DOCX)
     console.log(`Calling generate-letter-documents for purchase ${purchaseId}`);
     
     const generateResponse = await fetch(
@@ -106,7 +110,7 @@ serve(async (req) => {
           purchaseId: purchase.id,
           letterContent: purchase.letter_content,
           templateName: purchase.template_name,
-          generateDocx,
+          generateDocx: false, // No longer generating DOCX
         }),
       }
     );
@@ -165,8 +169,8 @@ serve(async (req) => {
         templateName: purchase.template_name,
         purchaseType: purchase.purchase_type,
         pdfUrl: generateResult.pdfUrl,
-        docxUrl: generateResult.docxUrl,
         letterContent: purchase.letter_content,
+        editExpiresAt: editExpiresAt,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

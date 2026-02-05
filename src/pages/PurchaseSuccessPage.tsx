@@ -4,9 +4,9 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Check, Download, FileText, FileEdit, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Download, FileText, Edit, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { trackPurchaseComplete, trackDownloadPdf, trackDownloadDocx } from '@/hooks/useGTM';
+import { trackPurchaseComplete, trackDownloadPdf } from '@/hooks/useGTM';
 
 interface PurchaseData {
   id: string;
@@ -14,7 +14,7 @@ interface PurchaseData {
   purchaseType: string;
   letterContent: string;
   pdfUrl?: string;
-  docxUrl?: string;
+  editExpiresAt?: string;
 }
 
 const PurchaseSuccessPage = () => {
@@ -47,7 +47,7 @@ const PurchaseSuccessPage = () => {
           // Track purchase complete only once
           if (!purchaseTrackedRef.current) {
             purchaseTrackedRef.current = true;
-            const price = data.purchase.purchaseType === 'pdf-editable' ? 9.99 : 5.99;
+            const price = data.purchase.purchaseType === 'pdf-editable' ? 14.99 : 9.99;
             trackPurchaseComplete(
               data.purchase.templateSlug || 'unknown',
               'unknown', // category not available in purchase data
@@ -84,25 +84,10 @@ const PurchaseSuccessPage = () => {
     document.body.removeChild(link);
   };
 
-  const downloadDocx = () => {
-    if (!purchase?.docxUrl) return;
-    
-    trackDownloadDocx(purchase.templateName.replace(/\s+/g, '-').toLowerCase());
-    
-    // Open the signed URL in a new tab to download
-    const link = document.createElement('a');
-    link.href = purchase.docxUrl;
-    link.download = `${purchase.templateName.replace(/\s+/g, '-').toLowerCase()}.docx`;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <Layout>
       <SEOHead 
-        title="Purchase Successful | DisputeLetters"
+        title="Purchase Successful | Letter of Dispute"
         description="Your letter purchase was successful. Download your documents."
         canonicalPath="/purchase-success"
       />
@@ -145,7 +130,7 @@ const PurchaseSuccessPage = () => {
                   Purchase Successful!
                 </h1>
                 <p className="text-muted-foreground">
-                  Your letter is ready to download
+                  Your letter is ready
                 </p>
               </div>
 
@@ -155,7 +140,7 @@ const PurchaseSuccessPage = () => {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {purchase.purchaseType === 'pdf-editable' 
-                    ? 'PDF + Editable Document' 
+                    ? 'PDF + 30 Days Edit Access' 
                     : 'PDF Only'}
                 </p>
               </div>
@@ -163,7 +148,7 @@ const PurchaseSuccessPage = () => {
               <div className="space-y-3">
                 <Button 
                   className="w-full" 
-                  variant="accent"
+                  variant="outline"
                   onClick={downloadPdf}
                   disabled={!purchase.pdfUrl}
                 >
@@ -174,15 +159,24 @@ const PurchaseSuccessPage = () => {
                 {purchase.purchaseType === 'pdf-editable' && (
                   <Button 
                     className="w-full" 
-                    variant="outline"
-                    onClick={downloadDocx}
-                    disabled={!purchase.docxUrl}
+                    variant="accent"
+                    asChild
                   >
-                    <FileEdit className="h-4 w-4 mr-2" />
-                    Download Editable Document
+                    <Link to={`/letters/${purchase.id}/edit`}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Your Letter
+                    </Link>
                   </Button>
                 )}
               </div>
+
+              {purchase.purchaseType === 'pdf-editable' && (
+                <div className="mt-4 p-3 bg-primary/5 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">
+                    You have <span className="font-medium text-foreground">30 days</span> to edit your letter in our online editor
+                  </p>
+                </div>
+              )}
 
               <div className="mt-8 pt-6 border-t border-border text-center">
                 <p className="text-sm text-muted-foreground mb-4">

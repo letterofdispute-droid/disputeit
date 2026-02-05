@@ -51,11 +51,11 @@ verify_jwt = false
 [functions.send-contact-email]
 verify_jwt = false
 
-[functions.check-subscription]
+[functions.create-edit-unlock-checkout]
 verify_jwt = false
 
-[functions.create-subscription-checkout]
+[functions.verify-edit-unlock-purchase]
 verify_jwt = false
 
-[functions.customer-portal]
+[functions.export-letter-pdf]
 verify_jwt = false
