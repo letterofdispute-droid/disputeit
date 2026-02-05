@@ -113,9 +113,17 @@ export default function ClusterPlanner({
   const handleGenerateAll = () => {
     if (!existingPlan) return;
     
+    // Get IDs of all queued items for this plan
+    const queuedIds = planQueueItems
+      .filter(item => item.status === 'queued')
+      .map(item => item.id);
+    
+    if (queuedIds.length === 0) return;
+    
     bulkGenerate({
       planId: existingPlan.id,
-      batchSize: 10,
+      queueItemIds: queuedIds,
+      batchSize: queuedIds.length,
     });
   };
 
