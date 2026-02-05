@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
+import { useQueueStats } from '@/hooks/useQueueStats';
 import QueueStats from './queue/QueueStats';
 import QueueFilters from './queue/QueueFilters';
 import QueueActions from './queue/QueueActions';
 import QueueTable from './queue/QueueTable';
 import GenerationProgress from './queue/GenerationProgress';
+import QueuePagination from './queue/QueuePagination';
+
+const ITEMS_PER_PAGE = 50;
 
 export default function ContentQueue() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [batchSize, setBatchSize] = useState<number>(5);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const { 
     queueItems, 
@@ -22,12 +27,14 @@ export default function ContentQueue() {
     retryFailed,
     isRetrying,
     deleteItems,
-    getStats,
     getFailedIds,
     generationProgress,
   } = useContentQueue();
 
-  const stats = getStats();
+  // Use separate hook for accurate global stats (not limited by pagination)
+  const { data: globalStats, isLoading: statsLoading } = useQueueStats();
+  
+  const stats = globalStats || { queued: 0, generating: 0, generated: 0, published: 0, failed: 0, total: 0 };
 
   // Filter items
   const filteredItems = queueItems?.filter(item => {
@@ -35,6 +42,24 @@ export default function ContentQueue() {
     if (categoryFilter !== 'all' && item.content_plans?.category_id !== categoryFilter) return false;
     return true;
   }) || [];
+
+  // Pagination
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  const handleStatusChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setCategoryFilter(category);
+    setCurrentPage(1);
+  };
 
   const toggleSelection = (id: string) => {
     const newSelected = new Set(selectedIds);
@@ -116,8 +141,8 @@ export default function ContentQueue() {
         <QueueFilters
           statusFilter={statusFilter}
           categoryFilter={categoryFilter}
-          onStatusChange={setStatusFilter}
-          onCategoryChange={setCategoryFilter}
+          onStatusChange={handleStatusChange}
+          onCategoryChange={handleCategoryChange}
           onRefresh={refetch}
         />
 
@@ -136,10 +161,19 @@ export default function ContentQueue() {
 
       {/* Queue Table */}
       <QueueTable
-        items={filteredItems}
+        items={paginatedItems}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
         onToggleSelectAll={toggleSelectAll}
+      />
+
+      {/* Pagination */}
+      <QueuePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        totalItems={filteredItems.length}
+        itemsPerPage={ITEMS_PER_PAGE}
       />
     </div>
   );
