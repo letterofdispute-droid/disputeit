@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useContentPlans, ContentPlan } from '@/hooks/useContentPlans';
-import { useContentQueue } from '@/hooks/useContentQueue';
+import { useTemplateProgress } from '@/hooks/useTemplateProgress';
 import { allTemplates } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
@@ -33,7 +33,7 @@ interface CategoryGroup {
 
 export default function TemplateCoverageMap() {
   const { plans, plansLoading, generatePlan, isGeneratingPlan } = useContentPlans();
-  const { queueItems } = useContentQueue();
+  const { data: templateProgress, isLoading: progressLoading } = useTemplateProgress();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -74,17 +74,19 @@ export default function TemplateCoverageMap() {
     return plans?.find(p => p.template_slug === templateSlug);
   };
 
-  // Get article count for a template
+  // Get article count for a template - uses aggregated data from useTemplateProgress
   const getArticleCount = (templateSlug: string): { generated: number; total: number } => {
     const plan = getPlanForTemplate(templateSlug);
     if (!plan) return { generated: 0, total: 0 };
     
-    const templateQueueItems = queueItems?.filter(q => q.plan_id === plan.id) || [];
-    const generated = templateQueueItems.filter(q => 
-      q.status === 'generated' || q.status === 'published'
-    ).length;
+    // Use pre-aggregated progress data instead of filtering queue items
+    const progress = templateProgress?.[templateSlug];
+    if (progress) {
+      return { generated: progress.generated, total: progress.total };
+    }
     
-    return { generated, total: plan.target_article_count };
+    // Fallback to target count if no queue items yet
+    return { generated: 0, total: plan.target_article_count };
   };
 
   // Filter categories
@@ -128,7 +130,7 @@ export default function TemplateCoverageMap() {
     }
   };
 
-  if (plansLoading) {
+  if (plansLoading || progressLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
