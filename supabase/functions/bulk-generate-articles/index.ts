@@ -65,66 +65,6 @@ const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).jo
 // JSON PARSING HELPERS (Robust AI response handling)
 // ============================================
 
-/**
- * Escapes control characters ONLY inside JSON string values.
- * Structural JSON whitespace (between properties) is preserved.
- * 
- * This is critical for handling AI responses that contain HTML with literal newlines
- * inside the "content" field - those MUST be escaped as \n for valid JSON.
- */
-function escapeControlCharsInStrings(json: string): string {
-  let result = '';
-  let inString = false;
-  let escaped = false;
-  
-  for (let i = 0; i < json.length; i++) {
-    const char = json[i];
-    const code = json.charCodeAt(i);
-    
-    // If the previous character was a backslash, this char is escaped
-    if (escaped) {
-      result += char;
-      escaped = false;
-      continue;
-    }
-    
-    // Backslash inside a string starts an escape sequence
-    if (char === '\\' && inString) {
-      result += char;
-      escaped = true;
-      continue;
-    }
-    
-    // Quote toggles string state
-    if (char === '"') {
-      inString = !inString;
-      result += char;
-      continue;
-    }
-    
-    // Inside a string: escape control characters
-    if (inString) {
-      if (code === 0x0A) { // \n - newline
-        result += '\\n';
-      } else if (code === 0x0D) { // \r - carriage return
-        result += '\\r';
-      } else if (code === 0x09) { // \t - tab
-        result += '\\t';
-      } else if (code < 0x20 || code === 0x7F) {
-        // Skip other control characters (0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F)
-        continue;
-      } else {
-        result += char;
-      }
-    } else {
-      // Outside string: keep as-is (structural whitespace is valid)
-      result += char;
-    }
-  }
-  
-  return result;
-}
-
 function sanitizeJsonString(raw: string): string {
   // Step 1: Remove markdown code blocks
   let cleaned = raw.trim();
@@ -144,10 +84,9 @@ function parseAIResponse(content: string): any {
     throw new Error('Empty AI response');
   }
   
-  // Log first 200 chars for debugging
   console.log('AI response preview:', content.substring(0, 200));
   
-  // Step 1: Clean up markdown code blocks and trailing commas
+  // Step 1: Remove markdown code blocks and fix trailing commas
   let sanitized = sanitizeJsonString(content);
   
   // Step 2: Try direct parse first (most responses are valid)
@@ -156,7 +95,7 @@ function parseAIResponse(content: string): any {
   } catch (firstError) {
     console.log('First parse failed:', (firstError as Error).message);
     
-    // Step 3: Try to extract JSON object
+    // Step 3: Try extracting JSON object
     const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON object found in AI response');
@@ -164,16 +103,34 @@ function parseAIResponse(content: string): any {
     
     let extracted = jsonMatch[0];
     
-    // Step 4: Apply string-aware control character escaping
-    // This is the key fix: escape \n, \r, \t ONLY inside quoted strings
-    extracted = escapeControlCharsInStrings(extracted);
+    // Step 4: AGGRESSIVE APPROACH - Replace all literal control chars
+    // This is safe because JSON structure doesn't need literal newlines for parsing
+    // The AI often generates HTML with raw newlines inside the content field
+    let fixed = extracted
+      .replace(/\r\n/g, '\\n')  // Windows line endings
+      .replace(/\r/g, '\\n')    // Old Mac line endings
+      .replace(/\n/g, '\\n')    // Unix line endings
+      .replace(/\t/g, '\\t')    // Tabs
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Other control chars
     
     try {
-      return JSON.parse(extracted);
+      return JSON.parse(fixed);
     } catch (secondError) {
-      console.error('Recovery parse failed:', (secondError as Error).message);
-      console.error('Extracted JSON start:', extracted.substring(0, 300));
-      throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+      console.log('Second parse failed:', (secondError as Error).message);
+      
+      // Step 5: Try fixing common JSON issues
+      fixed = fixed
+        .replace(/,\s*([\]}])/g, '$1')           // Remove trailing commas
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
+        .replace(/:\s*'([^']*)'/g, ':"$1"');     // Single to double quotes
+      
+      try {
+        return JSON.parse(fixed);
+      } catch (thirdError) {
+        console.error('All parse attempts failed');
+        console.error('Final content start:', fixed.substring(0, 500));
+        throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+      }
     }
   }
 }
@@ -832,7 +789,7 @@ Respond with ONLY this JSON:
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.7,
-            max_tokens: 4000,
+            max_tokens: 8000,
           }),
         });
 
