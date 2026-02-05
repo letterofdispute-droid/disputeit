@@ -123,6 +123,9 @@ const VALUE_TIER_CONFIGS = {
   },
 };
 
+const MAX_RETRIES = 2;
+const BUFFER_MULTIPLIER = 2;
+
 // Category-specific language for natural-sounding titles
 const CATEGORY_LANGUAGE: Record<string, { terms: string[]; tone: string }> = {
   contractors: {
@@ -288,15 +291,15 @@ serve(async (req) => {
     const existingTitles = existingPosts?.map(p => p.title) || [];
     console.log(`Found ${existingTitles.length} existing titles for deduplication`);
 
-    // Use AI to generate tailored titles and keywords
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    const targetCount = tierConfig.articleCount;
     const articleTypesToGenerate = ARTICLE_TYPES
       .filter(t => tierConfig.articleTypes.includes(t.id))
-      .slice(0, tierConfig.articleCount);
+      .slice(0, targetCount);
 
     // Get category-specific context
     const categoryContext = CATEGORY_LANGUAGE[categoryId] || {
@@ -360,10 +363,36 @@ GOOD EXAMPLES (diverse, specific, human):
 ${existingTitlesSample.length > 0 ? `EXISTING TITLES IN DATABASE (do NOT duplicate these patterns or first words):
 ${existingTitlesSample}
 ` : ''}
-
 Output valid JSON only.`;
 
-    const userPrompt = `Generate a diverse content cluster for this complaint letter template:
+    // Generate with retry loop
+    let validatedArticles: any[] = [];
+    let retryCount = 0;
+    const allRejections: { title: string; reason: string }[] = [];
+    const seenFirstWords = new Set<string>();
+
+    // Pre-populate seen first words from existing titles
+    for (const existing of existingTitles) {
+      const words = existing.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+      if (words.length >= 2) {
+        seenFirstWords.add(words.slice(0, 2).join(' '));
+      }
+    }
+
+    while (validatedArticles.length < targetCount && retryCount <= MAX_RETRIES) {
+      const remaining = targetCount - validatedArticles.length;
+      const toGenerate = retryCount === 0 
+        ? targetCount * BUFFER_MULTIPLIER 
+        : remaining * BUFFER_MULTIPLIER;
+
+      console.log(`Attempt ${retryCount + 1}: Generating ${toGenerate} titles (need ${remaining} more)`);
+
+      // Build rejection feedback for retries
+      const rejectionFeedback = retryCount > 0 && allRejections.length > 0
+        ? `\n\nPREVIOUS REJECTED TITLES (do NOT repeat similar patterns):\n${allRejections.slice(-10).map(r => `- "${r.title}" - ${r.reason}`).join('\n')}\n`
+        : '';
+
+      const userPrompt = `Generate a diverse content cluster for this complaint letter template:
 
 TEMPLATE: "${templateName}"
 CATEGORY: ${categoryId}
@@ -372,14 +401,14 @@ ${subcategorySlug ? `SUBCATEGORY: ${subcategorySlug}` : ''}
 CATEGORY CONTEXT:
 - Typical terms: ${categoryContext.terms.join(', ')}
 - Tone: ${categoryContext.tone}
-
-Generate ${articleTypesToGenerate.length} unique articles. Each needs a DIFFERENT structure and feel:
+${rejectionFeedback}
+Generate ${toGenerate} unique articles. Each needs a DIFFERENT structure and feel:
 
 ${articleTypesToGenerate.map((t, i) => {
-  const structureHints = ['question format', 'numbered list', 'bold statement', 'emotional hook', 'how-to style', 'case study angle', 'comparison frame', 'checklist style'];
-  return `${i + 1}. ${t.name} (${t.id}) - Try: ${structureHints[i % structureHints.length]}
-   Inspiration patterns (don't copy literally): ${t.variations.slice(0, 2).join(', ')}`;
-}).join('\n')}
+    const structureHints = ['question format', 'numbered list', 'bold statement', 'emotional hook', 'how-to style', 'case study angle', 'comparison frame', 'checklist style'];
+    return `${i + 1}. ${t.name} (${t.id}) - Try: ${structureHints[i % structureHints.length]}
+     Inspiration patterns (don't copy literally): ${t.variations.slice(0, 2).join(', ')}`;
+  }).join('\n')}
 
 VALIDATION REQUIREMENTS:
 - No two titles can share the same first 3 words
@@ -399,89 +428,98 @@ Return JSON:
   ]
 }`;
 
-    console.log('Generating diverse content plan for:', templateName);
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.85 + (retryCount * 0.05), // Increase temperature on retries
+          max_tokens: 3000,
+        }),
+      });
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.85, // Higher temperature for more creative variation
-        max_tokens: 2500,
-      }),
-    });
+      if (!aiResponse.ok) {
+        throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      }
 
-    if (!aiResponse.ok) {
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      const aiData = await aiResponse.json();
+      let content = aiData.choices[0]?.message?.content;
+      
+      // Parse JSON from response
+      let cleanedContent = content.trim();
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.slice(7);
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.slice(3);
+      }
+      if (cleanedContent.endsWith('```')) {
+        cleanedContent = cleanedContent.slice(0, -3);
+      }
+      cleanedContent = cleanedContent.trim();
+
+      const parsedContent = JSON.parse(cleanedContent);
+      const generatedArticles = parsedContent.articles || [];
+
+      // Validate each generated article
+      for (const article of generatedArticles) {
+        if (validatedArticles.length >= targetCount) break;
+        
+        const title = article.title || '';
+        
+        // Layer 1: Check against banned starters and existing DB titles
+        const validation = validateTitle(title, existingTitles);
+        if (!validation.isValid) {
+          console.log('Rejecting title (banned/duplicate):', title.slice(0, 50) + '...', '-', validation.reason);
+          allRejections.push({ title, reason: validation.reason || 'banned pattern' });
+          continue;
+        }
+        
+        // Layer 2: Check first 2 words against this batch
+        const titleWords = title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+        const firstTwo = titleWords.slice(0, 2).join(' ');
+        
+        if (seenFirstWords.has(firstTwo) && firstTwo.length > 3) {
+          console.log('Rejecting title (batch duplicate):', title.slice(0, 50) + '...');
+          allRejections.push({ title, reason: 'duplicates first words of another title' });
+          continue;
+        }
+        
+        // Layer 3: Check if title matches template name exactly
+        if (title.toLowerCase().trim() === templateName.toLowerCase().trim()) {
+          console.log('Rejecting title (matches template name):', title);
+          allRejections.push({ title, reason: 'matches template name exactly' });
+          continue;
+        }
+        
+        seenFirstWords.add(firstTwo);
+        validatedArticles.push(article);
+      }
+
+      console.log(`After attempt ${retryCount + 1}: ${validatedArticles.length}/${targetCount} valid titles`);
+
+      if (validatedArticles.length < targetCount) {
+        retryCount++;
+        if (retryCount <= MAX_RETRIES) {
+          console.log(`Retrying... (${retryCount}/${MAX_RETRIES})`);
+        }
+      }
     }
 
-    const aiData = await aiResponse.json();
-    let content = aiData.choices[0]?.message?.content;
+    // Trim to exact target count
+    const finalArticles = validatedArticles.slice(0, targetCount);
     
-    // Parse JSON from response
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.slice(7);
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.slice(3);
-    }
-    if (cleanedContent.endsWith('```')) {
-      cleanedContent = cleanedContent.slice(0, -3);
-    }
-    cleanedContent = cleanedContent.trim();
-
-    const parsedContent = JSON.parse(cleanedContent);
-    let generatedArticles = parsedContent.articles || [];
-
-    // Multi-layer title validation
-    const validatedArticles = [];
-    const seenFirstWords = new Set<string>();
-
-    // Add existing titles' first words to seen set
-    for (const existing of existingTitles) {
-      const words = existing.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
-      if (words.length >= 2) {
-        seenFirstWords.add(words.slice(0, 2).join(' '));
-      }
+    if (finalArticles.length < targetCount) {
+      console.warn(`WARNING: Only generated ${finalArticles.length}/${targetCount} valid titles after ${retryCount} retries`);
     }
 
-    for (const article of generatedArticles) {
-      const title = article.title || '';
-      
-      // Layer 1: Check against banned starters and existing DB titles
-      const validation = validateTitle(title, existingTitles);
-      if (!validation.isValid) {
-        console.log('Rejecting title (banned/duplicate):', title, '-', validation.reason);
-        continue;
-      }
-      
-      // Layer 2: Check first 2 words against this batch
-      const titleWords = title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
-      const firstTwo = titleWords.slice(0, 2).join(' ');
-      
-      if (seenFirstWords.has(firstTwo) && firstTwo.length > 3) {
-        console.log('Rejecting title (batch duplicate):', title);
-        continue;
-      }
-      
-      // Layer 3: Check if title matches template name exactly
-      if (title.toLowerCase().trim() === templateName.toLowerCase().trim()) {
-        console.log('Rejecting title (matches template name):', title);
-        continue;
-      }
-      
-      seenFirstWords.add(firstTwo);
-      validatedArticles.push(article);
-    }
-
-    console.log(`Validated ${validatedArticles.length} unique titles from ${generatedArticles.length} generated`);
+    console.log(`Final: ${finalArticles.length} unique titles for plan`);
 
     // Create the content plan with retry for transient errors
     const plan = await withRetry(async () => {
@@ -505,7 +543,7 @@ Return JSON:
     });
 
     // Create queue items for each article
-    const queueItems = validatedArticles.map((article: any, index: number) => {
+    const queueItems = finalArticles.map((article: any, index: number) => {
       const articleType = ARTICLE_TYPES.find(t => t.id === article.type);
       return {
         plan_id: plan.id,
