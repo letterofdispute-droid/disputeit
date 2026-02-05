@@ -106,6 +106,8 @@ export default function ContentQueue() {
           current={generationProgress?.current || 0}
           total={generationProgress?.total || selectedIds.size || stats.failed}
           currentTitle={generationProgress?.currentTitle}
+          currentBatch={generationProgress?.currentBatch}
+          totalBatches={generationProgress?.totalBatches}
         />
       )}
 
