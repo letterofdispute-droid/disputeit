@@ -250,36 +250,102 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     },
   });
 
-  // Retry failed items
+  // Retry failed items - now uses chunked processing like bulkGenerate
   const retryFailedMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      console.log('[Retry] Starting retry for', ids.length, 'items');
+      
       // First, reset status to 'queued' for failed items
       const { error: updateError } = await supabase
         .from('content_queue')
         .update({ status: 'queued', error_message: null })
         .in('id', ids);
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[Retry] Failed to reset items:', updateError);
+        throw updateError;
+      }
+      
+      console.log('[Retry] Items reset to queued, starting generation...');
 
-      // Then trigger bulk generation
-      const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
-        body: { queueItemIds: ids, batchSize: ids.length },
+      // Process in chunks like bulkGenerate does to prevent timeouts
+      const chunks = chunkArray(ids, MAX_BATCH_SIZE);
+      const totalBatches = chunks.length;
+      let totalSucceeded = 0;
+      let totalFailed = 0;
+      let processedItems = 0;
+
+      // Set initial progress
+      setGenerationProgress({ 
+        current: 0, 
+        total: ids.length,
+        currentBatch: 1,
+        totalBatches
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Failed to retry articles');
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        // Update progress for current batch
+        setGenerationProgress({
+          current: processedItems,
+          total: ids.length,
+          currentBatch: i + 1,
+          totalBatches
+        });
+
+        console.log(`[Retry] Processing batch ${i + 1}/${totalBatches} with ${chunk.length} items`);
+
+        const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
+          body: { queueItemIds: chunk, batchSize: chunk.length },
+        });
+
+        if (error) {
+          console.error(`[Retry] Batch ${i + 1} invoke error:`, error);
+          totalFailed += chunk.length;
+        } else if (!data?.success) {
+          console.error(`[Retry] Batch ${i + 1} returned error:`, data?.error);
+          totalFailed += chunk.length;
+        } else {
+          console.log(`[Retry] Batch ${i + 1} completed: ${data.succeeded} succeeded, ${data.failed} failed`);
+          totalSucceeded += data.succeeded || 0;
+          totalFailed += data.failed || 0;
+        }
+
+        processedItems += chunk.length;
+        
+        // Update progress after batch completes
+        setGenerationProgress({
+          current: processedItems,
+          total: ids.length,
+          currentBatch: i + 1,
+          totalBatches
+        });
+
+        // Refetch queue to update UI between batches
+        await queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      }
       
-      return data;
+      console.log(`[Retry] Complete: ${totalSucceeded} succeeded, ${totalFailed} failed`);
+      return { 
+        success: true,
+        succeeded: totalSucceeded, 
+        failed: totalFailed,
+        totalBatches
+      };
     },
     onSuccess: (data) => {
+      setGenerationProgress(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+      const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
       toast({
         title: 'Retry complete',
-        description: `Retried ${data.succeeded} articles, ${data.failed} failed`,
+        description: `Retried ${data.succeeded} articles, ${data.failed} failed${batchInfo}`,
       });
     },
     onError: (error) => {
+      setGenerationProgress(null);
       toast({
         title: 'Retry failed',
         description: error instanceof Error ? error.message : 'Unknown error',

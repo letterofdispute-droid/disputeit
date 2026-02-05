@@ -62,7 +62,56 @@ function mapToBlogCategory(templateCategory: string): { slug: string; name: stri
 const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n');
 
 // ============================================
-// JSON PARSING HELPERS (Robust AI response handling)
+// STRUCTURED LOGGING HELPER
+// ============================================
+
+function logStep(title: string, step: string, message: string, data?: any) {
+  const shortTitle = title.substring(0, 40);
+  const logLine = `[ARTICLE:${shortTitle}] [${step}] ${message}`;
+  if (data) {
+    console.log(logLine, JSON.stringify(data).substring(0, 200));
+  } else {
+    console.log(logLine);
+  }
+}
+
+// ============================================
+// UNIQUE SLUG GENERATION (Collision Handling)
+// ============================================
+
+async function generateUniqueSlug(
+  supabase: SupabaseClient,
+  baseSlug: string
+): Promise<string> {
+  let slug = baseSlug;
+  let attempt = 0;
+  
+  while (attempt < 10) {
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    
+    if (!data) {
+      console.log(`[SLUG] Using slug: ${slug}${attempt > 0 ? ` (attempt ${attempt})` : ''}`);
+      return slug; // No collision
+    }
+    
+    // Collision - add or increment suffix
+    attempt++;
+    slug = `${baseSlug}-${attempt}`;
+    console.log(`[SLUG] Collision detected, trying: ${slug}`);
+  }
+  
+  // Final fallback with timestamp
+  const finalSlug = `${baseSlug}-${Date.now()}`;
+  console.log(`[SLUG] Max attempts reached, using timestamp: ${finalSlug}`);
+  return finalSlug;
+}
+
+// ============================================
+// JSON PARSING HELPERS (Bulletproof AI response handling)
 // ============================================
 
 function sanitizeJsonString(raw: string): string {
@@ -84,51 +133,84 @@ function parseAIResponse(content: string): any {
     throw new Error('Empty AI response');
   }
   
-  console.log('AI response preview:', content.substring(0, 200));
+  console.log('[JSON_PARSE] Response length:', content.length);
+  console.log('[JSON_PARSE] Preview:', content.substring(0, 300));
   
   // Step 1: Remove markdown code blocks and fix trailing commas
   let sanitized = sanitizeJsonString(content);
   
   // Step 2: Try direct parse first (most responses are valid)
   try {
-    return JSON.parse(sanitized);
+    const result = JSON.parse(sanitized);
+    console.log('[JSON_PARSE] Direct parse succeeded');
+    return result;
   } catch (firstError) {
-    console.log('First parse failed:', (firstError as Error).message);
+    console.log('[JSON_PARSE] Attempt 1 failed:', (firstError as Error).message);
     
     // Step 3: Try extracting JSON object
     const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error('[JSON_PARSE] No JSON object found in response');
       throw new Error('No JSON object found in AI response');
     }
     
     let extracted = jsonMatch[0];
+    console.log('[JSON_PARSE] Extracted JSON length:', extracted.length);
     
-    // Step 4: AGGRESSIVE APPROACH - Replace all literal control chars
-    // This is safe because JSON structure doesn't need literal newlines for parsing
-    // The AI often generates HTML with raw newlines inside the content field
-    let fixed = extracted
-      .replace(/\r\n/g, '\\n')  // Windows line endings
-      .replace(/\r/g, '\\n')    // Old Mac line endings
-      .replace(/\n/g, '\\n')    // Unix line endings
-      .replace(/\t/g, '\\t')    // Tabs
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Other control chars
+    // Step 4: SMART CHARACTER-BY-CHARACTER ESCAPE
+    // Only escape raw control chars, NOT already-escaped ones
+    const chars = extracted.split('');
+    const fixed: string[] = [];
+    
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i];
+      const code = char.charCodeAt(0);
+      const prevChar = i > 0 ? chars[i - 1] : '';
+      
+      // Skip if previous char was backslash (already escaped sequence)
+      if (prevChar === '\\') {
+        fixed.push(char);
+        continue;
+      }
+      
+      // Escape raw control characters
+      if (code === 0x0A) { // Newline
+        fixed.push('\\', 'n');
+      } else if (code === 0x0D) { // Carriage return
+        fixed.push('\\', 'r');
+      } else if (code === 0x09) { // Tab
+        fixed.push('\\', 't');
+      } else if (code < 0x20 && code !== 0x0A && code !== 0x0D && code !== 0x09) {
+        // Strip other control characters
+        continue;
+      } else {
+        fixed.push(char);
+      }
+    }
+    
+    let fixedStr = fixed.join('');
     
     try {
-      return JSON.parse(fixed);
+      const result = JSON.parse(fixedStr);
+      console.log('[JSON_PARSE] Attempt 2 succeeded (after escape fix)');
+      return result;
     } catch (secondError) {
-      console.log('Second parse failed:', (secondError as Error).message);
+      console.log('[JSON_PARSE] Attempt 2 failed:', (secondError as Error).message);
       
-      // Step 5: Try fixing common JSON issues
-      fixed = fixed
+      // Step 5: Try fixing common JSON syntax issues
+      fixedStr = fixedStr
         .replace(/,\s*([\]}])/g, '$1')           // Remove trailing commas
         .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
         .replace(/:\s*'([^']*)'/g, ':"$1"');     // Single to double quotes
       
       try {
-        return JSON.parse(fixed);
+        const result = JSON.parse(fixedStr);
+        console.log('[JSON_PARSE] Attempt 3 succeeded (after syntax fix)');
+        return result;
       } catch (thirdError) {
-        console.error('All parse attempts failed');
-        console.error('Final content start:', fixed.substring(0, 500));
+        console.error('[JSON_PARSE] All attempts failed');
+        console.error('[JSON_PARSE] Error position hint:', (firstError as Error).message);
+        console.error('[JSON_PARSE] Content around error:', fixedStr.substring(0, 500));
         throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
       }
     }
@@ -846,21 +928,25 @@ Respond with ONLY this JSON:
           console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%, Still missing: ${recheckValidation.missing.join(', ') || 'none'}`);
         }
 
-        // Generate slug from title
-        const slug = parsedContent.title
+        // Generate UNIQUE slug from title (with collision handling)
+        logStep(item.suggested_title, 'SLUG', 'Generating unique slug');
+        const baseSlug = parsedContent.title
           .toLowerCase()
           .replace(/[^a-z0-9\s-]/g, '')
           .replace(/\s+/g, '-')
           .replace(/-+/g, '-')
           .substring(0, 80);
+        
+        const slug = await generateUniqueSlug(supabaseAdmin, baseSlug);
 
         // Calculate read time
         const textContent = parsedContent.content.replace(/<[^>]*>/g, ' ').trim();
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
+        logStep(item.suggested_title, 'METRICS', `Word count: ${words}, Read time: ${readTime}`);
 
         // === AI-GENERATED IMAGES WITH STYLE DIVERSITY ===
-        console.log(`Generating AI images for: ${parsedContent.title}`);
+        logStep(item.suggested_title, 'IMAGE_START', 'Starting image generation');
         const imageStyles = getImageStyles();
         
         // 1. Featured image - AI generation with fallback
@@ -880,7 +966,7 @@ Respond with ONLY this JSON:
         
         // Pixabay fallback if AI generation fails
         if (!featuredResult.url) {
-          console.log('Featured image AI failed, using Pixabay fallback');
+          logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Featured image AI failed, using Pixabay');
           featuredResult = await fetchPixabayFallback(
             supabaseAdmin,
             apiKey,
@@ -889,6 +975,7 @@ Respond with ONLY this JSON:
             parsedContent.title
           );
         }
+        logStep(item.suggested_title, 'IMAGE_FEATURED', featuredResult.url ? 'Featured image ready' : 'No featured image');
 
         // 2. Check for middle image placeholders and fetch if needed
         const hasMiddleImage1 = parsedContent.content.includes('{{MIDDLE_IMAGE_1}}');
@@ -898,6 +985,7 @@ Respond with ONLY this JSON:
         let middleImage2Result: { url: string | null; altText: string | null } = { url: null, altText: null };
 
         if (hasMiddleImage1) {
+          logStep(item.suggested_title, 'IMAGE_MIDDLE1', 'Generating middle image 1');
           // Wait before generating next image to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
           
@@ -917,7 +1005,7 @@ Respond with ONLY this JSON:
           
           // Pixabay fallback
           if (!middleImage1Result.url) {
-            console.log('Middle image 1 AI failed, using Pixabay fallback');
+            logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 1 AI failed, using Pixabay');
             middleImage1Result = await fetchPixabayFallback(
               supabaseAdmin,
               apiKey,
@@ -929,6 +1017,7 @@ Respond with ONLY this JSON:
         }
 
         if (hasMiddleImage2) {
+          logStep(item.suggested_title, 'IMAGE_MIDDLE2', 'Generating middle image 2');
           // Wait before generating next image to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
           
@@ -948,7 +1037,7 @@ Respond with ONLY this JSON:
           
           // Pixabay fallback
           if (!middleImage2Result.url) {
-            console.log('Middle image 2 AI failed, using Pixabay fallback');
+            logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 2 AI failed, using Pixabay');
             middleImage2Result = await fetchPixabayFallback(
               supabaseAdmin,
               apiKey,
@@ -960,6 +1049,7 @@ Respond with ONLY this JSON:
         }
 
         // Create blog post with images and correct blog category
+        logStep(item.suggested_title, 'DB_INSERT', 'Inserting blog post', { slug, category: blogCategory.slug });
         const { data: blogPost, error: postError } = await supabaseAdmin
           .from('blog_posts')
           .insert({
@@ -988,10 +1078,12 @@ Respond with ONLY this JSON:
           .single();
 
         if (postError) {
+          logStep(item.suggested_title, 'DB_ERROR', postError.message, { code: postError.code, slug });
           throw new Error(`Failed to create blog post: ${postError.message}`);
         }
 
         // Update queue item
+        logStep(item.suggested_title, 'QUEUE_UPDATE', 'Marking queue item as generated');
         await supabaseAdmin
           .from('content_queue')
           .update({ 
@@ -1002,7 +1094,7 @@ Respond with ONLY this JSON:
           .eq('id', item.id);
 
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
-        console.log(`Successfully generated: ${blogPost.title} (with ${featuredResult.url ? 'AI' : 'no'} featured image)`);
+        logStep(item.suggested_title, 'SUCCESS', 'Article created successfully', { blogPostId: blogPost.id, slug });
 
         // Add newly created title to existing titles list to prevent duplicates in same batch
         existingDbTitles.push(blogPost.title);
@@ -1011,20 +1103,22 @@ Respond with ONLY this JSON:
         await new Promise(resolve => setTimeout(resolve, 5000));
 
       } catch (error) {
-        console.error(`Failed to generate article for queue item ${item.id}:`, error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        logStep(item.suggested_title, 'ERROR', errorMsg);
+        console.error(`[ARTICLE:${item.suggested_title.substring(0, 40)}] Full error:`, error);
         
         await supabaseAdmin
           .from('content_queue')
           .update({ 
             status: 'failed',
-            error_message: error instanceof Error ? error.message : 'Unknown error',
+            error_message: errorMsg,
           })
           .eq('id', item.id);
 
         results.push({ 
           queueId: item.id, 
           success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+          error: errorMsg 
         });
       }
     }
