@@ -1,134 +1,207 @@
 
-# Fix: Content Queue Data Fetching and Progress Tracking
+# Fix: Remaining Article Generation Failure Points
+
+## Issues Identified from Database
+
+| Error Type | Example | Occurrences | Root Cause |
+|------------|---------|-------------|------------|
+| JSON Parse - Bad control char | `position 4368` | 1 | Escape sequence detection flaw |
+| JSON Parse - Missing comma | `position 7310` | 1 | Unescaped quotes in HTML attributes |
+| Duplicate slug constraint | `blog_posts_slug_key` | 1 | Race condition in slug generation |
 
 ## Root Cause Analysis
 
-Your progress bars and queue stats are showing incorrect data because of a **query limit issue**:
+### Issue 1: Escape Sequence Detection Flaw
 
-| What's Happening | Database Reality | UI Shows |
-|------------------|------------------|----------|
-| Poor Workmanship articles | 7 generated | 3/7 progress |
-| Total queued items | 191 queued | 32 queued |
-| Total items | 433 items | Only 200 fetched |
-
-The `useContentQueue` hook limits results to 200 items, but there are now 433 items in the queue. For templates whose items fall outside this window, progress bars show incorrect counts.
-
-## Solution Overview
-
-1. **Smart data fetching** - Fetch aggregated stats from database instead of calculating client-side
-2. **Separate queries** for different use cases (coverage map vs queue management)
-3. **Pagination** for the queue table to handle large item counts
-
-## Implementation Plan
-
-### Part 1: Add Database-Side Stats Calculation
-
-Instead of fetching all items and counting client-side, fetch pre-calculated stats per template:
-
-**New query approach for Coverage Map:**
-- Query `content_plans` with a count of generated/total items per plan
-- This gives accurate stats regardless of how many items exist
-
-### Part 2: Fix useContentQueue Hook
-
-**File: `src/hooks/useContentQueue.ts`**
-
-1. Remove the `.limit(200)` restriction when fetching for a specific plan
-2. When fetching globally (for Queue tab), add pagination support
-3. Add a separate stats-only query that aggregates counts
-
-### Part 3: Update TemplateCoverageMap
-
-**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
-
-Instead of filtering queue items client-side, use a dedicated hook that fetches accurate counts per template directly from the database.
-
-### Part 4: Update ContentQueue Component
-
-**File: `src/components/admin/seo/ContentQueue.tsx`**
-
-Add pagination or virtual scrolling to handle large item lists, with accurate global stats from a separate aggregation query.
-
-## Technical Changes
-
-### useContentQueue.ts Changes
-
+The current code at lines 160-174:
 ```typescript
-// When fetching for a specific plan, remove limit
-if (planId) {
-  query = query.eq('plan_id', planId);
-  // No limit for specific plan - need all items for accurate stats
-} else {
-  // For global queue view, keep limit but add pagination
-  query = query.limit(500); // Increase limit for queue view
+// Current flawed logic
+for (let i = 0; i < chars.length; i++) {
+  const prevChar = i > 0 ? chars[i - 1] : '';
+  if (prevChar === '\\') {
+    fixed.push(char);
+    continue;
+  }
+  // ...
 }
-
-// Add separate stats query
-const { data: globalStats } = useQuery({
-  queryKey: ['content-queue-stats'],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('content_queue')
-      .select('status')
-    // Count by status
-    return {
-      queued: data?.filter(i => i.status === 'queued').length || 0,
-      // ... etc
-    };
-  }
-});
 ```
 
-### New useTemplateProgress Hook
+**Problem**: When the AI outputs `\"` in the content, after `split('')`:
+- Position N: `\`
+- Position N+1: `"`
 
-Create a dedicated hook for coverage map progress that queries efficiently:
+When we're at N+1, `prevChar` is `\`, so we skip... but then the original `\` at N was already pushed as-is, so we end up with `\"` which is correct. **BUT** when the AI outputs a raw newline character (ASCII 10), the logic processes it and outputs `\n`, which is two characters. On the *next* iteration, `prevChar` is `n` (not `\`), so subsequent characters aren't protected.
+
+### Issue 2: Unescaped Quotes in HTML
+
+The AI generates HTML like:
+```json
+"content": "<p class=\"intro\">Some text with \"quoted words\" here</p>"
+```
+
+The inner `"quoted words"` breaks JSON parsing because they're not escaped as `\"quoted words\"`.
+
+### Issue 3: Slug Race Condition
+
+```
+Request A: generateUniqueSlug() → "my-article" (no collision)
+Request B: generateUniqueSlug() → "my-article" (no collision yet)
+Request A: INSERT blog_posts with slug "my-article" → SUCCESS
+Request B: INSERT blog_posts with slug "my-article" → CONSTRAINT VIOLATION
+```
+
+The fix needs to retry the INSERT with a new slug, not just check beforehand.
+
+---
+
+## Solution: Three-Layer Defense
+
+### Fix 1: Robust Escape Logic with State Tracking
+
+Replace character-by-character with proper state machine:
 
 ```typescript
-// Fetch article counts per template from database
-const { data: templateProgress } = useQuery({
-  queryKey: ['template-progress'],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('content_queue')
-      .select('plan_id, status, content_plans!inner(template_slug)')
+function fixControlCharacters(json: string): string {
+  let result = '';
+  let inString = false;
+  let escapeNext = false;
+  
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+    const code = char.charCodeAt(0);
     
-    // Aggregate by template
-    const progress: Record<string, {generated: number, total: number}> = {};
-    // ... aggregation logic
-    return progress;
+    if (escapeNext) {
+      result += char;
+      escapeNext = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      result += char;
+      escapeNext = true;
+      continue;
+    }
+    
+    if (char === '"' && !escapeNext) {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    
+    // Only escape control characters INSIDE strings
+    if (inString) {
+      if (code === 0x0A) { result += '\\n'; continue; }
+      if (code === 0x0D) { result += '\\r'; continue; }
+      if (code === 0x09) { result += '\\t'; continue; }
+      if (code < 0x20) { continue; } // Strip other control chars
+    }
+    
+    result += char;
   }
-});
+  
+  return result;
+}
 ```
+
+### Fix 2: Quote Sanitization in HTML Content
+
+Add HTML quote escaping before JSON parse:
+
+```typescript
+// Fix unescaped quotes inside HTML attribute values
+function fixHtmlQuotes(json: string): string {
+  // Match "content": "..." and escape internal quotes
+  return json.replace(
+    /("content"\s*:\s*")(.+?)("\s*[,}])/gs,
+    (match, prefix, content, suffix) => {
+      // Escape quotes that aren't already escaped and aren't the string delimiters
+      const fixed = content.replace(/(?<!\\)"/g, '\\"');
+      return prefix + fixed + suffix;
+    }
+  );
+}
+```
+
+### Fix 3: INSERT-Retry for Slug Collisions
+
+Wrap the blog post insert in retry logic:
+
+```typescript
+async function insertBlogPostWithRetry(
+  supabase: SupabaseClient,
+  postData: any,
+  maxRetries = 5
+): Promise<{ data: any; error: any }> {
+  let slug = postData.slug;
+  let attempt = 0;
+  
+  while (attempt < maxRetries) {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .insert({ ...postData, slug })
+      .select()
+      .single();
+    
+    if (!error) {
+      return { data, error: null };
+    }
+    
+    // Check if it's a slug collision
+    if (error.code === '23505' && error.message.includes('slug')) {
+      attempt++;
+      slug = `${postData.slug}-${attempt}`;
+      console.log(`[SLUG_RETRY] Collision detected, trying: ${slug}`);
+      continue;
+    }
+    
+    // Other error - return immediately
+    return { data: null, error };
+  }
+  
+  return { 
+    data: null, 
+    error: { message: `Max slug retry attempts reached` } 
+  };
+}
+```
+
+---
 
 ## Files to Modify
 
-1. **`src/hooks/useContentQueue.ts`**
-   - Remove limit when querying by planId
-   - Increase global limit to 500-1000
-   - Add separate stats aggregation query
+### `supabase/functions/bulk-generate-articles/index.ts`
 
-2. **`src/hooks/useTemplateProgress.ts`** (new file)
-   - Dedicated hook for template coverage progress
-   - Efficient aggregation query
+| Lines | Change |
+|-------|--------|
+| 117-129 | Add `fixHtmlQuotes()` function |
+| 131-218 | Replace `parseAIResponse()` with state-machine approach |
+| 82-111 | Remove `generateUniqueSlug()` - move logic to insert retry |
+| 1050-1083 | Replace direct INSERT with `insertBlogPostWithRetry()` |
 
-3. **`src/components/admin/seo/TemplateCoverageMap.tsx`**
-   - Use new useTemplateProgress hook
-   - Remove dependency on useContentQueue for stats
-
-4. **`src/components/admin/seo/queue/QueueStats.tsx`**
-   - Use aggregated stats from useContentQueue
+---
 
 ## Expected Results
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Poor Workmanship progress | 3/7 | 7/7 ✓ |
-| Queue tab: Queued count | 32 | 191 (actual) |
-| Queue tab: Total visible | 200 | All items with pagination |
-| Retry tracking | Items disappear | All items tracked correctly |
+| Failure Type | Before | After |
+|--------------|--------|-------|
+| Bad control char in JSON | Fails | State machine handles correctly |
+| Missing comma/bracket | Fails | Quote sanitization prevents |
+| Duplicate slug | Fails | Retry with `-1`, `-2` suffix |
+| Overall failure rate | ~1-2% | <0.1% |
 
-## Deployment
+---
 
-After implementation, the edge function deployment timeout issue should be resolved separately by:
-1. Waiting for platform stability
-2. Manually triggering deployment via the retry flow
+## Technical Notes
+
+### State Machine vs Character-by-Character
+The state machine approach tracks:
+- `inString`: Whether we're inside a JSON string value
+- `escapeNext`: Whether the previous character was a backslash
+
+This correctly handles:
+- `\"` inside strings (valid escape, preserve)
+- Raw newlines inside strings (escape to `\n`)
+- Backslashes before non-escape characters
+
+### Why INSERT-Retry Instead of Pre-Check
+The pre-check approach (`generateUniqueSlug`) has a TOCTOU (time-of-check to time-of-use) race condition. The INSERT-retry approach handles the constraint violation atomically at the database level.
