@@ -65,8 +65,68 @@ const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).jo
 // JSON PARSING HELPERS (Robust AI response handling)
 // ============================================
 
+/**
+ * Escapes control characters ONLY inside JSON string values.
+ * Structural JSON whitespace (between properties) is preserved.
+ * 
+ * This is critical for handling AI responses that contain HTML with literal newlines
+ * inside the "content" field - those MUST be escaped as \n for valid JSON.
+ */
+function escapeControlCharsInStrings(json: string): string {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+    const code = json.charCodeAt(i);
+    
+    // If the previous character was a backslash, this char is escaped
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+    
+    // Backslash inside a string starts an escape sequence
+    if (char === '\\' && inString) {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    
+    // Quote toggles string state
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    
+    // Inside a string: escape control characters
+    if (inString) {
+      if (code === 0x0A) { // \n - newline
+        result += '\\n';
+      } else if (code === 0x0D) { // \r - carriage return
+        result += '\\r';
+      } else if (code === 0x09) { // \t - tab
+        result += '\\t';
+      } else if (code < 0x20 || code === 0x7F) {
+        // Skip other control characters (0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F)
+        continue;
+      } else {
+        result += char;
+      }
+    } else {
+      // Outside string: keep as-is (structural whitespace is valid)
+      result += char;
+    }
+  }
+  
+  return result;
+}
+
 function sanitizeJsonString(raw: string): string {
-  // Step 1: Remove markdown code blocks only
+  // Step 1: Remove markdown code blocks
   let cleaned = raw.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
@@ -87,7 +147,7 @@ function parseAIResponse(content: string): any {
   // Log first 200 chars for debugging
   console.log('AI response preview:', content.substring(0, 200));
   
-  // Step 1: Clean up markdown code blocks
+  // Step 1: Clean up markdown code blocks and trailing commas
   let sanitized = sanitizeJsonString(content);
   
   // Step 2: Try direct parse first (most responses are valid)
@@ -96,7 +156,7 @@ function parseAIResponse(content: string): any {
   } catch (firstError) {
     console.log('First parse failed:', (firstError as Error).message);
     
-    // Step 3: Try to extract JSON object and handle special cases
+    // Step 3: Try to extract JSON object
     const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON object found in AI response');
@@ -104,9 +164,9 @@ function parseAIResponse(content: string): any {
     
     let extracted = jsonMatch[0];
     
-    // Step 4: Only remove truly invalid control characters
-    // Preserve \t (0x09), \n (0x0A), \r (0x0D) which are valid JSON whitespace
-    extracted = extracted.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Step 4: Apply string-aware control character escaping
+    // This is the key fix: escape \n, \r, \t ONLY inside quoted strings
+    extracted = escapeControlCharsInStrings(extracted);
     
     try {
       return JSON.parse(extracted);
