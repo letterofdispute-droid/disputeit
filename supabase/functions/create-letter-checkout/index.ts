@@ -8,13 +8,13 @@ const corsHeaders = {
 };
 
 const PRICE_IDS = {
-  "pdf-only": "price_1StTGvROE6uHwbboT87kTuPx",
-  "pdf-editable": "price_1StTGwROE6uHwbboJuTsE91V",
+  "pdf-only": "price_1SxZWsROE6uHwbbom1l6Z4fU",
+  "pdf-editable": "price_1SxZWtROE6uHwbboDYtTLOTU",
 };
 
 const AMOUNTS = {
-  "pdf-only": 599,
-  "pdf-editable": 999,
+  "pdf-only": 999,
+  "pdf-editable": 1499,
 };
 
 serve(async (req) => {

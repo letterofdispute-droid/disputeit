@@ -14,8 +14,9 @@ import PricingModal from './PricingModal';
 import SmartField from './SmartField';
 import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
+import HumanCraftedBadge from './HumanCraftedBadge';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
-import { 
+import {
   trackLetterFormStart, 
   trackLetterFormStep, 
   trackLetterPreviewView, 
@@ -114,6 +115,11 @@ const LetterGenerator = ({
           <div className="h-full bg-accent transition-all duration-300" style={{
           width: `${step / totalSteps * 100}%`
         }} />
+        </div>
+        
+        {/* Human-Crafted Trust Badge */}
+        <div className="mt-4">
+          <HumanCraftedBadge />
         </div>
       </div>
 

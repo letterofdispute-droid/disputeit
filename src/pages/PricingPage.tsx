@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
@@ -22,13 +23,19 @@ import {
   AlertTriangle,
   Scale,
   Bot,
-  X
+  X,
+  Infinity,
+  Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const options = [
   {
     name: 'PDF Only',
-    price: '$5.99',
+    price: '$9.99',
+    priceValue: 9.99,
     description: 'Download your letter as a professional PDF',
     icon: FileText,
     features: [
@@ -42,7 +49,8 @@ const options = [
   },
   {
     name: 'PDF + Editable',
-    price: '$9.99',
+    price: '$14.99',
+    priceValue: 14.99,
     description: 'PDF plus an editable Word document',
     icon: FileEdit,
     features: [
@@ -54,6 +62,23 @@ const options = [
     cta: 'Get PDF + Editable',
     href: '/#letters',
     popular: true,
+  },
+  {
+    name: 'Unlimited Monthly',
+    price: '$24.99',
+    priceValue: 24.99,
+    priceDetail: '/month',
+    description: 'Unlimited letters for one monthly fee',
+    icon: Infinity,
+    features: [
+      'Unlimited letter generation',
+      'All formats included (PDF + Word)',
+      'Priority email support',
+      'Cancel anytime',
+    ],
+    cta: 'Go Unlimited',
+    isSubscription: true,
+    savings: 'Best for multiple disputes',
   },
 ];
 
@@ -117,20 +142,24 @@ const faqs = [
     answer: 'The PDF option gives you a ready-to-send professional letter. The PDF + Editable option includes a Word document so you can make additional changes before sending. Choose Editable if you want to customize the letter or use it as a template for similar disputes.',
   },
   {
+    question: 'How does the Unlimited Monthly subscription work?',
+    answer: 'For $24.99/month, you can generate as many letters as you need. Each letter comes with both PDF and editable Word formats. You can cancel anytime, and your subscription will remain active until the end of your billing period.',
+  },
+  {
     question: 'Can I get a refund if I\'m not satisfied?',
     answer: 'Yes! We offer a 30-day money-back guarantee. If you\'re not satisfied with your letter for any reason, contact us for a full refund—no questions asked.',
   },
   {
     question: 'Can I use the same letter for multiple disputes?',
-    answer: 'With the PDF + Editable option, you can modify the document as many times as you need for similar disputes. This is especially useful if you\'re dealing with the same company on multiple issues.',
+    answer: 'With the PDF + Editable option, you can modify the document as many times as you need for similar disputes. If you have multiple disputes, the Unlimited Monthly subscription is the most cost-effective option.',
   },
   {
     question: 'Is my payment information secure?',
     answer: 'Absolutely. We use Stripe for payment processing, which is PCI-compliant and used by millions of businesses worldwide. Your payment information is never stored on our servers.',
   },
   {
-    question: 'Do you offer bulk pricing for multiple letters?',
-    answer: 'Currently we offer per-letter pricing. If you need to create many letters, the PDF + Editable option at $9.99 gives you a template you can modify for similar situations.',
+    question: 'Do I need to create an account?',
+    answer: 'For one-time purchases, no account is required. However, an account is needed for the Unlimited Monthly subscription to track your subscription status. Creating an account also lets you access your purchase history and saved letters.',
   },
   {
     question: 'How quickly can I get my letter?',
@@ -152,16 +181,29 @@ const productSchema = {
     {
       "@type": "Offer",
       "name": "PDF Only",
-      "price": "5.99",
+      "price": "9.99",
       "priceCurrency": "USD",
       "availability": "https://schema.org/InStock"
     },
     {
       "@type": "Offer",
       "name": "PDF + Editable",
-      "price": "9.99",
+      "price": "14.99",
       "priceCurrency": "USD",
       "availability": "https://schema.org/InStock"
+    },
+    {
+      "@type": "Offer",
+      "name": "Unlimited Monthly",
+      "price": "24.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "priceSpecification": {
+        "@type": "UnitPriceSpecification",
+        "price": "24.99",
+        "priceCurrency": "USD",
+        "billingDuration": "P1M"
+      }
     }
   ]
 };
@@ -181,11 +223,51 @@ const faqSchema = {
 };
 
 const PricingPage = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in to subscribe to unlimited letters.',
+      });
+      navigate('/login', { state: { from: { pathname: '/pricing' } } });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('create-subscription-checkout');
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start subscription checkout';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <SEOHead 
         title="Pricing - Simple Per-Letter Pricing | DisputeLetters"
-        description="Create professional dispute letters from $5.99. No subscriptions, no hidden fees. Pay only for what you need with our simple per-letter pricing."
+        description="Create professional dispute letters from $9.99. No hidden fees. Per-letter or unlimited monthly subscription options available."
         canonicalPath="/pricing"
       />
       <Helmet>
@@ -205,7 +287,7 @@ const PricingPage = () => {
               Simple, Transparent Pricing
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-6">
-              Pay only for what you need. No subscriptions, no hidden fees, no surprises.
+              Pay per letter or go unlimited. No hidden fees, no surprises.
             </p>
             {/* Trust badges in hero */}
             <div className="flex flex-wrap justify-center gap-4 text-sm text-primary-foreground/70">
@@ -225,17 +307,22 @@ const PricingPage = () => {
       {/* Pricing Cards */}
       <section className="py-16 md:py-24 bg-background">
         <div className="container-wide">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {options.map((option, index) => {
               const Icon = option.icon;
               return (
                 <Card 
                   key={index} 
-                  className={`relative ${option.popular ? 'border-accent shadow-lg scale-105' : ''}`}
+                  className={`relative ${option.popular ? 'border-accent shadow-lg md:scale-105' : ''}`}
                 >
                   {option.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <Badge className="bg-accent text-accent-foreground">Best Value</Badge>
+                    </div>
+                  )}
+                  {option.savings && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Badge variant="secondary">{option.savings}</Badge>
                     </div>
                   )}
                   <CardHeader className="text-center pb-4">
@@ -245,7 +332,9 @@ const PricingPage = () => {
                     <CardTitle className="font-serif text-xl">{option.name}</CardTitle>
                     <div className="mt-4">
                       <span className="text-4xl font-bold text-foreground">{option.price}</span>
-                      <span className="text-muted-foreground"> / letter</span>
+                      <span className="text-muted-foreground">
+                        {option.priceDetail || ' / letter'}
+                      </span>
                     </div>
                     <CardDescription className="mt-2">{option.description}</CardDescription>
                   </CardHeader>
@@ -258,16 +347,31 @@ const PricingPage = () => {
                         </li>
                       ))}
                     </ul>
-                    <Button 
-                      className="w-full" 
-                      variant={option.popular ? 'accent' : 'outline'}
-                      asChild
-                    >
-                      <Link to={option.href}>
-                        {option.cta}
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    {option.isSubscription ? (
+                      <Button 
+                        className="w-full" 
+                        variant="default"
+                        onClick={handleSubscribe}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : null}
+                        {isLoading ? 'Processing...' : option.cta}
+                        {!isLoading && <ArrowRight className="h-4 w-4 ml-1" />}
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full" 
+                        variant={option.popular ? 'accent' : 'outline'}
+                        asChild
+                      >
+                        <Link to={option.href || '/#letters'}>
+                          {option.cta}
+                          <ArrowRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               );
