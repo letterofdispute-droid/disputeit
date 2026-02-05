@@ -229,17 +229,17 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify admin access
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claims?.claims) {
+    // Verify admin access using getUser (works with Authorization header)
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Auth error:', userError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
         status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
     
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
     const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: userId });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { 
