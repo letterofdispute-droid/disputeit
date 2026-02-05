@@ -36,6 +36,20 @@ interface GenerationProgress {
   current: number;
   total: number;
   currentTitle?: string;
+  currentBatch?: number;
+  totalBatches?: number;
+}
+
+// Maximum items per edge function call to prevent timeouts
+const MAX_BATCH_SIZE = 3;
+
+// Helper to chunk array into smaller arrays
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
 }
 
 export function useContentQueue(planId?: string, categoryId?: string) {
@@ -140,30 +154,90 @@ export function useContentQueue(planId?: string, categoryId?: string) {
   });
 
   // Bulk generate articles with progress tracking
+  // Automatically chains multiple batches when processing more than MAX_BATCH_SIZE items
   const bulkGenerateMutation = useMutation({
     mutationFn: async (params: BulkGenerateParams) => {
       const itemIds = params.queueItemIds || [];
-      const total = itemIds.length;
-      
-      // Set initial progress
-      setGenerationProgress({ current: 0, total });
+      const totalItems = itemIds.length;
 
-      const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
-        body: params,
+      // Split into chunks of MAX_BATCH_SIZE to prevent edge function timeouts
+      const chunks = chunkArray(itemIds, MAX_BATCH_SIZE);
+      const totalBatches = chunks.length;
+      
+      let totalSucceeded = 0;
+      let totalFailed = 0;
+      let processedItems = 0;
+
+      // Set initial progress
+      setGenerationProgress({ 
+        current: 0, 
+        total: totalItems,
+        currentBatch: 1,
+        totalBatches
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Failed to generate articles');
+      // Process each chunk sequentially
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        // Update progress for current batch
+        setGenerationProgress({
+          current: processedItems,
+          total: totalItems,
+          currentBatch: i + 1,
+          totalBatches
+        });
+
+        console.log(`Processing batch ${i + 1}/${totalBatches} with ${chunk.length} items`);
+
+        const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
+          body: {
+            ...params,
+            queueItemIds: chunk,
+            batchSize: chunk.length,
+          },
+        });
+
+        if (error) {
+          console.error(`Batch ${i + 1} failed:`, error);
+          totalFailed += chunk.length;
+        } else if (!data.success) {
+          console.error(`Batch ${i + 1} returned error:`, data.error);
+          totalFailed += chunk.length;
+        } else {
+          totalSucceeded += data.succeeded || 0;
+          totalFailed += data.failed || 0;
+        }
+
+        processedItems += chunk.length;
+        
+        // Update progress after batch completes
+        setGenerationProgress({
+          current: processedItems,
+          total: totalItems,
+          currentBatch: i + 1,
+          totalBatches
+        });
+
+        // Refetch queue to update UI between batches
+        await queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      }
       
-      return data;
+      return {
+        success: true,
+        succeeded: totalSucceeded,
+        failed: totalFailed,
+        totalBatches
+      };
     },
     onSuccess: (data) => {
       setGenerationProgress(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+      const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
       toast({
         title: 'Batch generation complete',
-        description: `Generated ${data.succeeded} articles, ${data.failed} failed`,
+        description: `Generated ${data.succeeded} articles, ${data.failed} failed${batchInfo}`,
       });
     },
     onError: (error) => {
