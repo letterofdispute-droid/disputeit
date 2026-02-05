@@ -1,101 +1,165 @@
 
+# Fix Stuck "Generating" Articles: Stale Status Detection & Recovery
 
-# Fix: Ensure Requested Article Count is Always Met
+## Problem Identified
 
-## Problem
+The article "The Magnuson-Moss Warranty Act: Your Ally Against Subcontractor Issues" is stuck in `status: 'generating'` with:
+- `generated_at: null`
+- `error_message: null`
+- Created at: `2026-02-05 08:15:13`
 
-When generating a content plan with a target of 7 articles (medium tier), the system:
-1. Asks AI to generate exactly 7 titles
-2. Validates each title against banned phrases and existing titles
-3. Rejects titles that fail validation (e.g., 3 rejected for matching existing patterns)
-4. Creates the plan with only 4 articles instead of 7
+**Root Cause Analysis:**
 
-**Edge function logs confirm:**
-```
-Validated 4 unique titles from 7 generated
-```
+From the edge function logs:
+1. The `bulk-generate-articles` function processed 6 articles successfully before timing out
+2. Edge function execution time: **125,485ms (over 2 minutes)** 
+3. Connection reset errors occurred during AI image generation
+4. The 7th article ("Magnuson-Moss...") was marked as `generating` but the function timed out before it could complete or mark it as `failed`
 
----
-
-## Root Cause
-
-The current flow generates only the exact number needed, with no buffer for rejected titles. When validation removes titles, there's no mechanism to generate replacements.
-
----
-
-## Solution: Over-Generate + Retry Loop
-
-### Strategy 1: Request 2x the Needed Titles
-Ask AI to generate MORE titles than needed (e.g., 14 for a 7-article plan), then take the first N that pass validation.
-
-### Strategy 2: Retry with Feedback
-If first attempt yields fewer valid titles than needed, retry the AI request with specific feedback about what was rejected and why.
+**Why this happens:**
+- Edge functions have timeout limits (~150s on free tier, 400s on paid)
+- Processing multiple AI-generated images per article takes 30-60 seconds each
+- When timeout occurs, there's no cleanup mechanism to mark in-progress items as failed
+- The frontend only polls while `generationProgress` is active (which stops when the HTTP request completes/errors)
 
 ---
 
-## Technical Implementation
+## Solution: Multi-Layer Recovery System
 
-### 1. Over-Generate Initial Titles
+### 1. Database Trigger for Stale Detection
 
-Change the AI request to generate 2x the required number:
+Create a function that automatically marks items stuck in "generating" for more than 10 minutes as "failed":
 
-```typescript
-// Current: Generate exactly what's needed
-const articleTypesToGenerate = ARTICLE_TYPES
-  .filter(t => tierConfig.articleTypes.includes(t.id))
-  .slice(0, tierConfig.articleCount);
-
-// New: Generate 2x for buffer, but repeat article types if needed
-const targetCount = tierConfig.articleCount;
-const bufferMultiplier = 2;
-const totalToGenerate = targetCount * bufferMultiplier;
+```sql
+-- Function to detect and recover stale generating items
+CREATE OR REPLACE FUNCTION public.recover_stale_generating_items()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+  UPDATE public.content_queue
+  SET 
+    status = 'failed',
+    error_message = 'Generation timed out after 10 minutes'
+  WHERE 
+    status = 'generating'
+    AND created_at < NOW() - INTERVAL '10 minutes'
+    AND (generated_at IS NULL);
+END;
+$function$
 ```
 
-Update the AI prompt:
-```typescript
-Generate ${totalToGenerate} unique article title ideas. I will select the best ${targetCount} that pass validation.
-```
+### 2. Frontend Stale Detection Hook
 
-### 2. Add Retry Loop if Needed
-
-After validation, if we have fewer valid titles than requested:
+Add automatic detection of stale items in the UI:
 
 ```typescript
-const MAX_RETRIES = 2;
-let retryCount = 0;
-let validatedArticles = [];
+// In useContentQueue.ts
 
-while (validatedArticles.length < tierConfig.articleCount && retryCount < MAX_RETRIES) {
-  // Generate titles
-  const generated = await generateTitles(...);
+// Add stale detection helper
+const getStaleGeneratingItems = useCallback(() => {
+  if (!queueItems) return [];
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
   
-  // Validate and merge with previous
-  const newlyValidated = validateTitles(generated, existingTitles, validatedArticles);
-  validatedArticles = [...validatedArticles, ...newlyValidated];
-  
-  if (validatedArticles.length < tierConfig.articleCount) {
-    retryCount++;
-    console.log(`Only ${validatedArticles.length} valid titles, retrying (${retryCount}/${MAX_RETRIES})...`);
-    
-    // Add rejected titles to prompt as negative examples
-    const rejectedExamples = getRecentRejections();
-  }
-}
+  return queueItems.filter(item => 
+    item.status === 'generating' && 
+    new Date(item.created_at) < tenMinutesAgo
+  );
+}, [queueItems]);
 
-// Trim to exact count
-validatedArticles = validatedArticles.slice(0, tierConfig.articleCount);
+// Expose a mutation to reset stale items
+const resetStaleMutation = useMutation({
+  mutationFn: async (ids: string[]) => {
+    const { error } = await supabase
+      .from('content_queue')
+      .update({ 
+        status: 'failed', 
+        error_message: 'Generation timed out - automatically detected' 
+      })
+      .in('id', ids);
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+    toast({ title: 'Stale items marked as failed', description: 'You can now retry them' });
+  },
+});
 ```
 
-### 3. Update AI Prompt with Rejection Feedback
+### 3. Always-On Polling for Active Plans
 
-On retry, include specific feedback:
+Update the `refetchInterval` to poll whenever there are items in `generating` status (not just when `generationProgress` is set):
+
 ```typescript
-const retryPrompt = `
-PREVIOUS ATTEMPT REJECTED THESE TITLES (do NOT repeat similar patterns):
-${rejectedTitles.map(r => `- "${r.title}" - Reason: ${r.reason}`).join('\n')}
+const hasGeneratingItems = queueItems?.some(item => item.status === 'generating');
 
-Generate ${remaining} MORE unique titles that avoid these issues.
-`;
+const { data: queueItems, ... } = useQuery({
+  ...
+  // Poll when there are generating items OR during active generation
+  refetchInterval: (generationProgress || hasGeneratingItems) ? 5000 : false,
+});
+```
+
+### 4. Edge Function Improvements
+
+Add a pre-check at the start of bulk generation that cleans up stale items:
+
+```typescript
+// At the start of bulk-generate-articles, before processing
+const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+await supabaseAdmin
+  .from('content_queue')
+  .update({ 
+    status: 'failed', 
+    error_message: 'Previous generation timed out' 
+  })
+  .eq('status', 'generating')
+  .lt('created_at', tenMinutesAgo);
+
+console.log('Cleaned up stale generating items');
+```
+
+### 5. Smaller Batch Processing
+
+Reduce the risk of timeouts by processing fewer articles per function call:
+
+```typescript
+// In bulk-generate-articles, limit to 3 articles per invocation
+const maxArticlesPerBatch = 3;
+const itemsToProcess = queueItems.slice(0, maxArticlesPerBatch);
+```
+
+The frontend can then chain multiple calls if needed.
+
+---
+
+## UI Enhancement: Stale Item Warning
+
+In ClusterPlanner, show a warning when stale items are detected:
+
+```tsx
+// Add stale detection
+const staleItems = planQueueItems.filter(item => {
+  if (item.status !== 'generating') return false;
+  const createdAt = new Date(item.created_at);
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+  return createdAt < tenMinutesAgo;
+});
+
+// Show warning banner
+{staleItems.length > 0 && (
+  <Alert variant="warning" className="mb-4">
+    <AlertTriangle className="h-4 w-4" />
+    <AlertDescription>
+      {staleItems.length} item(s) appear stuck. 
+      <Button variant="link" onClick={handleMarkStaleAsFailed}>
+        Mark as failed and retry
+      </Button>
+    </AlertDescription>
+  </Alert>
+)}
 ```
 
 ---
@@ -104,45 +168,33 @@ Generate ${remaining} MORE unique titles that avoid these issues.
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/generate-content-plan/index.ts` | Add over-generation buffer, implement retry loop, track rejections |
+| Database Migration | Add `recover_stale_generating_items()` function |
+| `src/hooks/useContentQueue.ts` | Add stale detection, always-poll when generating, reset mutation |
+| `src/components/admin/seo/ClusterPlanner.tsx` | Add stale warning banner with "Mark as failed" action |
+| `supabase/functions/bulk-generate-articles/index.ts` | Pre-clean stale items, limit batch size to 3 |
 
 ---
 
-## Updated Flow
+## Expected Behavior After Fix
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                Generate Content Plan (7 articles)            │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1. Request AI to generate 14 titles (2x buffer)             │
-│     ↓                                                        │
-│  2. Validate each title against:                             │
-│     - Banned starter phrases                                 │
-│     - Existing database titles (first 2 words)               │
-│     - Current batch (no duplicates)                          │
-│     ↓                                                        │
-│  3. If valid count >= 7: Take first 7, create plan           │
-│     ↓                                                        │
-│  4. If valid count < 7: RETRY with feedback                  │
-│     - Include rejected titles as negative examples           │
-│     - Request only the remaining count needed                │
-│     ↓                                                        │
-│  5. After max 2 retries: Use what we have                    │
-│     - Log warning if still under target                      │
-│     ↓                                                        │
-│  6. Create plan with validated articles                      │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+1. **Immediate recovery**: Existing stuck item will be detected as stale and shown with a warning
+2. **User can retry**: Clicking "Mark as failed" allows immediate retry
+3. **Future prevention**: 
+   - Smaller batches reduce timeout risk
+   - Edge function cleans up old stale items on each run
+   - UI continuously polls until all items complete
+4. **Automatic cleanup**: Items stuck for 10+ minutes automatically marked as failed
+
+---
+
+## Immediate Manual Fix
+
+To unblock the current stuck item right now, run this query:
+
+```sql
+UPDATE content_queue 
+SET status = 'failed', error_message = 'Generation timed out'
+WHERE id = '3c060fc6-5961-4c94-b253-cba47074cc6e';
 ```
 
----
-
-## Expected Outcome
-
-After implementation:
-- Medium tier (7) will reliably produce 7 valid titles
-- High tier (10) will reliably produce 10 valid titles
-- If under-generation still occurs after retries, clear logging will show why
-- Toast will accurately report "Generated 7 article ideas" when requesting 7
-
+Then the item will appear as "failed" and can be retried normally.
