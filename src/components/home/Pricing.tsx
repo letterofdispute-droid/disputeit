@@ -1,13 +1,14 @@
-import { Check, FileText, FileEdit } from 'lucide-react';
+import { Check, FileText, FileEdit, Infinity, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { trackCTAClick } from '@/hooks/useGTM';
 
 const options = [
   {
     name: 'PDF Only',
-    price: '$5.99',
+    price: '$9.99',
     description: 'Download your letter as a PDF',
     icon: FileText,
     features: [
@@ -19,7 +20,7 @@ const options = [
   },
   {
     name: 'PDF + Editable',
-    price: '$9.99',
+    price: '$14.99',
     description: 'PDF plus an editable document',
     icon: FileEdit,
     features: [
@@ -28,6 +29,20 @@ const options = [
       'Make changes anytime',
     ],
     popular: true,
+  },
+  {
+    name: 'Unlimited Monthly',
+    price: '$24.99',
+    priceDetail: '/month',
+    description: 'Create unlimited letters',
+    icon: Infinity,
+    features: [
+      'Unlimited letters',
+      'All formats included',
+      'Cancel anytime',
+    ],
+    popular: false,
+    isSubscription: true,
   },
 ];
 
@@ -41,7 +56,7 @@ const Pricing = () => {
             Simple, Per-Letter Pricing
           </h2>
           <p className="text-lg text-muted-foreground mb-6">
-            Pay only for what you need. No subscriptions, no hidden fees.
+            Pay only for what you need. No hidden fees.
           </p>
           <div className="inline-block px-4 py-3 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">
@@ -51,7 +66,7 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {options.map((option) => {
             const Icon = option.icon;
             return (
@@ -59,7 +74,7 @@ const Pricing = () => {
                 key={option.name}
                 className={`relative p-6 ${
                   option.popular 
-                    ? 'border-2 border-accent shadow-elevated' 
+                    ? 'border-2 border-accent shadow-elevated md:scale-105' 
                     : 'border border-border'
                 }`}
               >
@@ -75,10 +90,16 @@ const Pricing = () => {
                     <Icon className="h-7 w-7 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground mb-2">{option.name}</h3>
-                  <div className="font-serif text-4xl font-bold text-foreground mb-2">
+                  <div className="font-serif text-4xl font-bold text-foreground mb-1">
                     {option.price}
+                    {option.priceDetail && (
+                      <span className="text-base font-normal text-muted-foreground">{option.priceDetail}</span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground">{option.description}</p>
+                  {option.isSubscription && (
+                    <Badge variant="secondary" className="mt-2 text-xs">Best for multiple disputes</Badge>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-6">
@@ -91,13 +112,14 @@ const Pricing = () => {
                 </ul>
 
                 <Button
-                  variant={option.popular ? 'accent' : 'outline'}
+                  variant={option.popular ? 'accent' : option.isSubscription ? 'default' : 'outline'}
                   className="w-full"
                   asChild
-                  onClick={() => trackCTAClick(`pricing_${option.name.toLowerCase().replace(' ', '_')}`, 'pricing_section')}
+                  onClick={() => trackCTAClick(`pricing_${option.name.toLowerCase().replace(/\s+/g, '_')}`, 'pricing_section')}
                 >
-                  <Link to="/#letters">
-                    Create Letter
+                  <Link to={option.isSubscription ? '/pricing' : '/#letters'}>
+                    {option.isSubscription ? 'Learn More' : 'Create Letter'}
+                    {option.isSubscription && <ArrowRight className="h-4 w-4 ml-1" />}
                   </Link>
                 </Button>
               </Card>
