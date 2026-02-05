@@ -1,200 +1,94 @@
 
-# Fix Stuck "Generating" Articles: Stale Status Detection & Recovery
+# Fix: "Generate All Queued" Returns 0 Articles
 
 ## Problem Identified
 
-The article "The Magnuson-Moss Warranty Act: Your Ally Against Subcontractor Issues" is stuck in `status: 'generating'` with:
-- `generated_at: null`
-- `error_message: null`
-- Created at: `2026-02-05 08:15:13`
+When clicking "Generate All Queued" in ClusterPlanner, the system immediately returns "Batch generation complete - Generated 0 articles, 0 failed" without processing anything.
 
-**Root Cause Analysis:**
+## Root Cause
 
-From the edge function logs:
-1. The `bulk-generate-articles` function processed 6 articles successfully before timing out
-2. Edge function execution time: **125,485ms (over 2 minutes)** 
-3. Connection reset errors occurred during AI image generation
-4. The 7th article ("Magnuson-Moss...") was marked as `generating` but the function timed out before it could complete or mark it as `failed`
+The recent batch chaining implementation broke the flow:
 
-**Why this happens:**
-- Edge functions have timeout limits (~150s on free tier, 400s on paid)
-- Processing multiple AI-generated images per article takes 30-60 seconds each
-- When timeout occurs, there's no cleanup mechanism to mark in-progress items as failed
-- The frontend only polls while `generationProgress` is active (which stops when the HTTP request completes/errors)
+1. **ClusterPlanner.tsx** (line 113-119) calls:
+   ```typescript
+   bulkGenerate({
+     planId: existingPlan.id,
+     batchSize: 10,
+   });
+   ```
+   Notice: **No `queueItemIds` is passed**
 
----
+2. **useContentQueue.ts** mutation (line 159-161):
+   ```typescript
+   const itemIds = params.queueItemIds || [];  // Empty array!
+   const chunks = chunkArray(itemIds, MAX_BATCH_SIZE);  // Empty chunks!
+   const totalBatches = chunks.length;  // 0 batches!
+   ```
 
-## Solution: Multi-Layer Recovery System
+3. The `for` loop never executes (0 iterations), so:
+   ```typescript
+   return { success: true, succeeded: 0, failed: 0, totalBatches: 0 }
+   ```
 
-### 1. Database Trigger for Stale Detection
+## Solution
 
-Create a function that automatically marks items stuck in "generating" for more than 10 minutes as "failed":
-
-```sql
--- Function to detect and recover stale generating items
-CREATE OR REPLACE FUNCTION public.recover_stale_generating_items()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $function$
-BEGIN
-  UPDATE public.content_queue
-  SET 
-    status = 'failed',
-    error_message = 'Generation timed out after 10 minutes'
-  WHERE 
-    status = 'generating'
-    AND created_at < NOW() - INTERVAL '10 minutes'
-    AND (generated_at IS NULL);
-END;
-$function$
-```
-
-### 2. Frontend Stale Detection Hook
-
-Add automatic detection of stale items in the UI:
+Modify `handleGenerateAll` in ClusterPlanner to explicitly pass the queued item IDs:
 
 ```typescript
-// In useContentQueue.ts
-
-// Add stale detection helper
-const getStaleGeneratingItems = useCallback(() => {
-  if (!queueItems) return [];
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+const handleGenerateAll = () => {
+  if (!existingPlan) return;
   
-  return queueItems.filter(item => 
-    item.status === 'generating' && 
-    new Date(item.created_at) < tenMinutesAgo
-  );
-}, [queueItems]);
-
-// Expose a mutation to reset stale items
-const resetStaleMutation = useMutation({
-  mutationFn: async (ids: string[]) => {
-    const { error } = await supabase
-      .from('content_queue')
-      .update({ 
-        status: 'failed', 
-        error_message: 'Generation timed out - automatically detected' 
-      })
-      .in('id', ids);
-    if (error) throw error;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['content-queue'] });
-    toast({ title: 'Stale items marked as failed', description: 'You can now retry them' });
-  },
-});
+  // Get IDs of all queued items for this plan
+  const queuedIds = planQueueItems
+    .filter(item => item.status === 'queued')
+    .map(item => item.id);
+  
+  if (queuedIds.length === 0) return;
+  
+  bulkGenerate({
+    planId: existingPlan.id,
+    queueItemIds: queuedIds,  // Now explicitly passing the IDs
+    batchSize: queuedIds.length,
+  });
+};
 ```
 
-### 3. Always-On Polling for Active Plans
-
-Update the `refetchInterval` to poll whenever there are items in `generating` status (not just when `generationProgress` is set):
-
-```typescript
-const hasGeneratingItems = queueItems?.some(item => item.status === 'generating');
-
-const { data: queueItems, ... } = useQuery({
-  ...
-  // Poll when there are generating items OR during active generation
-  refetchInterval: (generationProgress || hasGeneratingItems) ? 5000 : false,
-});
-```
-
-### 4. Edge Function Improvements
-
-Add a pre-check at the start of bulk generation that cleans up stale items:
-
-```typescript
-// At the start of bulk-generate-articles, before processing
-const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-
-await supabaseAdmin
-  .from('content_queue')
-  .update({ 
-    status: 'failed', 
-    error_message: 'Previous generation timed out' 
-  })
-  .eq('status', 'generating')
-  .lt('created_at', tenMinutesAgo);
-
-console.log('Cleaned up stale generating items');
-```
-
-### 5. Smaller Batch Processing
-
-Reduce the risk of timeouts by processing fewer articles per function call:
-
-```typescript
-// In bulk-generate-articles, limit to 3 articles per invocation
-const maxArticlesPerBatch = 3;
-const itemsToProcess = queueItems.slice(0, maxArticlesPerBatch);
-```
-
-The frontend can then chain multiple calls if needed.
-
----
-
-## UI Enhancement: Stale Item Warning
-
-In ClusterPlanner, show a warning when stale items are detected:
-
-```tsx
-// Add stale detection
-const staleItems = planQueueItems.filter(item => {
-  if (item.status !== 'generating') return false;
-  const createdAt = new Date(item.created_at);
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  return createdAt < tenMinutesAgo;
-});
-
-// Show warning banner
-{staleItems.length > 0 && (
-  <Alert variant="warning" className="mb-4">
-    <AlertTriangle className="h-4 w-4" />
-    <AlertDescription>
-      {staleItems.length} item(s) appear stuck. 
-      <Button variant="link" onClick={handleMarkStaleAsFailed}>
-        Mark as failed and retry
-      </Button>
-    </AlertDescription>
-  </Alert>
-)}
-```
+This ensures the mutation receives the actual item IDs to process and properly chunks them.
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| Database Migration | Add `recover_stale_generating_items()` function |
-| `src/hooks/useContentQueue.ts` | Add stale detection, always-poll when generating, reset mutation |
-| `src/components/admin/seo/ClusterPlanner.tsx` | Add stale warning banner with "Mark as failed" action |
-| `supabase/functions/bulk-generate-articles/index.ts` | Pre-clean stale items, limit batch size to 3 |
+| File | Change |
+|------|--------|
+| `src/components/admin/seo/ClusterPlanner.tsx` | Update `handleGenerateAll` to pass `queueItemIds` |
 
 ---
 
-## Expected Behavior After Fix
+## Validation Checklist
 
-1. **Immediate recovery**: Existing stuck item will be detected as stale and shown with a warning
-2. **User can retry**: Clicking "Mark as failed" allows immediate retry
-3. **Future prevention**: 
-   - Smaller batches reduce timeout risk
-   - Edge function cleans up old stale items on each run
-   - UI continuously polls until all items complete
-4. **Automatic cleanup**: Items stuck for 10+ minutes automatically marked as failed
+After fix:
+- `handleGenerateAll` extracts queued item IDs from `planQueueItems`
+- Those IDs are passed to `bulkGenerate({ queueItemIds: [...] })`
+- The mutation chunks these IDs and processes them in batches of 3
+- Progress UI shows "Batch 1 of N" correctly
+- Toast shows actual generated count
 
 ---
 
-## Immediate Manual Fix
+## Expected Flow After Fix
 
-To unblock the current stuck item right now, run this query:
-
-```sql
-UPDATE content_queue 
-SET status = 'failed', error_message = 'Generation timed out'
-WHERE id = '3c060fc6-5961-4c94-b253-cba47074cc6e';
+```text
+User clicks "Generate All Queued (5)"
+    ↓
+handleGenerateAll extracts 5 queued IDs
+    ↓
+bulkGenerate({ queueItemIds: [id1, id2, id3, id4, id5] })
+    ↓
+chunkArray → [[id1, id2, id3], [id4, id5]]
+    ↓
+Process batch 1/2 → 3 articles
+Process batch 2/2 → 2 articles
+    ↓
+Toast: "Generated 5 articles (2 batches)"
 ```
-
-Then the item will appear as "failed" and can be retried normally.
