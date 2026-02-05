@@ -1,5 +1,129 @@
 // Post-generation content validator to catch AI-typical phrases
 
+// === TITLE VALIDATION ===
+
+// Banned title starters - emotional hooks and generic phrases AI defaults to
+export const BANNED_TITLE_STARTERS = [
+  'fed up',
+  'tired of',
+  'sick of',
+  'frustrated with',
+  'had enough',
+  'enough is enough',
+  'stop letting',
+  "don't let",
+  'the ultimate',
+  'the complete',
+  'everything you need',
+  'all you need to know',
+  'a comprehensive',
+  'the definitive',
+  'your complete',
+  'the only guide',
+  'finally',
+  'at last',
+  'once and for all',
+  'say goodbye to',
+  'never again',
+  'are you tired',
+  'have you ever',
+  'what if i told you',
+  'imagine if',
+  'picture this',
+  'let me tell you',
+  'here is why',
+  "here's why",
+  "here's how",
+  'here is how',
+  'discover how',
+  'learn how',
+  'find out how',
+  'see how',
+  'watch how',
+];
+
+export interface TitleValidation {
+  isValid: boolean;
+  reason?: string;
+}
+
+export function validateTitle(
+  title: string,
+  existingTitles: string[]
+): TitleValidation {
+  const lowerTitle = title.toLowerCase().trim();
+  
+  // Check banned starters
+  for (const banned of BANNED_TITLE_STARTERS) {
+    if (lowerTitle.startsWith(banned)) {
+      return { 
+        isValid: false, 
+        reason: `Title starts with banned phrase: "${banned}"` 
+      };
+    }
+  }
+  
+  // Check first 2 words against existing titles to prevent patterns
+  const titleWords = lowerTitle.split(/\s+/).filter(w => w.length > 0);
+  const firstTwoWords = titleWords.slice(0, 2).join(' ');
+  
+  for (const existing of existingTitles) {
+    const existingLower = existing.toLowerCase().trim();
+    const existingWords = existingLower.split(/\s+/).filter(w => w.length > 0);
+    const existingFirstTwo = existingWords.slice(0, 2).join(' ');
+    
+    if (firstTwoWords === existingFirstTwo && firstTwoWords.length > 3) {
+      return { 
+        isValid: false, 
+        reason: `Title starts same as existing: "${existing.substring(0, 50)}..."` 
+      };
+    }
+  }
+  
+  return { isValid: true };
+}
+
+// Validate a batch of titles for diversity
+export function validateTitleBatch(
+  titles: string[],
+  existingTitles: string[]
+): { valid: string[]; rejected: Array<{ title: string; reason: string }> } {
+  const valid: string[] = [];
+  const rejected: Array<{ title: string; reason: string }> = [];
+  const seenFirstWords = new Set<string>();
+  
+  // Build set of first words from existing titles
+  for (const existing of existingTitles) {
+    const words = existing.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    if (words.length > 0) {
+      seenFirstWords.add(words.slice(0, 2).join(' '));
+    }
+  }
+  
+  for (const title of titles) {
+    const validation = validateTitle(title, existingTitles);
+    
+    if (!validation.isValid) {
+      rejected.push({ title, reason: validation.reason! });
+      continue;
+    }
+    
+    // Also check against already-validated titles in this batch
+    const titleWords = title.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    const firstTwo = titleWords.slice(0, 2).join(' ');
+    
+    if (seenFirstWords.has(firstTwo) && firstTwo.length > 3) {
+      rejected.push({ title, reason: `Duplicate pattern in batch: "${firstTwo}"` });
+      continue;
+    }
+    
+    seenFirstWords.add(firstTwo);
+    valid.push(title);
+  }
+  
+  return { valid, rejected };
+}
+
 export const FORBIDDEN_PHRASES = [
   // AI jargon
   'delve', 'delving', 'dive into', 'diving deep', 'deep dive',
