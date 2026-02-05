@@ -34,6 +34,9 @@ interface BlogPost {
   related_templates: string[] | null;
   middle_image_1_url?: string | null;
   middle_image_2_url?: string | null;
+  featured_image_alt?: string | null;
+  middle_image_1_alt?: string | null;
+  middle_image_2_alt?: string | null;
 }
 const ArticlePage = () => {
   const {
@@ -237,13 +240,15 @@ const ArticlePage = () => {
     const hasPlaceholder2 = html.includes('{{MIDDLE_IMAGE_2}}');
     if (post.middle_image_1_url) {
       if (hasPlaceholder1) {
-        html = html.replace(/{{MIDDLE_IMAGE_1}}/g, `<figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="" loading="lazy" /></figure>`);
+        const alt1 = post.middle_image_1_alt || post.title;
+        html = html.replace(/{{MIDDLE_IMAGE_1}}/g, `<figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="${alt1.replace(/"/g, '&quot;')}" loading="lazy" /></figure>`);
       } else {
         // Smart injection: insert image approximately 45% through the content
         const paragraphs = html.split('</p>');
         const midPoint = Math.floor(paragraphs.length * 0.45);
         if (midPoint > 0 && paragraphs.length > 3) {
-          paragraphs.splice(midPoint, 0, `</p><figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="" loading="lazy" /></figure><p>`);
+          const alt1 = post.middle_image_1_alt || post.title;
+          paragraphs.splice(midPoint, 0, `</p><figure class="article-middle-image"><img src="${post.middle_image_1_url}" alt="${alt1.replace(/"/g, '&quot;')}" loading="lazy" /></figure><p>`);
           html = paragraphs.join('</p>');
         }
       }
@@ -252,13 +257,15 @@ const ArticlePage = () => {
     }
     if (post.middle_image_2_url) {
       if (hasPlaceholder2) {
-        html = html.replace(/{{MIDDLE_IMAGE_2}}/g, `<figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="" loading="lazy" /></figure>`);
+        const alt2 = post.middle_image_2_alt || post.title;
+        html = html.replace(/{{MIDDLE_IMAGE_2}}/g, `<figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="${alt2.replace(/"/g, '&quot;')}" loading="lazy" /></figure>`);
       } else if (post.middle_image_1_url) {
         // Smart injection: insert second image approximately 75% through
         const paragraphs = html.split('</p>');
         const insertPoint = Math.floor(paragraphs.length * 0.75);
         if (insertPoint > 0 && paragraphs.length > 5) {
-          paragraphs.splice(insertPoint, 0, `</p><figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="" loading="lazy" /></figure><p>`);
+          const alt2 = post.middle_image_2_alt || post.title;
+          paragraphs.splice(insertPoint, 0, `</p><figure class="article-middle-image"><img src="${post.middle_image_2_url}" alt="${alt2.replace(/"/g, '&quot;')}" loading="lazy" /></figure><p>`);
           html = paragraphs.join('</p>');
         }
       }
@@ -277,7 +284,7 @@ const ArticlePage = () => {
       ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption'],
       ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel', 'style', 'colspan', 'rowspan', 'loading']
     });
-  }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url]);
+  }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url, post?.middle_image_1_alt, post?.middle_image_2_alt, post?.title]);
 
   // Branded author display - always use LoD Contributor
   const displayAuthor = "LoD Contributor";
@@ -411,7 +418,7 @@ const ArticlePage = () => {
             {/* Right: Featured Image */}
             <div className="order-1 md:order-2">
               {post.featured_image_url ? <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                  <img src={post.featured_image_url} alt={post.title} className="w-full h-64 md:h-80 object-cover" />
+                  <img src={post.featured_image_url} alt={post.featured_image_alt || post.title} className="w-full h-64 md:h-80 object-cover" />
                 </div> : <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl h-64 md:h-80 flex items-center justify-center">
                   <FileText className="h-16 w-16 text-white/30" />
                 </div>}
