@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { BANNED_TITLE_STARTERS, validateTitle } from "../_shared/contentValidator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -278,6 +279,15 @@ serve(async (req) => {
       });
     }
 
+    // Fetch existing blog post titles for cross-database deduplication
+    const { data: existingPosts } = await supabase
+      .from('blog_posts')
+      .select('title')
+      .limit(500);
+
+    const existingTitles = existingPosts?.map(p => p.title) || [];
+    console.log(`Found ${existingTitles.length} existing titles for deduplication`);
+
     // Use AI to generate tailored titles and keywords
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
@@ -294,36 +304,62 @@ serve(async (req) => {
       tone: 'helpful and professional',
     };
 
+    // Build banned starters list for prompt
+    const bannedStartersList = BANNED_TITLE_STARTERS.slice(0, 15).map(s => `- "${s}"`).join('\n');
+    
+    // Build existing titles sample for negative examples
+    const existingTitlesSample = existingTitles.slice(0, 25).map(t => `- ${t}`).join('\n');
+
     const systemPrompt = `You are a US-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN—never templated or formulaic.
 
-CRITICAL DIVERSITY RULES:
+ABSOLUTE BANS - NEVER START TITLES WITH:
+${bannedStartersList}
+- Any variation of "Fed Up" or "Tired of" or emotional hooks
+- "The Ultimate" or "The Complete" or "Everything You Need"
+- Questions like "Are you tired...?" or "Have you ever...?"
+
+MANDATORY VARIETY RULES:
 1. Each title must feel like it was written by a different person
-2. NEVER start two titles the same way
+2. NEVER start two titles with the same first word
 3. Vary sentence structures dramatically:
    - Questions: "Why Does Your Claim Keep Failing?"
    - Numbers: "5 Costly Mistakes You're Making"
    - Statements: "What Companies Hope You Don't Know"
    - Action: "Getting Your Money Back After..."
-   - Emotional: "Fed Up? Here's What Actually Works"
+   - Direct: "Your Rights When [Situation] Happens"
 4. Mix title lengths: some punchy (5-7 words), some descriptive (10-12 words)
 5. Use natural language people actually type into Google
 6. Include US-specific references where relevant (FTC Act, Magnuson-Moss Warranty Act, state consumer protection laws, etc.)
+7. Maximum 2 titles can end with question marks (?)
+8. Maximum 1 title can start with a number
+9. At least 2 titles must be declarative statements
+10. At least 1 title should reference a specific law or regulation
 
-ANTI-PATTERN RULES:
-- Never repeat the exact template name in titles
-- Avoid generic phrasing like "Complete Guide to X"
-- Don't use the same power words repeatedly
+STRICT ANTI-PATTERN RULES:
+- Never repeat the exact template name "${templateName}" in titles
+- No two titles can share the same first 2 words
+- Avoid generic phrasing like "Complete Guide to X" or "Everything About X"
+- Don't use the same power words repeatedly across titles
 - Each title should pass the "would a real journalist write this?" test
+- Check your output: if any titles look similar, rewrite them
 
 BAD EXAMPLES (too templated):
 - "How to File a Poor Workmanship Complaint Step-by-Step"
 - "7 Mistakes That Get Your Claim Rejected"
-- "Your Rights: Poor Workmanship - What Contractors Won't Tell You"
+- "Fed Up? Here's a Letter That Works"
+- "Tired of Being Ignored? Try This"
+- "The Ultimate Guide to Getting Your Refund"
 
-GOOD EXAMPLES (diverse & human):
+GOOD EXAMPLES (diverse, specific, human):
 - "What to Do When Your Contractor's Work Falls Apart"
 - "The 7 Excuses Shady Contractors Use (And How to Fight Back)"
-- "Your Rights Under State Consumer Protection Laws After Shoddy Work"
+- "FTC Rules Give You More Power Than You Think"
+- "California Contractors State License Board: When to File"
+- "Recovery Tactics That Actually Got Results in 2025"
+
+${existingTitlesSample.length > 0 ? `EXISTING TITLES IN DATABASE (do NOT duplicate these patterns or first words):
+${existingTitlesSample}
+` : ''}
 
 Output valid JSON only.`;
 
@@ -404,21 +440,44 @@ Return JSON:
     const parsedContent = JSON.parse(cleanedContent);
     let generatedArticles = parsedContent.articles || [];
 
-    // Validate title diversity
-    const titleStarts = new Set<string>();
+    // Multi-layer title validation
     const validatedArticles = [];
-    
+    const seenFirstWords = new Set<string>();
+
+    // Add existing titles' first words to seen set
+    for (const existing of existingTitles) {
+      const words = existing.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+      if (words.length >= 2) {
+        seenFirstWords.add(words.slice(0, 2).join(' '));
+      }
+    }
+
     for (const article of generatedArticles) {
       const title = article.title || '';
-      const firstThreeWords = title.split(' ').slice(0, 3).join(' ').toLowerCase();
       
-      // Skip if duplicate start or matches template name exactly
-      if (titleStarts.has(firstThreeWords) || title.toLowerCase() === templateName.toLowerCase()) {
-        console.log('Skipping duplicate or template-matching title:', title);
+      // Layer 1: Check against banned starters and existing DB titles
+      const validation = validateTitle(title, existingTitles);
+      if (!validation.isValid) {
+        console.log('Rejecting title (banned/duplicate):', title, '-', validation.reason);
         continue;
       }
       
-      titleStarts.add(firstThreeWords);
+      // Layer 2: Check first 2 words against this batch
+      const titleWords = title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+      const firstTwo = titleWords.slice(0, 2).join(' ');
+      
+      if (seenFirstWords.has(firstTwo) && firstTwo.length > 3) {
+        console.log('Rejecting title (batch duplicate):', title);
+        continue;
+      }
+      
+      // Layer 3: Check if title matches template name exactly
+      if (title.toLowerCase().trim() === templateName.toLowerCase().trim()) {
+        console.log('Rejecting title (matches template name):', title);
+        continue;
+      }
+      
+      seenFirstWords.add(firstTwo);
       validatedArticles.push(article);
     }
 

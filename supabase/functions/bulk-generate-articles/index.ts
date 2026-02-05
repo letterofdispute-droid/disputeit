@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
-import { validateContent, getViolationSummary } from "../_shared/contentValidator.ts";
+import { validateContent, getViolationSummary, validateTitle, BANNED_TITLE_STARTERS } from "../_shared/contentValidator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -472,6 +472,15 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Fetch existing titles for final validation
+    const { data: existingPosts } = await supabaseAdmin
+      .from('blog_posts')
+      .select('title')
+      .limit(500);
+
+    const existingDbTitles = existingPosts?.map(p => p.title) || [];
+    console.log(`Loaded ${existingDbTitles.length} existing titles for validation`);
+
     const results: Array<{ queueId: string; success: boolean; blogPostId?: string; error?: string }> = [];
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.expert_professional;
 
@@ -588,6 +597,16 @@ Respond with ONLY this JSON:
         cleanedContent = cleanedContent.trim();
 
         const parsedContent = JSON.parse(cleanedContent);
+
+        // === TITLE VALIDATION GATE ===
+        // Ensure the AI hasn't drifted back to banned patterns
+        const titleValidation = validateTitle(parsedContent.title, existingDbTitles);
+        if (!titleValidation.isValid) {
+          console.error('Title validation failed:', parsedContent.title, '-', titleValidation.reason);
+          // Use the suggested title from queue instead
+          console.log('Falling back to suggested title:', item.suggested_title);
+          parsedContent.title = item.suggested_title;
+        }
 
         // Validate content for AI-typical phrases
         const validationResult = validateContent(parsedContent.content);
@@ -750,6 +769,9 @@ Respond with ONLY this JSON:
 
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
         console.log(`Successfully generated: ${blogPost.title} (with ${featuredResult.url ? 'AI' : 'no'} featured image)`);
+
+        // Add newly created title to existing titles list to prevent duplicates in same batch
+        existingDbTitles.push(blogPost.title);
 
         // Longer delay between articles for sequential processing
         await new Promise(resolve => setTimeout(resolve, 5000));
