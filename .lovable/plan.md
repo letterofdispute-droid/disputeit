@@ -1,181 +1,258 @@
 
-# Pricing Model Update + Human-Crafted Trust Indicator
+
+# In-App Letter Editor for Letter Of Dispute
 
 ## Overview
 
-This plan implements a three-tier pricing model with a new monthly subscription option, updates prices across the entire site, and adds a subtle "human-crafted" trust indicator near the letter forms.
+Replace the current DOCX download option with a built-in TipTap-powered letter editor. Remove the Unlimited Monthly subscription entirely.
 
-## New Pricing Structure
+## Updated Pricing Structure (2 Tiers Only)
 
-| Tier | Current | New | Type |
-|------|---------|-----|------|
-| PDF Only | $5.99 | **$9.99** | One-time |
-| PDF + Editable | $9.99 | **$14.99** | One-time |
-| Unlimited Monthly | N/A | **$24.99/mo** | Subscription (NEW) |
+| Tier | Price | What Customer Gets |
+|------|-------|-------------------|
+| PDF Only | $9.99 | Read-only PDF download |
+| PDF + Edit Access | $14.99 | PDF + 30 days in-app editing + export to PDF |
+| ~~Unlimited Monthly~~ | ~~$24.99/mo~~ | **REMOVED** |
 
-## Implementation Scope
+**Re-edit unlock:** $5.99 to unlock 30 more days of editing after initial period expires.
 
-### Part 1: Stripe Configuration
+## What Gets Removed
 
-1. **Create new Stripe products and prices:**
-   - Update existing "Letter PDF Only" price to $9.99 (create new price, keep old for existing purchases)
-   - Update existing "Letter PDF + Editable" price to $14.99 (create new price)
-   - Create new "Unlimited Monthly" subscription product at $24.99/month
+- Delete `supabase/functions/check-subscription/index.ts`
+- Delete `supabase/functions/create-subscription-checkout/index.ts`
+- Delete `supabase/functions/customer-portal/index.ts`
+- Remove subscription checking from `useAuth.tsx`
+- Remove subscription UI from `PricingModal.tsx`, `Pricing.tsx`, `PricingPage.tsx`
+- Remove subscription columns from database (or leave unused)
 
-### Part 2: Frontend Updates
-
-**Files to modify:**
-
-| File | Changes |
-|------|---------|
-| `src/components/letter/PricingModal.tsx` | Update prices to $9.99 / $14.99, add subscription option |
-| `src/components/home/Pricing.tsx` | Update prices, add subscription tier card |
-| `src/pages/PricingPage.tsx` | Add subscription tier, update all prices, update schema |
-| `src/pages/Index.tsx` | No changes needed (uses Pricing component) |
-
-### Part 3: Edge Function Updates
-
-**Files to modify:**
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/create-letter-checkout/index.ts` | Update price IDs and amounts |
-| NEW: `supabase/functions/check-subscription/index.ts` | Verify active subscription status |
-| NEW: `supabase/functions/create-subscription-checkout/index.ts` | Create subscription checkout session |
-
-### Part 4: Subscription Infrastructure
-
-1. **Database updates:**
-   - Add `subscription_status` and `subscription_end` columns to `profiles` table
-   - Track which users have active unlimited subscriptions
-
-2. **Auth context updates:**
-   - Add subscription checking on login
-   - Provide `hasUnlimitedAccess` flag to components
-
-3. **UI logic updates:**
-   - If user has active subscription, skip pricing modal and generate letter directly
-   - Show "Manage Subscription" button in dashboard
-
-### Part 5: Human-Crafted Trust Indicator
-
-Create a subtle, reassuring indicator next to template forms that emphasizes human expertise while acknowledging AI assistance.
-
-**New component:** `HumanCraftedBadge`
+## System Architecture
 
 ```text
-+--------------------------------------------------+
-| [Users icon] Crafted by legal writing experts    |
-|              AI assists, humans ensure quality   |
-+--------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────┐
+│                      PURCHASE FLOW                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User Completes Form → Chooses Tier → Stripe Payment            │
+│                                                                  │
+│  PDF Only ($9.99):                                              │
+│    └─→ Generate PDF → Store in 'letters' bucket → Download     │
+│                                                                  │
+│  PDF + Edit ($14.99):                                           │
+│    └─→ Generate PDF → Store content in DB with edit_expires_at │
+│    └─→ User redirected to /letters/{purchase_id}/edit          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      EDITOR ACCESS FLOW                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User visits /letters/{purchase_id}/edit                        │
+│                                                                  │
+│  ┌─ Check edit_expires_at ────────────────────────────────────┐ │
+│  │                                                             │ │
+│  │  If edit_expires_at > now():                               │ │
+│  │    → Show full editor with save & export                   │ │
+│  │    → Display "X days remaining" badge                      │ │
+│  │                                                             │ │
+│  │  If edit_expires_at <= now():                              │ │
+│  │    → Show read-only preview with blur overlay              │ │
+│  │    → "Unlock Editing for $5.99" button                     │ │
+│  │    → Stripe checkout → extends edit_expires_at by 30 days  │ │
+│  │                                                             │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Placement:**
-- Below the progress bar in `LetterGenerator.tsx`
-- Subtle, non-intrusive design using muted colors
-- Uses `Users` icon from Lucide to represent human team
+## Database Changes
 
----
-
-## Technical Details
-
-### New Stripe Prices to Create
-
-```text
-Product: Letter PDF Only (prod_TrBeqRtAKr9B1q)
-  - New Price: $9.99 (price_NEW_PDF_ONLY)
-
-Product: Letter PDF + Editable (prod_TrBepH46owx3In)
-  - New Price: $14.99 (price_NEW_PDF_EDITABLE)
-
-NEW Product: Unlimited Monthly
-  - Price: $24.99/month recurring
-```
-
-### Edge Function: check-subscription
-
-Checks if user has an active Stripe subscription:
-- Called on login and periodically (every 60 seconds)
-- Returns `{ subscribed: boolean, subscription_end: string | null }`
-- Used to bypass payment for unlimited subscribers
-
-### Edge Function: create-subscription-checkout
-
-Creates a Stripe checkout session for the subscription:
-- Requires authenticated user
-- Uses `mode: "subscription"`
-- Returns checkout URL
-
-### PricingModal Changes
-
-```text
-Current:
-+-------------------+  +-------------------+
-| PDF Only  $5.99   |  | PDF+Edit  $9.99   |
-+-------------------+  +-------------------+
-
-New:
-+-------------------+  +-------------------+
-| PDF Only  $9.99   |  | PDF+Edit $14.99   |
-+-------------------+  +-------------------+
-         +------------------------+
-         | Unlimited $24.99/mo    |
-         | Save with unlimited    |
-         +------------------------+
-```
-
-### Database Migration
+### Migration: Add editing access columns to `letter_purchases`
 
 ```sql
-ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'none',
-ADD COLUMN IF NOT EXISTS subscription_end timestamp with time zone;
+ALTER TABLE public.letter_purchases
+ADD COLUMN IF NOT EXISTS edit_expires_at timestamp with time zone,
+ADD COLUMN IF NOT EXISTS last_edited_content text,
+ADD COLUMN IF NOT EXISTS last_edited_at timestamp with time zone;
+
+-- For existing pdf-editable purchases, grant 30-day access from now
+UPDATE public.letter_purchases
+SET edit_expires_at = NOW() + INTERVAL '30 days'
+WHERE purchase_type = 'pdf-editable'
+  AND edit_expires_at IS NULL;
+
+-- Add RLS policy for users to update their own letters
+CREATE POLICY "Users can update their own letters for editing"
+ON public.letter_purchases
+FOR UPDATE
+USING (auth.uid() = user_id OR email = auth.email())
+WITH CHECK (auth.uid() = user_id OR email = auth.email());
 ```
 
----
+## New Components
 
-## Files to Create/Modify Summary
+### 1. Letter Editor Page (`src/pages/LetterEditorPage.tsx`)
+
+- Route: `/letters/:purchaseId/edit`
+- Fetches purchase data and checks edit access
+- Shows countdown timer for editing access
+- Displays TipTap editor or locked state
+
+### 2. Letter Editor Component (`src/components/letter/LetterEditor.tsx`)
+
+Adapted from existing `RichTextEditor.tsx`:
+
+- Simplified toolbar (bold, italic, lists)
+- Letter-style formatting
+- Auto-save every 30 seconds
+- Manual save button
+- "Export as PDF" button
+
+### 3. Edit Access Badge (`src/components/letter/EditAccessBadge.tsx`)
+
+Shows remaining edit access time:
+- Green: "23 days remaining"
+- Yellow: "3 days remaining"  
+- Red: "Editing locked - Unlock for $5.99"
+
+### 4. Unlock Editing Modal (`src/components/letter/UnlockEditingModal.tsx`)
+
+Shown when edit access has expired:
+- Preview of letter (blurred body)
+- "Unlock 30 more days of editing for $5.99"
+- Stripe checkout integration
+
+## Edge Functions
+
+### New Functions
+
+| Function | Purpose |
+|----------|---------|
+| `create-edit-unlock-checkout` | Creates $5.99 Stripe checkout for unlocking editing |
+| `verify-edit-unlock-purchase` | Verifies payment, extends edit_expires_at by 30 days |
+| `export-letter-pdf` | Generates PDF from current edited content |
+
+### Functions to Update
+
+| Function | Changes |
+|----------|---------|
+| `verify-letter-purchase` | Set edit_expires_at for pdf-editable, skip DOCX |
+| `generate-letter-documents` | Remove DOCX generation entirely |
+
+### Functions to Delete
+
+| Function | Reason |
+|----------|--------|
+| `check-subscription` | No subscription tier |
+| `create-subscription-checkout` | No subscription tier |
+| `customer-portal` | No subscription tier |
+
+## Files Summary
 
 ### New Files
-- `src/components/letter/HumanCraftedBadge.tsx` - Trust indicator component
-- `supabase/functions/check-subscription/index.ts` - Verify subscription
-- `supabase/functions/create-subscription-checkout/index.ts` - Create subscription
 
-### Modified Files
-- `src/components/letter/PricingModal.tsx` - Add subscription option, update prices
-- `src/components/letter/LetterGenerator.tsx` - Add HumanCraftedBadge, subscription bypass
-- `src/components/home/Pricing.tsx` - Add subscription tier, update prices
-- `src/pages/PricingPage.tsx` - Add subscription tier, update schema
-- `src/hooks/useAuth.tsx` - Add subscription checking
-- `supabase/functions/create-letter-checkout/index.ts` - Update price IDs
-- `supabase/config.toml` - Add new edge function configs
+| File | Purpose |
+|------|---------|
+| `src/pages/LetterEditorPage.tsx` | Main editor page with access control |
+| `src/components/letter/LetterEditor.tsx` | TipTap editor for letters |
+| `src/components/letter/EditAccessBadge.tsx` | Shows remaining edit time |
+| `src/components/letter/UnlockEditingModal.tsx` | Payment modal for unlocking |
+| `supabase/functions/create-edit-unlock-checkout/index.ts` | Stripe checkout for unlock |
+| `supabase/functions/verify-edit-unlock-purchase/index.ts` | Verify unlock payment |
+| `supabase/functions/export-letter-pdf/index.ts` | Generate PDF from edited content |
 
----
+### Files to Modify
 
-## User Flow After Implementation
+| File | Changes |
+|------|---------|
+| `src/routes.ts` | Add `/letters/:purchaseId/edit` route |
+| `src/pages/PurchaseSuccessPage.tsx` | For pdf-editable, show "Edit Letter" CTA |
+| `src/components/dashboard/PurchasedLetterCard.tsx` | Replace "Download Word" with "Edit Letter" |
+| `src/components/letter/PricingModal.tsx` | Remove subscription option, update copy |
+| `src/components/home/Pricing.tsx` | Remove subscription tier |
+| `src/pages/PricingPage.tsx` | Remove subscription tier, update schema |
+| `src/hooks/useAuth.tsx` | Remove subscription checking logic |
+| `supabase/functions/verify-letter-purchase/index.ts` | Set edit_expires_at, skip DOCX |
+| `supabase/functions/generate-letter-documents/index.ts` | Remove DOCX generation |
+| `supabase/config.toml` | Remove subscription functions, add new ones |
 
-### Per-Letter Purchase Flow (unchanged)
-1. User fills out letter form
-2. Clicks "Generate Letter"
-3. Sees pricing modal with 3 options ($9.99, $14.99, $24.99/mo)
-4. Selects option and pays via Stripe
-5. Downloads letter
+### Files to Delete
 
-### Subscription Flow (new)
-1. User purchases $24.99/mo subscription
-2. On subsequent visits, subscription is detected
-3. User fills out letter form
-4. Clicks "Generate Letter"
-5. Letter is generated immediately (no payment step)
-6. User can download unlimited letters
+| File | Reason |
+|------|--------|
+| `supabase/functions/check-subscription/index.ts` | No subscription tier |
+| `supabase/functions/create-subscription-checkout/index.ts` | No subscription tier |
+| `supabase/functions/customer-portal/index.ts` | No subscription tier |
 
----
+## Stripe Products
 
-## Rollout Sequence
+### Keep Existing
+- PDF Only: $9.99 (`price_1SxZWsROE6uHwbbom1l6Z4fU`)
+- PDF + Edit: $14.99 (`price_1SxZWtROE6uHwbboDYtTLOTU`)
 
-1. Create new Stripe prices (tool calls)
-2. Run database migration for subscription columns
-3. Create edge functions for subscription management
-4. Update frontend components with new prices and subscription option
-5. Deploy edge functions
-6. Test end-to-end purchase flows
+### Create New
+- Letter Editing Access Unlock: $5.99 (one-time)
+
+### Archive/Ignore
+- Unlimited Monthly: $24.99/mo (`price_1SxZWuROE6uHwbbot8KzRRU7`) - no longer used
+
+## User Experience
+
+### Editor Interface
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  ← Back to Dashboard          [23 days of editing remaining] │
+├──────────────────────────────────────────────────────────────┤
+│  Refund Request Letter                          [Save Draft] │
+├──────────────────────────────────────────────────────────────┤
+│  [B] [I] [List] [Numbered]              [Undo] [Redo]        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Dear Customer Service,                                      │
+│                                                              │
+│  I am writing to formally request a refund for my recent    │
+│  purchase of [Product Name] on [Date].                      │
+│                                                              │
+│  The issue I experienced was...                             │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│  847 words  •  Auto-saved 2 minutes ago          [Export PDF]│
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Expired Access State
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │  🔒 Editing Access Expired                          │   │
+│   │                                                      │   │
+│   │  Unlock 30 more days of editing                     │   │
+│   │                                                      │   │
+│   │  [$5.99 - Unlock Editing]                           │   │
+│   │                                                      │   │
+│   │  [Download Last Saved PDF]                          │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│   [Blurred letter content preview behind overlay]           │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Implementation Sequence
+
+1. Remove subscription tier (code cleanup)
+2. Database migration (add edit tracking columns)
+3. Create $5.99 Stripe product
+4. Build LetterEditor component (adapt TipTap)
+5. Build LetterEditorPage with access control
+6. Create edge functions (unlock checkout, verify, export)
+7. Update verify-letter-purchase (set edit_expires_at)
+8. Update generate-letter-documents (remove DOCX)
+9. Update dashboard (Edit Letter button)
+10. Update success page (Edit Letter CTA)
+11. Update pricing UI (remove subscription, clarify copy)
+12. Delete unused subscription edge functions
+
