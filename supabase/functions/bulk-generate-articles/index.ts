@@ -604,8 +604,11 @@ serve(async (req) => {
       queueItemIds,
       batchSize = 3, // Reduced from 5 to prevent timeouts
       tone = 'expert_professional',
-      wordCount = 1500,
+      wordCount: requestedWordCount = 1500,
     } = await req.json() as BulkGenerateRequest;
+    
+    // ENFORCE MINIMUM 1200 WORDS - this is a hard requirement
+    const wordCount = Math.max(requestedWordCount, 1200);
 
     // Enforce maximum batch size to prevent edge function timeouts
     const maxBatchSize = 3;
@@ -722,11 +725,13 @@ CRITICAL OUTPUT REQUIREMENTS:
 ${middleImageInstructions}
 
 CONTENT REQUIREMENTS:
-- Write approximately ${wordCount} words
+- CRITICAL: Write MINIMUM ${wordCount} words. Articles under ${wordCount} words will be rejected.
+- This is a LONG-FORM article - include 5-7 substantial sections with detailed explanations
 - ${toneInstruction}
 ${keywordInstruction}
 - Write for US readers seeking help with disputes and complaints
 - Include actionable advice and practical steps
+- Each section should have 150-250 words
 ${categoryInfo ? `- This article relates to our ${categoryInfo.name} category` : ''}
 
 SEO REQUIREMENTS:

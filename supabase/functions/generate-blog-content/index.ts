@@ -72,12 +72,14 @@ CRITICAL OUTPUT REQUIREMENTS:
 ${middleImageInstructions}
 
 CONTENT REQUIREMENTS:
-- Write approximately ${targetWordCount} words
+- CRITICAL: Write MINIMUM ${targetWordCount} words. Articles under ${targetWordCount} words will be rejected.
+- This is a LONG-FORM article - include 5-7 substantial sections with detailed explanations
 - ${toneInstruction}
 - Naturally incorporate the primary keywords 2-3+ times each throughout the article
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords
 - Write for US readers who need help with disputes and complaints
 - Include actionable advice and practical steps
+- Each section should have 150-250 words
 ${relevantCategory ? `- This article relates to our ${relevantCategory.name} category (${relevantCategory.description})` : ''}
 
 SEO REQUIREMENTS:
