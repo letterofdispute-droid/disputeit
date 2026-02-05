@@ -542,12 +542,21 @@ Return JSON:
       return data;
     });
 
-    // Create queue items for each article
+    // Valid article type IDs that match the database constraint
+    const VALID_ARTICLE_TYPES = ['how-to', 'mistakes', 'rights', 'sample', 'faq', 'case-study', 'comparison', 'checklist'];
+    
+    // Create queue items for each article, validating article type
     const queueItems = finalArticles.map((article: any, index: number) => {
       const articleType = ARTICLE_TYPES.find(t => t.id === article.type);
+      // Validate article type - fallback to 'how-to' if invalid
+      let validArticleType = article.type;
+      if (!VALID_ARTICLE_TYPES.includes(validArticleType)) {
+        console.warn(`Invalid article type "${validArticleType}", falling back to "how-to"`);
+        validArticleType = 'how-to';
+      }
       return {
         plan_id: plan.id,
-        article_type: article.type,
+        article_type: validArticleType,
         suggested_title: article.title,
         suggested_keywords: article.keywords || [],
         priority: articleType?.priority || (100 - index * 5),
