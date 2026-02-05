@@ -83,7 +83,7 @@ const LetterEditor = ({
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-card">
+    <div className="overflow-hidden">
       {/* Toolbar */}
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b border-border bg-muted/30">

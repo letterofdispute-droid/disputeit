@@ -179,6 +179,14 @@ const LetterEditorPage = () => {
     }
   };
 
+  // Subtle branding component
+  const BrandingBadge = () => (
+    <div className="flex items-center justify-center gap-2 py-3 border-t border-border bg-muted/20">
+      <img src="/ld-logo-icon.svg" alt="" className="h-4 w-4 opacity-50" />
+      <span className="text-xs text-muted-foreground">Letter of Dispute</span>
+    </div>
+  );
+
   if (authLoading || isLoading) {
     return (
       <Layout>
@@ -264,13 +272,16 @@ const LetterEditorPage = () => {
 
           {/* Editor or Locked State */}
           {hasEditAccess ? (
-            <LetterEditor
-              content={content}
-              onChange={setContent}
-              onSave={handleSave}
-              isSaving={isSaving}
-              lastSavedAt={lastSavedAt}
-            />
+            <div className="border border-border rounded-lg overflow-hidden bg-card">
+              <LetterEditor
+                content={content}
+                onChange={setContent}
+                onSave={handleSave}
+                isSaving={isSaving}
+                lastSavedAt={lastSavedAt}
+              />
+              <BrandingBadge />
+            </div>
           ) : (
             <div className="relative">
               {/* Blurred preview */}
