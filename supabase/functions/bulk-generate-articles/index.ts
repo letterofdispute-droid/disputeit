@@ -66,56 +66,55 @@ const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).jo
 // ============================================
 
 function sanitizeJsonString(raw: string): string {
-  // Step 1: Remove markdown code blocks
+  // Step 1: Remove markdown code blocks only
   let cleaned = raw.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
   
-  // Step 2: Fix control characters in string values
-  // Replace actual newlines/tabs within strings with their escaped versions
-  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (char) => {
-    switch (char) {
-      case '\n': return '\\n';
-      case '\r': return '\\r';
-      case '\t': return '\\t';
-      default: return ''; // Remove other control characters
-    }
-  });
-  
-  // Step 3: Fix trailing commas (common AI mistake)
+  // Step 2: Fix trailing commas (common AI mistake)
   cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
   
   return cleaned;
 }
 
 function parseAIResponse(content: string): any {
-  // First attempt: direct sanitization
+  if (!content) {
+    throw new Error('Empty AI response');
+  }
+  
+  // Log first 200 chars for debugging
+  console.log('AI response preview:', content.substring(0, 200));
+  
+  // Step 1: Clean up markdown code blocks
   let sanitized = sanitizeJsonString(content);
   
+  // Step 2: Try direct parse first (most responses are valid)
   try {
     return JSON.parse(sanitized);
   } catch (firstError) {
-    console.log('First parse attempt failed, trying recovery...', (firstError as Error).message);
+    console.log('First parse failed:', (firstError as Error).message);
     
-    // Second attempt: more aggressive cleanup
-    // Try to extract just the JSON object
+    // Step 3: Try to extract JSON object and handle special cases
     const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        // Additional cleanup for the extracted JSON
-        let extracted = jsonMatch[0];
-        // Fix common issues like unescaped quotes in strings
-        extracted = extracted.replace(/([^\\])\\([^"\\nrt])/g, '$1\\\\$2');
-        return JSON.parse(extracted);
-      } catch (secondError) {
-        console.error('Recovery parse also failed:', (secondError as Error).message);
-        throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
-      }
+    if (!jsonMatch) {
+      throw new Error('No JSON object found in AI response');
     }
     
-    throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+    let extracted = jsonMatch[0];
+    
+    // Step 4: Only remove truly invalid control characters
+    // Preserve \t (0x09), \n (0x0A), \r (0x0D) which are valid JSON whitespace
+    extracted = extracted.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    
+    try {
+      return JSON.parse(extracted);
+    } catch (secondError) {
+      console.error('Recovery parse failed:', (secondError as Error).message);
+      console.error('Extracted JSON start:', extracted.substring(0, 300));
+      throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+    }
   }
 }
 
