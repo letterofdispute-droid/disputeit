@@ -1,222 +1,134 @@
 
-# Fix: Production-Ready Article Generation - Complete Reliability Overhaul
+# Fix: Content Queue Data Fetching and Progress Tracking
 
-## Issues Identified
+## Root Cause Analysis
 
-### Issue 1: JSON Parsing Still Failing
-**Logs show:** `Failed to parse AI response: Expected ',' or '}' after property value in JSON at position 7310`
+Your progress bars and queue stats are showing incorrect data because of a **query limit issue**:
 
-The aggressive newline replacement converts `\n` to `\\n`, but this happens AFTER the AI has already produced JSON with embedded raw newlines in strings. The replacement pattern is also escaping already-valid escaped sequences (double-escaping issue).
+| What's Happening | Database Reality | UI Shows |
+|------------------|------------------|----------|
+| Poor Workmanship articles | 7 generated | 3/7 progress |
+| Total queued items | 191 queued | 32 queued |
+| Total items | 433 items | Only 200 fetched |
 
-### Issue 2: Duplicate Slug Constraint Violations  
-**Logs show:** `duplicate key value violates unique constraint "blog_posts_slug_key"`
+The `useContentQueue` hook limits results to 200 items, but there are now 433 items in the queue. For templates whose items fall outside this window, progress bars show incorrect counts.
 
-When retrying an article with the same title, the slug generation creates the same slug as an existing post, causing a database error. The article generation succeeds, images are uploaded, but insertion fails.
+## Solution Overview
 
-### Issue 3: Articles Disappearing During Retry
-**User reports:** "I add 15 failed to retry → only 3 failed remaining → but generated count didn't rise"
+1. **Smart data fetching** - Fetch aggregated stats from database instead of calculating client-side
+2. **Separate queries** for different use cases (coverage map vs queue management)
+3. **Pagination** for the queue table to handle large item counts
 
-The `retryFailedMutation` in `useContentQueue.ts` does this:
-1. Resets items to `status: 'queued'`
-2. Calls edge function with those IDs
-3. But edge function queries for `status = 'queued'` items
+## Implementation Plan
 
-**Problem:** If items were already reset to 'queued' in a previous attempt but marked as 'generating' by a stale timeout, they get cleaned up as "stale" and marked failed again - but the UI doesn't reflect this properly because the query limits don't capture all items.
+### Part 1: Add Database-Side Stats Calculation
 
----
+Instead of fetching all items and counting client-side, fetch pre-calculated stats per template:
 
-## Solution: Multi-Layered Reliability Fixes
+**New query approach for Coverage Map:**
+- Query `content_plans` with a count of generated/total items per plan
+- This gives accurate stats regardless of how many items exist
 
-### Fix 1: Bulletproof JSON Parsing (Double-Escape Prevention)
-Replace the current parsing with a regex that handles escaped sequences correctly:
+### Part 2: Fix useContentQueue Hook
 
-```typescript
-function parseAIResponse(content: string): any {
-  // Step 1: Clean markdown
-  let cleaned = sanitizeJsonString(content);
-  
-  // Step 2: Direct parse attempt
-  try {
-    return JSON.parse(cleaned);
-  } catch (e1) {
-    console.log('[JSON Parse] Attempt 1 failed:', (e1 as Error).message);
-    
-    // Step 3: Extract JSON object and fix control chars
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON object found');
-    
-    let json = match[0];
-    
-    // Key fix: Only escape raw control chars, not already-escaped ones
-    // This regex matches a raw newline NOT preceded by backslash
-    json = json.split('').map((char, i, arr) => {
-      const code = char.charCodeAt(0);
-      // Skip if previous char was backslash (already escaped)
-      if (i > 0 && arr[i-1] === '\\') return char;
-      // Escape control characters
-      if (code === 0x0A) return '\\n';
-      if (code === 0x0D) return '\\r';
-      if (code === 0x09) return '\\t';
-      if (code < 0x20 && code !== 0x0A && code !== 0x0D && code !== 0x09) return '';
-      return char;
-    }).join('');
-    
-    try {
-      return JSON.parse(json);
-    } catch (e2) {
-      console.error('[JSON Parse] All attempts failed');
-      throw new Error(`JSON parse failed: ${(e1 as Error).message}`);
-    }
-  }
-}
-```
+**File: `src/hooks/useContentQueue.ts`**
 
-### Fix 2: Unique Slug Generation with Collision Handling
-Add a helper that appends a numeric suffix when slug exists:
+1. Remove the `.limit(200)` restriction when fetching for a specific plan
+2. When fetching globally (for Queue tab), add pagination support
+3. Add a separate stats-only query that aggregates counts
+
+### Part 3: Update TemplateCoverageMap
+
+**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
+
+Instead of filtering queue items client-side, use a dedicated hook that fetches accurate counts per template directly from the database.
+
+### Part 4: Update ContentQueue Component
+
+**File: `src/components/admin/seo/ContentQueue.tsx`**
+
+Add pagination or virtual scrolling to handle large item lists, with accurate global stats from a separate aggregation query.
+
+## Technical Changes
+
+### useContentQueue.ts Changes
 
 ```typescript
-async function generateUniqueSlug(
-  supabase: SupabaseClient, 
-  baseSlug: string
-): Promise<string> {
-  let slug = baseSlug;
-  let attempt = 0;
-  
-  while (attempt < 10) {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle();
-    
-    if (!data) return slug; // No collision
-    
-    // Collision - add or increment suffix
-    attempt++;
-    slug = `${baseSlug}-${attempt}`;
-  }
-  
-  // Final fallback with timestamp
-  return `${baseSlug}-${Date.now()}`;
-}
-```
-
-### Fix 3: Comprehensive Logging with Structured Output
-Add detailed logging at every step:
-
-```typescript
-// Log format: [ARTICLE:title] [STEP:name] message
-function logStep(title: string, step: string, message: string, data?: any) {
-  const shortTitle = title.substring(0, 40);
-  const logLine = `[ARTICLE:${shortTitle}] [${step}] ${message}`;
-  if (data) {
-    console.log(logLine, JSON.stringify(data).substring(0, 200));
-  } else {
-    console.log(logLine);
-  }
+// When fetching for a specific plan, remove limit
+if (planId) {
+  query = query.eq('plan_id', planId);
+  // No limit for specific plan - need all items for accurate stats
+} else {
+  // For global queue view, keep limit but add pagination
+  query = query.limit(500); // Increase limit for queue view
 }
 
-// Usage throughout:
-logStep(item.suggested_title, 'START', 'Beginning generation');
-logStep(item.suggested_title, 'AI_CALL', 'Calling AI gateway');
-logStep(item.suggested_title, 'JSON_PARSE', 'Parsing response', { chars: content.length });
-logStep(item.suggested_title, 'SLUG', 'Generated unique slug', { slug });
-logStep(item.suggested_title, 'IMAGE_FEATURED', 'Generating featured image');
-logStep(item.suggested_title, 'DB_INSERT', 'Inserting blog post');
-logStep(item.suggested_title, 'SUCCESS', 'Article created', { blogPostId });
-// On error:
-logStep(item.suggested_title, 'ERROR', error.message, { step: 'DB_INSERT' });
-```
-
-### Fix 4: Retry Flow Race Condition Fix
-In `useContentQueue.ts`, the retry mutation should wait for edge function to actually start before returning:
-
-```typescript
-const retryFailedMutation = useMutation({
-  mutationFn: async (ids: string[]) => {
-    console.log('[Retry] Starting retry for', ids.length, 'items');
-    
-    // Reset to queued
-    const { error: updateError } = await supabase
+// Add separate stats query
+const { data: globalStats } = useQuery({
+  queryKey: ['content-queue-stats'],
+  queryFn: async () => {
+    const { data } = await supabase
       .from('content_queue')
-      .update({ status: 'queued', error_message: null })
-      .in('id', ids);
-    
-    if (updateError) throw updateError;
-    
-    // Process in chunks like bulkGenerate does
-    const chunks = chunkArray(ids, MAX_BATCH_SIZE);
-    let totalSucceeded = 0;
-    let totalFailed = 0;
-    
-    for (const chunk of chunks) {
-      console.log('[Retry] Processing chunk of', chunk.length);
-      const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
-        body: { queueItemIds: chunk, batchSize: chunk.length },
-      });
-      
-      if (error || !data?.success) {
-        console.error('[Retry] Chunk failed:', error || data?.error);
-        totalFailed += chunk.length;
-      } else {
-        totalSucceeded += data.succeeded || 0;
-        totalFailed += data.failed || 0;
-      }
-      
-      // Refresh UI between chunks
-      await queryClient.invalidateQueries({ queryKey: ['content-queue'] });
-    }
-    
-    return { succeeded: totalSucceeded, failed: totalFailed };
-  },
-  // ...
+      .select('status')
+    // Count by status
+    return {
+      queued: data?.filter(i => i.status === 'queued').length || 0,
+      // ... etc
+    };
+  }
 });
 ```
 
----
+### New useTemplateProgress Hook
+
+Create a dedicated hook for coverage map progress that queries efficiently:
+
+```typescript
+// Fetch article counts per template from database
+const { data: templateProgress } = useQuery({
+  queryKey: ['template-progress'],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from('content_queue')
+      .select('plan_id, status, content_plans!inner(template_slug)')
+    
+    // Aggregate by template
+    const progress: Record<string, {generated: number, total: number}> = {};
+    // ... aggregation logic
+    return progress;
+  }
+});
+```
 
 ## Files to Modify
 
-### 1. `supabase/functions/bulk-generate-articles/index.ts`
+1. **`src/hooks/useContentQueue.ts`**
+   - Remove limit when querying by planId
+   - Increase global limit to 500-1000
+   - Add separate stats aggregation query
 
-| Section | Changes |
-|---------|---------|
-| Lines 68-136 | Rewrite `parseAIResponse()` with bulletproof JSON handling |
-| Lines 849-856 | Add `generateUniqueSlug()` function before blog post insert |
-| Lines 963-988 | Use unique slug and add comprehensive error logging |
-| Throughout | Add `logStep()` function and structured logging |
+2. **`src/hooks/useTemplateProgress.ts`** (new file)
+   - Dedicated hook for template coverage progress
+   - Efficient aggregation query
 
-### 2. `src/hooks/useContentQueue.ts`
+3. **`src/components/admin/seo/TemplateCoverageMap.tsx`**
+   - Use new useTemplateProgress hook
+   - Remove dependency on useContentQueue for stats
 
-| Section | Changes |
-|---------|---------|
-| Lines 253-289 | Rewrite `retryFailedMutation` to use chunked processing like `bulkGenerateMutation` |
+4. **`src/components/admin/seo/queue/QueueStats.tsx`**
+   - Use aggregated stats from useContentQueue
 
----
+## Expected Results
 
-## Expected Outcomes
+| Metric | Before | After |
+|--------|--------|-------|
+| Poor Workmanship progress | 3/7 | 7/7 ✓ |
+| Queue tab: Queued count | 32 | 191 (actual) |
+| Queue tab: Total visible | 200 | All items with pagination |
+| Retry tracking | Items disappear | All items tracked correctly |
 
-| Issue | Before | After |
-|-------|--------|-------|
-| JSON Parse Errors | ~30% of articles fail | <1% failure rate |
-| Duplicate Slug | Hard failure, article lost | Auto-suffix applied, article saved |
-| Retry Disappearing | Items reset but not processed | Chunked processing with progress |
-| Debugging | Minimal logs | Structured logs showing exact failure point |
+## Deployment
 
----
-
-## Technical Notes
-
-### JSON Parsing Edge Cases Handled
-- Raw newlines inside HTML content strings
-- Already-escaped sequences (won't double-escape)
-- Tab characters
-- Other control characters (0x00-0x1F)
-- Markdown code block wrappers
-- Trailing commas
-
-### Slug Collision Strategy
-1. Try base slug: `how-to-write-a-dispute-letter`
-2. If exists, try: `how-to-write-a-dispute-letter-1`
-3. Up to 10 attempts with incrementing suffix
-4. Final fallback: `how-to-write-a-dispute-letter-1738769123456`
+After implementation, the edge function deployment timeout issue should be resolved separately by:
+1. Waiting for platform stability
+2. Manually triggering deployment via the retry flow
