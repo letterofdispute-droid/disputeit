@@ -54,11 +54,11 @@ const steps = [
     number: '03',
     title: 'Generate Your Letter',
     icon: FileText,
-    description: 'Your personalized dispute letter is created instantly. Preview it, make any final adjustments, then download as PDF or editable Word document.',
+    description: 'Your personalized dispute letter is created instantly. Preview it, make any final adjustments, then download as PDF or edit online with 30-day access.',
     tips: [
       'Review the letter preview before purchasing',
       'PDF is ready to send immediately',
-      'Word format lets you make additional edits',
+      'Edit Access gives you 30 days to customize online',
     ],
   },
   {
@@ -144,11 +144,11 @@ const faqs = [
   },
   {
     question: 'What if my situation isn\'t covered by a template?',
-    answer: 'With 400+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Editable option lets you customize any template.',
+    answer: 'With 400+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Edit Access option gives you 30 days to customize any template in our online editor.',
   },
   {
     question: 'Can I customize the letter after generating it?',
-    answer: 'Yes! The PDF + Editable ($9.99) option includes a Word document you can modify. This is perfect if you need to add specific details or adjust the language for your situation.',
+    answer: 'Yes! The PDF + Edit Access ($14.99) option includes 30 days of in-app editing. Make changes anytime, then export to PDF when you\'re ready to send.',
   },
   {
     question: 'Are these letters legally binding?',
@@ -165,12 +165,12 @@ const howToSchema = {
   "@context": "https://schema.org",
   "@type": "HowTo",
   "name": "How to Create a Professional Dispute Letter",
-  "description": "Create legally-sound dispute letters in minutes with DisputeLetters. Our step-by-step process guides you from selecting the right template to sending your letter.",
+  "description": "Create legally-sound dispute letters in minutes with Letter of Dispute. Our step-by-step process guides you from selecting the right template to sending your letter.",
   "totalTime": "PT10M",
   "estimatedCost": {
     "@type": "MonetaryAmount",
     "currency": "USD",
-    "value": "5.99"
+    "value": "9.99"
   },
   "step": [
     {
@@ -189,7 +189,7 @@ const howToSchema = {
       "@type": "HowToStep",
       "position": 3,
       "name": "Generate Your Letter",
-      "text": "Your personalized dispute letter is created instantly. Preview it, then download as PDF or editable Word document."
+      "text": "Your personalized dispute letter is created instantly. Preview it, then download as PDF or use our in-app editor with Edit Access."
     },
     {
       "@type": "HowToStep",
@@ -218,8 +218,8 @@ const HowItWorksPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="How It Works - Create Dispute Letters in Minutes | DisputeLetters"
-        description="Learn how DisputeLetters helps you create professional dispute letters in minutes. Our 4-step process guides you from choosing a template to sending your letter and getting results."
+        title="How It Works - Create Dispute Letters in Minutes | Letter of Dispute"
+        description="Learn how Letter of Dispute helps you create professional dispute letters in minutes. Our 4-step process guides you from choosing a template to sending your letter and getting results."
         canonicalPath="/how-it-works"
       />
       <Helmet>
@@ -236,7 +236,7 @@ const HowItWorksPage = () => {
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="font-serif text-4xl md:text-5xl font-bold text-primary-foreground mb-6">
-              How DisputeLetters Works
+              How Letter of Dispute Works
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-8">
               Create professional dispute letters in minutes—not hours. No legal expertise needed. 
