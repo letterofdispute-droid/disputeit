@@ -61,6 +61,170 @@ function mapToBlogCategory(templateCategory: string): { slug: string; name: stri
 // Build category context for the AI
 const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n');
 
+// ============================================
+// JSON PARSING HELPERS (Robust AI response handling)
+// ============================================
+
+function sanitizeJsonString(raw: string): string {
+  // Step 1: Remove markdown code blocks
+  let cleaned = raw.trim();
+  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+  else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
+  cleaned = cleaned.trim();
+  
+  // Step 2: Fix control characters in string values
+  // Replace actual newlines/tabs within strings with their escaped versions
+  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (char) => {
+    switch (char) {
+      case '\n': return '\\n';
+      case '\r': return '\\r';
+      case '\t': return '\\t';
+      default: return ''; // Remove other control characters
+    }
+  });
+  
+  // Step 3: Fix trailing commas (common AI mistake)
+  cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+  
+  return cleaned;
+}
+
+function parseAIResponse(content: string): any {
+  // First attempt: direct sanitization
+  let sanitized = sanitizeJsonString(content);
+  
+  try {
+    return JSON.parse(sanitized);
+  } catch (firstError) {
+    console.log('First parse attempt failed, trying recovery...', (firstError as Error).message);
+    
+    // Second attempt: more aggressive cleanup
+    // Try to extract just the JSON object
+    const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        // Additional cleanup for the extracted JSON
+        let extracted = jsonMatch[0];
+        // Fix common issues like unescaped quotes in strings
+        extracted = extracted.replace(/([^\\])\\([^"\\nrt])/g, '$1\\\\$2');
+        return JSON.parse(extracted);
+      } catch (secondError) {
+        console.error('Recovery parse also failed:', (secondError as Error).message);
+        throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+      }
+    }
+    
+    throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+  }
+}
+
+// ============================================
+// KEYWORD VALIDATION & REMEDIATION
+// ============================================
+
+function validateKeywordUsage(content: string, keywords: string[]): {
+  found: string[];
+  missing: string[];
+  coverage: number;
+} {
+  if (!keywords || keywords.length === 0) {
+    return { found: [], missing: [], coverage: 100 };
+  }
+  
+  const lowerContent = content.toLowerCase();
+  const found: string[] = [];
+  const missing: string[] = [];
+  
+  for (const keyword of keywords) {
+    const keywordLower = keyword.toLowerCase();
+    // Check for whole word or phrase match
+    if (lowerContent.includes(keywordLower)) {
+      found.push(keyword);
+    } else {
+      missing.push(keyword);
+    }
+  }
+  
+  return {
+    found,
+    missing,
+    coverage: keywords.length > 0 ? (found.length / keywords.length) * 100 : 100
+  };
+}
+
+async function remediateKeywords(
+  apiKey: string,
+  existingContent: string,
+  missingKeywords: string[],
+  articleTitle: string
+): Promise<string> {
+  console.log(`Remediating content to add ${missingKeywords.length} missing keywords: ${missingKeywords.join(', ')}`);
+  
+  const prompt = `You are editing an existing article to naturally incorporate missing keywords.
+
+ARTICLE TITLE: "${articleTitle}"
+
+MISSING KEYWORDS TO ADD (each must appear at least once): ${missingKeywords.join(', ')}
+
+EXISTING HTML CONTENT:
+${existingContent}
+
+INSTRUCTIONS:
+1. Naturally weave each missing keyword into the content - they MUST appear in the output
+2. You can either modify existing paragraphs or add 1-2 new paragraphs where appropriate
+3. Each keyword should appear at least once, preferably 2-3 times
+4. Maintain the same tone, style, and HTML structure
+5. Keep all existing {{MIDDLE_IMAGE_1}} and {{MIDDLE_IMAGE_2}} placeholders intact
+6. Return ONLY the updated HTML content - no explanations, no markdown code blocks
+7. Use American English spelling
+
+OUTPUT: Updated HTML content with all keywords integrated`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.5,
+        max_tokens: 5000,
+      }),
+    });
+
+    if (!response.ok) {
+      console.log('Keyword remediation API call failed, using original content');
+      return existingContent;
+    }
+
+    const data = await response.json();
+    let updatedContent = data.choices[0]?.message?.content || existingContent;
+    
+    // Clean markdown if present
+    if (updatedContent.startsWith('```html')) {
+      updatedContent = updatedContent.slice(7);
+    } else if (updatedContent.startsWith('```')) {
+      updatedContent = updatedContent.slice(3);
+    }
+    if (updatedContent.endsWith('```')) {
+      updatedContent = updatedContent.slice(0, -3);
+    }
+    
+    return updatedContent.trim();
+  } catch (error) {
+    console.error('Keyword remediation error:', error);
+    return existingContent;
+  }
+}
+
+// ============================================
+// IMAGE GENERATION HELPERS
+// ============================================
+
 // Generate SEO-optimized alt text using AI
 async function generateSEOAltText(
   apiKey: string,
@@ -371,6 +535,10 @@ async function fetchPixabayFallback(
   }
 }
 
+// ============================================
+// MAIN REQUEST HANDLER
+// ============================================
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -529,6 +697,13 @@ serve(async (req) => {
           : `7. Include ONE image placeholder:
    - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
         
+        // Build keyword instruction with explicit requirement
+        const keywordList = item.suggested_keywords?.join(', ') || 'consumer rights, dispute letter';
+        const keywordInstruction = item.suggested_keywords && item.suggested_keywords.length > 0
+          ? `MANDATORY KEYWORDS - Each of these MUST appear 2-3 times in the article:
+${item.suggested_keywords.map((kw: string, i: number) => `   ${i + 1}. "${kw}"`).join('\n')}`
+          : `- Naturally incorporate consumer rights and dispute-related terms`;
+        
         const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
 a US platform specializing in consumer rights, dispute resolution, and complaint letters.
 
@@ -550,7 +725,7 @@ ${middleImageInstructions}
 CONTENT REQUIREMENTS:
 - Write approximately ${wordCount} words
 - ${toneInstruction}
-- Naturally incorporate the provided keywords 2-3+ times each
+${keywordInstruction}
 - Write for US readers seeking help with disputes and complaints
 - Include actionable advice and practical steps
 ${categoryInfo ? `- This article relates to our ${categoryInfo.name} category` : ''}
@@ -566,7 +741,7 @@ Title: "${item.suggested_title}"
 Template Context: ${plan.template_name}
 Category: ${plan.category_id}
 ${plan.subcategory_slug ? `Subcategory: ${plan.subcategory_slug}` : ''}
-Keywords: ${item.suggested_keywords?.join(', ') || 'consumer rights, dispute letter'}
+Keywords: ${keywordList}
 
 Respond with ONLY this JSON:
 {
@@ -604,19 +779,8 @@ Respond with ONLY this JSON:
         const aiData = await aiResponse.json();
         let content = aiData.choices[0]?.message?.content;
         
-        // Parse JSON
-        let cleanedContent = content.trim();
-        if (cleanedContent.startsWith('```json')) {
-          cleanedContent = cleanedContent.slice(7);
-        } else if (cleanedContent.startsWith('```')) {
-          cleanedContent = cleanedContent.slice(3);
-        }
-        if (cleanedContent.endsWith('```')) {
-          cleanedContent = cleanedContent.slice(0, -3);
-        }
-        cleanedContent = cleanedContent.trim();
-
-        const parsedContent = JSON.parse(cleanedContent);
+        // Use robust JSON parsing
+        const parsedContent = parseAIResponse(content);
 
         // === TITLE VALIDATION GATE ===
         // Ensure the AI hasn't drifted back to banned patterns
@@ -631,6 +795,35 @@ Respond with ONLY this JSON:
         // Validate content for AI-typical phrases
         const validationResult = validateContent(parsedContent.content);
         console.log(`Content validation for "${item.suggested_title}":`, getViolationSummary(validationResult));
+
+        // === KEYWORD VALIDATION & REMEDIATION ===
+        const keywordValidation = validateKeywordUsage(
+          parsedContent.content,
+          item.suggested_keywords || []
+        );
+        
+        console.log(`Keyword coverage: ${keywordValidation.coverage.toFixed(0)}%`);
+        if (keywordValidation.found.length > 0) {
+          console.log(`Keywords found: ${keywordValidation.found.join(', ')}`);
+        }
+        if (keywordValidation.missing.length > 0) {
+          console.log(`Keywords missing: ${keywordValidation.missing.join(', ')}`);
+        }
+        
+        // If keywords are missing, trigger remediation
+        if (keywordValidation.missing.length > 0) {
+          console.log(`Triggering keyword remediation for ${keywordValidation.missing.length} missing keywords...`);
+          parsedContent.content = await remediateKeywords(
+            apiKey,
+            parsedContent.content,
+            keywordValidation.missing,
+            parsedContent.title
+          );
+          
+          // Re-validate after remediation
+          const recheckValidation = validateKeywordUsage(parsedContent.content, item.suggested_keywords || []);
+          console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%, Still missing: ${recheckValidation.missing.join(', ') || 'none'}`);
+        }
 
         // Generate slug from title
         const slug = parsedContent.title

@@ -28,7 +28,7 @@ const resources = [
     icon: MessageCircle,
   },
   {
-    title: 'Blog',
+    title: 'Knowledge Center',
     description: 'Tips, guides, and articles',
     href: '/articles',
     icon: BookOpen,
