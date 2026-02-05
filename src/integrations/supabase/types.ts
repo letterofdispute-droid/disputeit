@@ -80,11 +80,14 @@ export type Database = {
           created_at: string
           excerpt: string | null
           featured: boolean
+          featured_image_alt: string | null
           featured_image_url: string | null
           id: string
           meta_description: string | null
           meta_title: string | null
+          middle_image_1_alt: string | null
           middle_image_1_url: string | null
+          middle_image_2_alt: string | null
           middle_image_2_url: string | null
           published_at: string | null
           read_time: string | null
@@ -108,11 +111,14 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          middle_image_1_alt?: string | null
           middle_image_1_url?: string | null
+          middle_image_2_alt?: string | null
           middle_image_2_url?: string | null
           published_at?: string | null
           read_time?: string | null
@@ -136,11 +142,14 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          middle_image_1_alt?: string | null
           middle_image_1_url?: string | null
+          middle_image_2_alt?: string | null
           middle_image_2_url?: string | null
           published_at?: string | null
           read_time?: string | null

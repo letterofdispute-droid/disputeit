@@ -9,6 +9,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Style variants for image diversity
+const STYLE_VARIANTS = ['warm', 'cool', 'neutral', 'dramatic'] as const;
+type StyleVariant = typeof STYLE_VARIANTS[number];
+
+const STYLE_GUIDES: Record<StyleVariant, string> = {
+  warm: 'warm golden lighting, earthy tones, inviting atmosphere, sunset colors',
+  cool: 'cool blue tones, modern clean aesthetic, crisp lighting, professional',
+  neutral: 'balanced natural colors, soft daylight, professional office setting',
+  dramatic: 'high contrast, dynamic shadows, bold composition, striking visuals'
+};
+
 interface BulkGenerateRequest {
   planId?: string;
   categoryId?: string;
@@ -50,10 +61,181 @@ function mapToBlogCategory(templateCategory: string): { slug: string; name: stri
 // Build category context for the AI
 const CATEGORY_CONTEXT = CATEGORIES.map(c => `- ${c.name}: ${c.description}`).join('\n');
 
-// Generate SEO-friendly alt text for an image
-function generateAltText(searchQuery: string, articleTitle: string): string {
-  const cleanTitle = articleTitle.replace(/['"]/g, '').substring(0, 60);
-  return `${cleanTitle} - ${searchQuery}`.substring(0, 125);
+// Generate SEO-optimized alt text using AI
+async function generateSEOAltText(
+  apiKey: string,
+  articleTitle: string,
+  imageContext: string
+): Promise<string> {
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          {
+            role: 'system',
+            content: `Generate SEO-optimized alt text for a blog image.
+Rules:
+- 10-15 words maximum
+- Describe the likely scene based on the article topic
+- Naturally incorporate keywords for SEO
+- Be specific and descriptive
+- No phrases like "image of" or "photo of"
+Example: "Frustrated homeowner reviewing contractor documents at kitchen table"`
+          },
+          {
+            role: 'user',
+            content: `Article: "${articleTitle}"\nImage context: ${imageContext}`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 50,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const altText = data.choices[0]?.message?.content?.trim();
+      if (altText) {
+        // Clean and truncate alt text
+        return altText.replace(/['"]/g, '').substring(0, 125);
+      }
+    }
+  } catch (e) {
+    console.log('Alt text generation failed, using title:', e);
+  }
+  return articleTitle.replace(/['"]/g, '').substring(0, 100);
+}
+
+// Generate AI image using Gemini
+async function generateAIImage(
+  supabase: SupabaseClient,
+  apiKey: string,
+  title: string,
+  context: string,
+  storagePath: string,
+  styleVariant: StyleVariant
+): Promise<{ url: string | null; altText: string | null }> {
+  const styleGuide = STYLE_GUIDES[styleVariant];
+  
+  const imagePrompt = `Generate a REALISTIC PHOTOGRAPH for: "${title}"
+Context: ${context}
+
+CRITICAL REQUIREMENTS:
+- Must be a REALISTIC PHOTOGRAPH taken with a professional camera
+- NOT an illustration, clipart, vector graphic, cartoon, or icon
+- Include real people, objects, or environments relevant to the topic
+- Professional stock photo quality, 16:9 aspect ratio
+- Style: ${styleGuide}
+- Suitable for a consumer rights and legal advice website
+- No text overlays in the image
+
+Think: What would a professional stock photographer capture for this topic?`;
+
+  try {
+    console.log(`Generating AI image for: ${title} (style: ${styleVariant})`);
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image',
+        messages: [{ role: 'user', content: imagePrompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI image generation failed:', response.status, errorText);
+      return { url: null, altText: null };
+    }
+
+    const data = await response.json();
+    
+    // Extract image from response - handle both formats
+    const message = data.choices[0]?.message;
+    let base64Data: string | null = null;
+    
+    // Format 1: images array (newer format)
+    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+      const imagePart = message.images.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
+    }
+    
+    // Format 2: content array (older format)
+    if (!base64Data && message?.content && Array.isArray(message.content)) {
+      const imagePart = message.content.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
+    }
+
+    if (!base64Data) {
+      console.error('No image in AI response');
+      return { url: null, altText: null };
+    }
+    
+    // Extract the actual base64 data
+    const base64Match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+    let imageBuffer: Uint8Array;
+    let imageExtension = 'png';
+    
+    if (base64Match) {
+      imageExtension = base64Match[1];
+      const base64String = base64Match[2];
+      imageBuffer = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+    } else {
+      // Assume raw base64
+      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    }
+
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('blog-images')
+      .upload(`${storagePath}.${imageExtension}`, imageBuffer, {
+        contentType: `image/${imageExtension}`,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError.message);
+      return { url: null, altText: null };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(`${storagePath}.${imageExtension}`);
+
+    // Generate SEO alt text
+    const altText = await generateSEOAltText(apiKey, title, context);
+
+    console.log(`AI image uploaded: ${urlData.publicUrl}`);
+    return { url: urlData.publicUrl, altText };
+  } catch (error) {
+    console.error('Error generating AI image:', error);
+    return { url: null, altText: null };
+  }
+}
+
+// Shuffle and get unique styles for an article's images
+function getImageStyles(): { featured: StyleVariant; middle1: StyleVariant; middle2: StyleVariant } {
+  const shuffled = [...STYLE_VARIANTS].sort(() => Math.random() - 0.5);
+  return {
+    featured: shuffled[0],
+    middle1: shuffled[1],
+    middle2: shuffled[2],
+  };
 }
 
 // Extract visual keywords from article title/category using AI
@@ -109,179 +291,10 @@ Return ONLY keywords, no punctuation, no explanation.`
   return title;
 }
 
-// Use AI vision to analyze candidate images and pick the best one for the topic
-async function selectBestImageWithVision(
-  apiKey: string,
-  candidates: Array<{ url: string; largeUrl: string; tags: string; id: number }>,
-  articleTitle: string,
-  category: string
-): Promise<{ url: string; id: number } | null> {
-  if (candidates.length === 0) return null;
-  if (candidates.length === 1) return { url: candidates[0].largeUrl, id: candidates[0].id };
-
-  try {
-    // Prepare image descriptions for the vision model
-    const imageDescriptions = candidates.map((c, i) => 
-      `Image ${i + 1}: Tags: ${c.tags}`
-    ).join('\n');
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an image selector for a consumer rights blog. 
-Pick the BEST image for an article's featured image.
-
-Consider:
-1. Relevance to the article topic
-2. Professional appearance suitable for a blog header
-3. Human elements (people in relevant situations are engaging)
-4. Avoid generic/abstract images when specific ones are available
-
-Respond with ONLY the image number (1, 2, 3, etc.) - nothing else.`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Article: "${articleTitle}" (Category: ${category})\n\nCandidate images:\n${imageDescriptions}\n\nWhich image number is best for this article's featured image?`
-              },
-              ...candidates.slice(0, 5).map(c => ({
-                type: 'image_url',
-                image_url: { url: c.url }
-              }))
-            ]
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 10,
-      }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const choice = data.choices[0]?.message?.content?.trim();
-      const imageIndex = parseInt(choice, 10) - 1;
-      
-      if (!isNaN(imageIndex) && imageIndex >= 0 && imageIndex < candidates.length) {
-        console.log(`Vision AI selected image ${imageIndex + 1} for "${articleTitle}"`);
-        return { url: candidates[imageIndex].largeUrl, id: candidates[imageIndex].id };
-      }
-    }
-  } catch (e) {
-    console.log('Vision analysis failed, using first candidate:', e);
-  }
-  
-  // Fallback to first candidate
-  return { url: candidates[0].largeUrl, id: candidates[0].id };
-}
-
-// Fetch image from Pixabay with vision analysis for featured images
-async function fetchAndUploadFeaturedImage(
+// Fetch image from Pixabay as fallback
+async function fetchPixabayFallback(
   supabase: SupabaseClient,
   apiKey: string,
-  searchQuery: string,
-  storagePath: string,
-  articleTitle: string,
-  category: string
-): Promise<{ url: string | null; altText: string | null }> {
-  try {
-    const pixabayKey = Deno.env.get('PIXABAY_API_KEY');
-    if (!pixabayKey) {
-      console.log('PIXABAY_API_KEY not configured, skipping image');
-      return { url: null, altText: null };
-    }
-
-    // Clean and prepare search query
-    const cleanQuery = searchQuery
-      .replace(/[^\w\s]/g, ' ')
-      .split(' ')
-      .filter(w => w.length > 2)
-      .slice(0, 4)
-      .join(' ');
-
-    // Search Pixabay for multiple candidates
-    const url = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(cleanQuery)}&image_type=photo&orientation=horizontal&per_page=10&safesearch=true`;
-    
-    console.log(`Searching Pixabay for featured image: "${cleanQuery}"`);
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (!data.hits?.length) {
-      console.log(`No Pixabay results for: "${cleanQuery}"`);
-      return { url: null, altText: null };
-    }
-
-    // Prepare candidates for vision analysis
-    const candidates = data.hits.slice(0, 5).map((hit: any) => ({
-      url: hit.webformatURL, // Use smaller thumbnail for vision analysis
-      largeUrl: hit.largeImageURL,
-      tags: hit.tags,
-      id: hit.id
-    }));
-
-    // Use vision AI to pick the best image
-    const selected = await selectBestImageWithVision(
-      apiKey,
-      candidates,
-      articleTitle,
-      category
-    );
-
-    if (!selected) {
-      return { url: null, altText: null };
-    }
-
-    console.log(`Vision selected Pixabay image: ${selected.id}`);
-    
-    // Download the selected image
-    const imageResponse = await fetch(selected.url);
-    if (!imageResponse.ok) {
-      console.error(`Failed to download image: ${imageResponse.status}`);
-      return { url: null, altText: null };
-    }
-    
-    const imageBuffer = await imageResponse.arrayBuffer();
-    
-    // Upload to Supabase storage
-    const { error: uploadError } = await supabase.storage
-      .from('blog-images')
-      .upload(`${storagePath}.jpg`, imageBuffer, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-    
-    if (uploadError) {
-      console.error(`Upload error: ${uploadError.message}`);
-      return { url: null, altText: null };
-    }
-    
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('blog-images')
-      .getPublicUrl(`${storagePath}.jpg`);
-    
-    const altText = generateAltText(cleanQuery, articleTitle);
-    
-    console.log(`Uploaded featured image to: ${urlData.publicUrl}`);
-    return { url: urlData.publicUrl, altText };
-  } catch (error) {
-    console.error('Error fetching/uploading featured image:', error);
-    return { url: null, altText: null };
-  }
-}
-
-// Fetch image from Pixabay, download, and upload to Supabase storage (for middle images - no vision)
-async function fetchAndUploadImage(
-  supabase: SupabaseClient,
   searchQuery: string,
   storagePath: string,
   articleTitle: string
@@ -305,7 +318,7 @@ async function fetchAndUploadImage(
     const randomOffset = Math.floor(Math.random() * 20);
     const url = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(cleanQuery)}&image_type=photo&orientation=horizontal&per_page=30&safesearch=true`;
     
-    console.log(`Searching Pixabay for: "${cleanQuery}"`);
+    console.log(`Pixabay fallback for: "${cleanQuery}"`);
     const response = await fetch(url);
     const data = await response.json();
     
@@ -320,7 +333,7 @@ async function fetchAndUploadImage(
     
     console.log(`Selected Pixabay image: ${hit.id}`);
     
-    // Download the image
+    // Download the selected image
     const imageResponse = await fetch(hit.largeImageURL);
     if (!imageResponse.ok) {
       console.error(`Failed to download image: ${imageResponse.status}`);
@@ -347,12 +360,13 @@ async function fetchAndUploadImage(
       .from('blog-images')
       .getPublicUrl(`${storagePath}.jpg`);
     
-    const altText = generateAltText(cleanQuery, articleTitle);
+    // Generate SEO alt text
+    const altText = await generateSEOAltText(apiKey, articleTitle, cleanQuery);
     
-    console.log(`Uploaded image to: ${urlData.publicUrl}`);
+    console.log(`Pixabay fallback uploaded: ${urlData.publicUrl}`);
     return { url: urlData.publicUrl, altText };
   } catch (error) {
-    console.error('Error fetching/uploading image:', error);
+    console.error('Error fetching Pixabay fallback:', error);
     return { url: null, altText: null };
   }
 }
@@ -592,61 +606,104 @@ Respond with ONLY this JSON:
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
 
-        // === AUTO-FETCH IMAGES WITH AI VISION FOR FEATURED IMAGE ===
-        console.log(`Fetching images for: ${parsedContent.title}`);
+        // === AI-GENERATED IMAGES WITH STYLE DIVERSITY ===
+        console.log(`Generating AI images for: ${parsedContent.title}`);
+        const imageStyles = getImageStyles();
         
-        // 1. Featured image - use AI vision analysis to pick the best one
-        const featuredSearchTerm = await extractVisualKeywords(
+        // 1. Featured image - AI generation with fallback
+        const featuredContext = await extractVisualKeywords(
           apiKey,
           parsedContent.title,
           plan.category_id
         );
-        const { url: featuredImageUrl } = await fetchAndUploadFeaturedImage(
+        let featuredResult = await generateAIImage(
           supabaseAdmin,
           apiKey,
-          featuredSearchTerm,
-          `articles/${slug}-featured`,
           parsedContent.title,
-          plan.category_id
+          featuredContext,
+          `articles/${slug}-featured`,
+          imageStyles.featured
         );
+        
+        // Pixabay fallback if AI generation fails
+        if (!featuredResult.url) {
+          console.log('Featured image AI failed, using Pixabay fallback');
+          featuredResult = await fetchPixabayFallback(
+            supabaseAdmin,
+            apiKey,
+            featuredContext,
+            `articles/${slug}-featured`,
+            parsedContent.title
+          );
+        }
 
         // 2. Check for middle image placeholders and fetch if needed
         const hasMiddleImage1 = parsedContent.content.includes('{{MIDDLE_IMAGE_1}}');
         const hasMiddleImage2 = parsedContent.content.includes('{{MIDDLE_IMAGE_2}}');
 
-        let middleImage1Url: string | null = null;
-        let middleImage2Url: string | null = null;
+        let middleImage1Result: { url: string | null; altText: string | null } = { url: null, altText: null };
+        let middleImage2Result: { url: string | null; altText: string | null } = { url: null, altText: null };
 
         if (hasMiddleImage1) {
-          // Use AI to extract visual keywords for middle image
-          const middleSearchTerm1 = await extractVisualKeywords(
+          // Wait before generating next image to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          const middleContext1 = await extractVisualKeywords(
             apiKey,
             `${item.suggested_keywords?.[0] || plan.template_name} consumer help`,
             plan.category_id
           );
-          const { url } = await fetchAndUploadImage(
+          middleImage1Result = await generateAIImage(
             supabaseAdmin,
-            middleSearchTerm1,
+            apiKey,
+            parsedContent.title,
+            middleContext1,
             `articles/${slug}-middle1`,
-            parsedContent.title
+            imageStyles.middle1
           );
-          middleImage1Url = url;
+          
+          // Pixabay fallback
+          if (!middleImage1Result.url) {
+            console.log('Middle image 1 AI failed, using Pixabay fallback');
+            middleImage1Result = await fetchPixabayFallback(
+              supabaseAdmin,
+              apiKey,
+              middleContext1,
+              `articles/${slug}-middle1`,
+              parsedContent.title
+            );
+          }
         }
 
         if (hasMiddleImage2) {
-          // Use different keywords for second middle image
-          const middleSearchTerm2 = await extractVisualKeywords(
+          // Wait before generating next image to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          const middleContext2 = await extractVisualKeywords(
             apiKey,
             `${item.suggested_keywords?.[1] || 'dispute resolution'} advice`,
             plan.category_id
           );
-          const { url } = await fetchAndUploadImage(
+          middleImage2Result = await generateAIImage(
             supabaseAdmin,
-            middleSearchTerm2,
+            apiKey,
+            parsedContent.title,
+            middleContext2,
             `articles/${slug}-middle2`,
-            parsedContent.title
+            imageStyles.middle2
           );
-          middleImage2Url = url;
+          
+          // Pixabay fallback
+          if (!middleImage2Result.url) {
+            console.log('Middle image 2 AI failed, using Pixabay fallback');
+            middleImage2Result = await fetchPixabayFallback(
+              supabaseAdmin,
+              apiKey,
+              middleContext2,
+              `articles/${slug}-middle2`,
+              parsedContent.title
+            );
+          }
         }
 
         // Create blog post with images and correct blog category
@@ -664,9 +721,12 @@ Respond with ONLY this JSON:
             tags: parsedContent.suggested_tags?.slice(0, 3) || [],
             read_time: readTime,
             status: 'draft',
-            featured_image_url: featuredImageUrl,
-            middle_image_1_url: middleImage1Url,
-            middle_image_2_url: middleImage2Url,
+            featured_image_url: featuredResult.url,
+            featured_image_alt: featuredResult.altText,
+            middle_image_1_url: middleImage1Result.url,
+            middle_image_1_alt: middleImage1Result.altText,
+            middle_image_2_url: middleImage2Result.url,
+            middle_image_2_alt: middleImage2Result.altText,
             related_templates: [plan.template_slug],
             content_plan_id: item.plan_id,
             article_type: item.article_type,
@@ -689,10 +749,10 @@ Respond with ONLY this JSON:
           .eq('id', item.id);
 
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
-        console.log(`Successfully generated: ${blogPost.title} (with ${featuredImageUrl ? 'featured' : 'no featured'} image)`);
+        console.log(`Successfully generated: ${blogPost.title} (with ${featuredResult.url ? 'AI' : 'no'} featured image)`);
 
-        // Small delay between generations to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Longer delay between articles for sequential processing
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
       } catch (error) {
         console.error(`Failed to generate article for queue item ${item.id}:`, error);
