@@ -79,35 +79,49 @@ function logStep(title: string, step: string, message: string, data?: any) {
 // UNIQUE SLUG GENERATION (Collision Handling)
 // ============================================
 
-async function generateUniqueSlug(
+// INSERT with retry for slug collisions (atomic approach - no TOCTOU race condition)
+async function insertBlogPostWithRetry(
   supabase: SupabaseClient,
-  baseSlug: string
-): Promise<string> {
-  let slug = baseSlug;
+  postData: any,
+  maxRetries = 5
+): Promise<{ data: any; error: any }> {
+  let slug = postData.slug;
   let attempt = 0;
   
-  while (attempt < 10) {
-    const { data } = await supabase
+  while (attempt < maxRetries) {
+    const { data, error } = await supabase
       .from('blog_posts')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle();
+      .insert({ ...postData, slug })
+      .select()
+      .single();
     
-    if (!data) {
-      console.log(`[SLUG] Using slug: ${slug}${attempt > 0 ? ` (attempt ${attempt})` : ''}`);
-      return slug; // No collision
+    if (!error) {
+      console.log(`[SLUG_INSERT] Success with slug: ${slug}${attempt > 0 ? ` (attempt ${attempt})` : ''}`);
+      return { data, error: null };
     }
     
-    // Collision - add or increment suffix
-    attempt++;
-    slug = `${baseSlug}-${attempt}`;
-    console.log(`[SLUG] Collision detected, trying: ${slug}`);
+    // Check if it's a slug collision (unique constraint violation)
+    if (error.code === '23505' && error.message.includes('slug')) {
+      attempt++;
+      slug = `${postData.slug}-${attempt}`;
+      console.log(`[SLUG_RETRY] Collision detected, trying: ${slug}`);
+      continue;
+    }
+    
+    // Other error - return immediately
+    return { data: null, error };
   }
   
   // Final fallback with timestamp
-  const finalSlug = `${baseSlug}-${Date.now()}`;
-  console.log(`[SLUG] Max attempts reached, using timestamp: ${finalSlug}`);
-  return finalSlug;
+  const finalSlug = `${postData.slug}-${Date.now()}`;
+  console.log(`[SLUG_RETRY] Max attempts reached, using timestamp: ${finalSlug}`);
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .insert({ ...postData, slug: finalSlug })
+    .select()
+    .single();
+  
+  return { data, error };
 }
 
 // ============================================
@@ -126,6 +140,88 @@ function sanitizeJsonString(raw: string): string {
   cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
   
   return cleaned;
+}
+
+// State-machine approach for proper escape handling
+function fixControlCharacters(json: string): string {
+  let result = '';
+  let inString = false;
+  let escapeNext = false;
+  
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+    const code = char.charCodeAt(0);
+    
+    // If previous char was backslash, this is an escape sequence - pass through
+    if (escapeNext) {
+      result += char;
+      escapeNext = false;
+      continue;
+    }
+    
+    // Backslash starts an escape sequence
+    if (char === '\\') {
+      result += char;
+      escapeNext = true;
+      continue;
+    }
+    
+    // Toggle string state on unescaped quotes
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    
+    // Only escape control characters INSIDE strings
+    if (inString) {
+      if (code === 0x0A) { result += '\\n'; continue; } // Raw newline
+      if (code === 0x0D) { result += '\\r'; continue; } // Carriage return
+      if (code === 0x09) { result += '\\t'; continue; } // Tab
+      if (code < 0x20) { continue; } // Strip other control chars
+    }
+    
+    result += char;
+  }
+  
+  return result;
+}
+
+// Fix unescaped quotes inside HTML content (AI sometimes outputs "quoted words" instead of \"quoted words\")
+function fixHtmlQuotes(json: string): string {
+  // This is a targeted fix for the content field specifically
+  // We need to be careful not to break valid JSON structure
+  try {
+    // Find content field and fix internal unescaped quotes
+    // Pattern: "content": "...<html with unescaped quotes>..."
+    return json.replace(
+      /("content"\s*:\s*")([^]*?)("(?:\s*[,}]))/g,
+      (match, prefix, content, suffix) => {
+        // Check if content has potential HTML with unescaped quotes
+        // Only fix quotes that appear to be inside HTML attributes or text
+        if (!content.includes('<')) {
+          return match; // Not HTML, don't modify
+        }
+        
+        // Escape quotes that aren't already escaped
+        // This regex matches " that isn't preceded by \
+        const fixed = content.replace(/(?<!\\)"/g, (q: string, offset: number, str: string) => {
+          // Don't escape if it looks like a string delimiter
+          // Check if this quote could be ending the JSON string
+          const beforeQuote = str.substring(Math.max(0, offset - 5), offset);
+          if (beforeQuote.match(/[}\]]\s*$/)) {
+            return q; // Likely a real JSON delimiter
+          }
+          return '\\"';
+        });
+        
+        return prefix + fixed + suffix;
+      }
+    );
+  } catch (e) {
+    console.log('[JSON_FIX] fixHtmlQuotes failed, returning original');
+    return json;
+  }
 }
 
 function parseAIResponse(content: string): any {
@@ -157,63 +253,43 @@ function parseAIResponse(content: string): any {
     let extracted = jsonMatch[0];
     console.log('[JSON_PARSE] Extracted JSON length:', extracted.length);
     
-    // Step 4: SMART CHARACTER-BY-CHARACTER ESCAPE
-    // Only escape raw control chars, NOT already-escaped ones
-    const chars = extracted.split('');
-    const fixed: string[] = [];
-    
-    for (let i = 0; i < chars.length; i++) {
-      const char = chars[i];
-      const code = char.charCodeAt(0);
-      const prevChar = i > 0 ? chars[i - 1] : '';
-      
-      // Skip if previous char was backslash (already escaped sequence)
-      if (prevChar === '\\') {
-        fixed.push(char);
-        continue;
-      }
-      
-      // Escape raw control characters
-      if (code === 0x0A) { // Newline
-        fixed.push('\\', 'n');
-      } else if (code === 0x0D) { // Carriage return
-        fixed.push('\\', 'r');
-      } else if (code === 0x09) { // Tab
-        fixed.push('\\', 't');
-      } else if (code < 0x20 && code !== 0x0A && code !== 0x0D && code !== 0x09) {
-        // Strip other control characters
-        continue;
-      } else {
-        fixed.push(char);
-      }
-    }
-    
-    let fixedStr = fixed.join('');
+    // Step 4: Apply state-machine control character fix
+    let fixedStr = fixControlCharacters(extracted);
     
     try {
       const result = JSON.parse(fixedStr);
-      console.log('[JSON_PARSE] Attempt 2 succeeded (after escape fix)');
+      console.log('[JSON_PARSE] Attempt 2 succeeded (after state-machine fix)');
       return result;
     } catch (secondError) {
       console.log('[JSON_PARSE] Attempt 2 failed:', (secondError as Error).message);
       
-      // Step 5: Try fixing common JSON syntax issues
-      fixedStr = fixedStr
-        .replace(/,\s*([\]}])/g, '$1')           // Remove trailing commas
-        .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
-        .replace(/:\s*'([^']*)'/g, ':"$1"');     // Single to double quotes
+      // Step 5: Try fixing HTML quotes
+      fixedStr = fixHtmlQuotes(fixedStr);
       
       try {
         const result = JSON.parse(fixedStr);
-        console.log('[JSON_PARSE] Attempt 3 succeeded (after syntax fix)');
+        console.log('[JSON_PARSE] Attempt 3 succeeded (after HTML quote fix)');
         return result;
       } catch (thirdError) {
-        console.error('[JSON_PARSE] All attempts failed');
-        console.error('[JSON_PARSE] Error position hint:', (firstError as Error).message);
-        console.error('[JSON_PARSE] Content around error:', fixedStr.substring(0, 500));
-        throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+        console.log('[JSON_PARSE] Attempt 3 failed:', (thirdError as Error).message);
+        
+        // Step 6: Last resort - fix common JSON syntax issues
+        fixedStr = fixedStr
+          .replace(/,\s*([\]}])/g, '$1')           // Remove trailing commas
+          .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
+          .replace(/:\s*'([^']*)'/g, ':"$1"');     // Single to double quotes
+        
+        try {
+          const result = JSON.parse(fixedStr);
+          console.log('[JSON_PARSE] Attempt 4 succeeded (after syntax fix)');
+          return result;
+        } catch (fourthError) {
+          console.error('[JSON_PARSE] All attempts failed');
+          console.error('[JSON_PARSE] Error position hint:', (firstError as Error).message);
+          console.error('[JSON_PARSE] Content around error:', fixedStr.substring(0, 500));
+          throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
+        }
       }
-    }
   }
 }
 
@@ -928,16 +1004,14 @@ Respond with ONLY this JSON:
           console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%, Still missing: ${recheckValidation.missing.join(', ') || 'none'}`);
         }
 
-        // Generate UNIQUE slug from title (with collision handling)
-        logStep(item.suggested_title, 'SLUG', 'Generating unique slug');
-        const baseSlug = parsedContent.title
+        // Generate base slug from title (collision handling happens at INSERT time)
+        logStep(item.suggested_title, 'SLUG', 'Generating base slug');
+        const slug = parsedContent.title
           .toLowerCase()
           .replace(/[^a-z0-9\s-]/g, '')
           .replace(/\s+/g, '-')
           .replace(/-+/g, '-')
           .substring(0, 80);
-        
-        const slug = await generateUniqueSlug(supabaseAdmin, baseSlug);
 
         // Calculate read time
         const textContent = parsedContent.content.replace(/<[^>]*>/g, ' ').trim();
@@ -1048,11 +1122,11 @@ Respond with ONLY this JSON:
           }
         }
 
-        // Create blog post with images and correct blog category
-        logStep(item.suggested_title, 'DB_INSERT', 'Inserting blog post', { slug, category: blogCategory.slug });
-        const { data: blogPost, error: postError } = await supabaseAdmin
-          .from('blog_posts')
-          .insert({
+        // Create blog post with images and correct blog category (with slug collision retry)
+        logStep(item.suggested_title, 'DB_INSERT', 'Inserting blog post with retry', { slug, category: blogCategory.slug });
+        const { data: blogPost, error: postError } = await insertBlogPostWithRetry(
+          supabaseAdmin,
+          {
             title: parsedContent.title,
             slug: slug,
             content: parsedContent.content,
@@ -1073,9 +1147,8 @@ Respond with ONLY this JSON:
             related_templates: [plan.template_slug],
             content_plan_id: item.plan_id,
             article_type: item.article_type,
-          })
-          .select()
-          .single();
+          }
+        );
 
         if (postError) {
           logStep(item.suggested_title, 'DB_ERROR', postError.message, { code: postError.code, slug });
