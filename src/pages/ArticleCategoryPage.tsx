@@ -1,17 +1,89 @@
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
-import { getBlogCategoryBySlug, getBlogPostsByCategory, blogCategories } from '@/data/blogPosts';
+import { supabase } from '@/integrations/supabase/client';
+import { getBlogCategoryBySlug, blogCategories } from '@/data/blogPosts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+
+const POSTS_PER_PAGE = 12;
 
 const ArticleCategoryPage = () => {
   const { category } = useParams<{ category: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
   
   const categoryData = category ? getBlogCategoryBySlug(category) : undefined;
-  const posts = category ? getBlogPostsByCategory(category) : [];
+
+  // Fetch posts from database filtered by category
+  const { data: dbPosts, isLoading } = useQuery({
+    queryKey: ['blog-posts-category', category],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .eq('category_slug', category)
+        .order('published_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!category,
+  });
+
+  // Pagination logic
+  const posts = dbPosts || [];
+  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setSearchParams({ page: page.toString() });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      if (currentPage > 3) {
+        pages.push('ellipsis');
+      }
+      
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis');
+      }
+      
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
 
   if (!categoryData) {
     return <Navigate to="/articles" replace />;
@@ -34,7 +106,7 @@ const ArticleCategoryPage = () => {
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <Link to="/articles" className="text-muted-foreground hover:text-foreground">
-              Blog
+              Knowledge Center
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <span className="text-foreground font-medium">{categoryData.name}</span>
@@ -83,49 +155,122 @@ const ArticleCategoryPage = () => {
       {/* Posts Grid */}
       <section className="py-12 md:py-16 bg-background">
         <div className="container-wide">
-          {posts.length > 0 ? (
+          {isLoading ? (
+            // Loading skeleton
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {posts.map((post) => (
-                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
                   <CardHeader>
-                    <Badge variant="secondary" className="w-fit mb-2">
-                      {post.category}
-                    </Badge>
-                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
-                      <Link to={`/articles/${post.categorySlug}/${post.slug}`}>
-                        {post.title}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {post.excerpt}
-                    </CardDescription>
+                    <Skeleton className="h-5 w-20 mb-2" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-4 w-3/4 mt-2" />
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(post.publishedAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {post.readTime}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-16" />
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+          ) : paginatedPosts.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedPosts.map((post) => (
+                  <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
+                    <CardHeader>
+                      <Badge variant="secondary" className="w-fit mb-2">
+                        {post.category}
+                      </Badge>
+                      <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
+                        <Link to={`/articles/${post.category_slug}/${post.slug}`}>
+                          {post.title}
+                        </Link>
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {post.excerpt}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            }) : 'Draft'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {post.read_time || '5 min read'}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-12">
+                  <Pagination>
+                    <PaginationContent>
+                      {currentPage > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                      
+                      {getPageNumbers().map((page, index) => (
+                        <PaginationItem key={index}>
+                          {page === 'ellipsis' ? (
+                            <PaginationEllipsis />
+                          ) : (
+                            <PaginationLink
+                              onClick={() => handlePageChange(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          )}
+                        </PaginationItem>
+                      ))}
+                      
+                      {currentPage < totalPages && (
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           ) : (
+            // Empty state
             <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">No articles in this category yet.</p>
-              <Button variant="outline" asChild>
-                <Link to="/articles">View All Articles</Link>
-              </Button>
+              <div className="max-w-md mx-auto">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  No articles in this category yet
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  We're working on adding more content to the {categoryData.name} category. 
+                  Check back soon or explore our other articles.
+                </p>
+                <Button variant="outline" asChild>
+                  <Link to="/articles">View All Articles</Link>
+                </Button>
+              </div>
             </div>
           )}
         </div>
