@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { X, Check, CreditCard, FileText, Edit, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +44,7 @@ const pricingOptions = [
 
 const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: PricingModalProps) => {
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -143,7 +146,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
                     variant={option.popular ? 'accent' : 'outline'}
                     className="w-full"
                     onClick={() => handlePurchase(option.id)}
-                    disabled={isLoading !== null}
+                    disabled={isLoading !== null || !agreedToTerms}
                   >
                     {loading ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -157,8 +160,30 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
             })}
           </div>
 
+          {/* Terms Agreement Checkbox */}
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox 
+                checked={agreedToTerms} 
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm text-muted-foreground leading-relaxed">
+                I agree to the{' '}
+                <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy" target="_blank" className="text-primary hover:underline font-medium">
+                  Privacy Policy
+                </Link>
+                . I understand that templates are provided "as is" for informational purposes only and should be used at my own discretion and risk.
+              </span>
+            </label>
+          </div>
+
           {/* Re-edit info */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center">
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">Need to edit after 30 days?</span>
               {' '}Unlock editing access again for just $5.99

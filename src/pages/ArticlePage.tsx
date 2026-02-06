@@ -6,7 +6,7 @@ import SEOHead from '@/components/SEOHead';
 import { getBlogPostBySlug, getBlogPostsByCategory } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen, List, FileText } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowRight, User, Share2, Eye, Twitter, Linkedin, Copy, Check, BookOpen, List, FileText, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -412,6 +412,11 @@ const ArticlePage = () => {
                       {post.views.toLocaleString()} views
                     </span>
                   </>}
+                <span className="hidden sm:inline text-white/40">|</span>
+                <span className="flex items-center gap-2 text-white/50">
+                  <UserCheck className="h-4 w-4" />
+                  Human reviewed
+                </span>
               </div>
             </div>
             

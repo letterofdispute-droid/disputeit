@@ -525,7 +525,14 @@ Deno.serve(async (req) => {
 
     switch (sitemapType) {
       case 'index':
-        xml = generateSitemapIndex(today);
+        // For index, we need to know how many blog pages exist
+        const { count: totalBlogPosts } = await supabase
+          .from('blog_posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'published');
+        
+        const blogPages = Math.max(1, Math.ceil((totalBlogPosts || 0) / 1000));
+        xml = generateSitemapIndex(today, blogPages);
         break;
       
       case 'static':
@@ -541,23 +548,37 @@ Deno.serve(async (req) => {
         break;
       
       case 'blog':
-        // Fetch published blog posts from database
-        const { data: posts, error } = await supabase
+        // Pagination for blog sitemap
+        const URLS_PER_PAGE = 1000;
+        const page = parseInt(url.searchParams.get('page') || '1');
+        const offset = (page - 1) * URLS_PER_PAGE;
+        
+        // Fetch published blog posts from database with pagination
+        const { data: posts, error, count } = await supabase
           .from('blog_posts')
-          .select('slug, category_slug, updated_at, published_at')
+          .select('slug, category_slug, updated_at, published_at', { count: 'exact' })
           .eq('status', 'published')
-          .order('published_at', { ascending: false });
+          .order('published_at', { ascending: false })
+          .range(offset, offset + URLS_PER_PAGE - 1);
         
         if (error) {
           console.error('Error fetching blog posts:', error);
-          xml = generateBlogSitemap([], today);
+          xml = generateBlogSitemap([], today, page, 1);
         } else {
-          xml = generateBlogSitemap(posts || [], today);
+          const totalPages = Math.ceil((count || 0) / URLS_PER_PAGE);
+          xml = generateBlogSitemap(posts || [], today, page, totalPages);
         }
         break;
       
       default:
-        xml = generateSitemapIndex(today);
+        // Default to index - need blog count
+        const { count: defaultBlogCount } = await supabase
+          .from('blog_posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'published');
+        
+        const defaultBlogPages = Math.max(1, Math.ceil((defaultBlogCount || 0) / 1000));
+        xml = generateSitemapIndex(today, defaultBlogPages);
     }
 
     return new Response(xml, {
@@ -582,7 +603,16 @@ Deno.serve(async (req) => {
   }
 });
 
-function generateSitemapIndex(today: string): string {
+function generateSitemapIndex(today: string, blogPages: number = 1): string {
+  // Generate blog sitemap entries based on number of pages
+  const blogSitemapEntries = Array.from({ length: blogPages }, (_, i) => {
+    const pageNum = i + 1;
+    return `  <sitemap>
+    <loc>${FUNCTION_URL}?type=blog&amp;page=${pageNum}</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>`;
+  }).join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
@@ -597,10 +627,7 @@ function generateSitemapIndex(today: string): string {
     <loc>${FUNCTION_URL}?type=templates</loc>
     <lastmod>${today}</lastmod>
   </sitemap>
-  <sitemap>
-    <loc>${FUNCTION_URL}?type=blog</loc>
-    <lastmod>${today}</lastmod>
-  </sitemap>
+${blogSitemapEntries}
 </sitemapindex>`;
 }
 
@@ -743,7 +770,7 @@ ${templateUrls}
 </urlset>`;
 }
 
-function generateBlogSitemap(posts: BlogPost[], today: string): string {
+function generateBlogSitemap(posts: BlogPost[], today: string, currentPage: number = 1, totalPages: number = 1): string {
   const urls = posts.map(post => {
     const lastmod = post.updated_at?.split('T')[0] || post.published_at?.split('T')[0] || today;
     return `  <url>
@@ -754,8 +781,13 @@ function generateBlogSitemap(posts: BlogPost[], today: string): string {
   </url>`;
   }).join('\n');
 
+  // Add comment about pagination status
+  const paginationComment = totalPages > 1 
+    ? `<!-- Blog Sitemap Page ${currentPage} of ${totalPages} -->\n` 
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${paginationComment}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>`;
 }
