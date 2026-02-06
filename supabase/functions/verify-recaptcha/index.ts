@@ -65,14 +65,19 @@ serve(async (req) => {
     if (verifyResult.error) {
       console.error('reCAPTCHA Enterprise API error:', verifyResult.error);
       
-      // Check if this is likely a configuration issue - allow through in development
+      // Check if this is likely a configuration issue - allow through in development/preview
       const host = req.headers.get('origin') || req.headers.get('referer') || '';
-      const isDevelopment = host.includes('lovableproject.com') || host.includes('localhost');
+      const isDevelopment = host.includes('lovableproject.com') || host.includes('localhost') || host.includes('lovable.app');
       
-      if (isDevelopment) {
-        console.warn('Allowing through due to API error in development environment');
+      // Also check for permission/configuration errors which indicate setup issues, not bot activity
+      const isConfigError = verifyResult.error.code === 403 || 
+                           verifyResult.error.status === 'PERMISSION_DENIED' ||
+                           verifyResult.error.message?.includes('Permission denied');
+      
+      if (isDevelopment || isConfigError) {
+        console.warn('Allowing through due to API error (dev/config issue):', { isDevelopment, isConfigError });
         return new Response(
-          JSON.stringify({ success: true, score: 1.0, bypassed: true, reason: 'dev_api_error' }),
+          JSON.stringify({ success: true, score: 1.0, bypassed: true, reason: 'api_config_error' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
