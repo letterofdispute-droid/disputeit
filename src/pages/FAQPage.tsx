@@ -32,7 +32,7 @@ const faqCategories = [
       },
       {
         question: 'What if my situation isn\'t covered by a template?',
-        answer: 'With 400+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Editable option lets you customize any template.',
+        answer: 'With 500+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Editable option lets you customize any template.',
       },
     ],
   },
@@ -308,7 +308,7 @@ const FAQPage = () => {
               Ready to Create Your Letter?
             </h2>
             <p className="text-lg text-primary-foreground/80 mb-8">
-              Browse 400+ templates and resolve your dispute today.
+              Browse 500+ templates and resolve your dispute today.
             </p>
             <Button variant="accent" size="lg" asChild>
               <Link to="/#letters">

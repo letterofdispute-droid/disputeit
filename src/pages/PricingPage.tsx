@@ -144,7 +144,7 @@ const faqs = [
   },
   {
     question: 'What if my dispute doesn\'t fit any template?',
-    answer: 'With 400+ templates across 13 categories, we cover most consumer situations. Try our AI assistant to describe your issue, and it will recommend the closest match. The Edit Access option lets you customize any template to fit your specific needs.',
+    answer: 'With 500+ templates across 13 categories, we cover most consumer situations. Try our AI assistant to describe your issue, and it will recommend the closest match. The Edit Access option lets you customize any template to fit your specific needs.',
   },
 ];
 

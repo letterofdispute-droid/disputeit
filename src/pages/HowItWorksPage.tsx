@@ -144,7 +144,7 @@ const faqs = [
   },
   {
     question: 'What if my situation isn\'t covered by a template?',
-    answer: 'With 400+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Edit Access option gives you 30 days to customize any template in our online editor.',
+    answer: 'With 500+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Edit Access option gives you 30 days to customize any template in our online editor.',
   },
   {
     question: 'Can I customize the letter after generating it?',
