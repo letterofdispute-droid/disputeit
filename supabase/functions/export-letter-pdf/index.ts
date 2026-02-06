@@ -7,6 +7,7 @@ import {
   drawDate,
   drawDeliveryMethod,
   drawSubjectLine,
+  drawSalutation,
   drawBodyContent,
   drawSignatureBlock,
   drawFooter,
@@ -82,6 +83,9 @@ async function generateProfessionalPDF(
   
   // Draw subject line
   yPosition = drawSubjectLine(page, fonts, yPosition, subject);
+  
+  // Draw salutation (professional legal format)
+  yPosition = drawSalutation(page, fonts, yPosition);
   
   // Draw body content
   const { pages, finalY } = drawBodyContent(
