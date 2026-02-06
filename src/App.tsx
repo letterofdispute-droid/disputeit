@@ -46,6 +46,7 @@ import AdminPageEditor from "./pages/admin/AdminPageEditor";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminHealth from "./pages/admin/AdminHealth";
 import SettingsPage from "./pages/SettingsPage";
 import GuidesPage from "./pages/GuidesPage";
 import CategoryGuidePage from "./pages/CategoryGuidePage";
@@ -117,6 +118,7 @@ const App = () => (
             <Route path="templates" element={<AdminTemplates />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="health" element={<AdminHealth />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
           
