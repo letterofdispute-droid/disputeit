@@ -22,7 +22,7 @@ const outputDir = path.join(__dirname, '..', 'dist');
 const SUPABASE_URL = 'https://koulmtfnkuapzigcplov.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
 
-const SITE_URL = 'https://disputeletters.com';
+const SITE_URL = 'https://letterofdispute.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
 
 // ============================================
