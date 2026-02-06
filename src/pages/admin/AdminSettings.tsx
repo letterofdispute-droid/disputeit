@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Database, Download, Users, ShoppingCart, BarChart3, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import ExportButton from '@/components/admin/export/ExportButton';
 
 interface Settings {
   site_name: string;
@@ -269,6 +270,98 @@ const AdminSettings = () => {
           )}
           {isSaving ? 'Saving...' : 'Save Settings'}
         </Button>
+
+        {/* Data Export Section */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Data Export & Backup
+            </CardTitle>
+            <CardDescription>
+              Download your platform data as CSV files for backup or analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Quick Export Dropdown */}
+            <div className="flex flex-col gap-3">
+              <Label>Quick Export</Label>
+              <ExportButton 
+                showAll 
+                label="Export All Data" 
+                variant="default"
+                showDatePicker
+              />
+              <p className="text-xs text-muted-foreground">
+                Select a data type to download as CSV. Orders and analytics support date filtering.
+              </p>
+            </div>
+
+            {/* Individual Export Options */}
+            <div className="border-t border-border pt-4 mt-4">
+              <Label className="mb-3 block">Individual Exports</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Users</p>
+                      <p className="text-xs text-muted-foreground">All profiles</p>
+                    </div>
+                  </div>
+                  <ExportButton exportType="users" size="sm" variant="ghost" label="" />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Orders</p>
+                      <p className="text-xs text-muted-foreground">All purchases</p>
+                    </div>
+                  </div>
+                  <ExportButton exportType="orders" size="sm" variant="ghost" label="" showDatePicker />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Analytics</p>
+                      <p className="text-xs text-muted-foreground">Event data</p>
+                    </div>
+                  </div>
+                  <ExportButton exportType="analytics" size="sm" variant="ghost" label="" showDatePicker />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Blog Posts</p>
+                      <p className="text-xs text-muted-foreground">All articles</p>
+                    </div>
+                  </div>
+                  <ExportButton exportType="blog_posts" size="sm" variant="ghost" label="" />
+                </div>
+              </div>
+            </div>
+
+            {/* Backup Info */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
+              <div className="flex items-start gap-3">
+                <Download className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Regular Backups Recommended</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    We recommend exporting your data regularly for safekeeping. All exports are in CSV format 
+                    and can be opened in Excel, Google Sheets, or any spreadsheet application.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
