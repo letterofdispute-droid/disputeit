@@ -68,3 +68,9 @@ verify_jwt = false
 
 [functions.process-refund]
 verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.send-admin-email]
+verify_jwt = false
