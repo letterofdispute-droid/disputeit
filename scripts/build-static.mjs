@@ -13,16 +13,14 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const outputDir = path.join(__dirname, '..', 'dist');
 
-// Initialize Supabase client for fetching blog posts
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://koulmtfnkuapzigcplov.supabase.co';
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Supabase config for fetching blog posts via REST API
+const SUPABASE_URL = 'https://koulmtfnkuapzigcplov.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
 
 const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
@@ -273,16 +271,23 @@ async function loadBlogPosts() {
   console.log('   Fetching blog posts from database...');
   
   try {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('slug, category_slug, updated_at')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false });
+    // Use native fetch with Supabase REST API
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/blog_posts?status=eq.published&select=slug,category_slug,updated_at&order=published_at.desc`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
     
-    if (error) {
-      console.log(`   ⚠️ Could not fetch blog posts from database: ${error.message}`);
+    if (!response.ok) {
+      console.log(`   ⚠️ Could not fetch blog posts: ${response.status} ${response.statusText}`);
       return [];
     }
+    
+    const data = await response.json();
     
     return data.map(post => ({
       slug: post.slug,
