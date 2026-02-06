@@ -13,10 +13,16 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distDir = path.join(__dirname, '..', 'dist');
+const publicDir = path.join(__dirname, '..', 'public');
+
+// Initialize Supabase client for fetching blog posts
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://koulmtfnkuapzigcplov.supabase.co';
+const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const SITE_URL = 'https://disputeletters.com';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
@@ -264,26 +270,29 @@ async function loadAllTemplates() {
 // ============================================
 
 async function loadBlogPosts() {
-  const blogFilePath = path.join(__dirname, '../src/data/blogPosts.ts');
-  if (!fs.existsSync(blogFilePath)) {
-    console.log('   ⚠️ Blog posts file not found');
+  console.log('   Fetching blog posts from database...');
+  
+  try {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('slug, category_slug, updated_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false });
+    
+    if (error) {
+      console.log(`   ⚠️ Could not fetch blog posts from database: ${error.message}`);
+      return [];
+    }
+    
+    return data.map(post => ({
+      slug: post.slug,
+      categorySlug: post.category_slug,
+      lastmod: post.updated_at?.split('T')[0] || BUILD_DATE
+    }));
+  } catch (err) {
+    console.log(`   ⚠️ Error fetching blog posts: ${err.message}`);
     return [];
   }
-  
-  const content = fs.readFileSync(blogFilePath, 'utf-8');
-  const posts = [];
-  
-  // Match blog post objects - extract slug and categorySlug
-  const postMatches = content.matchAll(/{\s*slug:\s*['"]([^'"]+)['"],[\s\S]*?categorySlug:\s*['"]([^'"]+)['"]/g);
-  
-  for (const match of postMatches) {
-    posts.push({
-      slug: match[1],
-      categorySlug: match[2],
-    });
-  }
-  
-  return posts;
 }
 
 // ============================================
@@ -434,11 +443,11 @@ function generateBlogSitemap(blogPosts) {
 // ============================================
 
 async function buildSitemaps() {
-  console.log('\n🗺️  Generating sitemaps to dist/...\n');
+  console.log('\n🗺️  Generating sitemaps to public/...\n');
   
-  // Ensure dist directory exists
-  if (!fs.existsSync(distDir)) {
-    fs.mkdirSync(distDir, { recursive: true });
+  // Ensure public directory exists
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
   }
   
   // Load all templates
@@ -455,24 +464,24 @@ async function buildSitemaps() {
   console.log('\n📄 Generating sitemap files...');
   
   // Sitemap index
-  fs.writeFileSync(path.join(distDir, 'sitemap.xml'), generateSitemapIndex());
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapIndex());
   console.log('   ✅ sitemap.xml (index)');
   
   // Static pages sitemap
-  fs.writeFileSync(path.join(distDir, 'sitemap-static.xml'), generateStaticSitemap());
+  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), generateStaticSitemap());
   console.log('   ✅ sitemap-static.xml');
   
   // Categories + subcategories + guides sitemap
-  fs.writeFileSync(path.join(distDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
+  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   console.log(`   ✅ sitemap-categories.xml (${categories.length} categories + ${subcatCount} subcategories + ${categories.length} guides)`);
   
   // Templates sitemap
-  fs.writeFileSync(path.join(distDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
+  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
   console.log(`   ✅ sitemap-templates.xml (${templates.length} templates)`);
   
   // Blog sitemap
-  fs.writeFileSync(path.join(distDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
+  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
   console.log(`   ✅ sitemap-blog.xml (${blogCategories.length} categories + ${blogPosts.length} posts)`);
   
   // Summary
