@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.export-data]
 verify_jwt = false
+
+[functions.system-health]
+verify_jwt = false
