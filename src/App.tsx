@@ -40,6 +40,7 @@ import AdminBlog from "./pages/admin/AdminBlog";
 import AdminBlogEditor from "./pages/admin/AdminBlogEditor";
 import AIBlogGenerator from "./pages/admin/AIBlogGenerator";
 import AdminPages from "./pages/admin/AdminPages";
+import AdminTemplates from "./pages/admin/AdminTemplates";
 import AdminPageEditor from "./pages/admin/AdminPageEditor";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="pages" element={<AdminPages />} />
             <Route path="pages/new" element={<AdminPageEditor />} />
             <Route path="pages/edit/:id" element={<AdminPageEditor />} />
+            <Route path="templates" element={<AdminTemplates />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="settings" element={<AdminSettings />} />
