@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
 
 interface BlogPost {
   id: string;
@@ -53,6 +54,8 @@ interface BlogPost {
   author: string;
   created_at: string;
   views: number;
+  meta_title: string | null;
+  meta_description: string | null;
 }
 
 // Blog categories available in the system
@@ -65,9 +68,12 @@ const BLOG_CATEGORIES = [
   { slug: 'success-stories', name: 'Success Stories' },
 ];
 
+const POSTS_PER_PAGE = 100;
+
 const AdminBlog = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
@@ -77,18 +83,64 @@ const AdminBlog = () => {
   const [isBulkPublishing, setIsBulkPublishing] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [draftCount, setDraftCount] = useState(0);
   const { toast } = useToast();
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, categoryFilter, debouncedSearch]);
+
+  // Fetch posts when dependencies change
   useEffect(() => {
     fetchPosts();
+  }, [currentPage, statusFilter, categoryFilter, debouncedSearch]);
+
+  // Fetch draft count separately (for header display)
+  useEffect(() => {
+    fetchDraftCount();
   }, []);
 
-  const fetchPosts = async () => {
-    const { data, error } = await supabase
+  const fetchDraftCount = async () => {
+    const { count } = await supabase
       .from('blog_posts')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'draft');
+    setDraftCount(count || 0);
+  };
 
+  const fetchPosts = useCallback(async () => {
+    setIsLoading(true);
+    
+    let query = supabase
+      .from('blog_posts')
+      .select('id, title, slug, category, category_slug, status, author, created_at, views, meta_title, meta_description', { count: 'exact' });
+    
+    // Apply filters on backend
+    if (statusFilter !== 'all') {
+      query = query.eq('status', statusFilter);
+    }
+    if (categoryFilter !== 'all') {
+      query = query.eq('category_slug', categoryFilter);
+    }
+    if (debouncedSearch) {
+      query = query.ilike('title', `%${debouncedSearch}%`);
+    }
+    
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE - 1);
+    
     if (error) {
       toast({
         title: 'Error fetching posts',
@@ -97,9 +149,10 @@ const AdminBlog = () => {
       });
     } else {
       setPosts(data || []);
+      setTotalCount(count || 0);
     }
     setIsLoading(false);
-  };
+  }, [currentPage, statusFilter, categoryFilter, debouncedSearch, toast]);
 
   const deletePost = async (id: string) => {
     const { error } = await supabase
@@ -119,6 +172,7 @@ const AdminBlog = () => {
         description: 'The blog post has been deleted.',
       });
       fetchPosts();
+      fetchDraftCount();
     }
     setDeletingPostId(null);
   };
@@ -148,6 +202,7 @@ const AdminBlog = () => {
       });
       setSelectedIds(new Set());
       fetchPosts();
+      fetchDraftCount();
     }
     setIsBulkPublishing(false);
   };
@@ -174,16 +229,17 @@ const AdminBlog = () => {
       });
       setSelectedIds(new Set());
       fetchPosts();
+      fetchDraftCount();
     }
     setIsBulkDeleting(false);
     setShowBulkDeleteDialog(false);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredPosts.length) {
+    if (selectedIds.size === posts.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredPosts.map(p => p.id)));
+      setSelectedIds(new Set(posts.map(p => p.id)));
     }
   };
 
@@ -197,17 +253,9 @@ const AdminBlog = () => {
     setSelectedIds(newSet);
   };
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || post.category_slug === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE);
 
-  // Count drafts for quick action
-  const draftCount = posts.filter(p => p.status === 'draft').length;
-
-  if (isLoading) {
+  if (isLoading && posts.length === 0) {
     return (
       <div className="p-6 lg:p-8 flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -222,7 +270,7 @@ const AdminBlog = () => {
         <div>
           <h1 className="font-serif text-3xl font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground">
-            Manage your blog content
+            {totalCount.toLocaleString()} total posts
             {draftCount > 0 && (
               <span className="ml-2 text-amber-600">• {draftCount} drafts</span>
             )}
@@ -342,89 +390,114 @@ const AdminBlog = () => {
       {/* Posts Table */}
       <Card>
         <CardContent className="p-0">
-          {filteredPosts.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={selectedIds.size === filteredPosts.length && filteredPosts.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[40%]">Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Views</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPosts.map((post) => (
-                  <TableRow key={post.id} data-selected={selectedIds.has(post.id) ? 'true' : undefined} className={selectedIds.has(post.id) ? 'bg-muted' : ''}>
-                    <TableCell>
+          {posts.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">
                       <Checkbox
-                        checked={selectedIds.has(post.id)}
-                        onCheckedChange={() => toggleSelect(post.id)}
+                        checked={selectedIds.size === posts.length && posts.length > 0}
+                        onCheckedChange={toggleSelectAll}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-foreground">{post.title}</p>
-                        <p className="text-sm text-muted-foreground">{post.author}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{post.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={post.status === 'published' ? 'default' : 'outline'}
-                        className={post.status === 'published' ? 'bg-success' : ''}
-                      >
-                        {post.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {post.views.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(`/articles/${post.category_slug}/${post.slug || post.id}`, '_blank')}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/blog/edit/${post.id}`)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => setDeletingPostId(post.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                    </TableHead>
+                    <TableHead className="w-[45%]">Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Views</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {posts.map((post) => (
+                    <TableRow key={post.id} data-selected={selectedIds.has(post.id) ? 'true' : undefined} className={selectedIds.has(post.id) ? 'bg-muted' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(post.id)}
+                          onCheckedChange={() => toggleSelect(post.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">{post.title}</p>
+                          <p className="text-sm text-muted-foreground">{post.author}</p>
+                          {post.meta_title && (
+                            <p className="text-xs text-muted-foreground/70 truncate max-w-md">
+                              <span className="font-medium">Meta:</span> {post.meta_title}
+                            </p>
+                          )}
+                          {post.meta_description && (
+                            <p className="text-xs text-muted-foreground/60 truncate max-w-md">
+                              {post.meta_description}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{post.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={post.status === 'published' ? 'default' : 'outline'}
+                          className={post.status === 'published' ? 'bg-success' : ''}
+                        >
+                          {post.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(post.created_at).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {post.views.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => window.open(`/articles/${post.category_slug}/${post.slug || post.id}`, '_blank')}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/blog/edit/${post.id}`)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => setDeletingPostId(post.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="p-4 border-t">
+                  <QueuePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={totalCount}
+                    itemsPerPage={POSTS_PER_PAGE}
+                  />
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
