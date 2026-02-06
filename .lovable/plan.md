@@ -1,121 +1,127 @@
 
-# Serve Sitemaps from Your Domain
+# Plan: Enhanced Pages Dashboard with Pagination and SEO Fields
 
-## Goal
-Make sitemaps accessible at `disputeletters.com/sitemap.xml` like every other website, instead of the ugly Supabase function URL.
-
-## Strategy: Hybrid Static + Dynamic
-
-Since templates and categories rarely change but blog posts are added frequently, we'll use a hybrid approach:
-- Static pages, categories, templates → generated at build time, served from domain
-- Blog posts → fetched from database at build time (updated on each deploy)
+## Overview
+Transform the existing `AdminPages` dashboard to match the `AdminBlog` pattern, adding:
+- Backend pagination (100 pages per page)
+- SEO meta title and description display in the table
+- Debounced search with backend filtering
+- Total count and draft count display in header
 
 ---
 
 ## Changes Required
 
-### 1. Update Build Script Output Location
+### 1. Update AdminPages.tsx
 
-**File:** `scripts/build-static.mjs`
+**Add new state variables:**
+- `debouncedSearch` for debounced search input
+- `currentPage` for pagination
+- `totalCount` for total pages count
+- `draftCount` for draft pages count
 
-Change output from `dist/` to `public/` so sitemaps are included in the deployed static files and accessible at root URLs.
+**Update the Page interface** to include `meta_title` and `meta_description` fields.
 
-```text
-Before: const distDir = path.join(__dirname, '..', 'dist');
-After:  const publicDir = path.join(__dirname, '..', 'public');
-```
+**Implement backend pagination:**
+- Use `.range()` for paginated queries (100 items per page)
+- Add `count: 'exact'` to get total count
+- Move filtering to backend with `.eq()` and `.ilike()`
 
-### 2. Update robots.txt
+**Update table display:**
+- Add SEO meta title and description below each page title (same pattern as AdminBlog)
+- Truncate long descriptions with `truncate max-w-md`
 
-**File:** `public/robots.txt`
+**Add pagination component:**
+- Import and use `QueuePagination` component
+- Display "Showing X-Y of Z items" info
 
-Point to the clean domain URL instead of the Supabase function.
-
-```text
-Before: Sitemap: https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap
-After:  Sitemap: https://disputeletters.com/sitemap.xml
-```
-
-### 3. Fetch Blog Posts from Database at Build Time
-
-**File:** `scripts/build-static.mjs`
-
-Replace the static file read with a Supabase query to get all published blog posts. This ensures the blog sitemap includes all database content.
-
-Add Supabase client initialization and query:
-
-```text
-// At top of file
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
-
-// Replace loadBlogPosts function
-async function loadBlogPosts() {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('slug, category_slug, updated_at')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false });
-  
-  if (error) {
-    console.log('   ⚠️ Could not fetch blog posts from database');
-    return [];
-  }
-  
-  return data.map(post => ({
-    slug: post.slug,
-    categorySlug: post.category_slug,
-    lastmod: post.updated_at?.split('T')[0] || BUILD_DATE
-  }));
-}
-```
-
-### 4. Update Sitemap Index URLs
-
-**File:** `scripts/build-static.mjs`
-
-Change the sitemap index to use the actual domain:
-
-```text
-Before: <loc>${SITE_URL}/sitemap-static.xml</loc>
-After:  <loc>https://disputeletters.com/sitemap-static.xml</loc>
-```
-
-(Note: SITE_URL is already set to https://disputeletters.com so this may be fine)
+**Update header:**
+- Show total count and draft count like AdminBlog
 
 ---
 
-## Result After Deploy
+## Technical Details
 
-| URL | Content |
-|-----|---------|
-| `disputeletters.com/sitemap.xml` | Sitemap index pointing to sub-sitemaps |
-| `disputeletters.com/sitemap-static.xml` | Static pages (home, about, pricing, etc.) |
-| `disputeletters.com/sitemap-categories.xml` | All categories + subcategories + guides |
-| `disputeletters.com/sitemap-templates.xml` | All 400+ letter templates |
-| `disputeletters.com/sitemap-blog.xml` | All published blog articles |
+```text
++------------------------------------------+
+|  Pages Dashboard                         |
+|  X total pages • Y drafts                |
++------------------------------------------+
+| [Search...] [All] [Published] [Draft]    |
++------------------------------------------+
+| Title          | Slug | Status | Updated |
+|----------------|------|--------|---------|
+| Page Title     | /url | pub    | Jan 1   |
+|   Meta: SEO... |      |        |         |
+|   Desc: ...    |      |        |         |
++------------------------------------------+
+| Showing 1-100 of 500  [< 1 2 3 ... >]   |
++------------------------------------------+
+```
+
+### Key Code Changes:
+
+1. **Constants:**
+   - `const PAGES_PER_PAGE = 100;`
+
+2. **State additions:**
+   ```tsx
+   const [debouncedSearch, setDebouncedSearch] = useState('');
+   const [currentPage, setCurrentPage] = useState(1);
+   const [totalCount, setTotalCount] = useState(0);
+   const [draftCount, setDraftCount] = useState(0);
+   ```
+
+3. **Query modification:**
+   ```tsx
+   const { data, error, count } = await supabase
+     .from('pages')
+     .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description', { count: 'exact' })
+     .order('sort_order', { ascending: true })
+     .range((currentPage - 1) * PAGES_PER_PAGE, currentPage * PAGES_PER_PAGE - 1);
+   ```
+
+4. **Table cell for SEO display:**
+   ```tsx
+   <TableCell>
+     <div className="space-y-1">
+       <p className="font-medium">{page.title}</p>
+       {page.meta_title && (
+         <p className="text-xs text-muted-foreground/70 truncate max-w-md">
+           <span className="font-medium">Meta:</span> {page.meta_title}
+         </p>
+       )}
+       {page.meta_description && (
+         <p className="text-xs text-muted-foreground/60 truncate max-w-md">
+           {page.meta_description}
+         </p>
+       )}
+     </div>
+   </TableCell>
+   ```
 
 ---
 
-## Trade-off Consideration
+## Implementation Sequence
 
-With this approach, new blog posts require a **publish/deploy** to appear in the sitemap. This is standard for most static sites and is fine for SEO because:
-
-1. Search engines don't crawl sitemaps constantly - typically every few days
-2. You can trigger a deploy after adding new content
-3. New posts are still discoverable through internal links immediately
-
-If you need real-time sitemap updates without deploying, we can keep the edge function as a fallback and have the sitemap index reference it for just the blog portion.
+1. Add imports for `QueuePagination`, `Card`, `CardContent`, `Loader2`
+2. Add new state variables and constants
+3. Add debounce effect for search
+4. Add reset-to-page-1 effect when filters change
+5. Update `fetchPages` to use backend pagination and filtering
+6. Add `fetchDraftCount` function
+7. Update Page interface with SEO fields
+8. Update header to show counts
+9. Update table columns and cells to display SEO info
+10. Add `QueuePagination` component below table
+11. Remove client-side filtering logic (move to backend)
 
 ---
 
-## Technical Notes
+## Files to Modify
 
-- The build script runs automatically on every deploy via the Vite plugin
-- Environment variables (`VITE_SUPABASE_URL`) are available during build
-- Files in `public/` are served at root URLs after deploy
-- No changes needed to the edge function - it can remain as a backup or be removed later
+| File | Changes |
+|------|---------|
+| `src/pages/admin/AdminPages.tsx` | Complete refactor with pagination and SEO fields |
+
+No database changes required - the `pages` table already has `meta_title` and `meta_description` columns.
