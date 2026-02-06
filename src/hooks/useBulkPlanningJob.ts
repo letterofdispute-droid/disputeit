@@ -117,6 +117,51 @@ export function useBulkPlanningJob(categoryId?: string) {
     },
   });
 
+  // Retry failed templates from a job
+  const retryFailedMutation = useMutation({
+    mutationFn: async (job: BulkPlanningJob) => {
+      if (job.failed_slugs.length === 0) {
+        throw new Error('No failed templates to retry');
+      }
+
+      // Build templates array from failed slugs
+      // We need the template names, so we'll use slugs converted to names
+      const templates = job.failed_slugs.map(slug => ({
+        slug,
+        name: slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        subcategorySlug: undefined,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('bulk-plan-category', {
+        body: {
+          categoryId: job.category_id,
+          categoryName: job.category_name,
+          valueTier: job.value_tier as ValueTier,
+          templates,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to retry bulk planning');
+      return data as { success: boolean; jobId: string; status: string; total: number };
+    },
+    onSuccess: (data, job) => {
+      toast({
+        title: 'Retrying failed templates',
+        description: `Retrying ${job.failed_slugs.length} templates in background...`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-job', job.category_id] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-jobs-active'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to retry',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Get progress percentage
   const getProgress = (job: BulkPlanningJob | null): number => {
     if (!job || job.total_templates === 0) return 0;
@@ -134,6 +179,8 @@ export function useBulkPlanningJob(categoryId?: string) {
     startBulkPlan: startBulkPlanMutation.mutate,
     startBulkPlanAsync: startBulkPlanMutation.mutateAsync,
     isStarting: startBulkPlanMutation.isPending,
+    retryFailed: retryFailedMutation.mutate,
+    isRetrying: retryFailedMutation.isPending,
     getProgress,
     isComplete,
     isProcessing,
