@@ -88,11 +88,14 @@ const Footer = () => {
 
         {/* Disclaimer */}
         <div className="mt-12 pt-8 border-t border-border">
-          <div className="bg-muted/50 rounded-lg p-4 mb-6">
+          <div className="bg-muted/50 rounded-lg p-4 mb-6 space-y-2">
             <p className="text-xs text-muted-foreground text-center">
               <strong>Important Disclaimer:</strong> This service provides letter templates and does not constitute legal advice. 
               The letters generated are not reviewed by legal professionals and do not guarantee any specific outcome. 
               For legal matters, please consult a qualified attorney in your jurisdiction.
+            </p>
+            <p className="text-xs text-muted-foreground text-center">
+              All content on this site is reviewed and moderated by our editorial team.
             </p>
           </div>
           <p className="text-sm text-muted-foreground text-center">

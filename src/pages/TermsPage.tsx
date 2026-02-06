@@ -66,7 +66,7 @@ const TermsPage = () => {
 
             {/* Important Disclaimer */}
             <section className="bg-muted/50 rounded-lg p-6 border border-border">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">4. Important Legal Disclaimer</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">4. Important Legal Disclaimer — "As Is" Use</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="font-semibold text-foreground">
                   DISPUTELETTERS IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.
@@ -74,12 +74,18 @@ const TermsPage = () => {
                 <p>
                   The letters, templates, and information provided through our Service are for informational and educational purposes only. They do not constitute legal advice, and no attorney-client relationship is created by your use of the Service.
                 </p>
+                <p className="font-semibold text-foreground">
+                  ALL TEMPLATES AND LETTERS ARE PROVIDED "AS IS" AND ARE USED AT YOUR OWN RISK.
+                </p>
                 <p>
-                  Our letter templates are designed to help you communicate effectively with businesses and organizations but:
+                  By purchasing or using any letter template from our Service, you acknowledge and agree that:
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Templates are guidelines only:</strong> Our letters serve as starting points and general guidance for your communications. They are not tailored to your specific legal situation or jurisdiction.</li>
+                  <li><strong>You assume all responsibility:</strong> You are solely responsible for reviewing, customizing, and sending any letter generated through our Service. The outcome and consequences of using our templates are entirely your responsibility.</li>
+                  <li><strong>No guaranteed outcomes:</strong> We make no representations or warranties that using our templates will result in any particular outcome, resolution, refund, or response from the recipient.</li>
+                  <li><strong>No liability accepted:</strong> DisputeLetters, its owners, employees, and affiliates shall not be held liable for any damages, losses, or negative consequences arising from your use of our templates.</li>
                   <li>Are not reviewed by attorneys for your specific situation</li>
-                  <li>Do not guarantee any particular outcome or response</li>
                   <li>Should not be relied upon as a substitute for professional legal counsel</li>
                   <li>May not be appropriate for all situations or jurisdictions</li>
                 </ul>
@@ -187,9 +193,17 @@ const TermsPage = () => {
             {/* Disclaimer of Warranties */}
             <section>
               <h2 className="text-2xl font-semibold text-foreground mb-4">11. Disclaimer of Warranties</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
-              </p>
+              <div className="text-muted-foreground space-y-4">
+                <p className="leading-relaxed">
+                  THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
+                </p>
+                <p className="leading-relaxed font-semibold">
+                  ALL LETTER TEMPLATES AND GENERATED CONTENT ARE PROVIDED "AS IS" WITHOUT ANY WARRANTY OF EFFECTIVENESS OR SUITABILITY. YOU EXPRESSLY AGREE THAT YOUR USE OF OUR TEMPLATES IS AT YOUR SOLE RISK.
+                </p>
+                <p className="leading-relaxed">
+                  We do not guarantee that any letter will achieve your desired result, and we expressly disclaim any liability for the outcome of disputes you pursue using our templates. Results may vary based on your specific circumstances, the recipient's policies, applicable laws, and many other factors outside our control.
+                </p>
+              </div>
             </section>
 
             {/* Indemnification */}
