@@ -16,7 +16,7 @@ export default function SEODashboard() {
           SEO Content Command Center
         </h1>
         <p className="text-muted-foreground mt-1">
-          Orchestrate your content strategy across 450+ templates
+          Orchestrate your content strategy across 500+ templates
         </p>
       </div>
 
