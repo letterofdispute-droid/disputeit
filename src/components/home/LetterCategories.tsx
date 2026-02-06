@@ -10,7 +10,7 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = ({ category }: CategoryCardProps) => {
-  const { imageUrl, altText, isLoading } = useCategoryImage(
+  const { imageUrl, altText, isLoading, fallbackGradient } = useCategoryImage(
     category.id,
     category.imageKeywords[0],
     'category-card',
@@ -46,11 +46,11 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
           <div className="absolute inset-0 bg-muted animate-pulse" />
         )}
         
-        {/* Fallback background if no image */}
+        {/* Fallback gradient background if no image */}
         {!imageUrl && !isLoading && (
           <div 
-            className="absolute inset-0"
-            style={{ backgroundColor: category.color }}
+            className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient || ''}`}
+            style={!fallbackGradient ? { backgroundColor: category.color } : undefined}
           />
         )}
 

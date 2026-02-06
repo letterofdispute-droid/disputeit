@@ -21,7 +21,25 @@ interface UseCategoryImageResult {
   altText: string | null;
   isLoading: boolean;
   error: string | null;
+  fallbackGradient: string | null;
 }
+
+// Fallback gradients for each category when images fail to load
+const FALLBACK_GRADIENTS: Record<string, string> = {
+  'refunds': 'from-amber-600 to-orange-700',
+  'housing': 'from-blue-600 to-indigo-700',
+  'damaged-goods': 'from-red-600 to-rose-700',
+  'utilities': 'from-emerald-600 to-teal-700',
+  'vehicle': 'from-slate-600 to-zinc-700',
+  'financial': 'from-green-600 to-emerald-700',
+  'travel': 'from-sky-600 to-blue-700',
+  'insurance': 'from-purple-600 to-violet-700',
+  'employment': 'from-indigo-600 to-purple-700',
+  'ecommerce': 'from-orange-600 to-amber-700',
+  'contractors': 'from-yellow-600 to-orange-700',
+  'hoa': 'from-lime-600 to-green-700',
+  'healthcare': 'from-pink-600 to-rose-700',
+};
 
 // In-memory cache to prevent duplicate fetches during same session
 const imageCache = new Map<string, CategoryImage>();
@@ -35,6 +53,7 @@ export function useCategoryImage(
   const [image, setImage] = useState<CategoryImage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fallbackGradient, setFallbackGradient] = useState<string | null>(null);
 
   useEffect(() => {
     if (!categoryId || !searchQuery) {
@@ -91,7 +110,12 @@ export function useCategoryImage(
         }
       } catch (err) {
         console.error('Error fetching category image:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch image');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch image';
+        setError(errorMessage);
+        // Set fallback gradient when fetch fails
+        if (categoryId) {
+          setFallbackGradient(FALLBACK_GRADIENTS[categoryId] || 'from-gray-600 to-gray-800');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -107,6 +131,7 @@ export function useCategoryImage(
     altText: image?.alt_text || null,
     isLoading,
     error,
+    fallbackGradient,
   };
 }
 
