@@ -87,7 +87,7 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-x-hidden max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-serif font-bold text-foreground">

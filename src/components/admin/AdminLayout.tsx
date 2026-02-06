@@ -30,7 +30,7 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile header */}
       <div className="lg:hidden sticky top-0 z-50 flex items-center justify-between p-4 bg-card border-b border-border">
         <Link to="/admin" className="font-serif text-xl font-semibold text-foreground">
@@ -44,7 +44,7 @@ const AdminLayout = () => {
       <div className="flex">
         {/* Sidebar */}
         <aside className={cn(
-          "fixed left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200",
+          "fixed left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200 flex-shrink-0",
           "top-[57px] h-[calc(100vh-57px)] lg:top-0 lg:h-auto lg:inset-y-0",
           "lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -61,7 +61,7 @@ const AdminLayout = () => {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1">
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href, item.exact);
@@ -77,8 +77,8 @@ const AdminLayout = () => {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
-                    {item.label}
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 );
               })}
@@ -90,8 +90,8 @@ const AdminLayout = () => {
                 to="/"
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                <LogOut className="h-5 w-5" />
-                Back to Site
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">Back to Site</span>
               </Link>
             </div>
           </div>
@@ -106,7 +106,7 @@ const AdminLayout = () => {
         )}
 
         {/* Main content */}
-        <main className="flex-1 min-h-screen">
+        <main className="flex-1 min-h-screen overflow-x-hidden w-full min-w-0">
           <Outlet />
         </main>
       </div>

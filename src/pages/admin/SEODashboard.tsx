@@ -11,7 +11,7 @@ import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
 
 export default function SEODashboard() {
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-x-hidden max-w-full">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-serif font-bold text-foreground">
