@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, MoreHorizontal, Mail, Ban, 
-  UserCheck, Calendar, Loader2, Shield, ShieldOff
+  UserCheck, Calendar, Loader2, Shield, ShieldOff, Trash2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,8 +36,11 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import UserDetailModal from '@/components/admin/users/UserDetailModal';
+import DeleteUserDialog from '@/components/admin/users/DeleteUserDialog';
+import EmailUserDialog from '@/components/admin/users/EmailUserDialog';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   user_id: string;
   first_name: string | null;
@@ -59,6 +62,10 @@ const AdminUsers = () => {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [adminAction, setAdminAction] = useState<'grant' | 'revoke'>('grant');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'admins'>('all');
   const [stats, setStats] = useState({
     total: 0,
     pro: 0,
@@ -162,8 +169,41 @@ const AdminUsers = () => {
     const name = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
     const email = (user.email || '').toLowerCase();
     const query = searchQuery.toLowerCase();
-    return name.includes(query) || email.includes(query);
+    const matchesSearch = name.includes(query) || email.includes(query);
+    
+    if (statusFilter === 'active') {
+      return matchesSearch && user.status === 'active';
+    }
+    if (statusFilter === 'admins') {
+      return matchesSearch && user.is_admin;
+    }
+    return matchesSearch;
   });
+
+  const handleViewDetails = (user: UserProfile) => {
+    setSelectedUser(user);
+    setDetailModalOpen(true);
+  };
+
+  const handleEmailFromDetail = () => {
+    setDetailModalOpen(false);
+    setEmailDialogOpen(true);
+  };
+
+  const handleDeleteFromDetail = () => {
+    setDetailModalOpen(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: UserProfile) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleEmailUser = (user: UserProfile) => {
+    setSelectedUser(user);
+    setEmailDialogOpen(true);
+  };
 
   const getInitials = (firstName?: string | null, lastName?: string | null, email?: string | null) => {
     if (firstName && lastName) {
@@ -239,10 +279,28 @@ const AdminUsers = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline">All</Button>
-              <Button variant="ghost">Active</Button>
-              <Button variant="ghost">Admins</Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button 
+                variant={statusFilter === 'all' ? 'outline' : 'ghost'}
+                onClick={() => setStatusFilter('all')}
+                className="w-full sm:w-auto"
+              >
+                All
+              </Button>
+              <Button 
+                variant={statusFilter === 'active' ? 'outline' : 'ghost'}
+                onClick={() => setStatusFilter('active')}
+                className="w-full sm:w-auto"
+              >
+                Active
+              </Button>
+              <Button 
+                variant={statusFilter === 'admins' ? 'outline' : 'ghost'}
+                onClick={() => setStatusFilter('admins')}
+                className="w-full sm:w-auto"
+              >
+                Admins
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -318,13 +376,13 @@ const AdminUsers = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Email User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDetails(user)}>
                             <UserCheck className="h-4 w-4 mr-2" />
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEmailUser(user)}>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Email User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {user.is_admin ? (
@@ -343,11 +401,18 @@ const AdminUsers = () => {
                           )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            className="text-destructive"
                             onClick={() => handleSuspendAction(user)}
                           >
                             <Ban className="h-4 w-4 mr-2" />
                             {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={user.user_id === currentUser?.id}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -412,6 +477,30 @@ const AdminUsers = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Detail Modal */}
+      <UserDetailModal
+        user={selectedUser}
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        onEmailUser={handleEmailFromDetail}
+        onDeleteUser={handleDeleteFromDetail}
+      />
+
+      {/* Delete User Dialog */}
+      <DeleteUserDialog
+        user={selectedUser}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onSuccess={fetchUsers}
+      />
+
+      {/* Email User Dialog */}
+      <EmailUserDialog
+        user={selectedUser}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+      />
     </div>
   );
 };
