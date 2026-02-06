@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
+
+const PAGES_PER_PAGE = 100;
 
 interface Page {
   id: string;
@@ -41,6 +44,8 @@ interface Page {
   author: string | null;
   created_at: string;
   updated_at: string;
+  meta_title: string | null;
+  meta_description: string | null;
 }
 
 interface PageWithChildren extends Page {
@@ -52,31 +57,86 @@ const AdminPages = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [draftCount, setDraftCount] = useState(0);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter]);
+
+  // Fetch pages with pagination and filtering
   useEffect(() => {
     fetchPages();
+  }, [currentPage, debouncedSearch, statusFilter]);
+
+  // Fetch draft count separately
+  useEffect(() => {
+    fetchDraftCount();
   }, []);
 
   const fetchPages = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('pages')
-        .select('*')
+        .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description', { count: 'exact' })
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      // Apply search filter
+      if (debouncedSearch) {
+        query = query.or(`title.ilike.%${debouncedSearch}%,slug.ilike.%${debouncedSearch}%`);
+      }
+
+      // Apply pagination
+      const from = (currentPage - 1) * PAGES_PER_PAGE;
+      const to = from + PAGES_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
       if (error) throw error;
       setPages(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Error fetching pages:', error);
       toast({ title: 'Error', description: 'Failed to load pages.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchDraftCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('pages')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'draft');
+
+      if (error) throw error;
+      setDraftCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching draft count:', error);
     }
   };
 
@@ -86,6 +146,7 @@ const AdminPages = () => {
       if (error) throw error;
       toast({ title: 'Page deleted', description: 'The page has been deleted.' });
       fetchPages();
+      fetchDraftCount();
     } catch (error) {
       console.error('Error deleting page:', error);
       toast({ title: 'Error', description: 'Failed to delete page.', variant: 'destructive' });
@@ -137,17 +198,13 @@ const AdminPages = () => {
     return parent?.title || null;
   };
 
-  const filteredPages = buildHierarchy(pages).filter(page => {
-    const matchesSearch = page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         page.slug.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || page.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const hierarchicalPages = buildHierarchy(pages);
+  const totalPages = Math.ceil(totalCount / PAGES_PER_PAGE);
 
-  if (isLoading) {
+  if (isLoading && pages.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -158,7 +215,9 @@ const AdminPages = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Pages</h1>
-          <p className="text-muted-foreground">Manage your website pages</p>
+          <p className="text-muted-foreground">
+            {totalCount} total pages • {draftCount} drafts
+          </p>
         </div>
         <Button onClick={() => navigate('/admin/pages/new')}>
           <Plus className="h-4 w-4 mr-2" />
@@ -203,75 +262,100 @@ const AdminPages = () => {
       </div>
 
       {/* Table */}
-      {filteredPages.length > 0 ? (
-        <div className="rounded-md border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPages.map((page) => (
-                <TableRow key={page.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {(page.depth || 0) > 0 && (
-                        <span className="text-muted-foreground" style={{ marginLeft: `${(page.depth || 0) * 20}px` }}>
-                          <ChevronRight className="h-4 w-4 inline" />
-                        </span>
-                      )}
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{page.title}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">/{page.slug}</TableCell>
-                  <TableCell>
-                    <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
-                      {page.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {getParentTitle(page.parent_id) || '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(page.updated_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => window.open(`/${page.slug}`, '_blank')}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/admin/pages/edit/${page.id}`)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDeletingPageId(page.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      {hierarchicalPages.length > 0 ? (
+        <div className="space-y-4">
+          <div className="rounded-md border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[300px]">Title</TableHead>
+                  <TableHead>Slug</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Updated</TableHead>
+                  <TableHead className="w-[70px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {hierarchicalPages.map((page) => (
+                  <TableRow key={page.id}>
+                    <TableCell>
+                      <div className="flex items-start gap-2">
+                        {(page.depth || 0) > 0 && (
+                          <span className="text-muted-foreground mt-1" style={{ marginLeft: `${(page.depth || 0) * 20}px` }}>
+                            <ChevronRight className="h-4 w-4 inline" />
+                          </span>
+                        )}
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="font-medium">{page.title}</span>
+                          </div>
+                          {page.meta_title && (
+                            <p className="text-xs text-muted-foreground/70 truncate max-w-md">
+                              <span className="font-medium">Meta:</span> {page.meta_title}
+                            </p>
+                          )}
+                          {page.meta_description && (
+                            <p className="text-xs text-muted-foreground/60 truncate max-w-md">
+                              {page.meta_description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">/{page.slug}</TableCell>
+                    <TableCell>
+                      <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
+                        {page.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getParentTitle(page.parent_id) || '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(page.updated_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => window.open(`/${page.slug}`, '_blank')}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/pages/edit/${page.id}`)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeletingPageId(page.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <QueuePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={totalCount}
+            itemsPerPage={PAGES_PER_PAGE}
+          />
         </div>
       ) : (
         <div className="text-center py-12 border rounded-lg bg-card">
