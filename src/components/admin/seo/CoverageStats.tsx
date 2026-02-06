@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { FileText, Link2, CheckCircle2, AlertCircle, LayoutGrid } from 'lucide-react';
+import { FileText, Link2, CheckCircle2, LayoutGrid, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useContentPlans } from '@/hooks/useContentPlans';
 import { useContentQueue } from '@/hooks/useContentQueue';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
 import { allTemplates } from '@/data/allTemplates';
+import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 
 export default function CoverageStats() {
   const { plans } = useContentPlans();
@@ -31,6 +32,13 @@ export default function CoverageStats() {
     const linksPending = suggestions?.filter(s => s.status === 'pending').length || 0;
     const linksApplied = suggestions?.filter(s => s.status === 'applied').length || 0;
 
+    // Calculate tier distribution
+    const tierCounts = {
+      high: plans?.filter(p => p.value_tier === 'high').length || 0,
+      medium: plans?.filter(p => p.value_tier === 'medium').length || 0,
+      longtail: plans?.filter(p => p.value_tier === 'longtail').length || 0,
+    };
+
     // Calculate average articles per template
     const avgArticlesPerTemplate = templatesWithPlans > 0 
       ? ((articlesGenerated + articlesQueued) / templatesWithPlans).toFixed(1)
@@ -38,6 +46,12 @@ export default function CoverageStats() {
 
     // Coverage percentage
     const coveragePercent = Math.round((templatesWithPlans / totalTemplates) * 100);
+
+    // Format tier distribution string
+    const tierDistribution = Object.entries(tierCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([tier, count]) => `${count} ${VALUE_TIERS[tier as ValueTier].name.toLowerCase()}`)
+      .join(' • ');
 
     return {
       totalTemplates,
@@ -50,6 +64,8 @@ export default function CoverageStats() {
       linksApplied,
       avgArticlesPerTemplate,
       coveragePercent,
+      tierCounts,
+      tierDistribution,
     };
   }, [plans, queueItems, suggestions]);
 
@@ -62,6 +78,13 @@ export default function CoverageStats() {
       color: 'text-blue-500',
     },
     {
+      title: 'Tier Distribution',
+      value: stats.templatesWithPlans.toString(),
+      description: stats.tierDistribution || 'No plans yet',
+      icon: TrendingUp,
+      color: 'text-emerald-500',
+    },
+    {
       title: 'Articles Generated',
       value: stats.articlesGenerated.toString(),
       description: `${stats.articlesQueued} queued • ${stats.articlesPublished} published`,
@@ -71,7 +94,7 @@ export default function CoverageStats() {
     {
       title: 'Avg Articles/Template',
       value: stats.avgArticlesPerTemplate,
-      description: 'Target: 8-10 per template',
+      description: 'Target: 5-10 per template',
       icon: CheckCircle2,
       color: 'text-purple-500',
     },
@@ -85,7 +108,7 @@ export default function CoverageStats() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (

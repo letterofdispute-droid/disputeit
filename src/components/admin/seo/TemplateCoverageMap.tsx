@@ -15,10 +15,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useContentPlans, ContentPlan } from '@/hooks/useContentPlans';
 import { useTemplateProgress } from '@/hooks/useTemplateProgress';
+import { useCategoryTierSettings } from '@/hooks/useCategoryTierSettings';
 import { allTemplates } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 import ClusterPlanner from './ClusterPlanner';
+import BulkPlanConfirmDialog from './BulkPlanConfirmDialog';
 
 interface CategoryGroup {
   id: string;
@@ -31,9 +33,16 @@ interface CategoryGroup {
   }>;
 }
 
+interface BulkPlanState {
+  categoryId: string;
+  categoryName: string;
+  templates: CategoryGroup['templates'];
+}
+
 export default function TemplateCoverageMap() {
   const { plans, plansLoading, generatePlan, isGeneratingPlan } = useContentPlans();
   const { data: templateProgress, isLoading: progressLoading } = useTemplateProgress();
+  const { getTierForCategory } = useCategoryTierSettings();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -43,6 +52,10 @@ export default function TemplateCoverageMap() {
     categoryId: string;
     subcategorySlug?: string;
   } | null>(null);
+  
+  // Bulk plan confirmation dialog state
+  const [bulkPlanState, setBulkPlanState] = useState<BulkPlanState | null>(null);
+  const [isBulkPlanning, setIsBulkPlanning] = useState(false);
 
   // Group templates by category
   const categoryGroups = useMemo((): CategoryGroup[] => {
@@ -110,7 +123,8 @@ export default function TemplateCoverageMap() {
     setPlannerOpen(true);
   };
 
-  const handlePlanAllCategory = async (categoryId: string, tier: ValueTier = 'medium') => {
+  // Open confirmation dialog for bulk planning
+  const handlePlanAllCategory = (categoryId: string) => {
     const category = categoryGroups.find(g => g.id === categoryId);
     if (!category) return;
 
@@ -119,14 +133,36 @@ export default function TemplateCoverageMap() {
       t => !getPlanForTemplate(t.slug)
     );
 
-    for (const template of templatesWithoutPlans.slice(0, 5)) { // Limit to 5 at a time
-      generatePlan({
-        templateSlug: template.slug,
-        templateName: template.name,
-        categoryId: template.categoryId,
-        subcategorySlug: template.subcategorySlug,
-        valueTier: tier,
-      });
+    if (templatesWithoutPlans.length === 0) return;
+
+    setBulkPlanState({
+      categoryId,
+      categoryName: category.name,
+      templates: templatesWithoutPlans,
+    });
+  };
+
+  // Execute bulk plan creation after confirmation
+  const handleConfirmBulkPlan = async () => {
+    if (!bulkPlanState) return;
+    
+    const tier = getTierForCategory(bulkPlanState.categoryId);
+    setIsBulkPlanning(true);
+
+    try {
+      // Process all templates (no arbitrary limit)
+      for (const template of bulkPlanState.templates) {
+        await generatePlan({
+          templateSlug: template.slug,
+          templateName: template.name,
+          categoryId: template.categoryId,
+          subcategorySlug: template.subcategorySlug,
+          valueTier: tier,
+        });
+      }
+    } finally {
+      setIsBulkPlanning(false);
+      setBulkPlanState(null);
     }
   };
 
@@ -166,7 +202,9 @@ export default function TemplateCoverageMap() {
         {filteredGroups.map(category => {
           const isExpanded = expandedCategories.has(category.id);
           const templatesWithPlans = category.templates.filter(t => getPlanForTemplate(t.slug));
+          const templatesWithoutPlans = category.templates.length - templatesWithPlans.length;
           const coveragePercent = Math.round((templatesWithPlans.length / category.templates.length) * 100);
+          const categoryTier = getTierForCategory(category.id);
 
           return (
             <Collapsible key={category.id} open={isExpanded}>
@@ -186,6 +224,9 @@ export default function TemplateCoverageMap() {
                       <span className="text-sm text-muted-foreground ml-2">
                         ({category.templates.length} templates)
                       </span>
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {VALUE_TIERS[categoryTier].name}
+                      </Badge>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -202,9 +243,9 @@ export default function TemplateCoverageMap() {
                         e.stopPropagation();
                         handlePlanAllCategory(category.id);
                       }}
-                      disabled={isGeneratingPlan}
+                      disabled={isGeneratingPlan || isBulkPlanning || templatesWithoutPlans === 0}
                     >
-                      Plan All
+                      {templatesWithoutPlans === 0 ? 'All Planned' : `Plan ${templatesWithoutPlans}`}
                     </Button>
                   </div>
                 </CollapsibleTrigger>
@@ -284,6 +325,17 @@ export default function TemplateCoverageMap() {
         onOpenChange={setPlannerOpen}
         template={selectedTemplate}
         existingPlan={selectedTemplate ? getPlanForTemplate(selectedTemplate.slug) : undefined}
+      />
+
+      {/* Bulk Plan Confirmation Dialog */}
+      <BulkPlanConfirmDialog
+        open={!!bulkPlanState}
+        onOpenChange={(open) => !open && setBulkPlanState(null)}
+        categoryName={bulkPlanState?.categoryName || ''}
+        templateCount={bulkPlanState?.templates.length || 0}
+        valueTier={bulkPlanState ? getTierForCategory(bulkPlanState.categoryId) : 'medium'}
+        onConfirm={handleConfirmBulkPlan}
+        isLoading={isBulkPlanning}
       />
     </div>
   );
