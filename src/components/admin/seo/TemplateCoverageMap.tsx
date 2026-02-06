@@ -45,7 +45,7 @@ export default function TemplateCoverageMap() {
   const { plans, plansLoading, isGeneratingPlan } = useContentPlans();
   const { data: templateProgress, isLoading: progressLoading } = useTemplateProgress();
   const { getTierForCategory } = useCategoryTierSettings();
-  const { allActiveJobs, startBulkPlan, isStarting, invalidateJobs } = useBulkPlanningJob();
+  const { allActiveJobs, startBulkPlan, isStarting, retryFailed, isRetrying, invalidateJobs } = useBulkPlanningJob();
   
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -239,6 +239,8 @@ export default function TemplateCoverageMap() {
                     <BulkPlanningProgress 
                       job={activeJob} 
                       onDismiss={activeJob.status !== 'processing' ? () => handleDismissJob(activeJob.id) : undefined}
+                      onRetryFailed={activeJob.failed_templates > 0 ? () => retryFailed(activeJob) : undefined}
+                      isRetrying={isRetrying}
                     />
                   </div>
                 )}
