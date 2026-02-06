@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent } from 'lucide-react';
+import ExportButton from '@/components/admin/export/ExportButton';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
 import { 
@@ -309,17 +310,20 @@ const AdminAnalytics = () => {
           <h1 className="font-serif text-3xl font-bold text-foreground">Analytics</h1>
           <p className="text-muted-foreground">Track your platform performance & revenue</p>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-            <SelectItem value="365">Last year</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <ExportButton exportType="analytics" showDatePicker label="Export" />
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+              <SelectItem value="365">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="revenue" className="space-y-6">

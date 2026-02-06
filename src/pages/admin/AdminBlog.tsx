@@ -43,6 +43,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
+import ExportButton from '@/components/admin/export/ExportButton';
 
 interface BlogPost {
   id: string;
@@ -276,7 +277,8 @@ const AdminBlog = () => {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <ExportButton exportType="blog_posts" label="Export" />
           <Button variant="outline" onClick={() => navigate('/admin/blog/generate')}>
             <Sparkles className="h-4 w-4 mr-2" />
             AI Generate
