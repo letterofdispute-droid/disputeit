@@ -290,6 +290,7 @@ function parseAIResponse(content: string): any {
           throw new Error(`Failed to parse AI response: ${(firstError as Error).message}`);
         }
       }
+    }
   }
 }
 
@@ -1220,3 +1221,4 @@ Respond with ONLY this JSON:
     });
   }
 });
+
