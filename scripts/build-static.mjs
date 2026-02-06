@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, '..', 'public');
+const outputDir = path.join(__dirname, '..', 'dist');
 
 // Initialize Supabase client for fetching blog posts
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://koulmtfnkuapzigcplov.supabase.co';
@@ -443,11 +443,11 @@ function generateBlogSitemap(blogPosts) {
 // ============================================
 
 async function buildSitemaps() {
-  console.log('\n🗺️  Generating sitemaps to public/...\n');
+  console.log('\n🗺️  Generating sitemaps to dist/...\n');
   
-  // Ensure public directory exists
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
+  // Ensure output directory exists
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
   }
   
   // Load all templates
@@ -464,24 +464,24 @@ async function buildSitemaps() {
   console.log('\n📄 Generating sitemap files...');
   
   // Sitemap index
-  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapIndex());
+  fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), generateSitemapIndex());
   console.log('   ✅ sitemap.xml (index)');
   
   // Static pages sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), generateStaticSitemap());
+  fs.writeFileSync(path.join(outputDir, 'sitemap-static.xml'), generateStaticSitemap());
   console.log('   ✅ sitemap-static.xml');
   
   // Categories + subcategories + guides sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
+  fs.writeFileSync(path.join(outputDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   console.log(`   ✅ sitemap-categories.xml (${categories.length} categories + ${subcatCount} subcategories + ${categories.length} guides)`);
   
   // Templates sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
+  fs.writeFileSync(path.join(outputDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
   console.log(`   ✅ sitemap-templates.xml (${templates.length} templates)`);
   
   // Blog sitemap
-  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
+  fs.writeFileSync(path.join(outputDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
   console.log(`   ✅ sitemap-blog.xml (${blogCategories.length} categories + ${blogPosts.length} posts)`);
   
   // Summary
