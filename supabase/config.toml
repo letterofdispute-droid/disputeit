@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.generate-legal-letter]
 verify_jwt = false
+
+[functions.bulk-plan-category]
+verify_jwt = false

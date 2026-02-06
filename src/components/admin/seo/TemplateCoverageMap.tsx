@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -16,11 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useContentPlans, ContentPlan } from '@/hooks/useContentPlans';
 import { useTemplateProgress } from '@/hooks/useTemplateProgress';
 import { useCategoryTierSettings } from '@/hooks/useCategoryTierSettings';
+import { useBulkPlanningJob } from '@/hooks/useBulkPlanningJob';
 import { allTemplates } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 import ClusterPlanner from './ClusterPlanner';
 import BulkPlanConfirmDialog from './BulkPlanConfirmDialog';
+import BulkPlanningProgress from './BulkPlanningProgress';
 
 interface CategoryGroup {
   id: string;
@@ -40,9 +42,11 @@ interface BulkPlanState {
 }
 
 export default function TemplateCoverageMap() {
-  const { plans, plansLoading, generatePlan, isGeneratingPlan } = useContentPlans();
+  const { plans, plansLoading, isGeneratingPlan } = useContentPlans();
   const { data: templateProgress, isLoading: progressLoading } = useTemplateProgress();
   const { getTierForCategory } = useCategoryTierSettings();
+  const { allActiveJobs, startBulkPlan, isStarting, invalidateJobs } = useBulkPlanningJob();
+  
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -55,7 +59,22 @@ export default function TemplateCoverageMap() {
   
   // Bulk plan confirmation dialog state
   const [bulkPlanState, setBulkPlanState] = useState<BulkPlanState | null>(null);
-  const [isBulkPlanning, setIsBulkPlanning] = useState(false);
+  
+  // Track dismissed job IDs
+  const [dismissedJobs, setDismissedJobs] = useState<Set<string>>(new Set());
+  
+  // Get active job for a category
+  const getActiveJobForCategory = (categoryId: string) => {
+    return allActiveJobs?.find(j => j.category_id === categoryId && !dismissedJobs.has(j.id));
+  };
+  
+  // Refresh data when jobs complete
+  useEffect(() => {
+    const completedJobs = allActiveJobs?.filter(j => j.status !== 'processing') || [];
+    if (completedJobs.length > 0) {
+      invalidateJobs();
+    }
+  }, [allActiveJobs, invalidateJobs]);
 
   // Group templates by category
   const categoryGroups = useMemo((): CategoryGroup[] => {
@@ -142,28 +161,32 @@ export default function TemplateCoverageMap() {
     });
   };
 
-  // Execute bulk plan creation after confirmation
-  const handleConfirmBulkPlan = async () => {
+  // Execute bulk plan creation after confirmation (now async)
+  const handleConfirmBulkPlan = () => {
     if (!bulkPlanState) return;
     
     const tier = getTierForCategory(bulkPlanState.categoryId);
-    setIsBulkPlanning(true);
-
-    try {
-      // Process all templates (no arbitrary limit)
-      for (const template of bulkPlanState.templates) {
-        await generatePlan({
-          templateSlug: template.slug,
-          templateName: template.name,
-          categoryId: template.categoryId,
-          subcategorySlug: template.subcategorySlug,
-          valueTier: tier,
-        });
-      }
-    } finally {
-      setIsBulkPlanning(false);
-      setBulkPlanState(null);
-    }
+    
+    // Start async bulk planning job
+    startBulkPlan({
+      categoryId: bulkPlanState.categoryId,
+      categoryName: bulkPlanState.categoryName,
+      valueTier: tier,
+      templates: bulkPlanState.templates.map(t => ({
+        slug: t.slug,
+        name: t.name,
+        subcategorySlug: t.subcategorySlug,
+      })),
+    });
+    
+    // Close dialog immediately - progress shows inline
+    setBulkPlanState(null);
+  };
+  
+  // Dismiss a completed job from the UI
+  const handleDismissJob = (jobId: string) => {
+    setDismissedJobs(prev => new Set([...prev, jobId]));
+    invalidateJobs();
   };
 
   if (plansLoading || progressLoading) {
@@ -205,10 +228,20 @@ export default function TemplateCoverageMap() {
           const templatesWithoutPlans = category.templates.length - templatesWithPlans.length;
           const coveragePercent = Math.round((templatesWithPlans.length / category.templates.length) * 100);
           const categoryTier = getTierForCategory(category.id);
+          const activeJob = getActiveJobForCategory(category.id);
 
           return (
             <Collapsible key={category.id} open={isExpanded}>
               <div className="rounded-lg border bg-card">
+                {/* Show inline progress bar when job is active */}
+                {activeJob && (
+                  <div className="p-3 border-b">
+                    <BulkPlanningProgress 
+                      job={activeJob} 
+                      onDismiss={activeJob.status !== 'processing' ? () => handleDismissJob(activeJob.id) : undefined}
+                    />
+                  </div>
+                )}
                 <CollapsibleTrigger
                   onClick={() => toggleCategory(category.id)}
                   className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors"
@@ -243,7 +276,7 @@ export default function TemplateCoverageMap() {
                         e.stopPropagation();
                         handlePlanAllCategory(category.id);
                       }}
-                      disabled={isGeneratingPlan || isBulkPlanning || templatesWithoutPlans === 0}
+                      disabled={isGeneratingPlan || isStarting || !!getActiveJobForCategory(category.id) || templatesWithoutPlans === 0}
                     >
                       {templatesWithoutPlans === 0 ? 'All Planned' : `Plan ${templatesWithoutPlans}`}
                     </Button>
@@ -335,7 +368,7 @@ export default function TemplateCoverageMap() {
         templateCount={bulkPlanState?.templates.length || 0}
         valueTier={bulkPlanState ? getTierForCategory(bulkPlanState.categoryId) : 'medium'}
         onConfirm={handleConfirmBulkPlan}
-        isLoading={isBulkPlanning}
+        isLoading={isStarting}
       />
     </div>
   );
