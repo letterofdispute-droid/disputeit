@@ -1,153 +1,130 @@
 
 
-# Update Branding and Pricing Documentation for Letter Of Dispute
+# Fix Category Images Not Showing
 
-## Overview
+## Problem Analysis
 
-Fix branding inconsistencies (change "DisputeLetters" to "Letter of Dispute") and update all pricing-related documentation to reflect the new two-tier model with in-app editing.
+The screenshot shows category cards with **gray placeholder backgrounds** instead of real images. Here's what's happening:
 
----
+### Current System Architecture
 
-## 1. Branding Updates
+The system was designed correctly to self-host images from Pixabay:
 
-### Files Affected
-
-| File | Current | Should Be |
-|------|---------|-----------|
-| `src/pages/HowItWorksPage.tsx` | "DisputeLetters" | "Letter of Dispute" |
-
-### Specific Changes
-
-**HowItWorksPage.tsx:**
-- Line 168: Schema description mentions "DisputeLetters"
-- Line 221-222: SEO title/description say "DisputeLetters"
-- Line 239: H1 heading says "How DisputeLetters Works"
-
----
-
-## 2. Pricing Documentation Updates
-
-### HowItWorksPage.tsx - FAQs (Lines 136-161)
-
-| FAQ | Current Answer | Updated Answer |
-|-----|---------------|----------------|
-| "Can I customize the letter after generating it?" | "PDF + Editable ($9.99) includes a Word document" | "PDF + Edit Access ($14.99) includes 30 days of in-app editing" |
-| "What if my situation isn't covered by a template?" | "PDF + Editable option lets you customize" | "PDF + Edit Access option gives you 30 days to edit in our online editor" |
-
-### HowItWorksPage.tsx - Step 03 (Lines 54-63)
-
-| Current | Updated |
-|---------|---------|
-| "download as PDF or editable Word document" | "download as PDF, or edit in our online editor with the Edit Access option" |
-| Tips mention "Word format lets you make additional edits" | "Edit Access gives you 30 days to customize in our online editor" |
-
-### HowItWorksPage.tsx - HowTo Schema (Lines 163-200)
-
-| Field | Current | Updated |
-|-------|---------|---------|
-| estimatedCost.value | "5.99" | "9.99" |
-| description | "DisputeLetters" | "Letter of Dispute" |
-| Step 3 text | "download as PDF or editable Word document" | "download as PDF, or use our in-app editor" |
-
----
-
-## 3. PricingPage.tsx Verification
-
-The PricingPage.tsx already has correct pricing ($9.99 / $14.99) and mentions in-app editing. Minor branding check needed.
-
----
-
-## 4. Editor Branding (Subtle)
-
-Add subtle branding to the LetterEditorPage:
-- Small "Letter of Dispute" watermark or badge in the editor footer
-- Keeps brand presence without being intrusive
-
----
-
-## Summary of Changes
-
-| File | Type of Change |
-|------|---------------|
-| `src/pages/HowItWorksPage.tsx` | Brand name updates, pricing updates, FAQ updates, step descriptions, schema fixes |
-| `src/pages/LetterEditorPage.tsx` | Add subtle branding badge |
-
----
-
-## Technical Details
-
-### HowItWorksPage.tsx Changes
-
-1. **SEO Head (lines 220-224)**
-```tsx
-// Change from:
-title="How It Works - Create Dispute Letters in Minutes | DisputeLetters"
-description="Learn how DisputeLetters helps you..."
-
-// To:
-title="How It Works - Create Dispute Letters in Minutes | Letter of Dispute"
-description="Learn how Letter of Dispute helps you..."
+```text
+User visits homepage
+       ↓
+LetterCategories.tsx renders 13 category cards
+       ↓
+Each CategoryCard calls useCategoryImage hook
+       ↓
+Hook checks database cache (category_images table)
+       ↓
+If no cache → Calls fetch-category-images edge function
+       ↓
+Edge function: Pixabay API → Downloads image → Uploads to blog-images bucket → Stores URL in cache
+       ↓
+Returns self-hosted URL (permanent, no 24h expiration)
 ```
 
-2. **Hero H1 (line 239)**
-```tsx
-// Change from:
-How DisputeLetters Works
+### Why Images Aren't Loading
 
-// To:
-How Letter of Dispute Works
+| Component | Status |
+|-----------|--------|
+| `blog-images` storage bucket | Exists, public |
+| `category_images` database table | Exists, has 1 cached image |
+| `fetch-category-images` edge function code | Exists in codebase |
+| **Edge function deployment** | **NOT DEPLOYED (404 error)** |
+
+The edge function **exists in code** but was **never successfully deployed** to the backend. When the frontend calls it, it gets a 404 error.
+
+Current deployment attempts are timing out due to a platform issue.
+
+---
+
+## Solution Plan
+
+### Phase 1: Deploy Edge Function (Immediate)
+
+Once the platform deployment system recovers, deploy the `fetch-category-images` function:
+
+```text
+Edge function: fetch-category-images
+Status: Code exists, needs deployment
+Purpose: Downloads Pixabay images, uploads to Supabase Storage, caches URLs
 ```
 
-3. **Step 03 description and tips (lines 54-63)**
-```tsx
-// Update description:
-"Your personalized dispute letter is created instantly. Preview it, make any final adjustments, then download as PDF or edit online with 30-day access."
+### Phase 2: Add Fallback Images (Resilience)
 
-// Update tips:
-- 'Review the letter preview before purchasing',
-- 'PDF is ready to send immediately',
-- 'Edit Access gives you 30 days to customize online',
-```
+Add local fallback images in case the edge function fails, so users always see something:
 
-4. **FAQ updates (lines 147-151)**
-```tsx
-// "Can I customize the letter after generating it?"
-answer: 'Yes! The PDF + Edit Access ($14.99) option includes 30 days of in-app editing. Make changes anytime, then export to PDF when you\'re ready to send.'
+**Option A: Use bundled placeholder images**
+- Add simple gradient or icon-based placeholder images to `/public/images/categories/`
+- Fallback to these if the edge function call fails
 
-// "What if my situation isn't covered by a template?"
-answer: '...our PDF + Edit Access option gives you 30 days to customize any template in our online editor.'
-```
+**Option B: Use Pixabay URLs as temporary fallback**
+- Allow direct Pixabay URLs as fallback (may expire after 24h, but better than nothing)
 
-5. **HowTo Schema (lines 163-200)**
-```tsx
-estimatedCost: {
-  "@type": "MonetaryAmount",
-  "currency": "USD",
-  "value": "9.99"  // Updated from 5.99
+### Phase 3: Pre-populate Cache (Optional)
+
+Run a one-time script to populate all 13 category images into the cache:
+- Invoke the edge function for each category
+- Ensures all images are self-hosted before users visit
+
+---
+
+## Technical Implementation
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useCategoryImage.ts` | Add fallback URL support when edge function fails |
+| `src/components/home/LetterCategories.tsx` | Ensure graceful degradation with fallback |
+
+### Hook Enhancement
+
+```typescript
+// In useCategoryImage.ts - add fallback when edge function fails
+const FALLBACK_GRADIENTS = {
+  'refunds': 'from-amber-600 to-orange-700',
+  'housing': 'from-blue-600 to-indigo-700',
+  // ... etc for all 13 categories
+};
+
+// If edge function fails, return a gradient fallback
+if (fetchError && !data?.image) {
+  setFallbackGradient(FALLBACK_GRADIENTS[categoryId] || 'from-gray-600 to-gray-800');
 }
-// Update description: "Letter of Dispute"
-// Update step 3 text
 ```
 
-### LetterEditorPage.tsx - Subtle Branding
+### Category Card Enhancement
 
-Add a small branded footer inside the editor card:
 ```tsx
-// In the editor footer area, add:
-<div className="flex items-center gap-2 text-xs text-muted-foreground">
-  <img src="/ld-logo-icon.svg" alt="" className="h-4 w-4 opacity-50" />
-  <span>Letter of Dispute</span>
-</div>
+// Add gradient fallback
+{!imageUrl && !isLoading && (
+  <div 
+    className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient || ''}`}
+    style={!fallbackGradient ? { backgroundColor: category.color } : undefined}
+  />
+)}
 ```
 
 ---
 
-## Edge Functions Status
+## Implementation Sequence
 
-All edge functions are now deployed and ready:
-- `export-letter-pdf` - Deployed
-- `create-edit-unlock-checkout` - Deployed
-- `verify-edit-unlock-purchase` - Deployed
-- `create-letter-checkout` - Already deployed
-- `verify-letter-purchase` - Already deployed
+1. **Retry edge function deployment** - Platform issue may resolve
+2. **Add fallback gradients** - Ensures cards always look good
+3. **Test with deployed function** - Verify image caching works
+4. **Pre-populate cache** - Run batch fetch for all 13 categories
+
+---
+
+## Verification Steps
+
+After implementation:
+1. Visit homepage and verify category cards show images (or attractive gradients)
+2. Check `category_images` table has 13+ entries
+3. Verify images are served from `koulmtfnkuapzigcplov.supabase.co/storage/...` (self-hosted)
+4. Confirm no Pixabay URLs in cached entries (they expire)
 
