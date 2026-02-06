@@ -7,33 +7,12 @@
 
 import { PDFDocument, PDFPage, StandardFonts, rgb, PDFFont } from "https://esm.sh/pdf-lib@1.17.1";
 
-// Brand colors
-export const BRAND_BLUE = rgb(0, 0.196, 0.404); // #003268
+// Colors (neutral, professional)
 export const DARK_GRAY = rgb(0.2, 0.2, 0.2);
 export const MEDIUM_GRAY = rgb(0.4, 0.4, 0.4);
 export const LIGHT_GRAY = rgb(0.6, 0.6, 0.6);
 export const SEPARATOR_GRAY = rgb(0.85, 0.85, 0.85);
 export const BLACK = rgb(0, 0, 0);
-
-// Page dimensions (US Letter)
-export const PAGE_WIDTH = 612;
-export const PAGE_HEIGHT = 792;
-export const MARGIN_LEFT = 72; // 1 inch
-export const MARGIN_RIGHT = 72;
-export const MARGIN_TOP = 72;
-export const MARGIN_BOTTOM = 72;
-export const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-
-// Typography
-export const FONT_SIZE_BODY = 11;
-export const FONT_SIZE_HEADER = 14;
-export const FONT_SIZE_SUBJECT = 12;
-export const FONT_SIZE_FOOTER = 9;
-export const LINE_HEIGHT = FONT_SIZE_BODY * 1.6;
-
-// Logo as text (since we can't embed SVG easily)
-export const BRAND_NAME = "Letter of Dispute";
-export const BRAND_WEBSITE = "letterofdispute.com";
 
 export interface PDFFonts {
   regular: PDFFont;
@@ -116,7 +95,7 @@ export function cleanPlaceholders(content: string): string {
 }
 
 /**
- * Draw the letterhead (brand + accent line)
+ * Draw the letterhead (professional accent line only - no branding)
  */
 export function drawLetterhead(
   page: PDFPage,
@@ -125,16 +104,7 @@ export function drawLetterhead(
 ): number {
   let yPosition = PAGE_HEIGHT - MARGIN_TOP;
   
-  // Brand name
-  page.drawText(BRAND_NAME, {
-    x: MARGIN_LEFT,
-    y: yPosition,
-    size: FONT_SIZE_HEADER,
-    font: fonts.bold,
-    color: BRAND_BLUE,
-  });
-  
-  // Reference ID on the right
+  // Reference ID on the right (neutral identifier)
   if (referenceId) {
     const refText = `Ref: ${referenceId}`;
     const refWidth = fonts.regular.widthOfTextAtSize(refText, FONT_SIZE_FOOTER);
@@ -149,12 +119,12 @@ export function drawLetterhead(
   
   yPosition -= 15;
   
-  // Accent line
+  // Professional accent line (neutral dark gray)
   page.drawLine({
     start: { x: MARGIN_LEFT, y: yPosition },
     end: { x: PAGE_WIDTH - MARGIN_RIGHT, y: yPosition },
-    thickness: 1.5,
-    color: BRAND_BLUE,
+    thickness: 1,
+    color: DARK_GRAY,
   });
   
   yPosition -= 30;
@@ -347,7 +317,7 @@ export function drawSubjectLine(
 }
 
 /**
- * Draw page footer
+ * Draw page footer (unbranded - professional legal format)
  */
 export function drawFooter(
   page: PDFPage,
@@ -377,15 +347,6 @@ export function drawFooter(
     color: MEDIUM_GRAY,
   });
   
-  // Website (left)
-  page.drawText(BRAND_WEBSITE, {
-    x: MARGIN_LEFT,
-    y: footerY,
-    size: FONT_SIZE_FOOTER,
-    font: fonts.regular,
-    color: MEDIUM_GRAY,
-  });
-  
   // Reference ID (right)
   if (referenceId) {
     const refText = `Ref: ${referenceId}`;
@@ -399,7 +360,7 @@ export function drawFooter(
     });
   }
   
-  // Disclaimer
+  // Disclaimer (professional, neutral)
   const disclaimer = "This document is for dispute resolution purposes only and does not constitute legal advice.";
   const disclaimerWidth = fonts.regular.widthOfTextAtSize(disclaimer, FONT_SIZE_FOOTER - 1);
   page.drawText(disclaimer, {
@@ -457,16 +418,8 @@ export function drawBodyContent(
           currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
           pages.push(currentPage);
           
-          // Draw minimal header on continuation pages
+          // Continuation pages - just start from top margin (no branding)
           yPosition = PAGE_HEIGHT - MARGIN_TOP;
-          currentPage.drawText(BRAND_NAME, {
-            x: MARGIN_LEFT,
-            y: yPosition,
-            size: FONT_SIZE_FOOTER,
-            font: fonts.regular,
-            color: LIGHT_GRAY,
-          });
-          yPosition -= 25;
         }
         
         currentPage.drawText(wrappedLine, {
@@ -540,13 +493,33 @@ export function drawSignatureBlock(
 }
 
 /**
- * Generate a short reference ID
+ * Generate a short reference ID (neutral prefix)
  */
 export function generateReferenceId(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = 'LD-';
+  let result = 'REF-';
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+/**
+ * Draw salutation (professional legal letter format)
+ */
+export function drawSalutation(
+  page: PDFPage,
+  fonts: PDFFonts,
+  yPosition: number,
+  salutation: string = 'Dear Sir/Madam:'
+): number {
+  page.drawText(salutation, {
+    x: MARGIN_LEFT,
+    y: yPosition,
+    size: FONT_SIZE_BODY,
+    font: fonts.regular,
+    color: BLACK,
+  });
+  
+  return yPosition - LINE_HEIGHT * 1.5;
 }
