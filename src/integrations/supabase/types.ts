@@ -200,6 +200,60 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_planning_jobs: {
+        Row: {
+          category_id: string
+          category_name: string
+          completed_at: string | null
+          completed_templates: number
+          created_at: string
+          error_messages: Json | null
+          failed_slugs: string[]
+          failed_templates: number
+          id: string
+          processed_slugs: string[]
+          status: string
+          template_slugs: string[]
+          total_templates: number
+          updated_at: string
+          value_tier: string
+        }
+        Insert: {
+          category_id: string
+          category_name: string
+          completed_at?: string | null
+          completed_templates?: number
+          created_at?: string
+          error_messages?: Json | null
+          failed_slugs?: string[]
+          failed_templates?: number
+          id?: string
+          processed_slugs?: string[]
+          status?: string
+          template_slugs?: string[]
+          total_templates?: number
+          updated_at?: string
+          value_tier?: string
+        }
+        Update: {
+          category_id?: string
+          category_name?: string
+          completed_at?: string | null
+          completed_templates?: number
+          created_at?: string
+          error_messages?: Json | null
+          failed_slugs?: string[]
+          failed_templates?: number
+          id?: string
+          processed_slugs?: string[]
+          status?: string
+          template_slugs?: string[]
+          total_templates?: number
+          updated_at?: string
+          value_tier?: string
+        }
+        Relationships: []
+      }
       category_images: {
         Row: {
           alt_text: string | null
