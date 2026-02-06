@@ -1,151 +1,122 @@
 
 
-# Update to reCAPTCHA Enterprise
+# Fix PDF Template + Mobile Button Layout
 
 ## Overview
 
-Migrate from standard reCAPTCHA v3 to reCAPTCHA Enterprise, which is now managed through Google Cloud Console.
+Two issues need to be addressed:
+1. The downloaded PDF still uses the old unstyled template because the cached file is being served instead of regenerating with the new professional template
+2. Dashboard buttons overflow on mobile screens
 
 ---
 
-## What Changed
+## Issue 1: PDF Not Using New Template
 
-| Aspect | Standard v3 | Enterprise |
-|--------|-------------|------------|
-| Script URL | `recaptcha/api.js` | `recaptcha/enterprise.js` |
-| API namespace | `grecaptcha.execute()` | `grecaptcha.enterprise.execute()` |
-| Backend verification | `google.com/recaptcha/api/siteverify` | `recaptchaenterprise.googleapis.com` |
-| Scoring | Simple score (0-1) | Risk analysis with detailed assessment |
+### Root Cause
 
----
+The `regenerate-letter-urls` Edge Function checks if `letter.pdf` exists in storage (line 62). If it exists, it returns the cached signed URL. Since the old PDF was generated before the professional template was created, users are getting the old unstyled PDF.
 
-## Implementation Plan
+### Solution
 
-### 1. Replace React Library
+Force regeneration by:
+1. Deleting the old cached PDF before generating new one
+2. OR always regenerate the PDF to ensure latest template is used
 
-The current `react-google-recaptcha-v3` package doesn't support Enterprise. Replace with manual script loading:
+**Recommended Approach**: Modify `regenerate-letter-urls` to always call `generate-letter-documents` (which uses the professional template) instead of just returning cached URLs.
 
-**Remove**: `react-google-recaptcha-v3` dependency
-**Add**: Manual script injection in `index.html`
+### File Changes
 
-### 2. Update index.html
+**supabase/functions/regenerate-letter-urls/index.ts**:
+- Remove the "check if PDF exists" optimization
+- Always call `generate-letter-documents` to ensure fresh generation with the professional template
+- This guarantees users always get the professionally formatted PDF
 
-Add Enterprise script with your site key:
+```text
+Before:
+Line 60-106 - Checks if PDF exists, only regenerates if missing
 
-```html
-<script src="https://www.google.com/recaptcha/enterprise.js?render=6Ld-wWIsAAAAAGfPm69e5zwDmr-8GbkOHDvStyOj"></script>
-```
-
-### 3. Create New useRecaptcha Hook
-
-Replace the current hook with one that uses the Enterprise API:
-
-```typescript
-// Uses grecaptcha.enterprise.ready() and grecaptcha.enterprise.execute()
-const executeRecaptcha = async (action: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    window.grecaptcha.enterprise.ready(async () => {
-      try {
-        const token = await window.grecaptcha.enterprise.execute(
-          SITE_KEY,
-          { action }
-        );
-        resolve(token);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-};
-```
-
-### 4. Update main.tsx
-
-Remove the `GoogleReCaptchaProvider` wrapper since we're loading the script manually:
-
-```typescript
-// Before
-<GoogleReCaptchaProvider reCaptchaKey={recaptchaSiteKey}>
-  <App />
-</GoogleReCaptchaProvider>
-
-// After
-<App />
-```
-
-### 5. Update Backend Verification
-
-The edge function needs to call the Enterprise API instead of siteverify:
-
-**Option A: Use Enterprise API with API Key** (simpler)
-```
-POST https://recaptchaenterprise.googleapis.com/v1/projects/{PROJECT_ID}/assessments?key={API_KEY}
-```
-
-**Option B: Use siteverify endpoint** (still works for Enterprise score-based keys)
-The standard siteverify endpoint continues to work with Enterprise keys for basic use cases.
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `package.json` | Remove `react-google-recaptcha-v3` dependency |
-| `index.html` | Add Enterprise script tag with site key |
-| `src/main.tsx` | Remove `GoogleReCaptchaProvider` wrapper |
-| `src/hooks/useRecaptcha.ts` | Rewrite to use `grecaptcha.enterprise` API |
-| `src/vite-env.d.ts` | Add type declarations for `window.grecaptcha.enterprise` |
-
----
-
-## Type Declarations
-
-Add to `src/vite-env.d.ts`:
-
-```typescript
-interface GrecaptchaEnterprise {
-  ready: (callback: () => void) => void;
-  execute: (siteKey: string, options: { action: string }) => Promise<string>;
-}
-
-interface Grecaptcha {
-  enterprise: GrecaptchaEnterprise;
-}
-
-declare global {
-  interface Window {
-    grecaptcha: Grecaptcha;
-  }
-}
+After:
+- Skip the file existence check
+- Always call generate-letter-documents
+- Return the freshly generated professional PDF URL
 ```
 
 ---
 
-## Environment Variable
+## Issue 2: Mobile Button Overflow
 
-Update the site key secret:
+### Root Cause
 
-| Secret | Current Value | New Value |
-|--------|---------------|-----------|
-| `VITE_RECAPTCHA_SITE_KEY` | (old key) | `6Ld-wWIsAAAAAGfPm69e5zwDmr-8GbkOHDvStyOj` |
+Looking at the screenshot and code:
+- `PurchasedLetterCard.tsx` lines 105-136 (featured card) and 162-195 (regular card)
+- Buttons use `flex-row` with `gap-3` but no wrapping or size constraints
+- On small mobile screens, the two buttons ("Download PDF" + "Edit Letter") exceed container width
 
-Note: The secret key for backend verification (`RECAPTCHA_SECRET_KEY`) should still work with Enterprise for siteverify compatibility mode.
+### Solution
+
+Make buttons responsive:
+1. Stack buttons vertically on small screens using `flex-col` at base, `flex-row` at larger breakpoints
+2. Make buttons full width on mobile
+3. Use smaller button sizes on mobile
+
+### File Changes
+
+**src/components/dashboard/PurchasedLetterCard.tsx**:
+
+For the featured card (lines 105-136):
+```text
+Before:
+<div className="flex items-center gap-3">
+
+After:
+<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+```
+
+Also adjust button classes:
+- Add `w-full sm:w-auto` to buttons for full-width on mobile
+- Use `size="default"` instead of `size="lg"` on mobile
+
+For the regular card (lines 162-195):
+```text
+Before:
+<div className="flex items-center gap-2 sm:gap-3">
+
+After:
+<div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 w-full sm:w-auto">
+```
 
 ---
 
-## Affected Pages
+## Summary of Changes
 
-These pages use reCAPTCHA and will automatically work after the hook update:
-
-- `/login` - Login form
-- `/signup` - Signup form
-- `/forgot-password` - Password reset
-- `/contact` - Contact form
+| File | Change |
+|------|--------|
+| `supabase/functions/regenerate-letter-urls/index.ts` | Always regenerate PDF with professional template |
+| `src/components/dashboard/PurchasedLetterCard.tsx` | Fix button layout to stack on mobile |
 
 ---
 
-## Summary
+## Technical Details
 
-This migration switches from the `react-google-recaptcha-v3` npm package to a manual implementation using Google's Enterprise script. The API calls change from `grecaptcha.execute()` to `grecaptcha.enterprise.execute()`, but the overall flow remains the same. The backend verification can continue using the siteverify endpoint in compatibility mode.
+### Edge Function Change
+
+The modified `regenerate-letter-urls` will:
+1. Verify user access to purchase (unchanged)
+2. Always call `generate-letter-documents` to create a fresh PDF
+3. Return the new signed URL
+
+This ensures:
+- The professional template (letterhead, branded footer, Times New Roman, etc.) is always applied
+- Any edits made in the TipTap editor are reflected in downloaded PDF
+- No stale cached PDFs are served
+
+### Mobile Button Layout
+
+The responsive approach:
+- `flex-col` on mobile (stack vertically)
+- `sm:flex-row` on larger screens (side by side)
+- `w-full sm:w-auto` on buttons (full width mobile, auto on larger)
+- Consistent gap spacing
+
+This matches the pattern already used elsewhere in the component (line 87 for the info section) and ensures buttons never overflow the container.
 
