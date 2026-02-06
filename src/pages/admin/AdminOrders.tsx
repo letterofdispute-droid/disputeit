@@ -7,6 +7,7 @@ import OrderFilters from '@/components/admin/orders/OrderFilters';
 import OrdersTable from '@/components/admin/orders/OrdersTable';
 import OrderDetailModal from '@/components/admin/orders/OrderDetailModal';
 import RefundDialog from '@/components/admin/orders/RefundDialog';
+import ExportButton from '@/components/admin/export/ExportButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface Order {
@@ -87,13 +88,20 @@ const AdminOrders = () => {
 
   return (
     <div className="p-4 lg:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-serif font-bold text-foreground">
-          Orders & Payments
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage all purchases, view order details, and process refunds
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-serif font-bold text-foreground">
+            Orders & Payments
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage all purchases, view order details, and process refunds
+          </p>
+        </div>
+        <ExportButton 
+          exportType="orders" 
+          showDatePicker 
+          label="Export Orders"
+        />
       </div>
 
       <OrderStats stats={stats} />

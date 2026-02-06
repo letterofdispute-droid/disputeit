@@ -39,6 +39,7 @@ import { useAuth } from '@/hooks/useAuth';
 import UserDetailModal from '@/components/admin/users/UserDetailModal';
 import DeleteUserDialog from '@/components/admin/users/DeleteUserDialog';
 import EmailUserDialog from '@/components/admin/users/EmailUserDialog';
+import ExportButton from '@/components/admin/export/ExportButton';
 
 export interface UserProfile {
   id: string;
@@ -233,9 +234,12 @@ const AdminUsers = () => {
   return (
     <div className="p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-foreground">Users</h1>
-        <p className="text-muted-foreground">Manage user accounts, subscriptions, and admin access</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground">Manage user accounts, subscriptions, and admin access</p>
+        </div>
+        <ExportButton exportType="users" label="Export Users" />
       </div>
 
       {/* Stats */}
