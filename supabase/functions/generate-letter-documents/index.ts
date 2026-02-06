@@ -1,204 +1,153 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
 import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-} from "https://esm.sh/docx@8.5.0";
+  loadFonts,
+  drawLetterhead,
+  drawDate,
+  drawDeliveryMethod,
+  drawRecipientBlock,
+  drawSubjectLine,
+  drawBodyContent,
+  drawSignatureBlock,
+  drawFooter,
+  generateReferenceId,
+  PAGE_WIDTH,
+  PAGE_HEIGHT,
+  MARGIN_TOP,
+  LINE_HEIGHT,
+  cleanPlaceholders,
+  htmlToPlainText,
+} from "../_shared/pdfHelpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface GenerateDocumentsRequest {
   purchaseId: string;
   letterContent: string;
   templateName: string;
-  generateDocx: boolean;
+  generateDocx?: boolean;
+  // Optional metadata for better formatting
+  senderName?: string;
+  senderAddress?: string;
+  recipientName?: string;
+  recipientCompany?: string;
+  recipientAddress?: string;
 }
 
-// Split text into lines that fit within a given width
-function wrapText(text: string, maxCharsPerLine: number): string[] {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= maxCharsPerLine) {
-      currentLine += (currentLine ? ' ' : '') + word;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
+/**
+ * Extract subject line from letter content
+ * Looks for "Re:" line at the beginning
+ */
+function extractSubject(content: string, fallbackName: string): string {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.toLowerCase().startsWith('re:')) {
+      return trimmed.substring(3).trim();
     }
   }
-  if (currentLine) lines.push(currentLine);
-  return lines;
+  return fallbackName;
 }
 
-async function generatePDF(letterContent: string, templateName: string): Promise<Uint8Array> {
+/**
+ * Remove the Re: line from content since we'll format it separately
+ */
+function removeSubjectFromContent(content: string): string {
+  const lines = content.split('\n');
+  const filteredLines = lines.filter(line => {
+    const trimmed = line.trim().toLowerCase();
+    return !trimmed.startsWith('re:');
+  });
+  return filteredLines.join('\n').trim();
+}
+
+/**
+ * Generate a professional PDF letter
+ */
+async function generateProfessionalPDF(
+  letterContent: string,
+  templateName: string,
+  metadata?: {
+    senderName?: string;
+    senderAddress?: string;
+    recipientName?: string;
+    recipientCompany?: string;
+    recipientAddress?: string;
+  }
+): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-
-  const pageWidth = 612; // Letter size
-  const pageHeight = 792;
-  const margin = 72; // 1 inch margins
-  const fontSize = 12;
-  const lineHeight = fontSize * 1.5;
-  const maxCharsPerLine = 80;
-
-  let page = pdfDoc.addPage([pageWidth, pageHeight]);
-  let yPosition = pageHeight - margin;
-
-  // Add title
-  const titleFontSize = 16;
-  page.drawText(templateName, {
-    x: margin,
-    y: yPosition,
-    size: titleFontSize,
-    font: timesRomanBoldFont,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= titleFontSize * 2;
-
-  // Add date
-  const dateText = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  page.drawText(dateText, {
-    x: margin,
-    y: yPosition,
-    size: fontSize,
-    font: timesRomanFont,
-    color: rgb(0.3, 0.3, 0.3),
-  });
-  yPosition -= lineHeight * 2;
-
-  // Process letter content
-  const paragraphs = letterContent.split('\n\n');
-
-  for (const paragraph of paragraphs) {
-    const lines = paragraph.split('\n');
-    
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      
-      const wrappedLines = wrapText(line, maxCharsPerLine);
-      
-      for (const wrappedLine of wrappedLines) {
-        // Check if we need a new page
-        if (yPosition < margin + lineHeight) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          yPosition = pageHeight - margin;
-        }
-
-        page.drawText(wrappedLine, {
-          x: margin,
-          y: yPosition,
-          size: fontSize,
-          font: timesRomanFont,
-          color: rgb(0, 0, 0),
-        });
-        yPosition -= lineHeight;
-      }
-    }
-    
-    // Add extra space between paragraphs
-    yPosition -= lineHeight * 0.5;
+  const fonts = await loadFonts(pdfDoc);
+  
+  // Generate reference ID for this letter
+  const referenceId = generateReferenceId();
+  
+  // Clean the content
+  const cleanContent = cleanPlaceholders(htmlToPlainText(letterContent));
+  
+  // Extract subject from content
+  const subject = extractSubject(cleanContent, templateName);
+  const bodyContent = removeSubjectFromContent(cleanContent);
+  
+  // Create first page
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let yPosition = PAGE_HEIGHT - MARGIN_TOP;
+  
+  // Draw letterhead
+  yPosition = drawLetterhead(page, fonts, referenceId);
+  
+  // Draw date (right-aligned)
+  yPosition = drawDate(page, fonts, yPosition);
+  
+  // Draw sender block if we have sender info
+  // For now, leave space for user to add their info
+  // This will be filled when we have form data
+  
+  // Draw delivery method
+  yPosition = drawDeliveryMethod(page, fonts, yPosition);
+  
+  // Draw recipient block if we have recipient info
+  if (metadata?.recipientName || metadata?.recipientCompany || metadata?.recipientAddress) {
+    yPosition = drawRecipientBlock(
+      page,
+      fonts,
+      yPosition,
+      metadata.recipientName,
+      metadata.recipientCompany,
+      metadata.recipientAddress
+    );
+  } else {
+    // Add placeholder space for recipient
+    yPosition -= LINE_HEIGHT * 4;
   }
-
+  
+  // Draw subject line
+  yPosition = drawSubjectLine(page, fonts, yPosition, subject);
+  
+  // Draw body content (handles multi-page)
+  const { pages, finalY } = drawBodyContent(
+    page,
+    fonts,
+    bodyContent,
+    yPosition,
+    pdfDoc,
+    referenceId
+  );
+  
+  // Draw signature block on the last page
+  const lastPage = pages[pages.length - 1];
+  drawSignatureBlock(lastPage, fonts, finalY, metadata?.senderName);
+  
+  // Draw footers on all pages
+  const totalPages = pages.length;
+  for (let i = 0; i < pages.length; i++) {
+    drawFooter(pages[i], fonts, i + 1, totalPages, referenceId);
+  }
+  
   return await pdfDoc.save();
-}
-
-async function generateDOCX(letterContent: string, templateName: string): Promise<Uint8Array> {
-  const paragraphs: Paragraph[] = [];
-
-  // Add title
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: templateName,
-          bold: true,
-          size: 32, // 16pt
-        }),
-      ],
-      heading: HeadingLevel.HEADING_1,
-      spacing: { after: 400 },
-    })
-  );
-
-  // Add date
-  const dateText = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: dateText,
-          color: "666666",
-          size: 24, // 12pt
-        }),
-      ],
-      spacing: { after: 400 },
-    })
-  );
-
-  // Process letter content
-  const contentParagraphs = letterContent.split('\n\n');
-
-  for (const para of contentParagraphs) {
-    const lines = para.split('\n');
-    
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              size: 24, // 12pt
-            }),
-          ],
-          spacing: { after: 200 },
-        })
-      );
-    }
-    
-    // Add extra space between paragraphs
-    paragraphs.push(new Paragraph({ text: "", spacing: { after: 200 } }));
-  }
-
-  const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: {
-            margin: {
-              top: 1440, // 1 inch in twips
-              right: 1440,
-              bottom: 1440,
-              left: 1440,
-            },
-          },
-        },
-        children: paragraphs,
-      },
-    ],
-  });
-
-  const buffer = await Packer.toBuffer(doc);
-  return new Uint8Array(buffer);
 }
 
 serve(async (req) => {
@@ -213,18 +162,35 @@ serve(async (req) => {
   );
 
   try {
-    const { purchaseId, letterContent, templateName, generateDocx }: GenerateDocumentsRequest = await req.json();
+    const { 
+      purchaseId, 
+      letterContent, 
+      templateName, 
+      senderName,
+      senderAddress,
+      recipientName,
+      recipientCompany,
+      recipientAddress,
+    }: GenerateDocumentsRequest = await req.json();
 
     if (!purchaseId || !letterContent || !templateName) {
-      throw new Error("Missing required fields");
+      throw new Error("Missing required fields: purchaseId, letterContent, templateName");
     }
 
-    console.log(`Generating documents for purchase ${purchaseId}`);
+    console.log(`Generating professional PDF for purchase ${purchaseId}`);
 
-    // Generate PDF
-    const pdfBytes = await generatePDF(letterContent, templateName);
+    // Generate PDF with professional template
+    const pdfBytes = await generateProfessionalPDF(letterContent, templateName, {
+      senderName,
+      senderAddress,
+      recipientName,
+      recipientCompany,
+      recipientAddress,
+    });
+    
     const pdfFileName = `${purchaseId}/letter.pdf`;
     
+    // Upload to storage
     const { error: pdfUploadError } = await supabaseClient.storage
       .from("letters")
       .upload(pdfFileName, pdfBytes, {
@@ -246,43 +212,12 @@ serve(async (req) => {
       throw new Error(`Failed to create PDF signed URL: ${pdfUrlError.message}`);
     }
 
-    let docxUrl: string | null = null;
-
-    // Generate DOCX if requested
-    if (generateDocx) {
-      const docxBytes = await generateDOCX(letterContent, templateName);
-      const docxFileName = `${purchaseId}/letter.docx`;
-      
-      const { error: docxUploadError } = await supabaseClient.storage
-        .from("letters")
-        .upload(docxFileName, docxBytes, {
-          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          upsert: true,
-        });
-
-      if (docxUploadError) {
-        console.error("DOCX upload error:", docxUploadError);
-        throw new Error(`Failed to upload DOCX: ${docxUploadError.message}`);
-      }
-
-      // Get signed URL for DOCX
-      const { data: docxUrlData, error: docxUrlError } = await supabaseClient.storage
-        .from("letters")
-        .createSignedUrl(docxFileName, 60 * 60 * 24 * 7);
-
-      if (docxUrlError) {
-        throw new Error(`Failed to create DOCX signed URL: ${docxUrlError.message}`);
-      }
-
-      docxUrl = docxUrlData.signedUrl;
-    }
-
-    // Update purchase record with URLs
+    // Update purchase record with PDF URL
     const { error: updateError } = await supabaseClient
       .from("letter_purchases")
       .update({
         pdf_url: pdfUrlData.signedUrl,
-        docx_url: docxUrl,
+        docx_url: null, // No longer generating DOCX
       })
       .eq("id", purchaseId);
 
@@ -291,13 +226,12 @@ serve(async (req) => {
       throw new Error(`Failed to update purchase: ${updateError.message}`);
     }
 
-    console.log(`Documents generated successfully for purchase ${purchaseId}`);
+    console.log(`Professional PDF generated successfully for purchase ${purchaseId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         pdfUrl: pdfUrlData.signedUrl,
-        docxUrl,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

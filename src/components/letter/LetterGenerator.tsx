@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -16,6 +16,7 @@ import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
 import HumanCraftedBadge from './HumanCraftedBadge';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
+import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
 import {
   trackLetterFormStart, 
   trackLetterFormStep, 
@@ -45,13 +46,18 @@ const LetterGenerator = ({
     isLoading,
     requestSuggestionDebounced
   } = useFormAssistant();
+  const { generateLetter, isGenerating, generatedContent } = useGenerateLegalLetter();
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
   const totalSteps = 3;
 
-  // Generate letter content for checkout
-  const generatedLetterContent = useMemo(() => {
+  // Generate fallback letter content (for preview only)
+  const fallbackLetterContent = useMemo(() => {
     const result = generateFullLetter(template, formData, selectedJurisdiction, selectedTone);
     return result.fullContent;
   }, [template, formData, selectedJurisdiction, selectedTone]);
+
+  // Use AI-generated content if available, otherwise fallback
+  const generatedLetterContent = aiGeneratedContent || fallbackLetterContent;
 
   // Calculate letter strength - correct parameter order: (fieldValues, fields)
   const letterStrength = useMemo(() => {
@@ -305,12 +311,39 @@ const LetterGenerator = ({
                 }}>
                   Continue
                   <ChevronRight className="h-4 w-4 ml-2" />
-                </Button> : <Button variant="hero" onClick={() => {
-                  trackGenerateLetterClick(template.slug);
-                  setShowPricing(true);
-                }}>
-                  Generate Letter
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button> : <Button 
+                  variant="hero" 
+                  disabled={isGenerating}
+                  onClick={async () => {
+                    trackGenerateLetterClick(template.slug);
+                    
+                    // Generate AI-powered legal letter
+                    const aiContent = await generateLetter({
+                      templateCategory: template.category,
+                      templateName: template.title,
+                      templateSlug: template.slug,
+                      formData,
+                      jurisdiction: selectedJurisdiction as 'US' | 'UK' | 'EU' | 'generic',
+                      tone: selectedTone,
+                    });
+                    
+                    if (aiContent) {
+                      setAiGeneratedContent(aiContent);
+                      setShowPricing(true);
+                    }
+                  }}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Letter
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
                 </Button>}
             </div>
           </Card>

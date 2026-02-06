@@ -1,125 +1,108 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
+import {
+  loadFonts,
+  drawLetterhead,
+  drawDate,
+  drawDeliveryMethod,
+  drawSubjectLine,
+  drawBodyContent,
+  drawSignatureBlock,
+  drawFooter,
+  generateReferenceId,
+  PAGE_WIDTH,
+  PAGE_HEIGHT,
+  MARGIN_TOP,
+  LINE_HEIGHT,
+  cleanPlaceholders,
+  htmlToPlainText,
+} from "../_shared/pdfHelpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Split text into lines that fit within a given width
-function wrapText(text: string, maxCharsPerLine: number): string[] {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= maxCharsPerLine) {
-      currentLine += (currentLine ? ' ' : '') + word;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
+/**
+ * Extract subject line from letter content
+ */
+function extractSubject(content: string, fallbackName: string): string {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.toLowerCase().startsWith('re:')) {
+      return trimmed.substring(3).trim();
     }
   }
-  if (currentLine) lines.push(currentLine);
-  return lines;
+  return fallbackName;
 }
 
-// Strip HTML tags and convert to plain text
-function htmlToPlainText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+/**
+ * Remove the Re: line from content since we format it separately
+ */
+function removeSubjectFromContent(content: string): string {
+  const lines = content.split('\n');
+  const filteredLines = lines.filter(line => {
+    const trimmed = line.trim().toLowerCase();
+    return !trimmed.startsWith('re:');
+  });
+  return filteredLines.join('\n').trim();
 }
 
-async function generatePDF(letterContent: string, templateName: string): Promise<Uint8Array> {
+/**
+ * Generate a professional PDF letter
+ */
+async function generateProfessionalPDF(
+  letterContent: string,
+  templateName: string
+): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-
-  const pageWidth = 612; // Letter size
-  const pageHeight = 792;
-  const margin = 72; // 1 inch margins
-  const fontSize = 12;
-  const lineHeight = fontSize * 1.5;
-  const maxCharsPerLine = 80;
-
-  let page = pdfDoc.addPage([pageWidth, pageHeight]);
-  let yPosition = pageHeight - margin;
-
-  // Add title
-  const titleFontSize = 16;
-  page.drawText(templateName, {
-    x: margin,
-    y: yPosition,
-    size: titleFontSize,
-    font: timesRomanBoldFont,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= titleFontSize * 2;
-
-  // Add date
-  const dateText = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  page.drawText(dateText, {
-    x: margin,
-    y: yPosition,
-    size: fontSize,
-    font: timesRomanFont,
-    color: rgb(0.3, 0.3, 0.3),
-  });
-  yPosition -= lineHeight * 2;
-
-  // Convert HTML to plain text
-  const plainText = htmlToPlainText(letterContent);
-
-  // Process letter content
-  const paragraphs = plainText.split('\n\n');
-
-  for (const paragraph of paragraphs) {
-    const lines = paragraph.split('\n');
-    
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      
-      const wrappedLines = wrapText(line, maxCharsPerLine);
-      
-      for (const wrappedLine of wrappedLines) {
-        // Check if we need a new page
-        if (yPosition < margin + lineHeight) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          yPosition = pageHeight - margin;
-        }
-
-        page.drawText(wrappedLine, {
-          x: margin,
-          y: yPosition,
-          size: fontSize,
-          font: timesRomanFont,
-          color: rgb(0, 0, 0),
-        });
-        yPosition -= lineHeight;
-      }
-    }
-    
-    // Add extra space between paragraphs
-    yPosition -= lineHeight * 0.5;
+  const fonts = await loadFonts(pdfDoc);
+  
+  const referenceId = generateReferenceId();
+  const cleanContent = cleanPlaceholders(htmlToPlainText(letterContent));
+  const subject = extractSubject(cleanContent, templateName);
+  const bodyContent = removeSubjectFromContent(cleanContent);
+  
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let yPosition = PAGE_HEIGHT - MARGIN_TOP;
+  
+  // Draw letterhead
+  yPosition = drawLetterhead(page, fonts, referenceId);
+  
+  // Draw date
+  yPosition = drawDate(page, fonts, yPosition);
+  
+  // Draw delivery method
+  yPosition = drawDeliveryMethod(page, fonts, yPosition);
+  
+  // Space for recipient (they can add in editor)
+  yPosition -= LINE_HEIGHT * 3;
+  
+  // Draw subject line
+  yPosition = drawSubjectLine(page, fonts, yPosition, subject);
+  
+  // Draw body content
+  const { pages, finalY } = drawBodyContent(
+    page,
+    fonts,
+    bodyContent,
+    yPosition,
+    pdfDoc,
+    referenceId
+  );
+  
+  // Draw signature block
+  const lastPage = pages[pages.length - 1];
+  drawSignatureBlock(lastPage, fonts, finalY);
+  
+  // Draw footers
+  const totalPages = pages.length;
+  for (let i = 0; i < pages.length; i++) {
+    drawFooter(pages[i], fonts, i + 1, totalPages, referenceId);
   }
-
+  
   return await pdfDoc.save();
 }
 
@@ -152,14 +135,14 @@ serve(async (req) => {
       throw new Error("Purchase not found");
     }
 
-    // Use last edited content if available, otherwise original
+    // Use last edited content if available
     const content = purchase.last_edited_content || purchase.letter_content;
 
-    // Generate PDF
-    const pdfBytes = await generatePDF(content, purchase.template_name);
+    // Generate professional PDF
+    const pdfBytes = await generateProfessionalPDF(content, purchase.template_name);
     const pdfFileName = `${purchaseId}/letter-export.pdf`;
 
-    // Upload to storage (overwrite if exists)
+    // Upload to storage
     const { error: uploadError } = await supabaseClient.storage
       .from("letters")
       .upload(pdfFileName, pdfBytes, {
