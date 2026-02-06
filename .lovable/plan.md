@@ -1,118 +1,144 @@
 
 
-# Plan: Streamlined Bulk Content Planning with Category Defaults
+# Plan: Asynchronous Bulk Content Planning with Progress Tracking
 
 ## Problem Statement
-Currently, creating content plans for 500+ templates requires:
-1. Opening ClusterPlanner dialog for each template
-2. Selecting a value tier
-3. Reviewing 8 article types (already pre-selected by tier)
-4. Clicking "Create Plan"
+When clicking "Plan 41" for a category, the current implementation:
+1. Calls `generatePlan()` **sequentially** for each template (41 times)
+2. Each call waits for AI to generate diverse titles (~3-5 seconds per plan)
+3. **Total wait time: ~2-3 minutes** with UI frozen on "Creating Plans..."
+4. No visibility into progress or ability to navigate away
 
-Since the article types are automatically determined by the value tier selection, steps 2-4 are redundant when processing templates in bulk. This creates unnecessary friction for scaling the SEO content strategy.
+The quality requirements (unique titles, banned patterns, cross-database deduplication) remain critical and are preserved.
 
 ---
 
-## Solution: Category SEO Settings + One-Click Bulk Planning
+## Solution: Backend Job Queue with Progress Polling
 
-### Approach Overview
-1. Create a **Category SEO Settings** configuration (stored in `site_settings` table)
-2. Each category gets a default value tier assignment (high/medium/longtail)
-3. **"Plan All" button bypasses the dialog entirely** - uses the category's default tier
-4. Keep the dialog available for individual template overrides when needed
+### Architecture Overview
+
+```text
++------------------+     +-----------------------+     +---------------------+
+|  Frontend UI     |     | bulk-plan-category    |     | generate-content-   |
+|                  |     | edge function         |     | plan edge function  |
++------------------+     +-----------------------+     +---------------------+
+        |                         |                           |
+        | 1. Click "Plan 41"      |                           |
+        |------------------------>|                           |
+        |                         | 2. Create job record      |
+        |                         | status: 'processing'      |
+        |                         |                           |
+        | 3. Return immediately   |                           |
+        |<------------------------|                           |
+        |    { jobId, status }    |                           |
+        |                         |                           |
+        | 4. Poll for progress    | 5. Process templates      |
+        |------------------------>|    one by one             |
+        |                         |-------------------------->|
+        |                         |    update progress        |
+        |                         |<--------------------------|
+        |                         |                           |
+        | 6. Show real-time       |                           |
+        |    progress bar         |                           |
+        +-------------------------+---------------------------+
+```
+
+### Key Benefits
+- **Immediate UI response** - dialog closes instantly, progress shows in stats bar
+- **Real-time progress** - see "Planning 5/41..." as each completes
+- **Navigate freely** - leave page, come back, progress persists
+- **Resilient to failures** - failed templates can be retried individually
+- **Quality preserved** - same AI title generation with full diversity checks
 
 ---
 
 ## Implementation Details
 
-### 1. Add Category Tier Defaults Configuration
+### 1. New Database Table: `bulk_planning_jobs`
 
-Create a new component `CategoryTierSettings` that manages default tiers per category:
+Track the progress of bulk planning operations:
 
-```text
-+--------------------------------------------+
-| Category SEO Settings                      |
-+--------------------------------------------+
-| Category          | Default Tier | Actions |
-|-------------------|--------------|---------|
-| Travel            | High (10)    | [Edit]  |
-| Insurance         | High (10)    | [Edit]  |
-| Financial         | High (10)    | [Edit]  |
-| Housing           | Medium (7)   | [Edit]  |
-| Vehicle           | Medium (7)   | [Edit]  |
-| HOA & Property    | Long-tail (5)| [Edit]  |
-| Contractors       | Long-tail (5)| [Edit]  |
-+--------------------------------------------+
-```
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| category_id | text | Category being planned |
+| value_tier | text | 'high', 'medium', 'longtail' |
+| total_templates | integer | Templates to process |
+| completed_templates | integer | Templates processed so far |
+| failed_templates | integer | Count of failures |
+| status | text | 'processing', 'completed', 'failed' |
+| template_slugs | text[] | List of slugs to process |
+| processed_slugs | text[] | Already processed |
+| error_messages | jsonb | Template-specific errors |
+| created_at | timestamp | Job creation time |
+| completed_at | timestamp | Job completion time |
 
-**Storage:** Use existing `site_settings` table with key `category_seo_tiers`:
-```json
-{
-  "travel": "high",
-  "insurance": "high",
-  "financial": "high",
-  "housing": "medium",
-  "vehicle": "medium",
-  "hoa": "longtail",
-  "contractors": "longtail"
+### 2. New Edge Function: `bulk-plan-category`
+
+Orchestrates the batch processing:
+
+```typescript
+// supabase/functions/bulk-plan-category/index.ts
+
+// Phase 1: Create job and return immediately
+const job = await createBulkPlanningJob({
+  categoryId,
+  valueTier,
+  templateSlugs: templates.map(t => t.slug),
+});
+
+// Return job ID to frontend immediately
+return { jobId: job.id, status: 'processing', total: templates.length };
+
+// Phase 2: Process templates in background
+for (const template of templates) {
+  try {
+    // Call existing generate-content-plan logic
+    await generatePlanForTemplate(template, valueTier);
+    
+    // Update job progress
+    await updateJobProgress(job.id, template.slug, 'success');
+  } catch (error) {
+    await updateJobProgress(job.id, template.slug, 'failed', error.message);
+  }
 }
+
+// Mark job complete
+await completeJob(job.id);
 ```
 
-### 2. Modify "Plan All" Button Behavior
+### 3. Frontend Progress Component
 
-**Current behavior:**
-- "Plan All" creates plans with hardcoded `'medium'` tier
-- Limited to 5 templates at a time
-- Still requires manual intervention
-
-**New behavior:**
-- "Plan All" uses category's configured default tier
-- Remove artificial 5-template limit (process all unplanned templates)
-- Show confirmation with count before executing
-- Progress indicator during batch creation
-
-### 3. Keep Individual Override Capability
-
-The ClusterPlanner dialog remains accessible via:
-- "Create Plan" button on individual templates (for custom tier selection)
-- "View" button on existing plans (for status monitoring)
-
----
-
-## UI Changes
-
-### A. Add Settings Tab to SEO Dashboard
-
-Add a new "Settings" tab to the SEO Dashboard tabs:
-
-```tsx
-<TabsTrigger value="settings">
-  <Settings className="h-4 w-4" />
-  <span>Settings</span>
-</TabsTrigger>
-```
-
-This tab contains the CategoryTierSettings component.
-
-### B. Enhanced "Plan All" Button
-
-Replace current button with confirmation dialog:
+Replace blocking dialog with inline progress:
 
 ```text
-Current: [Plan All] (silently creates 5 plans)
-
-New: [Plan All Uncovered] → Opens confirmation:
-  "Create plans for 47 templates in Travel using High tier?"
-  [Cancel] [Create All]
++------------------------------------------+
+| Travel (41 templates)                    |
+|                                          |
+| [████████████░░░░░░░░░░] 15/41 planned  |
+| Currently: "Airline Delay Letter"        |
+|                                          |
+| [Cancel] or navigate away safely         |
++------------------------------------------+
 ```
 
-### C. Quick Stats Update
+### 4. Modified `TemplateCoverageMap.tsx` Flow
 
-Show tier distribution in category header:
-```text
-Travel (20 templates)
-├── 15 have plans (8 high, 5 medium, 2 longtail)  
-└── 5 uncovered
+```typescript
+// Old: Sequential blocking
+for (const template of templates) {
+  await generatePlan(template); // Waits 3-5s each
+}
+
+// New: Fire-and-forget with polling
+const { jobId } = await startBulkPlan(categoryId, tier, templates);
+// Dialog closes immediately
+
+// Progress shown via separate poll query
+const { data: job } = useQuery({
+  queryKey: ['bulk-planning-job', categoryId],
+  refetchInterval: 2000, // Poll every 2s
+});
 ```
 
 ---
@@ -121,62 +147,81 @@ Travel (20 templates)
 
 | File | Action | Changes |
 |------|--------|---------|
-| `src/components/admin/seo/CategoryTierSettings.tsx` | Create | New component for managing category tier defaults |
-| `src/hooks/useCategoryTierSettings.ts` | Create | Hook for fetching/updating tier settings from site_settings |
-| `src/pages/admin/SEODashboard.tsx` | Modify | Add Settings tab |
-| `src/components/admin/seo/TemplateCoverageMap.tsx` | Modify | Update "Plan All" to use category defaults, add confirmation dialog |
-| `src/components/admin/seo/CoverageStats.tsx` | Modify | Add tier distribution stats |
+| `supabase/functions/bulk-plan-category/index.ts` | Create | New edge function for async batch processing |
+| `src/hooks/useBulkPlanningJob.ts` | Create | Hook for starting jobs and polling progress |
+| `src/components/admin/seo/BulkPlanningProgress.tsx` | Create | Inline progress component |
+| `src/components/admin/seo/TemplateCoverageMap.tsx` | Modify | Use new async flow, show progress inline |
+| `src/components/admin/seo/BulkPlanConfirmDialog.tsx` | Modify | Update messaging, close immediately on confirm |
+
+**Database Migration:**
+- Create `bulk_planning_jobs` table with RLS policies for admin-only access
 
 ---
 
-## Workflow Comparison
+## Quality Preservation
 
-### Before (500+ dialogs)
-```text
-For each template:
-1. Click "Create Plan"
-2. Dialog opens
-3. Select tier (defaults already applied)
-4. Review article types (already selected)
-5. Click "Create Plan"
-6. Wait for AI generation
-7. Repeat...
+The existing title diversity system remains **completely unchanged**:
+
+- Same `generate-content-plan` edge function called per template
+- Same `BANNED_TITLE_STARTERS` validation
+- Same cross-database deduplication (checks 500 existing titles)
+- Same 2x buffer with retry loop for rejected titles
+- Same question-mark limits and first-word uniqueness checks
+- Same category-specific tone and terminology
+
+The only change is **orchestration** - moving from synchronous frontend loop to asynchronous backend job queue.
+
+---
+
+## User Experience Flow
+
+### Before (Current)
+1. Click "Plan 41" → Confirmation dialog
+2. Click "Create 41 Plans" → **Wait 2-3 minutes** (UI frozen)
+3. Dialog closes, all plans created
+
+### After (Proposed)
+1. Click "Plan 41" → Confirmation dialog
+2. Click "Start Planning" → Dialog closes **immediately**
+3. Category row shows progress bar: "Planning 5/41..."
+4. User can navigate away, progress persists
+5. When complete, row updates to "All Planned ✓"
+
+---
+
+## Error Handling
+
+- **Individual failures don't block batch** - continue with remaining templates
+- **Failed templates tracked** - shown in UI with retry option
+- **Stale job recovery** - jobs stuck >15 minutes auto-marked failed
+- **Retry individual failures** - button to retry just failed templates
+
+---
+
+## Progress Polling Strategy
+
+```typescript
+// Poll every 2 seconds while job is active
+const { data: activeJob } = useQuery({
+  queryKey: ['bulk-planning-job', categoryId],
+  queryFn: () => fetchActiveJob(categoryId),
+  refetchInterval: (query) => {
+    const job = query.state.data;
+    // Stop polling when complete
+    return job?.status === 'processing' ? 2000 : false;
+  },
+});
 ```
 
-### After (category-level bulk)
-```text
-One-time setup:
-1. Go to Settings tab
-2. Assign default tiers to each category
-3. Save
-
-Ongoing:
-1. Click "Plan All" on category
-2. Confirm: "Create 47 plans using High tier?"
-3. Done - all plans created
-```
-
 ---
 
-## Default Tier Recommendations
+## Estimated Impact
 
-Based on typical traffic and conversion patterns:
-
-| Tier | Categories | Articles/Template |
-|------|------------|-------------------|
-| **High** | Travel, Insurance, Financial | 10 |
-| **Medium** | Housing, Vehicle, Healthcare, Refunds, Utilities, E-commerce, Employment, Damaged Goods | 7 |
-| **Long-tail** | HOA, Contractors | 5 |
-
-These defaults will be pre-populated but fully editable.
-
----
-
-## Benefits
-
-1. **Eliminates 500+ redundant dialogs** - one-time category setup
-2. **Consistent tier assignment** - no accidental medium when high was intended
-3. **Faster onboarding** - bulk plan entire categories in seconds
-4. **Flexibility preserved** - individual overrides still possible
-5. **Visibility** - clear view of tier distribution across site
+| Metric | Before | After |
+|--------|--------|-------|
+| UI blocking time | 2-3 minutes | 0 seconds |
+| User can navigate | No | Yes |
+| Progress visibility | None | Real-time |
+| Failure recovery | Restart all | Retry failed only |
+| Total processing time | Same | Same (runs in background) |
 
