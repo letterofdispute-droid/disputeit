@@ -10,8 +10,8 @@ const Footer = () => {
             <Link to="/" className="flex items-center mb-4">
               <img 
                 src="/ld-logo.svg" 
-                alt="DisputeLetters" 
-                className="h-9" 
+                alt="Letter of Dispute" 
+                className="h-9"
               />
             </Link>
             <p className="text-sm text-muted-foreground">
@@ -99,7 +99,7 @@ const Footer = () => {
             </p>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} DisputeLetters. All rights reserved.
+            © {new Date().getFullYear()} Letter of Dispute. All rights reserved.
           </p>
         </div>
       </div>
