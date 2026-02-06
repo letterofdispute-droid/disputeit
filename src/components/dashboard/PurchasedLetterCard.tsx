@@ -157,7 +157,7 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         </div>
       </div>
       
-      <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
         <Badge variant="default" className="bg-success w-fit">
           Purchased
         </Badge>
@@ -168,7 +168,7 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
             size="sm"
             onClick={handleDownload}
             disabled={isDownloading}
-            className="flex-1 xs:flex-none"
+            className="flex-1 sm:flex-none"
           >
             {isDownloading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -185,7 +185,7 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
               variant="accent" 
               size="sm"
               asChild
-              className="flex-1 xs:flex-none"
+              className="flex-1 sm:flex-none"
             >
               <Link to={`/letters/${purchase.id}/edit`}>
                 <Edit className="h-4 w-4 mr-1" />

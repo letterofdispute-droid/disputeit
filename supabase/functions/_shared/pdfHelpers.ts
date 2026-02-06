@@ -7,6 +7,27 @@
 
 import { PDFDocument, PDFPage, StandardFonts, rgb, PDFFont } from "https://esm.sh/pdf-lib@1.17.1";
 
+// Page dimensions (US Letter - 8.5" x 11" at 72 points per inch)
+export const PAGE_WIDTH = 612;
+export const PAGE_HEIGHT = 792;
+
+// Margins (1 inch = 72 points)
+export const MARGIN_TOP = 72;
+export const MARGIN_BOTTOM = 72;
+export const MARGIN_LEFT = 72;
+export const MARGIN_RIGHT = 72;
+
+// Content area
+export const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+
+// Font sizes
+export const FONT_SIZE_BODY = 11;
+export const FONT_SIZE_SUBJECT = 12;
+export const FONT_SIZE_FOOTER = 9;
+
+// Line spacing (1.6x for readability)
+export const LINE_HEIGHT = FONT_SIZE_BODY * 1.6;
+
 // Colors (neutral, professional)
 export const DARK_GRAY = rgb(0.2, 0.2, 0.2);
 export const MEDIUM_GRAY = rgb(0.4, 0.4, 0.4);
