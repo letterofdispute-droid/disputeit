@@ -448,7 +448,7 @@ function generateBlogSitemap(blogPosts) {
 // ============================================
 
 async function buildSitemaps() {
-  console.log('\n🗺️  Generating sitemaps to dist/...\n');
+  console.log('\n🗺️  Generating sitemaps...\n');
   
   // Ensure output directory exists
   if (!fs.existsSync(outputDir)) {
@@ -465,33 +465,36 @@ async function buildSitemaps() {
   const blogPosts = await loadBlogPosts();
   console.log(`   ✅ Found ${blogPosts.length} blog posts`);
   
-  // Generate sitemaps
-  console.log('\n📄 Generating sitemap files...');
+  // Generate sitemap content
+  const sitemapIndex = generateSitemapIndex();
+  const sitemapStatic = generateStaticSitemap();
+  const sitemapCategories = generateCategoriesSitemap();
+  const sitemapTemplates = generateTemplatesSitemap(templates);
+  const sitemapBlog = generateBlogSitemap(blogPosts);
   
-  // Sitemap index
-  fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), generateSitemapIndex());
-  console.log('   ✅ sitemap.xml (index)');
+  // Write to dist/ (for current build)
+  console.log('\n📄 Writing sitemap files to dist/...');
+  fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), sitemapIndex);
+  fs.writeFileSync(path.join(outputDir, 'sitemap-static.xml'), sitemapStatic);
+  fs.writeFileSync(path.join(outputDir, 'sitemap-categories.xml'), sitemapCategories);
+  fs.writeFileSync(path.join(outputDir, 'sitemap-templates.xml'), sitemapTemplates);
+  fs.writeFileSync(path.join(outputDir, 'sitemap-blog.xml'), sitemapBlog);
+  console.log('   ✅ Sitemaps written to dist/');
   
-  // Static pages sitemap
-  fs.writeFileSync(path.join(outputDir, 'sitemap-static.xml'), generateStaticSitemap());
-  console.log('   ✅ sitemap-static.xml');
-  
-  // Categories + subcategories + guides sitemap
-  fs.writeFileSync(path.join(outputDir, 'sitemap-categories.xml'), generateCategoriesSitemap());
-  const subcatCount = Object.values(subcategoriesByCategory).flat().length;
-  console.log(`   ✅ sitemap-categories.xml (${categories.length} categories + ${subcatCount} subcategories + ${categories.length} guides)`);
-  
-  // Templates sitemap
-  fs.writeFileSync(path.join(outputDir, 'sitemap-templates.xml'), generateTemplatesSitemap(templates));
-  console.log(`   ✅ sitemap-templates.xml (${templates.length} templates)`);
-  
-  // Blog sitemap
-  fs.writeFileSync(path.join(outputDir, 'sitemap-blog.xml'), generateBlogSitemap(blogPosts));
-  console.log(`   ✅ sitemap-blog.xml (${blogCategories.length} categories + ${blogPosts.length} posts)`);
+  // Also write to public/ (for source control and future builds)
+  const publicDir = path.join(__dirname, '..', 'public');
+  console.log('\n📄 Writing sitemap files to public/...');
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), sitemapIndex);
+  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), sitemapStatic);
+  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), sitemapCategories);
+  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), sitemapTemplates);
+  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), sitemapBlog);
+  console.log('   ✅ Sitemaps written to public/');
   
   // Summary
+  const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogCategories.length + blogPosts.length;
-  console.log(`\n✨ Generated ${totalUrls} URLs across 5 sitemap files\n`);
+  console.log(`\n✨ Generated ${totalUrls} URLs across 5 sitemap files (in both dist/ and public/)\n`);
 }
 
 // Run the build
