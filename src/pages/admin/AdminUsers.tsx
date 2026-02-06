@@ -56,6 +56,7 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [adminAction, setAdminAction] = useState<'grant' | 'revoke'>('grant');
   const [stats, setStats] = useState({
@@ -115,6 +116,12 @@ const AdminUsers = () => {
       });
       fetchUsers();
     }
+    setSuspendDialogOpen(false);
+  };
+
+  const handleSuspendAction = (user: UserProfile) => {
+    setSelectedUser(user);
+    setSuspendDialogOpen(true);
   };
 
   const handleAdminAction = (user: UserProfile, action: 'grant' | 'revoke') => {
@@ -337,7 +344,7 @@ const AdminUsers = () => {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive"
-                            onClick={() => updateUserStatus(user.id, user.status === 'suspended' ? 'active' : 'suspended')}
+                            onClick={() => handleSuspendAction(user)}
                           >
                             <Ban className="h-4 w-4 mr-2" />
                             {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
@@ -375,6 +382,32 @@ const AdminUsers = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmAdminAction}>
               {adminAction === 'grant' ? 'Grant Admin' : 'Revoke Admin'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend/Unsuspend Confirmation Dialog */}
+      <AlertDialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedUser?.status === 'suspended' ? 'Unsuspend User' : 'Suspend User'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedUser?.status === 'suspended'
+                ? `Are you sure you want to unsuspend ${selectedUser?.email}? They will regain access to their account.`
+                : `Are you sure you want to suspend ${selectedUser?.email}? They will be unable to access their account.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedUser && updateUserStatus(selectedUser.id, selectedUser.status === 'suspended' ? 'active' : 'suspended')}
+              className={selectedUser?.status !== 'suspended' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              {selectedUser?.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
