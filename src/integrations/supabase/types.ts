@@ -408,6 +408,8 @@ export type Database = {
           letter_content: string
           pdf_url: string | null
           purchase_type: string
+          refund_reason: string | null
+          refunded_at: string | null
           status: string
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
@@ -428,6 +430,8 @@ export type Database = {
           letter_content: string
           pdf_url?: string | null
           purchase_type: string
+          refund_reason?: string | null
+          refunded_at?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -448,6 +452,8 @@ export type Database = {
           letter_content?: string
           pdf_url?: string | null
           purchase_type?: string
+          refund_reason?: string | null
+          refunded_at?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -626,6 +632,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      refund_logs: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          processed_by: string
+          purchase_id: string
+          reason: string | null
+          stripe_refund_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          processed_by: string
+          purchase_id: string
+          reason?: string | null
+          stripe_refund_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          processed_by?: string
+          purchase_id?: string
+          reason?: string | null
+          stripe_refund_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_logs_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "letter_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {
