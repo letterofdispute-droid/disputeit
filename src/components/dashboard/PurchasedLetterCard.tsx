@@ -102,13 +102,12 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button 
             variant="outline" 
-            size="lg"
             onClick={handleDownload}
             disabled={isDownloading}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             {isDownloading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -123,9 +122,8 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
           {hasEditAccess && (
             <Button 
               variant="accent" 
-              size="lg"
               asChild
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <Link to={`/letters/${purchase.id}/edit`}>
                 <Edit className="h-4 w-4" />
@@ -159,39 +157,43 @@ const PurchasedLetterCard = ({ purchase, featured = false }: PurchasedLetterCard
         </div>
       </div>
       
-      <div className="flex items-center gap-2 sm:gap-3">
-        <Badge variant="default" className="bg-success">
+      <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 w-full sm:w-auto">
+        <Badge variant="default" className="bg-success w-fit">
           Purchased
         </Badge>
         
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleDownload}
-          disabled={isDownloading}
-        >
-          {isDownloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-1" />
-              PDF
-            </>
-          )}
-        </Button>
-        
-        {hasEditAccess && (
+        <div className="flex gap-2">
           <Button 
-            variant="accent" 
+            variant="outline" 
             size="sm"
-            asChild
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex-1 xs:flex-none"
           >
-            <Link to={`/letters/${purchase.id}/edit`}>
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Link>
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-1" />
+                PDF
+              </>
+            )}
           </Button>
-        )}
+          
+          {hasEditAccess && (
+            <Button 
+              variant="accent" 
+              size="sm"
+              asChild
+              className="flex-1 xs:flex-none"
+            >
+              <Link to={`/letters/${purchase.id}/edit`}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

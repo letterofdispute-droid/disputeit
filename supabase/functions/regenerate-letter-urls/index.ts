@@ -57,80 +57,40 @@ serve(async (req) => {
       throw new Error("Purchase not found or not accessible");
     }
 
-    // Generate fresh signed URLs
-    const pdfFileName = `${purchaseId}/letter.pdf`;
-    const { data: pdfUrlData, error: pdfUrlError } = await supabaseClient.storage
-      .from("letters")
-      .createSignedUrl(pdfFileName, 60 * 60 * 24 * 7); // 7 days
-
-    if (pdfUrlError) {
-      // If PDF doesn't exist yet, regenerate it
-      console.log("PDF not found, regenerating documents...");
-      
-      const generateResponse = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-letter-documents`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({
-            purchaseId: purchase.id,
-            letterContent: purchase.letter_content,
-            templateName: purchase.template_name,
-            generateDocx: purchase.purchase_type === "pdf-editable",
-          }),
-        }
-      );
-
-      if (!generateResponse.ok) {
-        const errorText = await generateResponse.text();
-        console.error("Document generation failed:", errorText);
-        throw new Error("Failed to regenerate documents");
-      }
-
-      const generateResult = await generateResponse.json();
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          pdfUrl: generateResult.pdfUrl,
-          docxUrl: generateResult.docxUrl,
+    // Always regenerate PDF with professional template to ensure latest formatting
+    // Use last_edited_content if user has edited the letter, otherwise use original
+    const letterContent = purchase.last_edited_content || purchase.letter_content;
+    
+    console.log("Regenerating PDF with professional template...");
+    
+    const generateResponse = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-letter-documents`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          purchaseId: purchase.id,
+          letterContent: letterContent,
+          templateName: purchase.template_name,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
+      }
+    );
+
+    if (!generateResponse.ok) {
+      const errorText = await generateResponse.text();
+      console.error("Document generation failed:", errorText);
+      throw new Error("Failed to generate documents");
     }
 
-    let docxUrl: string | null = null;
-
-    // If purchase includes editable, get DOCX URL too
-    if (purchase.purchase_type === "pdf-editable") {
-      const docxFileName = `${purchaseId}/letter.docx`;
-      const { data: docxUrlData } = await supabaseClient.storage
-        .from("letters")
-        .createSignedUrl(docxFileName, 60 * 60 * 24 * 7);
-
-      docxUrl = docxUrlData?.signedUrl || null;
-    }
-
-    // Update the stored URLs
-    await supabaseClient
-      .from("letter_purchases")
-      .update({
-        pdf_url: pdfUrlData.signedUrl,
-        docx_url: docxUrl,
-      })
-      .eq("id", purchaseId);
+    const generateResult = await generateResponse.json();
 
     return new Response(
       JSON.stringify({
         success: true,
-        pdfUrl: pdfUrlData.signedUrl,
-        docxUrl,
+        pdfUrl: generateResult.pdfUrl,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
