@@ -99,7 +99,7 @@ serve(async (req: Request) => {
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({
-      from: "DisputeLetters <noreply@disputeletters.com>",
+      from: "Letter of Dispute <noreply@letterofdispute.com>",
       to: [to],
       subject: subject,
       html: `

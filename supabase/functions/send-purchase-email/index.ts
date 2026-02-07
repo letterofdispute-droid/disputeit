@@ -61,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
           <div style="background-color: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
-              <img src="https://disputeletters.com/ld-logo.svg" alt="DisputeLetters" style="height: 40px; width: auto;" />
+              <img src="https://letterofdispute.com/ld-logo.svg" alt="Letter of Dispute" style="height: 40px; width: auto;" />
               <p style="color: #6b7280; font-size: 14px; margin: 12px 0 0 0;">Professional Dispute Letter Templates</p>
             </div>
           
@@ -103,12 +103,12 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
 
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-            <img src="https://disputeletters.com/ld-logo-icon.svg" alt="DisputeLetters" style="height: 32px; width: 32px; margin-bottom: 12px;" />
+            <img src="https://letterofdispute.com/ld-logo-icon.svg" alt="Letter of Dispute" style="height: 32px; width: 32px; margin-bottom: 12px;" />
             <p style="color: #9ca3af; font-size: 12px; margin: 0;">
               Need help? Reply to this email or visit our website.
             </p>
             <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">
-              © ${new Date().getFullYear()} DisputeLetters. All rights reserved.
+              © ${new Date().getFullYear()} Letter of Dispute. All rights reserved.
             </p>
           </div>
           </div>
@@ -117,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "DisputeLetters <noreply@disputeletters.com>",
+      from: "Letter of Dispute <noreply@letterofdispute.com>",
       to: [email],
       subject: `Your Dispute Letter: ${templateName}`,
       html: emailHtml,

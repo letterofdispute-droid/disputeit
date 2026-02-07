@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SITE_URL = 'https://disputeletters.com';
+const SITE_URL = 'https://letterofdispute.com';
 const FUNCTION_URL = 'https://koulmtfnkuapzigcplov.supabase.co/functions/v1/generate-sitemap';
 
 // Category definitions with their IDs

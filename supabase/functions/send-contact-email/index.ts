@@ -80,8 +80,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send notification email to support
     await sendEmail(
-      ["support@disputeletters.com"],
-      "DisputeLetters <noreply@disputeletters.com>",
+      ["support@letterofdispute.com"],
+      "Letter of Dispute <noreply@letterofdispute.com>",
       `Contact Form: ${sanitizedSubject}`,
       `
         <!DOCTYPE html>
@@ -119,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
             </div>
             <div class="footer">
-              This message was sent from the DisputeLetters contact form.
+              This message was sent from the Letter of Dispute contact form.
             </div>
           </div>
         </body>
@@ -133,8 +133,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to the user
     await sendEmail(
       [email],
-      "DisputeLetters <noreply@disputeletters.com>",
-      "We received your message - DisputeLetters",
+      "Letter of Dispute <noreply@letterofdispute.com>",
+      "We received your message - Letter of Dispute",
       `
         <!DOCTYPE html>
         <html>
@@ -166,16 +166,16 @@ const handler = async (req: Request): Promise<Response> => {
               
               <p>In the meantime, you might find these resources helpful:</p>
               <ul>
-                <li><a href="https://disputeletters.com/templates">Browse our letter templates</a></li>
-                <li><a href="https://disputeletters.com/faq">Frequently Asked Questions</a></li>
-                <li><a href="https://disputeletters.com/how-it-works">How DisputeLetters works</a></li>
+                <li><a href="https://letterofdispute.com/templates">Browse our letter templates</a></li>
+                <li><a href="https://letterofdispute.com/faq">Frequently Asked Questions</a></li>
+                <li><a href="https://letterofdispute.com/how-it-works">How Letter of Dispute works</a></li>
               </ul>
               
-              <p>Best regards,<br>The DisputeLetters Team</p>
+              <p>Best regards,<br>The Letter of Dispute Team</p>
             </div>
             <div class="footer">
-              <p>DisputeLetters - Professional dispute resolution letters</p>
-              <p><a href="https://disputeletters.com">disputeletters.com</a></p>
+              <p>Letter of Dispute - Professional dispute resolution letters</p>
+              <p><a href="https://letterofdispute.com">letterofdispute.com</a></p>
             </div>
           </div>
         </body>
