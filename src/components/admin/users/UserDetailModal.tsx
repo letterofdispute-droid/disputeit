@@ -278,13 +278,13 @@ const UserDetailModal = ({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
+        <DrawerContent className="max-h-[85vh] flex flex-col">
+          <DrawerHeader className="flex-shrink-0">
             <DrawerTitle>User Details</DrawerTitle>
           </DrawerHeader>
-          <ScrollArea className="px-4 pb-6 max-h-[calc(90vh-80px)]">
+          <div className="flex-1 overflow-y-auto px-4 pb-6 overscroll-contain">
             {content}
-          </ScrollArea>
+          </div>
         </DrawerContent>
       </Drawer>
     );
