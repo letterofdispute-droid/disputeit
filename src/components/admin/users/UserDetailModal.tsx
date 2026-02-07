@@ -24,6 +24,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
+import UserCreditsSection from './UserCreditsSection';
 
 interface UserProfile {
   id: string;
@@ -247,6 +248,9 @@ const UserDetailModal = ({
           </Button>
         )}
       </div>
+
+      {/* Credits Section */}
+      <UserCreditsSection userId={user.user_id} userEmail={user.email || ''} />
 
       <Separator />
 

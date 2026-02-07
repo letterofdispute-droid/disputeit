@@ -695,6 +695,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          expires_at: string
+          granted_at: string
+          granted_by: string
+          id: string
+          purchase_id: string | null
+          reason: string | null
+          status: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string
+          granted_at?: string
+          granted_by: string
+          id?: string
+          purchase_id?: string | null
+          reason?: string | null
+          status?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          purchase_id?: string | null
+          reason?: string | null
+          status?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_credits_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "letter_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_letters: {
         Row: {
           content: string | null
