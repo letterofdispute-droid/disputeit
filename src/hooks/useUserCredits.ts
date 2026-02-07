@@ -74,18 +74,20 @@ export const useUserCredits = (options: UseUserCreditsOptions = {}) => {
   )[0];
 
   // Grant a credit to a user (admin only)
-  const grantCredit = async (targetUserId: string, reason?: string) => {
+  const grantCredit = async (targetUserId: string, reason?: string, targetUserEmail?: string) => {
     if (!user?.id || !isAdmin) {
       throw new Error('Only admins can grant credits');
     }
 
-    const { error: insertError } = await supabase
+    const { data: insertedCredit, error: insertError } = await supabase
       .from('user_credits')
       .insert({
         user_id: targetUserId,
         granted_by: user.id,
         reason: reason || null,
-      });
+      })
+      .select()
+      .single();
 
     if (insertError) {
       // Check for the max credit limit error
@@ -93,6 +95,23 @@ export const useUserCredits = (options: UseUserCreditsOptions = {}) => {
         throw new Error('User already has the maximum of 2 active credits');
       }
       throw insertError;
+    }
+
+    // Send email notification if we have the user's email
+    if (targetUserEmail && insertedCredit) {
+      try {
+        await supabase.functions.invoke('send-credit-email', {
+          body: {
+            email: targetUserEmail,
+            reason: reason || undefined,
+            expiresAt: insertedCredit.expires_at,
+          },
+        });
+        console.log('Credit notification email sent to:', targetUserEmail);
+      } catch (emailError) {
+        // Don't fail the credit grant if email fails
+        console.error('Failed to send credit notification email:', emailError);
+      }
     }
 
     // Refresh credits
