@@ -32,7 +32,7 @@ export function MethodologyBadge({
   const regulatoryBody = categoryKnowledge?.regulatoryBodies?.[0]?.name;
 
   return (
-    <Card className={cn("bg-muted/30 border-muted", className)}>
+    <Card className={cn("bg-muted/30 border-2 border-border shadow-sm", className)}>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Shield className="h-5 w-5 text-primary" />

@@ -29,34 +29,85 @@ const PurchaseSuccessPage = () => {
 
   useEffect(() => {
     const verifyPurchase = async () => {
-      if (!sessionId || !purchaseId) {
+      // Allow credit redemptions (no sessionId, only purchaseId)
+      if (!purchaseId) {
         setError('Missing purchase information');
         setIsLoading(false);
         return;
       }
 
       try {
-        const { data, error: fnError } = await supabase.functions.invoke('verify-letter-purchase', {
-          body: { sessionId, purchaseId },
-        });
+        // For credit redemptions (no session_id), fetch directly from database
+        if (!sessionId) {
+          const { data: purchaseData, error: fetchError } = await supabase
+            .from('letter_purchases')
+            .select('*')
+            .eq('id', purchaseId)
+            .single();
 
-        if (fnError) throw fnError;
+          if (fetchError || !purchaseData) {
+            throw new Error('Purchase not found');
+          }
 
-        if (data?.success && data?.purchase) {
-          setPurchase(data.purchase);
-          // Track purchase complete only once
+          // Verify it's a valid credit redemption (amount_cents = 0)
+          if (purchaseData.amount_cents !== 0) {
+            setError('Invalid purchase - please contact support');
+            setIsLoading(false);
+            return;
+          }
+
+          // Generate signed URL for PDF
+          let pdfUrl = purchaseData.pdf_url;
+          if (pdfUrl && pdfUrl.startsWith('letters/')) {
+            const { data: signedData } = await supabase.storage
+              .from('letters')
+              .createSignedUrl(pdfUrl.replace('letters/', ''), 3600);
+            pdfUrl = signedData?.signedUrl || null;
+          }
+
+          setPurchase({
+            id: purchaseData.id,
+            templateName: purchaseData.template_name,
+            purchaseType: purchaseData.purchase_type,
+            letterContent: purchaseData.letter_content,
+            pdfUrl: pdfUrl || undefined,
+            editExpiresAt: purchaseData.edit_expires_at || undefined,
+          });
+
+          // Track purchase complete
           if (!purchaseTrackedRef.current) {
             purchaseTrackedRef.current = true;
-            const price = data.purchase.purchaseType === 'pdf-editable' ? 14.99 : 9.99;
             trackPurchaseComplete(
-              data.purchase.templateSlug || 'unknown',
-              'unknown', // category not available in purchase data
-              data.purchase.purchaseType,
-              price
+              purchaseData.template_slug || 'unknown',
+              'unknown',
+              purchaseData.purchase_type,
+              0 // Credit redemption is free
             );
           }
         } else {
-          setError(data?.error || 'Payment verification failed');
+          // Standard Stripe purchase verification
+          const { data, error: fnError } = await supabase.functions.invoke('verify-letter-purchase', {
+            body: { sessionId, purchaseId },
+          });
+
+          if (fnError) throw fnError;
+
+          if (data?.success && data?.purchase) {
+            setPurchase(data.purchase);
+            // Track purchase complete only once
+            if (!purchaseTrackedRef.current) {
+              purchaseTrackedRef.current = true;
+              const price = data.purchase.purchaseType === 'pdf-editable' ? 14.99 : 9.99;
+              trackPurchaseComplete(
+                data.purchase.templateSlug || 'unknown',
+                'unknown',
+                data.purchase.purchaseType,
+                price
+              );
+            }
+          } else {
+            setError(data?.error || 'Payment verification failed');
+          }
         }
       } catch (err) {
         console.error('Verification error:', err);

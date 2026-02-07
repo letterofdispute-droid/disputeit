@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -15,6 +15,7 @@ import SmartField from './SmartField';
 import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
 import HumanCraftedBadge from './HumanCraftedBadge';
+import GeneratingOverlay from './GeneratingOverlay';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
 import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
 import {
@@ -38,6 +39,7 @@ const LetterGenerator = ({
   const [selectedJurisdiction, setSelectedJurisdiction] = useState(template.jurisdictions[0].code);
   const [showPreview, setShowPreview] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
   const [showEvidenceChecklist, setShowEvidenceChecklist] = useState(false);
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
   const formStartedRef = useRef(false);
@@ -313,9 +315,10 @@ const LetterGenerator = ({
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button> : <Button 
                   variant="hero" 
-                  disabled={isGenerating}
+                  disabled={isGenerating || showGeneratingOverlay}
                   onClick={async () => {
                     trackGenerateLetterClick(template.slug);
+                    setShowGeneratingOverlay(true);
                     
                     // Generate AI-powered legal letter
                     const aiContent = await generateLetter({
@@ -329,21 +332,11 @@ const LetterGenerator = ({
                     
                     if (aiContent) {
                       setAiGeneratedContent(aiContent);
-                      setShowPricing(true);
                     }
                   }}
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      Generate Letter
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
+                  Generate Letter
+                  <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>}
             </div>
           </Card>
@@ -373,6 +366,17 @@ const LetterGenerator = ({
       {showPreview && <LetterPreview template={template} formData={formData} tone={selectedTone} jurisdiction={selectedJurisdiction} onClose={() => setShowPreview(false)} />}
 
       {showPricing && <PricingModal templateSlug={template.slug} templateName={template.title} letterContent={generatedLetterContent} onClose={() => setShowPricing(false)} />}
+
+      {/* Generating Overlay with Progress */}
+      <GeneratingOverlay 
+        isGenerating={isGenerating} 
+        onComplete={() => {
+          setShowGeneratingOverlay(false);
+          if (aiGeneratedContent) {
+            setShowPricing(true);
+          }
+        }} 
+      />
     </div>;
 };
 export default LetterGenerator;

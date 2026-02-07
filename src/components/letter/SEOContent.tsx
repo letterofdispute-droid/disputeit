@@ -23,13 +23,17 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* When to Use */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Lightbulb className="h-5 w-5 text-accent" />
-              When to Use This Letter
-            </CardTitle>
+            <div className="flex flex-col items-center text-center">
+              <div className="p-3 bg-accent/10 rounded-full mb-3">
+                <Lightbulb className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle className="text-lg font-semibold">
+                When to Use This Letter
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="list-none space-y-2 m-0 p-0">
               {sections.whenToUse.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
@@ -43,16 +47,20 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* What You'll Need */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <FileText className="h-5 w-5 text-accent" />
-              What You'll Need
-            </CardTitle>
+            <div className="flex flex-col items-center text-center">
+              <div className="p-3 bg-accent/10 rounded-full mb-3">
+                <FileText className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle className="text-lg font-semibold">
+                What You'll Need
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="list-none space-y-2 m-0 p-0">
               {sections.whatYouNeed.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="text-accent font-bold">•</span>
+                  <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -63,16 +71,22 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* What Happens After */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Clock className="h-5 w-5 text-accent" />
-              What Happens Next
-            </CardTitle>
+            <div className="flex flex-col items-center text-center">
+              <div className="p-3 bg-accent/10 rounded-full mb-3">
+                <Clock className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle className="text-lg font-semibold">
+                What Happens Next
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="list-none space-y-2 m-0 p-0">
               {sections.whatHappensAfter.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="text-accent font-bold">{idx + 1}.</span>
+                  <span className="flex items-center justify-center w-5 h-5 bg-accent text-accent-foreground rounded-full text-xs font-bold shrink-0">
+                    {idx + 1}
+                  </span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -83,7 +97,7 @@ const SEOContent = ({ template }: SEOContentProps) => {
 
       {/* How It Works Steps */}
       <section className="mb-10">
-        <h2 className="font-serif text-2xl font-semibold text-foreground mb-6">
+        <h2 className="font-serif text-2xl font-semibold text-foreground mb-6 text-center">
           How to Create Your Letter
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 not-prose">
@@ -93,14 +107,12 @@ const SEOContent = ({ template }: SEOContentProps) => {
             { step: '3', title: 'Choose Tone', desc: 'Select neutral, firm, or final notice as needed' },
             { step: '4', title: 'Download', desc: 'Get your letter in PDF or Word format' },
           ].map((item) => (
-            <div key={item.step} className="flex items-start gap-3 p-4 bg-secondary/50 rounded-lg">
-              <span className="flex items-center justify-center w-8 h-8 bg-accent text-accent-foreground rounded-full text-sm font-bold shrink-0">
+            <div key={item.step} className="flex flex-col items-center text-center p-5 bg-secondary/50 rounded-lg">
+              <span className="flex items-center justify-center w-10 h-10 bg-accent text-accent-foreground rounded-full text-lg font-bold mb-3">
                 {item.step}
               </span>
-              <div>
-                <h3 className="font-medium text-foreground text-sm">{item.title}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
-              </div>
+              <h3 className="font-medium text-foreground text-sm mb-1">{item.title}</h3>
+              <p className="text-xs text-muted-foreground">{item.desc}</p>
             </div>
           ))}
         </div>
