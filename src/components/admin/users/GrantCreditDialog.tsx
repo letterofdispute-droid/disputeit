@@ -43,10 +43,10 @@ const GrantCreditDialog = ({
 
     setIsGranting(true);
     try {
-      await grantCredit(userId, reason.trim() || undefined);
+      await grantCredit(userId, reason.trim() || undefined, userEmail);
       toast({
         title: 'Credit granted',
-        description: `1 credit has been added to ${userEmail}'s account. Valid for 30 days.`,
+        description: `1 credit has been added to ${userEmail}'s account. They'll receive an email notification.`,
       });
       setReason('');
       onSuccess();
