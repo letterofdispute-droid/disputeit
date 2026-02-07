@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import PurchasedLetterCard from '@/components/dashboard/PurchasedLetterCard';
+import CreditsCard from '@/components/dashboard/CreditsCard';
 import { trackDashboardView } from '@/hooks/useGTM';
 
 interface UserLetter {
@@ -418,6 +419,9 @@ const Dashboard = () => {
 
               {/* Sidebar */}
               <div className="space-y-6">
+                {/* Credits Card */}
+                <CreditsCard />
+
                 {/* Recommendations */}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}

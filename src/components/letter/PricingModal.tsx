@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { X, Check, CreditCard, FileText, Edit, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { X, Check, CreditCard, FileText, Edit, Loader2, Gift, Clock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { trackPricingModalOpen, trackCheckoutInitiated } from '@/hooks/useGTM';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import { useAuth } from '@/hooks/useAuth';
+import { differenceInDays } from 'date-fns';
 
 interface PricingModalProps {
   templateSlug: string;
@@ -46,10 +50,47 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { activeCredits, oldestActiveCredit, isLoading: creditsLoading } = useUserCredits();
 
   useEffect(() => {
     trackPricingModalOpen(templateSlug);
   }, [templateSlug]);
+
+  const handleRedeemCredit = async () => {
+    if (!oldestActiveCredit) return;
+
+    setIsLoading('credit');
+    try {
+      const { data, error } = await supabase.functions.invoke('redeem-credit', {
+        body: {
+          templateSlug,
+          templateName,
+          letterContent,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Credit redeemed!',
+        description: 'Your letter has been generated successfully.',
+      });
+
+      onClose();
+      navigate(`/purchase-success?purchase_id=${data.purchaseId}`);
+    } catch (error) {
+      console.error('Credit redemption error:', error);
+      toast({
+        title: 'Failed to redeem credit',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(null);
+    }
+  };
 
   const handlePurchase = async (optionId: string) => {
     const selectedOption = pricingOptions.find(o => o.id === optionId);
@@ -102,6 +143,72 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
 
         {/* Pricing Cards */}
         <div className="p-6">
+          {/* Credit Option - shown prominently if user has credits */}
+          {user && !creditsLoading && activeCredits.length > 0 && oldestActiveCredit && (
+            <Card className="mb-4 border-2 border-success bg-gradient-to-r from-success/5 to-transparent">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-success text-white text-xs font-semibold rounded-full">
+                Free Credit Available!
+              </div>
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-success/10 rounded-full">
+                      <Gift className="h-6 w-6 text-success" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground">Use Your Credit</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You have {activeCredits.length} credit{activeCredits.length !== 1 ? 's' : ''} available
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className="bg-success">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {differenceInDays(new Date(oldestActiveCredit.expires_at), new Date())} days left
+                  </Badge>
+                </div>
+
+                <ul className="space-y-2 mb-5">
+                  <li className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Professional letter (PDF + DOCX)</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">30 days in-app editing</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">No payment required</span>
+                  </li>
+                </ul>
+
+                <Button
+                  variant="default"
+                  className="w-full bg-success hover:bg-success/90"
+                  onClick={handleRedeemCredit}
+                  disabled={isLoading !== null || !agreedToTerms}
+                >
+                  {isLoading === 'credit' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Gift className="h-4 w-4 mr-2" />
+                  )}
+                  {isLoading === 'credit' ? 'Processing...' : 'Use 1 Credit (Free)'}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Divider when credits are shown */}
+          {user && !creditsLoading && activeCredits.length > 0 && (
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground uppercase">Or pay</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pricingOptions.map((option) => {
               const Icon = option.icon;
