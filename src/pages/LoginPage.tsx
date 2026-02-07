@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { lovable } from '@/integrations/lovable';
+import { supabase } from '@/integrations/supabase/client';
 import { trackLoginComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
 const LoginPage = () => {
@@ -64,17 +65,49 @@ const LoginPage = () => {
     setIsGoogleLoading(true);
     trackGoogleAuthClick('login');
     
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-
-    if (error) {
-      toast({
-        title: 'Error signing in with Google',
-        description: error.message,
-        variant: 'destructive',
+    // Detect if we're on a custom domain
+    const isCustomDomain = 
+      !window.location.hostname.includes('lovable.app') &&
+      !window.location.hostname.includes('lovableproject.com');
+    
+    if (isCustomDomain) {
+      // Bypass auth-bridge by using Supabase directly
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          skipBrowserRedirect: true,
+        },
       });
-      setIsGoogleLoading(false);
+      
+      if (error) {
+        toast({
+          title: 'Error signing in with Google',
+          description: error.message,
+          variant: 'destructive',
+        });
+        setIsGoogleLoading(false);
+        return;
+      }
+      
+      // Redirect to OAuth URL
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } else {
+      // For Lovable domains, use the managed auth
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+
+      if (error) {
+        toast({
+          title: 'Error signing in with Google',
+          description: error.message,
+          variant: 'destructive',
+        });
+        setIsGoogleLoading(false);
+      }
     }
     // If successful, the user will be redirected
   };
