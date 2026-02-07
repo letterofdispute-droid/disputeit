@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
