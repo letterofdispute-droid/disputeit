@@ -755,17 +755,18 @@ serve(async (req) => {
       console.log(`Cleaned up ${staleItems.length} stale generating items`);
     }
 
-    // Verify admin access
+    // Verify admin access using getClaims (works with signing-keys)
     const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsError } = await supabase.auth.getUser(token);
-    if (claimsError || !claims?.user) {
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Auth claims error:', claimsError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
         status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
     
-    const userId = claims.user.id;
+    const userId = claimsData.claims.sub;
     const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: userId });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { 
