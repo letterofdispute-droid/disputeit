@@ -3,23 +3,66 @@ import { supabase } from '@/integrations/supabase/client';
 
 const RECAPTCHA_SITE_KEY = '6Ld622AsAAAAAB0AAUWGc3Bl78A1YKxdM6Piu27-';
 
+// Track if the script has been loaded
+let scriptLoaded = false;
+let scriptLoading = false;
+
+const loadRecaptchaScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (scriptLoaded && window.grecaptcha?.enterprise) {
+      resolve();
+      return;
+    }
+
+    // Already loading, wait for it
+    if (scriptLoading) {
+      const checkLoaded = setInterval(() => {
+        if (window.grecaptcha?.enterprise) {
+          clearInterval(checkLoaded);
+          resolve();
+        }
+      }, 100);
+      return;
+    }
+
+    scriptLoading = true;
+
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`;
+    script.async = true;
+    
+    script.onload = () => {
+      scriptLoaded = true;
+      scriptLoading = false;
+      resolve();
+    };
+    
+    script.onerror = () => {
+      scriptLoading = false;
+      reject(new Error('Failed to load reCAPTCHA script'));
+    };
+
+    document.head.appendChild(script);
+  });
+};
+
 export const useRecaptcha = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Check if grecaptcha.enterprise is available
-    const checkReady = () => {
-      if (window.grecaptcha?.enterprise) {
-        window.grecaptcha.enterprise.ready(() => {
-          setIsReady(true);
-        });
-      } else {
-        // Retry after a short delay if not yet loaded
-        setTimeout(checkReady, 100);
-      }
-    };
-    
-    checkReady();
+    // Dynamically load the reCAPTCHA script when this hook is used
+    loadRecaptchaScript()
+      .then(() => {
+        if (window.grecaptcha?.enterprise) {
+          window.grecaptcha.enterprise.ready(() => {
+            setIsReady(true);
+          });
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load reCAPTCHA:', error);
+      });
   }, []);
 
   const verifyRecaptcha = useCallback(async (action: string): Promise<{ success: boolean; score?: number; error?: string }> => {
