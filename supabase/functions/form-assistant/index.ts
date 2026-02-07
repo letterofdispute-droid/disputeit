@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-const LOVABLE_API_URL = 'https://api.lovable.dev/v1/chat/completions';
+const LOVABLE_API_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 // Category-specific expertise for the AI
 const categoryExpertise: Record<string, string> = {
