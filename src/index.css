@@ -147,6 +147,23 @@
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
+
+  /* Override prose list styling for not-prose sections */
+  .not-prose ul,
+  .not-prose ol {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+  }
+
+  .not-prose ul > li::before,
+  .not-prose ol > li::before {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
 }
 
 @layer components {

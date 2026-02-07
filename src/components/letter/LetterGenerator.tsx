@@ -14,10 +14,12 @@ import PricingModal from './PricingModal';
 import SmartField from './SmartField';
 import LetterStrengthMeter from './LetterStrengthMeter';
 import EvidenceChecklist from './EvidenceChecklist';
+import EvidenceUploader from './EvidenceUploader';
 import HumanCraftedBadge from './HumanCraftedBadge';
 import GeneratingOverlay from './GeneratingOverlay';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
 import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
+import { useEvidenceUpload } from '@/hooks/useEvidenceUpload';
 import {
   trackLetterFormStart, 
   trackLetterFormStep, 
@@ -50,6 +52,7 @@ const LetterGenerator = ({
   } = useFormAssistant();
   const { generateLetter, isGenerating, generatedContent } = useGenerateLegalLetter();
   const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
+  const evidenceUpload = useEvidenceUpload();
   const totalSteps = 3;
 
   // Generate fallback letter content (for preview only)
@@ -342,8 +345,18 @@ const LetterGenerator = ({
           </Card>
         </div>
 
-        {/* Sidebar - Evidence Checklist & Tips */}
+        {/* Sidebar - Evidence Checklist, Photo Upload & Tips */}
         <div className="lg:col-span-1 space-y-4">
+          {/* Evidence Photos Upload */}
+          <EvidenceUploader
+            photos={evidenceUpload.photos}
+            canAddMore={evidenceUpload.canAddMore}
+            maxPhotos={evidenceUpload.maxPhotos}
+            onAddPhotos={evidenceUpload.addPhotos}
+            onRemovePhoto={evidenceUpload.removePhoto}
+            onUpdateDescription={evidenceUpload.updateDescription}
+          />
+
           {/* Evidence Checklist Toggle */}
           <Button variant="outline" className="w-full justify-between lg:hidden" onClick={() => setShowEvidenceChecklist(!showEvidenceChecklist)}>
             <span>Evidence Checklist</span>

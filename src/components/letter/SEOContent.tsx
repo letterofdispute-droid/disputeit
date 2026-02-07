@@ -23,17 +23,17 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* When to Use */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-3 bg-accent/10 rounded-full mb-3">
-                <Lightbulb className="h-6 w-6 text-accent" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-lg shrink-0">
+                <Lightbulb className="h-5 w-5 text-accent" />
               </div>
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className="text-lg font-semibold text-left">
                 When to Use This Letter
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ul className="list-none space-y-2 m-0 p-0">
+            <ul className="space-y-2">
               {sections.whenToUse.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
@@ -47,17 +47,17 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* What You'll Need */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-3 bg-accent/10 rounded-full mb-3">
-                <FileText className="h-6 w-6 text-accent" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-lg shrink-0">
+                <FileText className="h-5 w-5 text-accent" />
               </div>
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className="text-lg font-semibold text-left">
                 What You'll Need
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ul className="list-none space-y-2 m-0 p-0">
+            <ul className="space-y-2">
               {sections.whatYouNeed.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
@@ -71,17 +71,17 @@ const SEOContent = ({ template }: SEOContentProps) => {
         {/* What Happens After */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-3 bg-accent/10 rounded-full mb-3">
-                <Clock className="h-6 w-6 text-accent" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-lg shrink-0">
+                <Clock className="h-5 w-5 text-accent" />
               </div>
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className="text-lg font-semibold text-left">
                 What Happens Next
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ul className="list-none space-y-2 m-0 p-0">
+            <ul className="space-y-2">
               {sections.whatHappensAfter.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <span className="flex items-center justify-center w-5 h-5 bg-accent text-accent-foreground rounded-full text-xs font-bold shrink-0">
@@ -105,7 +105,7 @@ const SEOContent = ({ template }: SEOContentProps) => {
             { step: '1', title: 'Gather Info', desc: 'Collect dates, reference numbers, and documentation' },
             { step: '2', title: 'Fill the Form', desc: 'Enter your specific details in our guided template' },
             { step: '3', title: 'Choose Tone', desc: 'Select neutral, firm, or final notice as needed' },
-            { step: '4', title: 'Download', desc: 'Get your letter in PDF or Word format' },
+            { step: '4', title: 'Download', desc: 'Get your letter in PDF format' },
           ].map((item) => (
             <div key={item.step} className="flex flex-col items-center text-center p-5 bg-secondary/50 rounded-lg">
               <span className="flex items-center justify-center w-10 h-10 bg-accent text-accent-foreground rounded-full text-lg font-bold mb-3">

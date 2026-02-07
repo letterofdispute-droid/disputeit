@@ -544,3 +544,134 @@ export function drawSalutation(
   
   return yPosition - LINE_HEIGHT * 1.5;
 }
+
+/**
+ * Evidence photo interface
+ */
+export interface EvidencePhoto {
+  imageBytes: Uint8Array;
+  description?: string;
+}
+
+/**
+ * Draw evidence section with embedded images
+ */
+export async function drawEvidenceSection(
+  pdfDoc: PDFDocument,
+  currentPage: PDFPage,
+  fonts: PDFFonts,
+  startY: number,
+  evidencePhotos: EvidencePhoto[],
+  referenceId?: string
+): Promise<{ pages: PDFPage[]; finalY: number }> {
+  if (evidencePhotos.length === 0) {
+    return { pages: [currentPage], finalY: startY };
+  }
+
+  const pages: PDFPage[] = [currentPage];
+  let page = currentPage;
+  let yPosition = startY;
+
+  // Section header
+  yPosition -= LINE_HEIGHT * 2;
+  
+  // Check if we need a new page for the header
+  if (yPosition < MARGIN_BOTTOM + 200) {
+    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pages.push(page);
+    yPosition = PAGE_HEIGHT - MARGIN_TOP;
+  }
+
+  // Draw section title
+  page.drawText('ATTACHED EVIDENCE', {
+    x: MARGIN_LEFT,
+    y: yPosition,
+    size: FONT_SIZE_SUBJECT,
+    font: fonts.bold,
+    color: BLACK,
+  });
+  yPosition -= LINE_HEIGHT;
+
+  // Underline
+  page.drawLine({
+    start: { x: MARGIN_LEFT, y: yPosition + LINE_HEIGHT * 0.3 },
+    end: { x: PAGE_WIDTH - MARGIN_RIGHT, y: yPosition + LINE_HEIGHT * 0.3 },
+    thickness: 0.5,
+    color: SEPARATOR_GRAY,
+  });
+  yPosition -= LINE_HEIGHT * 1.5;
+
+  // Draw each evidence photo
+  for (let i = 0; i < evidencePhotos.length; i++) {
+    const evidence = evidencePhotos[i];
+    
+    // Calculate image dimensions (max 400px wide, maintain aspect ratio)
+    const MAX_IMAGE_WIDTH = 400;
+    const MAX_IMAGE_HEIGHT = 300;
+    
+    let embeddedImage;
+    try {
+      // Try JPEG first, then PNG
+      try {
+        embeddedImage = await pdfDoc.embedJpg(evidence.imageBytes);
+      } catch {
+        embeddedImage = await pdfDoc.embedPng(evidence.imageBytes);
+      }
+    } catch (err) {
+      console.error(`Failed to embed image ${i + 1}:`, err);
+      continue; // Skip this image
+    }
+
+    const imgAspect = embeddedImage.width / embeddedImage.height;
+    let imgWidth = Math.min(embeddedImage.width, MAX_IMAGE_WIDTH);
+    let imgHeight = imgWidth / imgAspect;
+    
+    if (imgHeight > MAX_IMAGE_HEIGHT) {
+      imgHeight = MAX_IMAGE_HEIGHT;
+      imgWidth = imgHeight * imgAspect;
+    }
+
+    // Space needed: image height + caption + margin
+    const spaceNeeded = imgHeight + LINE_HEIGHT * 3;
+
+    // Check if we need a new page
+    if (yPosition - spaceNeeded < MARGIN_BOTTOM) {
+      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      pages.push(page);
+      yPosition = PAGE_HEIGHT - MARGIN_TOP;
+    }
+
+    // Draw image centered
+    const imgX = MARGIN_LEFT + (CONTENT_WIDTH - imgWidth) / 2;
+    yPosition -= imgHeight;
+    
+    page.drawImage(embeddedImage, {
+      x: imgX,
+      y: yPosition,
+      width: imgWidth,
+      height: imgHeight,
+    });
+
+    // Draw caption below image
+    yPosition -= LINE_HEIGHT * 1.5;
+    const caption = `Figure ${i + 1}${evidence.description ? `: ${evidence.description}` : ''}`;
+    const captionLines = wrapText(caption, fonts.regular, FONT_SIZE_BODY - 1, CONTENT_WIDTH);
+    
+    for (const line of captionLines) {
+      // Center the caption
+      const lineWidth = fonts.regular.widthOfTextAtSize(line, FONT_SIZE_BODY - 1);
+      page.drawText(line, {
+        x: MARGIN_LEFT + (CONTENT_WIDTH - lineWidth) / 2,
+        y: yPosition,
+        size: FONT_SIZE_BODY - 1,
+        font: fonts.regular,
+        color: MEDIUM_GRAY,
+      });
+      yPosition -= LINE_HEIGHT;
+    }
+
+    yPosition -= LINE_HEIGHT; // Extra spacing between images
+  }
+
+  return { pages, finalY: yPosition };
+}
