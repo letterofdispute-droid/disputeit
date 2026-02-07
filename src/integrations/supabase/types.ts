@@ -395,6 +395,50 @@ export type Database = {
           },
         ]
       }
+      evidence_photos: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_size_bytes: number | null
+          id: string
+          original_filename: string | null
+          position: number
+          purchase_id: string | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          original_filename?: string | null
+          position?: number
+          purchase_id?: string | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          original_filename?: string | null
+          position?: number
+          purchase_id?: string | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_photos_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "letter_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       letter_purchases: {
         Row: {
           amount_cents: number

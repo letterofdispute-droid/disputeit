@@ -11,6 +11,7 @@ import {
   drawBodyContent,
   drawSignatureBlock,
   drawFooter,
+  drawEvidenceSection,
   generateReferenceId,
   PAGE_WIDTH,
   PAGE_HEIGHT,
@@ -18,6 +19,7 @@ import {
   LINE_HEIGHT,
   cleanPlaceholders,
   htmlToPlainText,
+  EvidencePhoto,
 } from "../_shared/pdfHelpers.ts";
 
 const corsHeaders = {
@@ -36,6 +38,8 @@ interface GenerateDocumentsRequest {
   recipientName?: string;
   recipientCompany?: string;
   recipientAddress?: string;
+  // Evidence photos from storage
+  evidencePhotoPaths?: { storagePath: string; description?: string }[];
 }
 
 /**
@@ -71,13 +75,15 @@ function removeSubjectFromContent(content: string): string {
 async function generateProfessionalPDF(
   letterContent: string,
   templateName: string,
+  supabaseClient: ReturnType<typeof createClient>,
   metadata?: {
     senderName?: string;
     senderAddress?: string;
     recipientName?: string;
     recipientCompany?: string;
     recipientAddress?: string;
-  }
+  },
+  evidencePhotoPaths?: { storagePath: string; description?: string }[]
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const fonts = await loadFonts(pdfDoc);
@@ -138,8 +144,55 @@ async function generateProfessionalPDF(
   );
   
   // Draw signature block on the last page
-  const lastPage = pages[pages.length - 1];
-  drawSignatureBlock(lastPage, fonts, finalY, metadata?.senderName);
+  let lastPage = pages[pages.length - 1];
+  let currentY = drawSignatureBlock(lastPage, fonts, finalY, metadata?.senderName);
+  
+  // Fetch and embed evidence photos if provided
+  if (evidencePhotoPaths && evidencePhotoPaths.length > 0) {
+    console.log(`Fetching ${evidencePhotoPaths.length} evidence photos...`);
+    
+    const evidencePhotos: EvidencePhoto[] = [];
+    
+    for (const photo of evidencePhotoPaths) {
+      try {
+        const { data, error } = await supabaseClient.storage
+          .from('evidence-photos')
+          .download(photo.storagePath);
+        
+        if (error) {
+          console.error(`Failed to download evidence photo ${photo.storagePath}:`, error);
+          continue;
+        }
+        
+        const arrayBuffer = await data.arrayBuffer();
+        evidencePhotos.push({
+          imageBytes: new Uint8Array(arrayBuffer),
+          description: photo.description,
+        });
+      } catch (err) {
+        console.error(`Error processing evidence photo ${photo.storagePath}:`, err);
+      }
+    }
+    
+    if (evidencePhotos.length > 0) {
+      console.log(`Embedding ${evidencePhotos.length} evidence photos in PDF...`);
+      const { pages: evidencePages, finalY: evidenceFinalY } = await drawEvidenceSection(
+        pdfDoc,
+        lastPage,
+        fonts,
+        currentY,
+        evidencePhotos,
+        referenceId
+      );
+      
+      // Add any new pages created by evidence section
+      for (let i = 1; i < evidencePages.length; i++) {
+        if (!pages.includes(evidencePages[i])) {
+          pages.push(evidencePages[i]);
+        }
+      }
+    }
+  }
   
   // Draw footers on all pages
   const totalPages = pages.length;
@@ -171,6 +224,7 @@ serve(async (req) => {
       recipientName,
       recipientCompany,
       recipientAddress,
+      evidencePhotoPaths,
     }: GenerateDocumentsRequest = await req.json();
 
     if (!purchaseId || !letterContent || !templateName) {
@@ -178,15 +232,24 @@ serve(async (req) => {
     }
 
     console.log(`Generating professional PDF for purchase ${purchaseId}`);
+    if (evidencePhotoPaths && evidencePhotoPaths.length > 0) {
+      console.log(`Including ${evidencePhotoPaths.length} evidence photos`);
+    }
 
     // Generate PDF with professional template
-    const pdfBytes = await generateProfessionalPDF(letterContent, templateName, {
-      senderName,
-      senderAddress,
-      recipientName,
-      recipientCompany,
-      recipientAddress,
-    });
+    const pdfBytes = await generateProfessionalPDF(
+      letterContent, 
+      templateName, 
+      supabaseClient,
+      {
+        senderName,
+        senderAddress,
+        recipientName,
+        recipientCompany,
+        recipientAddress,
+      },
+      evidencePhotoPaths
+    );
     
     const pdfFileName = `${purchaseId}/letter.pdf`;
     
