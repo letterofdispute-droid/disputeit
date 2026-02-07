@@ -91,7 +91,7 @@ serve(async (req) => {
       throw new Error("Failed to create purchase record");
     }
 
-    const origin = req.headers.get("origin") || "https://disputeletters.com";
+    const origin = req.headers.get("origin") || "https://letterofdispute.com";
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
