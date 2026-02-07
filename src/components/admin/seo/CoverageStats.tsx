@@ -108,24 +108,24 @@ export default function CoverageStats() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
+          <Card key={index} className={index === statCards.length - 1 ? 'col-span-2 lg:col-span-1' : ''}>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                     {stat.title}
                   </p>
-                  <p className="text-3xl font-bold mt-1">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-2xl sm:text-3xl font-bold mt-1">{stat.value}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
                     {stat.description}
                   </p>
                 </div>
-                <div className={`p-3 rounded-full bg-muted ${stat.color}`}>
-                  <Icon className="h-6 w-6" />
+                <div className={`p-2 sm:p-3 rounded-full bg-muted ${stat.color} shrink-0`}>
+                  <Icon className="h-4 w-4 sm:h-6 sm:w-6" />
                 </div>
               </div>
             </CardContent>

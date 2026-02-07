@@ -200,7 +200,7 @@ export default function TemplateCoverageMap() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">Template Coverage</h3>
           <p className="text-sm text-muted-foreground">
@@ -208,7 +208,7 @@ export default function TemplateCoverageMap() {
           </p>
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
@@ -246,26 +246,26 @@ export default function TemplateCoverageMap() {
                 )}
                 <CollapsibleTrigger
                   onClick={() => toggleCategory(category.id)}
-                  className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full p-4 gap-3 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
-                    <div className="text-left">
+                    <div className="text-left flex flex-wrap items-center gap-1">
                       <span className="font-medium">{category.name}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
+                      <span className="text-sm text-muted-foreground">
                         ({category.templates.length} templates)
                       </span>
-                      <Badge variant="outline" className="ml-2 text-xs">
+                      <Badge variant="outline" className="text-xs">
                         {VALUE_TIERS[categoryTier].name}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 w-32">
+                  <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-7 sm:pl-0">
+                    <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:w-32">
                       <Progress value={coveragePercent} className="h-2" />
                       <span className="text-xs text-muted-foreground w-10">
                         {coveragePercent}%
@@ -295,25 +295,25 @@ export default function TemplateCoverageMap() {
                       return (
                         <div
                           key={template.slug}
-                          className="flex items-center justify-between px-4 py-3 pl-11 hover:bg-muted/30"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 pl-7 sm:pl-11 gap-2 hover:bg-muted/30"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="truncate text-sm">{template.name}</span>
                           </div>
 
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 sm:gap-4 justify-end">
                             {plan ? (
                               <>
-                                <div className="flex items-center gap-2 w-32">
+                                <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:w-32">
                                   <Progress value={progress} className="h-2" />
-                                  <span className="text-xs text-muted-foreground w-14">
+                                  <span className="text-xs text-muted-foreground w-14 shrink-0">
                                     {generated}/{total}
                                   </span>
                                 </div>
                                 <Badge 
                                   variant={progress === 100 ? 'default' : 'secondary'}
-                                  className="w-20 justify-center"
+                                  className="w-16 sm:w-20 justify-center text-xs shrink-0"
                                 >
                                   {progress === 100 ? (
                                     <><CheckCircle2 className="h-3 w-3 mr-1" /> Done</>
@@ -324,23 +324,21 @@ export default function TemplateCoverageMap() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  className="shrink-0"
                                   onClick={() => handleCreatePlan(template)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </>
                             ) : (
-                              <>
-                                <div className="w-32" />
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleCreatePlan(template)}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Create Plan
-                                </Button>
-                              </>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCreatePlan(template)}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Create Plan
+                              </Button>
                             )}
                           </div>
                         </div>

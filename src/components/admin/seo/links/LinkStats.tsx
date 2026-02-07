@@ -11,7 +11,7 @@ interface LinkStatsProps {
 
 export default function LinkStats({ stats }: LinkStatsProps) {
   return (
-    <div className="flex items-center gap-4 text-sm flex-wrap">
+    <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4 text-sm">
       <span className="text-muted-foreground">
         Pending: <strong>{stats.pending}</strong>
       </span>
@@ -22,7 +22,7 @@ export default function LinkStats({ stats }: LinkStatsProps) {
         Applied: <strong>{stats.applied}</strong>
       </span>
       {stats.rejected > 0 && (
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="text-xs col-span-2 sm:col-span-1 w-fit">
           Rejected: {stats.rejected}
         </Badge>
       )}

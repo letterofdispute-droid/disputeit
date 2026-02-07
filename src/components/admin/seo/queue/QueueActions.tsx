@@ -57,13 +57,14 @@ export default function QueueActions({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
         {/* Batch Size Settings */}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
-              <Settings2 className="h-4 w-4 mr-1" />
-              Batch: {batchSize}
+              <Settings2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Batch: {batchSize}</span>
+              <span className="sm:hidden">{batchSize}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-56" align="end">
@@ -87,11 +88,13 @@ export default function QueueActions({
         {failedCount > 0 && (
           <>
             <Button variant="outline" size="sm" onClick={onRetryFailed}>
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Retry Failed ({failedCount})
+              <RotateCcw className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Retry Failed ({failedCount})</span>
+              <span className="sm:hidden">{failedCount}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowClearFailedDialog(true)}>
-              Clear Failed
+              <span className="hidden sm:inline">Clear Failed</span>
+              <span className="sm:hidden">Clear</span>
             </Button>
           </>
         )}
@@ -102,8 +105,9 @@ export default function QueueActions({
           onClick={() => setShowDeleteDialog(true)}
           disabled={selectedCount === 0}
         >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Delete ({selectedCount})
+          <Trash2 className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">Delete ({selectedCount})</span>
+          <span className="sm:hidden">{selectedCount}</span>
         </Button>
         
         <Button
@@ -112,9 +116,9 @@ export default function QueueActions({
           disabled={selectedCount === 0 || isBulkGenerating}
         >
           {isBulkGenerating ? (
-            <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Generating...</>
+            <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /><span className="hidden sm:inline">Generating...</span></>
           ) : (
-            <><Play className="h-4 w-4 mr-1" /> Generate ({selectedCount})</>
+            <><Play className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Generate ({selectedCount})</span><span className="sm:hidden">{selectedCount}</span></>
           )}
         </Button>
       </div>
