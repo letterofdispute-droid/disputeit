@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, Check, CreditCard, FileText, Edit, Loader2, Gift, Clock } from 'lucide-react';
+import { X, Check, CreditCard, FileText, Edit, Loader2, Gift } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { trackPricingModalOpen, trackCheckoutInitiated } from '@/hooks/useGTM';
@@ -141,47 +140,50 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
           </Button>
         </div>
 
-        {/* Pricing Cards */}
+        {/* Content */}
         <div className="p-6">
+          {/* Terms Agreement Checkbox - FIRST for visibility */}
+          <div className="mb-5 p-4 bg-accent/5 rounded-lg border-2 border-accent/30">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox 
+                checked={agreedToTerms} 
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm text-muted-foreground leading-relaxed">
+                I agree to the{' '}
+                <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy" target="_blank" className="text-primary hover:underline font-medium">
+                  Privacy Policy
+                </Link>
+                . I understand that templates are provided "as is" for informational purposes only.
+              </span>
+            </label>
+          </div>
+
           {/* Credit Option - shown prominently if user has credits */}
           {user && !creditsLoading && activeCredits.length > 0 && oldestActiveCredit && (
-            <Card className="mb-4 border-2 border-success bg-gradient-to-r from-success/5 to-transparent">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-success text-white text-xs font-semibold rounded-full">
+            <Card className="relative mb-4 border-2 border-success bg-gradient-to-r from-success/5 to-transparent overflow-visible">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-success text-white text-xs font-semibold rounded-full whitespace-nowrap">
                 Free Credit Available!
               </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-success/10 rounded-full">
-                      <Gift className="h-6 w-6 text-success" />
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-success/10 rounded-full">
+                      <Gift className="h-5 w-5 text-success" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-foreground">Use Your Credit</h4>
-                      <p className="text-sm text-muted-foreground">
-                        You have {activeCredits.length} credit{activeCredits.length !== 1 ? 's' : ''} available
+                      <h4 className="font-semibold text-foreground text-sm">Use Your Credit</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {activeCredits.length} credit{activeCredits.length !== 1 ? 's' : ''} • Expires in {differenceInDays(new Date(oldestActiveCredit.expires_at), new Date())} days
                       </p>
                     </div>
                   </div>
-                  <Badge className="bg-success">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {differenceInDays(new Date(oldestActiveCredit.expires_at), new Date())} days left
-                  </Badge>
                 </div>
-
-                <ul className="space-y-2 mb-5">
-                  <li className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">Professional letter (PDF + DOCX)</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">30 days in-app editing</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">No payment required</span>
-                  </li>
-                </ul>
 
                 <Button
                   variant="default"
@@ -209,14 +211,14 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {pricingOptions.map((option) => {
               const Icon = option.icon;
               const loading = isLoading === option.id;
               return (
                 <Card
                   key={option.id}
-                  className={`relative p-5 transition-all ${
+                  className={`relative p-4 transition-all overflow-visible ${
                     option.popular 
                       ? 'border-2 border-accent shadow-elevated' 
                       : 'border border-border hover:border-muted-foreground/50'
@@ -224,26 +226,25 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
                 >
                   {/* Recommended Badge */}
                   {option.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-full whitespace-nowrap">
                       Recommended
                     </div>
                   )}
 
-                  <div className="text-center mb-4">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                      <Icon className="h-6 w-6 text-primary" />
+                  <div className="text-center mb-3">
+                    <div className="mx-auto w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <h4 className="font-semibold text-foreground mb-1">{option.name}</h4>
-                    <div className="font-serif text-3xl font-bold text-foreground">
+                    <h4 className="font-semibold text-foreground text-sm mb-1">{option.name}</h4>
+                    <div className="font-serif text-2xl font-bold text-foreground">
                       ${option.price.toFixed(2)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">per letter</p>
                   </div>
 
-                  <ul className="space-y-2 mb-5">
+                  <ul className="space-y-1 mb-4">
                     {option.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                      <li key={feature} className="flex items-start gap-2 text-xs">
+                        <Check className="h-3 w-3 text-success flex-shrink-0 mt-0.5" />
                         <span className="text-muted-foreground">{feature}</span>
                       </li>
                     ))}
@@ -252,6 +253,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
                   <Button
                     variant={option.popular ? 'accent' : 'outline'}
                     className="w-full"
+                    size="sm"
                     onClick={() => handlePurchase(option.id)}
                     disabled={isLoading !== null || !agreedToTerms}
                   >
@@ -260,33 +262,11 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
                     ) : (
                       <CreditCard className="h-4 w-4 mr-2" />
                     )}
-                    {loading ? 'Processing...' : option.popular ? 'Get PDF + Edit Access' : 'Get PDF'}
+                    {loading ? 'Processing...' : option.popular ? 'Get PDF + Edit' : 'Get PDF'}
                   </Button>
                 </Card>
               );
             })}
-          </div>
-
-          {/* Terms Agreement Checkbox */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <Checkbox 
-                checked={agreedToTerms} 
-                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                className="mt-0.5"
-              />
-              <span className="text-sm text-muted-foreground leading-relaxed">
-                I agree to the{' '}
-                <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link to="/privacy" target="_blank" className="text-primary hover:underline font-medium">
-                  Privacy Policy
-                </Link>
-                . I understand that templates are provided "as is" for informational purposes only and should be used at my own discretion and risk.
-              </span>
-            </label>
           </div>
 
           {/* Re-edit info */}
