@@ -21,17 +21,21 @@ const SEOContent = ({
         {/* When to Use */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold flex-col gap-0 flex items-center justify-start">
-              <Lightbulb className="h-5 w-5 text-accent" />
+            <div className="flex justify-center mb-2">
+              <Lightbulb className="h-6 w-6 text-accent" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-center">
               When to Use This Letter
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {sections.whenToUse.map((item, idx) => <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+            <ul className="space-y-1.5">
+              {sections.whenToUse.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-1.5 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
                   <span>{item}</span>
-                </li>)}
+                </li>
+              ))}
             </ul>
           </CardContent>
         </Card>
@@ -39,17 +43,21 @@ const SEOContent = ({
         {/* What You'll Need */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <FileText className="h-5 w-5 text-accent" />
+            <div className="flex justify-center mb-2">
+              <FileText className="h-6 w-6 text-accent" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-center">
               What You'll Need
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {sections.whatYouNeed.map((item, idx) => <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+            <ul className="space-y-1.5">
+              {sections.whatYouNeed.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-1.5 text-sm text-muted-foreground">
                   <span className="text-accent font-bold">•</span>
                   <span>{item}</span>
-                </li>)}
+                </li>
+              ))}
             </ul>
           </CardContent>
         </Card>
@@ -57,17 +65,21 @@ const SEOContent = ({
         {/* What Happens After */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Clock className="h-5 w-5 text-accent" />
+            <div className="flex justify-center mb-2">
+              <Clock className="h-6 w-6 text-accent" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-center">
               What Happens Next
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {sections.whatHappensAfter.map((item, idx) => <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+            <ul className="space-y-1.5">
+              {sections.whatHappensAfter.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-1.5 text-sm text-muted-foreground">
                   <span className="text-accent font-bold">{idx + 1}.</span>
                   <span>{item}</span>
-                </li>)}
+                </li>
+              ))}
             </ul>
           </CardContent>
         </Card>
@@ -80,30 +92,30 @@ const SEOContent = ({
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 not-prose">
           {[{
-          step: '1',
-          title: 'Gather Info',
-          desc: 'Collect dates, reference numbers, and documentation'
-        }, {
-          step: '2',
-          title: 'Fill the Form',
-          desc: 'Enter your specific details in our guided template'
-        }, {
-          step: '3',
-          title: 'Choose Tone',
-          desc: 'Select neutral, firm, or final notice as needed'
-        }, {
-          step: '4',
-          title: 'Download',
-          desc: 'Get your letter in PDF or Word format'
-        }].map(item => <div key={item.step} className="flex items-start gap-3 p-4 bg-secondary/50 rounded-lg">
-              <span className="flex items-center justify-center w-8 h-8 bg-accent text-accent-foreground rounded-full text-sm font-bold shrink-0">
+            step: '1',
+            title: 'Gather Info',
+            desc: 'Collect dates, reference numbers, and documentation'
+          }, {
+            step: '2',
+            title: 'Fill the Form',
+            desc: 'Enter your specific details in our guided template'
+          }, {
+            step: '3',
+            title: 'Choose Tone',
+            desc: 'Select neutral, firm, or final notice as needed'
+          }, {
+            step: '4',
+            title: 'Download',
+            desc: 'Get your letter in PDF or Word format'
+          }].map(item => (
+            <div key={item.step} className="flex flex-col items-center text-center p-4 bg-secondary/50 rounded-lg">
+              <span className="flex items-center justify-center w-8 h-8 bg-accent text-accent-foreground rounded-full text-sm font-bold mb-3">
                 {item.step}
               </span>
-              <div>
-                <h3 className="font-medium text-foreground text-sm">{item.title}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
-              </div>
-            </div>)}
+              <h3 className="font-serif font-semibold text-foreground">{item.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
