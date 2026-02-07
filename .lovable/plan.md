@@ -1,186 +1,211 @@
 
-# Credits System Implementation Plan
+# Template Page Improvements & Bug Fixes Plan
 
 ## Overview
-Implement a **goodwill credits system** that allows admins to assign free letter generation credits to users as a customer service gesture. Credits expire after 30 days and users can hold a maximum of 2 credits at any time.
+This plan addresses 6 distinct issues across template pages, pricing modal, credit redemption, and letter generation UX:
 
-## Business Rules
-- Maximum 2 credits per user at any time (enforced at database and application level)
-- Credits expire 30 days after being granted
-- One credit = one free letter (equivalent to PDF + Edit Access, valued at $14.99)
-- Credits are used instead of payment during checkout
-- Only admins can grant credits
+1. **SEO Content Cards** - Fix double bullet points and header layout
+2. **How to Create Your Letter** - Redesign step cards with vertical layout
+3. **Methodology Badge** - Add more prominent border styling
+4. **Pricing Modal** - Move checkbox above the fold for better visibility
+5. **Credit Redemption Error** - Fix "Missing purchase information" bug
+6. **Letter Generation Progress** - Add animated progress bar with rotating messages
 
 ---
 
-## Architecture Overview
+## Issue 1: SEO Content Cards - Double Bullet Points & Icon Placement
 
+**Problem:** The "When to Use", "What You'll Need", and "What Happens Next" cards show both a black bullet point (from default list styling) AND a yellow/accent icon/bullet, creating visual clutter. Additionally, icons are inline with text instead of above the section title.
+
+**Solution:**
+- Reorganize card header to place icon ABOVE the title (centered) instead of inline
+- Ensure the `<ul>` lists have no default list-style bullets since we're using custom icons/markers
+- Clean up the list styling to only show our custom accent-colored markers
+
+**File:** `src/components/letter/SEOContent.tsx`
+
+**Changes:**
 ```text
-+------------------+       +-------------------+       +------------------+
-|   Admin Panel    |  -->  |   user_credits    |  <--  |  PricingModal    |
-| (Grant Credits)  |       |     (table)       |       |  (Use Credits)   |
-+------------------+       +-------------------+       +------------------+
-         |                         |                          |
-         v                         v                          v
-+------------------+       +-------------------+       +------------------+
-| UserDetailModal  |       | Database Trigger  |       | redeem-credit    |
-| (View + Assign)  |       | (Enforce max 2)   |       | (Edge Function)  |
-+------------------+       +-------------------+       +------------------+
+- Move icon above card title, centered
+- Add explicit list-style-none to ul elements
+- Keep custom CheckCircle2, bullet, and number markers only
 ```
 
 ---
 
-## Implementation Steps
+## Issue 2: "How to Create Your Letter" Step Layout
 
-### Phase 1: Database Schema
+**Problem:** The current horizontal layout with number badge on the left and text on the right looks awkward. The number should be ABOVE the text, not beside it.
 
-**Create `user_credits` table:**
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | uuid | Primary key |
-| `user_id` | uuid | Reference to auth.users |
-| `granted_by` | uuid | Admin who granted the credit |
-| `granted_at` | timestamp | When the credit was granted |
-| `expires_at` | timestamp | 30 days from granted_at |
-| `used_at` | timestamp | When the credit was redeemed (null if unused) |
-| `purchase_id` | uuid | Links to letter_purchases when redeemed |
-| `reason` | text | Optional note from admin |
-| `status` | text | 'active', 'used', 'expired' |
+**Solution:**
+- Redesign the step cards to use a vertical/stacked layout
+- Number badge centered at top
+- Title and description centered below the number
 
-**Database Validation:**
-- A BEFORE INSERT trigger will check if user already has 2 or more active/unexpired credits
-- If limit exceeded, the insert is rejected with an error
+**File:** `src/components/letter/SEOContent.tsx`
 
-**RLS Policies:**
-- Admins can INSERT (grant credits)
-- Admins can SELECT all credits
-- Users can SELECT their own credits
-- No UPDATE or DELETE allowed (immutable audit trail)
-
----
-
-### Phase 2: Admin UI Changes
-
-**UserDetailModal Enhancements:**
-- Add a "Credits" section showing:
-  - Current active credits count (0, 1, or 2)
-  - List of credit history (granted, used, expired)
-  - "Grant Credit" button (disabled if user has 2 active credits)
-
-**Grant Credit Dialog:**
-- Optional reason field for documentation
-- Confirmation message explaining 30-day expiry
-- Success/error toast feedback
-
-**AdminUsers Table:**
-- Add a "Credits" column showing active credit count per user
-- Visual indicator (badge) when user has credits available
-
----
-
-### Phase 3: User-Facing UI Changes
-
-**PricingModal Updates:**
-- Check if user has active (non-expired, unused) credits
-- If credits available, show a third option: "Use 1 Credit (Free)"
-- Display credit expiration date
-- Credit option should be visually prominent
-
-**Dashboard Updates:**
-- Add a "Credits" card in the sidebar showing:
-  - Number of available credits
-  - Expiration dates for each credit
-  - Link to browse templates
-
----
-
-### Phase 4: Credit Redemption Flow
-
-**New Edge Function: `redeem-credit`**
-- Validates user has an active credit
-- Marks the oldest credit as 'used'
-- Creates a letter_purchase record with amount_cents = 0
-- Links the credit to the purchase
-- Generates the letter documents (PDF/DOCX)
-- Returns success with download URLs
-
-**Modified Flow:**
-1. User clicks "Use 1 Credit" in PricingModal
-2. Frontend calls `redeem-credit` edge function
-3. Edge function validates and processes
-4. User is redirected to success page with their letter
-
----
-
-### Phase 5: Expiration Handling
-
-**Approach:** 
-- Credits are checked for expiry at query time using `WHERE expires_at > NOW()`
-- No background job needed - expired credits are simply excluded from active count
-- Optional: A scheduled function could mark expired credits as 'expired' for cleaner data
-
----
-
-## Technical Details
-
-### Database Migration SQL (Summary)
-```sql
--- Create user_credits table
--- Add trigger to enforce max 2 active credits per user
--- Create RLS policies for admin and user access
+**Current:**
+```text
+[1] Gather Info
+    Description text
 ```
 
-### Files to Create
-| File | Purpose |
-|------|---------|
-| `src/hooks/useUserCredits.ts` | Hook to fetch/manage user credits |
-| `src/components/admin/users/GrantCreditDialog.tsx` | Admin dialog for granting credits |
-| `src/components/admin/users/UserCreditsSection.tsx` | Credits display in UserDetailModal |
-| `src/components/dashboard/CreditsCard.tsx` | User dashboard credits display |
-| `supabase/functions/redeem-credit/index.ts` | Edge function for credit redemption |
+**New Design:**
+```text
+    [1]
+  Gather Info
+Description text
+```
 
-### Files to Modify
+---
+
+## Issue 3: Methodology Badge Border
+
+**Problem:** The "How This Template Was Built" card is too subtle and not visible enough.
+
+**Solution:**
+- Add a slightly larger, darker border to make it more prominent
+- Use `border-border` or a custom darker border color
+
+**File:** `src/components/letter/MethodologyBadge.tsx`
+
+---
+
+## Issue 4: Pricing Modal - Checkbox Visibility
+
+**Problem:** When user has credits, they need to scroll down to find the Terms checkbox, and buttons are disabled until checkbox is checked. This is confusing UX.
+
+**Solution:**
+- Move the Terms Agreement checkbox to the TOP of the modal content, right after the header
+- Add visual emphasis to make it clear this needs to be checked first
+- Reorder the modal to: Header > Terms Checkbox > Credit Card (if available) > Pricing Options > Info Footer
+
+**File:** `src/components/letter/PricingModal.tsx`
+
+**New Order:**
+1. Header (sticky)
+2. Terms Agreement Checkbox (immediately visible)
+3. Credit Option (if user has credits)
+4. "OR PAY" divider
+5. Pricing cards
+6. Re-edit info & security note
+
+---
+
+## Issue 5: Credit Redemption Error - "Missing purchase information"
+
+**Root Cause Analysis:**
+The `PurchaseSuccessPage.tsx` requires BOTH `session_id` AND `purchase_id` URL parameters (line 32):
+```javascript
+if (!sessionId || !purchaseId) {
+  setError('Missing purchase information');
+  ...
+}
+```
+
+But the credit redemption flow only passes `purchase_id`:
+```javascript
+navigate(`/purchase-success?purchase_id=${data.purchaseId}`);
+```
+
+The `session_id` is a Stripe session ID, which doesn't exist for credit redemptions.
+
+**Solution:**
+- Update `PurchaseSuccessPage.tsx` to handle credit redemptions separately
+- If only `purchase_id` is provided (no `session_id`), fetch the purchase directly from the database
+- Skip Stripe verification for credit redemptions (amount_cents = 0)
+
+**Files:**
+- `src/pages/PurchaseSuccessPage.tsx` - Add credit redemption handling path
+- Create special handling when `session_id` is absent but `purchase_id` is present
+
+---
+
+## Issue 6: Letter Generation Progress Bar with Rotating Messages
+
+**Problem:** Letter generation completes too quickly (15-20 seconds), which doesn't feel substantial or worth the money. User wants:
+- Visual progress bar with percentage
+- Minimum generation time (e.g., 25-30 seconds)
+- Rotating educational/trust-building messages while waiting
+
+**Solution:**
+Create a new `GeneratingOverlay` component that:
+- Shows an animated progress bar from 0% to 100%
+- Runs for a minimum of ~25 seconds regardless of actual generation time
+- Displays rotating messages about the platform's value proposition
+- Only closes when BOTH the minimum time has elapsed AND generation is complete
+
+**New Component:** `src/components/letter/GeneratingOverlay.tsx`
+
+**Rotating Messages (examples):**
+1. "Analyzing your situation and legal context..."
+2. "Our templates are carefully crafted by consumer rights experts..."
+3. "We've helped thousands of consumers successfully resolve disputes..."
+4. "Adding relevant legal references for your jurisdiction..."
+5. "Each template is based on proven protection frameworks..."
+6. "Structuring your letter for maximum impact..."
+7. "We use AI to enhance your letter, but humans review every template..."
+8. "Finalizing your professionally formatted document..."
+
+**Integration:**
+- Show overlay when generation starts
+- Control progress bar animation with useEffect
+- Wait for both timer and API response before proceeding
+
+---
+
+## Implementation Summary
+
 | File | Changes |
 |------|---------|
-| `src/components/letter/PricingModal.tsx` | Add credit usage option |
-| `src/components/admin/users/UserDetailModal.tsx` | Add credits section + grant button |
-| `src/pages/admin/AdminUsers.tsx` | Add credits column to table |
-| `src/pages/Dashboard.tsx` | Add credits card to sidebar |
+| `src/components/letter/SEOContent.tsx` | Fix card headers, remove double bullets, redesign step cards |
+| `src/components/letter/MethodologyBadge.tsx` | Add more prominent border |
+| `src/components/letter/PricingModal.tsx` | Move checkbox to top |
+| `src/pages/PurchaseSuccessPage.tsx` | Handle credit redemption (no session_id) |
+| `src/components/letter/GeneratingOverlay.tsx` | NEW - Progress bar with rotating messages |
+| `src/components/letter/LetterGenerator.tsx` | Integrate GeneratingOverlay component |
 
 ---
 
-## Security Considerations
+## Visual Preview of Changes
 
-1. **Admin-only granting:** RLS policy ensures only admins can INSERT credits
-2. **Immutable records:** No UPDATE/DELETE policies for audit trail
-3. **Server-side validation:** Edge function double-checks credit validity before redemption
-4. **User ownership:** Users can only view/use their own credits
-5. **Rate limiting:** One credit per redemption call, validated server-side
+### SEO Content Cards (After)
+```text
++------------------------+
+|         [icon]         |
+|    When to Use This    |
+|        Letter          |
++------------------------+
+| ✓ First scenario       |
+| ✓ Second scenario      |
+| ✓ Third scenario       |
++------------------------+
+```
 
----
+### How to Create Steps (After)
+```text
++----------+ +----------+ +----------+ +----------+
+|    [1]   | |    [2]   | |    [3]   | |    [4]   |
+|  Gather  | | Fill the | |  Choose  | | Download |
+|   Info   | |   Form   | |   Tone   | |          |
+|          | |          | |          | |          |
+| Collect  | | Enter    | | Select   | | Get your |
+| dates... | | details..| | neutral..| | letter.. |
++----------+ +----------+ +----------+ +----------+
+```
 
-## User Experience Flow
-
-**Admin granting credit:**
-1. Admin opens user detail modal
-2. Sees current credit status (0/2 available)
-3. Clicks "Grant Credit"
-4. Optionally adds reason
-5. Confirms - credit is added with 30-day expiry
-
-**User using credit:**
-1. User generates letter as normal
-2. Clicks "Generate Letter"
-3. PricingModal shows "Use 1 Credit (Free)" option
-4. User clicks credit option
-5. Letter is generated and user redirected to success page
-6. Credit marked as used
-
----
-
-## Edge Cases Handled
-
-- User tries to use expired credit: Rejected at query level
-- Admin tries to grant 3rd credit: Rejected by database trigger
-- User with no account tries to use credit: Requires authentication
-- Credit used for both PDF options: Always grants PDF + Edit Access equivalent
+### Generating Overlay
+```text
++------------------------------------------+
+|                                          |
+|    [Logo or Icon]                        |
+|                                          |
+|    Generating Your Letter                |
+|                                          |
+|    [=========>        ] 47%              |
+|                                          |
+|    "Our templates are carefully          |
+|    crafted by consumer rights experts"   |
+|                                          |
++------------------------------------------+
+```
