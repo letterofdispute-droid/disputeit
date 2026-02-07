@@ -1,7 +1,7 @@
-import { useCallback, useRef } from 'react';
-import { ImagePlus, X, GripVertical, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { ImagePlus, X, Loader2, CheckCircle2, AlertCircle, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { EvidencePhoto } from '@/hooks/useEvidenceUpload';
@@ -127,15 +127,38 @@ const EvidenceUploader = ({
                   </div>
                 </div>
                 
-                {/* Description input */}
+                {/* Description - click to edit with textarea */}
                 <div className="p-2">
-                  <Input
-                    placeholder="Add description..."
-                    value={photo.description}
-                    onChange={(e) => onUpdateDescription(photo.id, e.target.value)}
-                    className="h-8 text-xs"
-                    disabled={photo.uploading}
-                  />
+                  {photo.description ? (
+                    <div 
+                      className="text-xs text-foreground bg-background/50 rounded p-1.5 cursor-pointer hover:bg-muted/50 transition-colors min-h-[32px] line-clamp-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newDesc = window.prompt('Photo description:', photo.description);
+                        if (newDesc !== null) {
+                          onUpdateDescription(photo.id, newDesc);
+                        }
+                      }}
+                      title="Click to edit description"
+                    >
+                      {photo.description}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newDesc = window.prompt('Add a description for this photo:');
+                        if (newDesc) {
+                          onUpdateDescription(photo.id, newDesc);
+                        }
+                      }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-center py-1"
+                      disabled={photo.uploading}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Add description
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
