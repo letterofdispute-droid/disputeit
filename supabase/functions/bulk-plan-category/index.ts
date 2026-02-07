@@ -111,6 +111,49 @@ const ARTICLE_TYPES = [
   },
 ];
 
+// Valid article type IDs for database constraint validation
+const VALID_ARTICLE_TYPE_IDS = ARTICLE_TYPES.map(t => t.id);
+
+/**
+ * Normalize and validate article type from AI response
+ * Returns a valid article type ID or 'how-to' as fallback
+ */
+function normalizeArticleType(rawType: string): string {
+  if (!rawType || typeof rawType !== 'string') return 'how-to';
+  
+  const normalized = rawType.toLowerCase().trim();
+  
+  // Direct match
+  if (VALID_ARTICLE_TYPE_IDS.includes(normalized)) {
+    return normalized;
+  }
+  
+  // Try without hyphens
+  const noHyphen = normalized.replace(/-/g, '');
+  const matchWithoutHyphen = VALID_ARTICLE_TYPE_IDS.find(
+    id => id.replace(/-/g, '') === noHyphen
+  );
+  if (matchWithoutHyphen) return matchWithoutHyphen;
+  
+  // Fuzzy matching for common AI variations
+  const fuzzyMappings: Record<string, string> = {
+    'howto': 'how-to',
+    'how to': 'how-to',
+    'casestudy': 'case-study',
+    'case study': 'case-study',
+    'faq': 'faq',
+    'qa': 'faq',
+    'q&a': 'faq',
+  };
+  
+  if (fuzzyMappings[normalized]) {
+    return fuzzyMappings[normalized];
+  }
+  
+  console.warn(`[BULK-PLAN] Invalid article type "${rawType}", defaulting to "how-to"`);
+  return 'how-to';
+}
+
 const VALUE_TIER_CONFIGS = {
   high: {
     articleCount: 10,
@@ -392,10 +435,10 @@ Return JSON:
     throw new Error(`Failed to create plan: ${planError.message}`);
   }
 
-  // Create queue items
+  // Create queue items with validated article types
   const queueItems = validatedArticles.map((article, index) => ({
     plan_id: newPlan.id,
-    article_type: article.type,
+    article_type: normalizeArticleType(article.type), // Validate to prevent constraint errors
     suggested_title: article.title,
     suggested_keywords: article.keywords,
     priority: 50 - index,
