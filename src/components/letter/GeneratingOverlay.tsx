@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, FileText, Shield, Sparkles, Scale, Users, CheckCircle2 } from 'lucide-react';
 
 interface GeneratingOverlayProps {
+  isOpen: boolean;
   isGenerating: boolean;
   onComplete: () => void;
 }
@@ -53,15 +54,15 @@ const rotatingMessages = [
 const MINIMUM_DURATION_MS = 25000; // 25 seconds minimum
 const MESSAGE_INTERVAL_MS = 3000; // Change message every 3 seconds
 
-const GeneratingOverlay = ({ isGenerating, onComplete }: GeneratingOverlayProps) => {
+const GeneratingOverlay = ({ isOpen, isGenerating, onComplete }: GeneratingOverlayProps) => {
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const [generationComplete, setGenerationComplete] = useState(false);
   const [timerComplete, setTimerComplete] = useState(false);
 
-  // Handle progress animation
+  // Handle progress animation - start when isOpen becomes true
   useEffect(() => {
-    if (!isGenerating) return;
+    if (!isOpen) return;
 
     setProgress(0);
     setGenerationComplete(false);
@@ -81,11 +82,11 @@ const GeneratingOverlay = ({ isGenerating, onComplete }: GeneratingOverlayProps)
     }, 100);
 
     return () => clearInterval(progressInterval);
-  }, [isGenerating]);
+  }, [isOpen]);
 
   // Handle message rotation
   useEffect(() => {
-    if (!isGenerating) return;
+    if (!isOpen) return;
 
     setMessageIndex(0);
     const messageInterval = setInterval(() => {
@@ -93,7 +94,7 @@ const GeneratingOverlay = ({ isGenerating, onComplete }: GeneratingOverlayProps)
     }, MESSAGE_INTERVAL_MS);
 
     return () => clearInterval(messageInterval);
-  }, [isGenerating]);
+  }, [isOpen]);
 
   // Track when generation completes
   useEffect(() => {
@@ -113,7 +114,8 @@ const GeneratingOverlay = ({ isGenerating, onComplete }: GeneratingOverlayProps)
     }
   }, [timerComplete, generationComplete, onComplete]);
 
-  if (!isGenerating && !timerComplete) return null;
+  // Don't render if not open
+  if (!isOpen) return null;
 
   const currentMessage = rotatingMessages[messageIndex];
   const Icon = currentMessage.icon;
