@@ -1,90 +1,132 @@
 
-# Fix Stuck Bulk Planning Job
+# Fix Mobile Layout Overflow in Admin Dashboard
 
-## Summary
-The "Damaged Goods" bulk planning job has been stuck for 8+ hours because the edge function's background processing timed out mid-way through. We need to (1) fix the stuck job immediately, and (2) add robustness to prevent this in the future.
+## Problem
+Multiple admin dashboard components display items inline that overflow horizontally on mobile devices, causing horizontal scrolling issues. The user provided two screenshots showing the SEO Coverage Map with inline elements that don't fit on mobile screens.
 
-## Immediate Fix
-
-### 1. Clean Up Stuck Job
-Mark the current stuck job as failed so the UI updates and the admin can retry:
-
-```sql
--- Update the stuck job to 'failed' status
-UPDATE bulk_planning_jobs
-SET 
-  status = 'failed',
-  completed_at = NOW(),
-  error_messages = error_messages || '{"_timeout": "Job timed out after extended processing"}'::jsonb
-WHERE id = '9f21edfa-d6d5-4430-aa1a-8808901c3f57'
-  AND status = 'processing';
-```
-
-This will:
-- Change status from 'processing' to 'failed'
-- Allow the "Retry Failed" button to appear for the 3 templates with constraint errors
-- Unlock the "Plan 22" button for remaining unprocessed templates
-
----
-
-## Architectural Improvements
-
-### 2. Add Stale Job Recovery Function
-Create a database function similar to `recover_stale_generating_items()` for bulk planning jobs:
-
-```sql
-CREATE OR REPLACE FUNCTION recover_stale_planning_jobs()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  UPDATE bulk_planning_jobs
-  SET 
-    status = 'failed',
-    completed_at = NOW(),
-    error_messages = error_messages || '{"_timeout": "Job timed out - no progress for 10+ minutes"}'::jsonb
-  WHERE 
-    status = 'processing'
-    AND updated_at < NOW() - INTERVAL '10 minutes';
-END;
-$$;
-```
-
-### 3. Improve Edge Function Reliability
-Update `bulk-plan-category` to:
-- Process in smaller batches (max 10 templates per invocation)
-- Use a "chunked" approach that chains multiple edge function calls
-- Add retry logic with exponential backoff for AI gateway calls
-
-### 4. Fix Article Type Validation
-Add pre-validation in the edge function to ensure AI-returned article types match allowed values before inserting:
-
-```typescript
-const VALID_ARTICLE_TYPES = ['how-to', 'mistakes', 'rights', 'sample', 'faq', 'case-study', 'comparison', 'checklist'];
-
-// Validate and fix article type before insert
-const normalizedType = VALID_ARTICLE_TYPES.find(t => 
-  t === article.type || 
-  t.replace('-', '') === article.type.replace('-', '').toLowerCase()
-) || 'how-to'; // fallback to how-to if invalid
-```
+## Solution
+Apply a consistent mobile-first stacking pattern across all affected components. On mobile, elements should stack vertically and only display inline at larger breakpoints.
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| Database migration | Add `recover_stale_planning_jobs()` function |
-| `supabase/functions/bulk-plan-category/index.ts` | Add article type validation, batch processing |
-| `src/hooks/useBulkPlanningJob.ts` | Add frontend stale job detection (optional) |
+### 1. TemplateCoverageMap.tsx
+**Issue**: Category header rows have progress bar, percentage, and "Plan X" button inline that overflow on mobile.
+
+**Fix**:
+- Stack category info (name, template count, tier badge) vertically on mobile
+- Move progress bar + button to a new row on mobile
+- Make template item rows stack on mobile instead of inline
+
+### 2. CoverageStats.tsx  
+**Issue**: 5-column grid is too wide for mobile.
+
+**Fix**: Change from `grid-cols-1 md:grid-cols-2 lg:grid-cols-5` to a 2-column layout on small screens with the 5th card spanning full width.
+
+### 3. QueueFilters.tsx
+**Issue**: Inline dropdowns and refresh button overflow on mobile.
+
+**Fix**: Stack vertically on mobile with `flex-col sm:flex-row` and make dropdowns full-width on mobile.
+
+### 4. QueueActions.tsx
+**Issue**: Multiple action buttons displayed inline overflow on mobile.
+
+**Fix**: Wrap buttons with `flex-wrap` and use stacked layout on mobile.
+
+### 5. QueueStats.tsx
+**Issue**: Inline stats can wrap awkwardly on mobile.
+
+**Fix**: Use a 2-column grid on mobile for consistent layout.
+
+### 6. LinkFilters.tsx
+**Issue**: Same as QueueFilters - inline elements overflow.
+
+**Fix**: Stack vertically on mobile.
+
+### 7. LinkActions.tsx
+**Issue**: Multiple action buttons inline.
+
+**Fix**: Apply mobile stacking pattern.
+
+### 8. LinkStats.tsx
+**Issue**: Same as QueueStats.
+
+**Fix**: Use 2-column grid on mobile.
 
 ---
 
-## Technical Notes
+## Technical Approach
 
-- The current background processing pattern `(async () => {...})()` is unreliable for long-running tasks
-- Edge functions should respond quickly and use job queues or smaller batches for processing
-- The failed templates (defective-product-complaint, furniture-defect-complaint, food-contamination-complaint) likely received malformed article types from the AI
-- After the database fix, the admin can use "Plan 22" to plan the remaining 22 templates
+### Mobile Stacking Pattern
+```tsx
+// Before (causes overflow)
+<div className="flex items-center gap-4">
+
+// After (stacks on mobile)
+<div className="flex flex-col sm:flex-row sm:items-center gap-4">
+```
+
+### Category Row Layout Fix
+```tsx
+// Category header - stack on mobile
+<CollapsibleTrigger className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full p-4">
+  {/* Category info */}
+  <div className="flex items-center gap-3 mb-3 sm:mb-0">
+    ...
+  </div>
+  {/* Progress + button - full width row on mobile */}
+  <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+    ...
+  </div>
+</CollapsibleTrigger>
+```
+
+### Template Row Layout Fix
+```tsx
+// Template item within category - stack on mobile
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 pl-11 gap-2">
+  {/* Template name */}
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    ...
+  </div>
+  {/* Progress + badge + action - row on mobile */}
+  <div className="flex items-center gap-4 justify-end sm:justify-start">
+    ...
+  </div>
+</div>
+```
+
+### Stats Grid Pattern
+```tsx
+// Before
+<div className="flex items-center gap-4 text-sm flex-wrap">
+
+// After - 2-column grid on mobile
+<div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4 text-sm">
+```
+
+---
+
+## Complete File List
+
+| File | Change Type |
+|------|-------------|
+| `src/components/admin/seo/TemplateCoverageMap.tsx` | Stack category headers and template rows on mobile |
+| `src/components/admin/seo/CoverageStats.tsx` | Improve mobile grid layout |
+| `src/components/admin/seo/ContentQueue.tsx` | Stack filters/actions container on mobile |
+| `src/components/admin/seo/LinkSuggestions.tsx` | Stack filters/actions container on mobile |
+| `src/components/admin/seo/queue/QueueFilters.tsx` | Stack dropdowns on mobile |
+| `src/components/admin/seo/queue/QueueActions.tsx` | Wrap and stack buttons on mobile |
+| `src/components/admin/seo/queue/QueueStats.tsx` | Use 2-column grid on mobile |
+| `src/components/admin/seo/links/LinkFilters.tsx` | Stack dropdowns on mobile |
+| `src/components/admin/seo/links/LinkActions.tsx` | Wrap and stack buttons on mobile |
+| `src/components/admin/seo/links/LinkStats.tsx` | Use 2-column grid on mobile |
+| `src/components/admin/seo/links/LinkCard.tsx` | Stack card content on mobile |
+
+---
+
+## Expected Outcome
+- No horizontal overflow on any admin page on mobile devices
+- Clean stacked layout that adapts gracefully to screen size
+- Consistent pattern applied across all admin components
