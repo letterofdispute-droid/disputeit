@@ -118,9 +118,36 @@ const UserDetailModal = ({
     .filter(p => p.status === 'completed')
     .reduce((sum, p) => sum + p.amount_cents, 0);
 
+  const stickyHeader = user ? (
+    <div className="flex items-center gap-3 py-2">
+      <Avatar className="h-10 w-10 flex-shrink-0">
+        <AvatarFallback className="bg-primary/10 text-primary">
+          {getInitials(user.first_name, user.last_name, user.email)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <h3 className="font-semibold text-foreground truncate">{getDisplayName()}</h3>
+        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+      </div>
+      <div className="flex gap-1 flex-shrink-0">
+        {user.is_admin && (
+          <Badge className="bg-primary text-xs">
+            <Shield className="h-3 w-3" />
+          </Badge>
+        )}
+        <Badge 
+          variant={user.status === 'active' ? 'default' : 'secondary'}
+          className={`text-xs ${user.status === 'active' ? 'bg-green-600' : ''}`}
+        >
+          {user.status}
+        </Badge>
+      </div>
+    </div>
+  ) : null;
+
   const content = user ? (
     <div className="space-y-6">
-      {/* User Header */}
+      {/* User Header - Full version for initial view */}
       <div className="flex flex-col items-center text-center gap-4">
         <Avatar className="h-20 w-20">
           <AvatarFallback className="bg-primary/10 text-primary text-2xl">
@@ -279,8 +306,11 @@ const UserDetailModal = ({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[85vh] flex flex-col">
-          <DrawerHeader className="flex-shrink-0">
-            <DrawerTitle>User Details</DrawerTitle>
+          <DrawerHeader className="flex-shrink-0 pb-0">
+            <DrawerTitle className="sr-only">User Details</DrawerTitle>
+            <div className="sticky top-0 bg-background border-b px-0 -mx-4 px-4">
+              {stickyHeader}
+            </div>
           </DrawerHeader>
           <div className="flex-1 overflow-y-auto px-4 pb-6 overscroll-contain">
             {content}
