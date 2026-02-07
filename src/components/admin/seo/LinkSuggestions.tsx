@@ -121,7 +121,7 @@ export default function LinkSuggestions() {
       {isScanning && <ScanProgress />}
 
       {/* Filters and Actions */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <LinkFilters
           statusFilter={statusFilter}
           categoryFilter={categoryFilter}

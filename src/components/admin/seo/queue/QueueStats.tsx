@@ -12,7 +12,7 @@ interface QueueStatsProps {
 
 export default function QueueStats({ stats }: QueueStatsProps) {
   return (
-    <div className="flex items-center gap-4 text-sm flex-wrap">
+    <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4 text-sm">
       <span className="text-muted-foreground">
         Queued: <strong>{stats.queued}</strong>
       </span>
@@ -26,7 +26,7 @@ export default function QueueStats({ stats }: QueueStatsProps) {
         Published: <strong>{stats.published}</strong>
       </span>
       {stats.failed > 0 && (
-        <Badge variant="destructive" className="text-xs">
+        <Badge variant="destructive" className="text-xs col-span-2 sm:col-span-1 w-fit">
           Failed: {stats.failed}
         </Badge>
       )}

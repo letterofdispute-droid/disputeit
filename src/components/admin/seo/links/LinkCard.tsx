@@ -55,35 +55,56 @@ export default function LinkCard({
 
   return (
     <Card className={`overflow-hidden transition-colors ${isSelected ? 'ring-2 ring-primary' : ''}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Selection Checkbox */}
-          {suggestion.status === 'pending' && (
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={() => onToggleSelect(suggestion.id)}
-              className="mt-1"
-            />
-          )}
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+          {/* Selection Checkbox - show inline on mobile */}
+          <div className="flex items-start justify-between sm:block">
+            {suggestion.status === 'pending' && (
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(suggestion.id)}
+                className="mt-1"
+              />
+            )}
+            
+            {/* Mobile: Relevance badge at top right */}
+            <div className="flex sm:hidden items-center gap-2">
+              <Badge variant={getRelevanceColor(suggestion.relevance_score || 0)} className="text-xs">
+                {suggestion.relevance_score || 0}%
+              </Badge>
+              {suggestion.status !== 'pending' && (
+                <Badge 
+                  variant={
+                    suggestion.status === 'applied' ? 'default' :
+                    suggestion.status === 'approved' ? 'secondary' :
+                    'outline'
+                  }
+                  className="capitalize text-xs"
+                >
+                  {suggestion.status}
+                </Badge>
+              )}
+            </div>
+          </div>
 
           <div className="flex-1 min-w-0 space-y-2">
             {/* Source Article */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-start sm:items-center gap-2 flex-wrap">
               <Badge variant="outline" className="shrink-0 text-xs">From</Badge>
-              <span className="text-sm font-medium truncate">
+              <span className="text-sm font-medium line-clamp-2 sm:truncate">
                 {suggestion.blog_posts?.title || 'Unknown article'}
               </span>
             </div>
 
             {/* Link Target */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-start sm:items-center gap-2 flex-wrap">
               <Badge className="shrink-0 text-xs capitalize">{suggestion.target_type}</Badge>
-              <span className="text-sm text-muted-foreground">→</span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">→</span>
               <a 
                 href={getTargetUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1 truncate"
+                className="text-sm text-primary hover:underline flex items-center gap-1 break-all sm:truncate"
               >
                 {suggestion.target_title}
                 <ExternalLink className="h-3 w-3 shrink-0" />
@@ -91,7 +112,7 @@ export default function LinkCard({
             </div>
 
             {/* Anchor Text */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <span className="text-sm text-muted-foreground shrink-0">Anchor:</span>
               {isEditing ? (
                 <div className="flex items-center gap-2 flex-1">
@@ -111,14 +132,14 @@ export default function LinkCard({
                 </div>
               ) : (
                 <div className="flex items-center gap-1">
-                  <code className="text-sm bg-muted px-2 py-0.5 rounded">
+                  <code className="text-sm bg-muted px-2 py-0.5 rounded break-all">
                     {suggestion.anchor_text}
                   </code>
                   {suggestion.status === 'pending' && (
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 shrink-0"
                       onClick={() => setIsEditing(true)}
                     >
                       <Edit2 className="h-3 w-3" />
@@ -134,10 +155,32 @@ export default function LinkCard({
                 "...{suggestion.context_snippet}..."
               </p>
             )}
+
+            {/* Mobile: Actions at bottom */}
+            {suggestion.status === 'pending' && (
+              <div className="flex sm:hidden items-center gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-primary"
+                  onClick={() => onApprove(suggestion.id)}
+                >
+                  <Check className="h-4 w-4 mr-1" /> Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-destructive"
+                  onClick={() => onReject(suggestion.id)}
+                >
+                  <X className="h-4 w-4 mr-1" /> Reject
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Relevance & Actions */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          {/* Desktop: Relevance & Actions */}
+          <div className="hidden sm:flex flex-col items-end gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Relevance:</span>
               <Badge variant={getRelevanceColor(suggestion.relevance_score || 0)}>

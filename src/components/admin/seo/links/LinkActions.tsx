@@ -27,7 +27,7 @@ export default function LinkActions({
   onApplyApproved,
 }: LinkActionsProps) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
       <Button
         variant="outline"
         size="sm"
@@ -35,9 +35,9 @@ export default function LinkActions({
         disabled={isScanning}
       >
         {isScanning ? (
-          <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Scanning...</>
+          <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /><span className="hidden sm:inline">Scanning...</span></>
         ) : (
-          <><Search className="h-4 w-4 mr-1" /> Scan for Links</>
+          <><Search className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Scan for Links</span><span className="sm:hidden">Scan</span></>
         )}
       </Button>
 
@@ -47,8 +47,9 @@ export default function LinkActions({
           size="sm"
           onClick={onApproveHighRelevance}
         >
-          <Zap className="h-4 w-4 mr-1" />
-          Approve All ≥85%
+          <Zap className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">Approve All ≥85%</span>
+          <span className="sm:hidden">≥85%</span>
         </Button>
       )}
 
@@ -59,16 +60,18 @@ export default function LinkActions({
             size="sm"
             onClick={onApproveSelected}
           >
-            <CheckCheck className="h-4 w-4 mr-1" />
-            Approve ({selectedCount})
+            <CheckCheck className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Approve ({selectedCount})</span>
+            <span className="sm:hidden">{selectedCount}</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={onRejectSelected}
           >
-            <X className="h-4 w-4 mr-1" />
-            Reject ({selectedCount})
+            <X className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Reject ({selectedCount})</span>
+            <span className="sm:hidden">{selectedCount}</span>
           </Button>
         </>
       )}
@@ -80,9 +83,9 @@ export default function LinkActions({
           disabled={isApplying}
         >
           {isApplying ? (
-            <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Applying...</>
+            <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /><span className="hidden sm:inline">Applying...</span></>
           ) : (
-            <>Apply Approved ({approvedCount})</>
+            <><span className="hidden sm:inline">Apply Approved ({approvedCount})</span><span className="sm:hidden">Apply ({approvedCount})</span></>
           )}
         </Button>
       )}

@@ -19,9 +19,9 @@ export default function QueueFilters({
   onRefresh,
 }: QueueFiltersProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
       <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger className="w-36">
+        <SelectTrigger className="w-full sm:w-36">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -34,21 +34,23 @@ export default function QueueFilters({
         </SelectContent>
       </Select>
 
-      <Select value={categoryFilter} onValueChange={onCategoryChange}>
-        <SelectTrigger className="w-44">
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
-          {templateCategories.map(c => (
-            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex gap-2">
+        <Select value={categoryFilter} onValueChange={onCategoryChange}>
+          <SelectTrigger className="flex-1 sm:w-44">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {templateCategories.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Button variant="outline" size="icon" onClick={onRefresh}>
-        <RefreshCw className="h-4 w-4" />
-      </Button>
+        <Button variant="outline" size="icon" onClick={onRefresh} className="shrink-0">
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
