@@ -1,211 +1,322 @@
 
-# Template Page Improvements & Bug Fixes Plan
+
+# Photo Evidence Upload & Styling Fixes Plan
 
 ## Overview
-This plan addresses 6 distinct issues across template pages, pricing modal, credit redemption, and letter generation UX:
-
-1. **SEO Content Cards** - Fix double bullet points and header layout
-2. **How to Create Your Letter** - Redesign step cards with vertical layout
-3. **Methodology Badge** - Add more prominent border styling
-4. **Pricing Modal** - Move checkbox above the fold for better visibility
-5. **Credit Redemption Error** - Fix "Missing purchase information" bug
-6. **Letter Generation Progress** - Add animated progress bar with rotating messages
+This plan addresses two main areas:
+1. **Photo/Evidence Upload System** - Allow users to upload up to 10 photos as evidence, which will be embedded in the generated PDF with optional descriptions
+2. **SEO Content Styling Fixes** - Remove double bullet points and fix title alignment issues
 
 ---
 
-## Issue 1: SEO Content Cards - Double Bullet Points & Icon Placement
+## Part 1: Photo Evidence Upload Feature
 
-**Problem:** The "When to Use", "What You'll Need", and "What Happens Next" cards show both a black bullet point (from default list styling) AND a yellow/accent icon/bullet, creating visual clutter. Additionally, icons are inline with text instead of above the section title.
+### 1.1 System Architecture
 
-**Solution:**
-- Reorganize card header to place icon ABOVE the title (centered) instead of inline
-- Ensure the `<ul>` lists have no default list-style bullets since we're using custom icons/markers
-- Clean up the list styling to only show our custom accent-colored markers
-
-**File:** `src/components/letter/SEOContent.tsx`
-
-**Changes:**
 ```text
-- Move icon above card title, centered
-- Add explicit list-style-none to ul elements
-- Keep custom CheckCircle2, bullet, and number markers only
++--------------------+       +----------------------+       +------------------+
+|  Evidence Uploader |  -->  |  Compress & Upload   |  -->  |  Supabase        |
+|  (in form)         |       |  to Storage          |       |  evidence-photos |
++--------------------+       +----------------------+       |  bucket          |
+                                                            +------------------+
+                                      |
+                                      v
+                            +----------------------+
+                            |  PDF Generator       |
+                            |  (embed images)      |
+                            +----------------------+
 ```
 
----
+### 1.2 Storage Setup
 
-## Issue 2: "How to Create Your Letter" Step Layout
+Create a new storage bucket for evidence photos:
+- Bucket name: `evidence-photos`
+- Access: Private (RLS protected)
+- Max file size: 2MB per image (after compression)
+- Max images per letter: 10
+- Allowed formats: JPEG, PNG, WebP
 
-**Problem:** The current horizontal layout with number badge on the left and text on the right looks awkward. The number should be ABOVE the text, not beside it.
+### 1.3 New Components
 
-**Solution:**
-- Redesign the step cards to use a vertical/stacked layout
-- Number badge centered at top
-- Title and description centered below the number
+**EvidenceUploader Component** (`src/components/letter/EvidenceUploader.tsx`)
+- Drag-and-drop upload area
+- Photo preview grid
+- Image compression before upload (client-side)
+- Description field for each photo
+- Delete/reorder functionality
+- Progress indicators
 
-**File:** `src/components/letter/SEOContent.tsx`
-
-**Current:**
 ```text
-[1] Gather Info
-    Description text
++----------------------------------------+
+|  Evidence Photos                        |
+|  +-----------+  +-----------+          |
+|  |  [Photo]  |  |  [Photo]  |  [+ Add] |
+|  |   X       |  |   X       |          |
+|  +-----------+  +-----------+          |
+|  Description... Description...          |
++----------------------------------------+
 ```
 
-**New Design:**
-```text
-    [1]
-  Gather Info
-Description text
+### 1.4 Database Schema
+
+New table for evidence metadata:
+```sql
+CREATE TABLE evidence_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  purchase_id UUID REFERENCES letter_purchases(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id),
+  storage_path TEXT NOT NULL,
+  description TEXT,
+  position INT NOT NULL DEFAULT 0,
+  original_filename TEXT,
+  file_size_bytes INT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS policies for user ownership
 ```
 
+### 1.5 Image Compression
+
+Client-side compression before upload:
+- Use browser Canvas API for compression
+- Target max dimensions: 1200px wide (maintain aspect ratio)
+- Target quality: 80% JPEG
+- Max file size after compression: 2MB
+
+### 1.6 PDF Integration
+
+Update `pdfHelpers.ts` to include a new function:
+- `drawEvidenceSection()` - Creates "Attached Evidence" section
+- Embeds compressed images inline
+- Adds numbered captions with user descriptions
+- Handles page breaks for multiple images
+
+PDF layout for evidence:
+```text
+Page N:
++----------------------------------+
+|  ATTACHED EVIDENCE               |
++----------------------------------+
+|  [Image 1]                       |
+|  Figure 1: Water damage photo    |
+|                                  |
+|  [Image 2]                       |
+|  Figure 2: Repair invoice        |
++----------------------------------+
+```
+
+### 1.7 Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/components/letter/EvidenceUploader.tsx` | Create | Upload component with compression |
+| `src/hooks/useEvidenceUpload.ts` | Create | Handle upload logic |
+| `src/lib/imageCompression.ts` | Create | Client-side image compression |
+| `supabase/functions/_shared/pdfHelpers.ts` | Modify | Add evidence embedding functions |
+| `supabase/functions/generate-letter-documents/index.ts` | Modify | Fetch and embed evidence images |
+| `src/components/letter/LetterGenerator.tsx` | Modify | Integrate evidence uploader |
+| SQL Migration | Create | New bucket + evidence_photos table |
+
 ---
 
-## Issue 3: Methodology Badge Border
+## Part 2: SEO Content Styling Fixes
 
-**Problem:** The "How This Template Was Built" card is too subtle and not visible enough.
+### 2.1 Root Cause Analysis
 
-**Solution:**
-- Add a slightly larger, darker border to make it more prominent
-- Use `border-border` or a custom darker border color
+The double bullet issue occurs because:
+1. The parent `<article className="prose">` applies prose styles
+2. The `.prose ul > li::before` in `index.css` adds a bullet pseudo-element
+3. Even with `not-prose` wrapper, nested `ul` elements may inherit styles
+4. The component also renders custom icons (CheckCircle2)
 
-**File:** `src/components/letter/MethodologyBadge.tsx`
+### 2.2 Styling Fixes
 
----
+**Fix 1: Remove inherited list bullets**
 
-## Issue 4: Pricing Modal - Checkbox Visibility
+In `SEOContent.tsx`, add explicit styling to override:
+```tsx
+// Change from:
+<ul className="list-none space-y-2 m-0 p-0">
 
-**Problem:** When user has credits, they need to scroll down to find the Terms checkbox, and buttons are disabled until checkbox is checked. This is confusing UX.
+// To:
+<ul className="space-y-2 m-0 p-0" style={{ listStyle: 'none' }}>
+  {/* Each li should also have no before/after styling */}
+</ul>
+```
 
-**Solution:**
-- Move the Terms Agreement checkbox to the TOP of the modal content, right after the header
-- Add visual emphasis to make it clear this needs to be checked first
-- Reorder the modal to: Header > Terms Checkbox > Credit Card (if available) > Pricing Options > Info Footer
+Better approach - add CSS class to index.css:
+```css
+/* Override prose list styling for not-prose sections */
+.not-prose ul,
+.not-prose ol {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
 
-**File:** `src/components/letter/PricingModal.tsx`
-
-**New Order:**
-1. Header (sticky)
-2. Terms Agreement Checkbox (immediately visible)
-3. Credit Option (if user has credits)
-4. "OR PAY" divider
-5. Pricing cards
-6. Re-edit info & security note
-
----
-
-## Issue 5: Credit Redemption Error - "Missing purchase information"
-
-**Root Cause Analysis:**
-The `PurchaseSuccessPage.tsx` requires BOTH `session_id` AND `purchase_id` URL parameters (line 32):
-```javascript
-if (!sessionId || !purchaseId) {
-  setError('Missing purchase information');
-  ...
+.not-prose ul > li::before,
+.not-prose ol > li::before {
+  content: none !important;
+  display: none !important;
 }
 ```
 
-But the credit redemption flow only passes `purchase_id`:
-```javascript
-navigate(`/purchase-success?purchase_id=${data.purchaseId}`);
+**Fix 2: Card header alignment**
+
+Current:
+```text
++------------------------+
+|   [icon centered]      |
+|   When to Use (centered)|
++------------------------+
 ```
 
-The `session_id` is a Stripe session ID, which doesn't exist for credit redemptions.
+Requested:
+```text
++------------------------+
+| [icon] When to Use     |  <-- Left aligned, no icon above
++------------------------+
+```
 
-**Solution:**
-- Update `PurchaseSuccessPage.tsx` to handle credit redemptions separately
-- If only `purchase_id` is provided (no `session_id`), fetch the purchase directly from the database
-- Skip Stripe verification for credit redemptions (amount_cents = 0)
+Wait - looking at the screenshot again, the user wants the headers LEFT aligned. Let me re-read...
 
-**Files:**
-- `src/pages/PurchaseSuccessPage.tsx` - Add credit redemption handling path
-- Create special handling when `session_id` is absent but `purchase_id` is present
+"I want titles to be aligned left without this gray line"
 
----
+So the fix is:
+- Remove the flex-col layout that centers icon above title
+- Change to inline left-aligned: `[icon] Title`
+- Remove any gray separator lines
 
-## Issue 6: Letter Generation Progress Bar with Rotating Messages
+**Fix 3: "How to Create Your Letter" section**
 
-**Problem:** Letter generation completes too quickly (15-20 seconds), which doesn't feel substantial or worth the money. User wants:
-- Visual progress bar with percentage
-- Minimum generation time (e.g., 25-30 seconds)
-- Rotating educational/trust-building messages while waiting
+Current shows gray lines between cards. User wants:
+- Remove gray divider lines
+- Center-align the title
 
-**Solution:**
-Create a new `GeneratingOverlay` component that:
-- Shows an animated progress bar from 0% to 100%
-- Runs for a minimum of ~25 seconds regardless of actual generation time
-- Displays rotating messages about the platform's value proposition
-- Only closes when BOTH the minimum time has elapsed AND generation is complete
-
-**New Component:** `src/components/letter/GeneratingOverlay.tsx`
-
-**Rotating Messages (examples):**
-1. "Analyzing your situation and legal context..."
-2. "Our templates are carefully crafted by consumer rights experts..."
-3. "We've helped thousands of consumers successfully resolve disputes..."
-4. "Adding relevant legal references for your jurisdiction..."
-5. "Each template is based on proven protection frameworks..."
-6. "Structuring your letter for maximum impact..."
-7. "We use AI to enhance your letter, but humans review every template..."
-8. "Finalizing your professionally formatted document..."
-
-**Integration:**
-- Show overlay when generation starts
-- Control progress bar animation with useEffect
-- Wait for both timer and API response before proceeding
-
----
-
-## Implementation Summary
+### 2.3 Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/letter/SEOContent.tsx` | Fix card headers, remove double bullets, redesign step cards |
-| `src/components/letter/MethodologyBadge.tsx` | Add more prominent border |
-| `src/components/letter/PricingModal.tsx` | Move checkbox to top |
-| `src/pages/PurchaseSuccessPage.tsx` | Handle credit redemption (no session_id) |
-| `src/components/letter/GeneratingOverlay.tsx` | NEW - Progress bar with rotating messages |
-| `src/components/letter/LetterGenerator.tsx` | Integrate GeneratingOverlay component |
+| `src/index.css` | Add `.not-prose` overrides for list styling |
+| `src/components/letter/SEOContent.tsx` | Fix card header layout (left-align with inline icon) |
 
 ---
 
-## Visual Preview of Changes
+## Technical Details
 
-### SEO Content Cards (After)
-```text
-+------------------------+
-|         [icon]         |
-|    When to Use This    |
-|        Letter          |
-+------------------------+
-| ✓ First scenario       |
-| ✓ Second scenario      |
-| ✓ Third scenario       |
-+------------------------+
+### Image Compression Implementation
+
+```typescript
+// src/lib/imageCompression.ts
+export async function compressImage(
+  file: File,
+  maxWidth: number = 1200,
+  quality: number = 0.8
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    img.onload = () => {
+      // Calculate new dimensions
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+        'image/jpeg',
+        quality
+      );
+    };
+    
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
 ```
 
-### How to Create Steps (After)
-```text
-+----------+ +----------+ +----------+ +----------+
-|    [1]   | |    [2]   | |    [3]   | |    [4]   |
-|  Gather  | | Fill the | |  Choose  | | Download |
-|   Info   | |   Form   | |   Tone   | |          |
-|          | |          | |          | |          |
-| Collect  | | Enter    | | Select   | | Get your |
-| dates... | | details..| | neutral..| | letter.. |
-+----------+ +----------+ +----------+ +----------+
+### PDF Evidence Embedding
+
+The pdf-lib library supports embedding images. New helper functions:
+```typescript
+export async function drawEvidenceSection(
+  pdfDoc: PDFDocument,
+  page: PDFPage,
+  fonts: PDFFonts,
+  yPosition: number,
+  evidencePhotos: { imageBytes: Uint8Array; description?: string }[]
+): Promise<{ pages: PDFPage[]; finalY: number }>
 ```
 
-### Generating Overlay
-```text
-+------------------------------------------+
-|                                          |
-|    [Logo or Icon]                        |
-|                                          |
-|    Generating Your Letter                |
-|                                          |
-|    [=========>        ] 47%              |
-|                                          |
-|    "Our templates are carefully          |
-|    crafted by consumer rights experts"   |
-|                                          |
-+------------------------------------------+
+### Storage Policy
+
+```sql
+-- Create bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('evidence-photos', 'evidence-photos', false, 2097152); -- 2MB limit
+
+-- Policy: Users can upload to their own folder
+CREATE POLICY "Users can upload evidence photos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'evidence-photos' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Policy: Users can read their own evidence
+CREATE POLICY "Users can view own evidence photos"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'evidence-photos'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 ```
+
+---
+
+## Implementation Order
+
+1. **Phase 1: Styling Fixes (Quick Win)**
+   - Update `index.css` with not-prose overrides
+   - Fix SEOContent.tsx card layouts
+   - Test and verify visual improvements
+
+2. **Phase 2: Evidence Storage Setup**
+   - Create SQL migration for bucket and table
+   - Set up RLS policies
+   - Test storage access
+
+3. **Phase 3: Upload Components**
+   - Create imageCompression utility
+   - Build EvidenceUploader component
+   - Integrate into LetterGenerator form
+
+4. **Phase 4: PDF Embedding**
+   - Add image embedding to pdfHelpers
+   - Update generate-letter-documents function
+   - Test end-to-end PDF generation with photos
+
+---
+
+## Summary
+
+| Feature | Complexity | Files Impacted |
+|---------|------------|----------------|
+| Styling fixes | Low | 2 files |
+| Evidence storage | Medium | 1 migration |
+| Upload component | Medium | 3 new files |
+| PDF embedding | Medium-High | 2 files |
+
+Total estimated new files: 4
+Total estimated modified files: 5
+
