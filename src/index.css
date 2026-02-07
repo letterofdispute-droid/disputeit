@@ -156,14 +156,19 @@
     margin: 0 !important;
   }
 
-  .not-prose ul > li::before,
-  .not-prose ol > li::before {
-    content: none !important;
-    display: none !important;
-    background: none !important;
-    width: 0 !important;
-    height: 0 !important;
-  }
+.not-prose ul > li::before,
+.not-prose ol > li::before {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.not-prose ul > li,
+.not-prose ol > li {
+  padding-left: 0 !important;
+}
 }
 
 @layer components {
