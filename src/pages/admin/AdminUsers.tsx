@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, MoreHorizontal, Mail, Ban, 
-  UserCheck, Calendar, Loader2, Shield, ShieldOff, Trash2
+  UserCheck, Calendar, Loader2, Shield, ShieldOff, Trash2, Gift
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,6 +36,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useUsersCreditCounts } from '@/hooks/useUserCredits';
 import UserDetailModal from '@/components/admin/users/UserDetailModal';
 import DeleteUserDialog from '@/components/admin/users/DeleteUserDialog';
 import EmailUserDialog from '@/components/admin/users/EmailUserDialog';
@@ -181,6 +182,10 @@ const AdminUsers = () => {
     return matchesSearch;
   });
 
+  // Get all user_ids for credit count fetching
+  const userIds = filteredUsers.map(u => u.user_id);
+  const { creditCounts, isLoading: creditsLoading } = useUsersCreditCounts(userIds);
+
   const handleViewDetails = (user: UserProfile) => {
     setSelectedUser(user);
     setDetailModalOpen(true);
@@ -321,6 +326,7 @@ const AdminUsers = () => {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Plan</TableHead>
+                  <TableHead>Credits</TableHead>
                   <TableHead>Letters</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -362,6 +368,18 @@ const AdminUsers = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{user.plan}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {creditsLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : creditCounts[user.user_id] ? (
+                        <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
+                          <Gift className="h-3 w-3 mr-1" />
+                          {creditCounts[user.user_id]}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {user.letters_count}
