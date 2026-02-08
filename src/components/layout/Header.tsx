@@ -83,7 +83,7 @@ const Header = () => {
                     {profile?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               </button>
             )}
             
@@ -215,7 +215,7 @@ const Header = () => {
                             <p className="font-medium truncate">
                               {profile?.first_name || user.email?.split('@')[0]}
                             </p>
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
                           </div>
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
