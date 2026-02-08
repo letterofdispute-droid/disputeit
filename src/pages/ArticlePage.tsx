@@ -1,4 +1,4 @@
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DOMPurify from 'dompurify';
 import Layout from '@/components/layout/Layout';
@@ -78,8 +78,8 @@ const ArticlePage = () => {
   }, [slug, category]);
 
   // Check if preview mode (allow admins to view drafts)
-  const urlParams = new URLSearchParams(window.location.search);
-  const isPreviewMode = urlParams.get('preview') === 'true';
+  const [searchParams] = useSearchParams();
+  const isPreviewMode = searchParams.get('preview') === 'true';
 
   // Fetch from database first, fall back to static data
   const {
