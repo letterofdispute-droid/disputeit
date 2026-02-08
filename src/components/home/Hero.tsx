@@ -29,15 +29,14 @@ const Hero = () => {
 
   return (
     <section className="relative overflow-hidden bg-primary py-20 md:py-28">
-      {/* Background Image with Overlay */}
-      {/* Background Image - Increased opacity */}
-      <div 
-        className="absolute inset-0 opacity-30 grayscale"
-        style={{
-          backgroundImage: `url('/images/hero-bg.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-        }}
+      {/* LCP Image - Optimized with fetchPriority */}
+      <img 
+        src="/images/hero-bg.jpg"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        loading="eager"
+        className="absolute inset-0 w-full h-full object-cover object-top opacity-30 grayscale"
       />
       
       {/* Gradient Overlay - More transparent to show image */}
