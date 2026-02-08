@@ -144,7 +144,16 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ### New Table: `article_embeddings`
 
+**IMPORTANT NOTES:**
+1. **pgvector Extension**: Must verify availability in Lovable Cloud. If unavailable, will use Edge Function-based cosine similarity with stored FLOAT[] arrays instead.
+2. **IVFFlat Index**: Created AFTER initial data load (not on empty table).
+3. **Rollback Strategy**: Uses `embedding_status` to track progress and enable resume.
+
 ```sql
+-- STEP 1: Enable pgvector (run separately, may need Supabase dashboard)
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- STEP 2: Create table (without vector index initially)
 CREATE TABLE public.article_embeddings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -154,9 +163,10 @@ CREATE TABLE public.article_embeddings (
   slug TEXT NOT NULL,
   title TEXT NOT NULL,
   category_id TEXT NOT NULL,
-  subcategory_slug TEXT,
+  subcategory_slug TEXT,              -- Required for template URL generation
   
   -- Semantic vector (OpenAI text-embedding-3-small = 1536 dimensions)
+  -- If pgvector unavailable, use: embedding_array FLOAT[] with 1536 elements
   embedding vector(1536),
   
   -- Extracted metadata
@@ -166,20 +176,29 @@ CREATE TABLE public.article_embeddings (
   -- Keywords (transferred from content_queue or defined)
   primary_keyword TEXT,               -- Main anchor text target
   secondary_keywords TEXT[],          -- Fallback anchors
+  anchor_variants TEXT[],             -- Rotated anchor text options (SEO)
   
   -- Hierarchy
+  article_type TEXT,                  -- Original type: how-to, faq, etc.
   article_role TEXT NOT NULL DEFAULT 'cluster' 
     CHECK (article_role IN ('super-pillar', 'pillar', 'cluster')),
-  parent_pillar_id UUID REFERENCES article_embeddings(id),
+  parent_pillar_id UUID,              -- FK added after table exists (avoid circular ref)
+  related_categories TEXT[],          -- Allow controlled cross-category linking
   
   -- Link equity tracking
   inbound_count INTEGER DEFAULT 0,
   outbound_count INTEGER DEFAULT 0,
   max_inbound INTEGER DEFAULT 20,     -- Configurable per tier
   
-  -- Change detection
+  -- Processing status (for resume capability)
+  embedding_status TEXT DEFAULT 'pending' 
+    CHECK (embedding_status IN ('pending', 'processing', 'completed', 'failed')),
+  error_message TEXT,
+  
+  -- Change detection & scheduling
   content_hash TEXT,                  -- MD5 of content for change detection
   last_embedded_at TIMESTAMPTZ,
+  next_scan_due_at TIMESTAMPTZ,       -- For periodic re-scan (link decay prevention)
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -189,18 +208,14 @@ CREATE TABLE public.article_embeddings (
   UNIQUE(content_type, slug)
 );
 
--- Critical: IVFFlat index for fast similarity search
--- Use lists = sqrt(n) where n = expected row count
--- For 5000 articles: sqrt(5000) ≈ 70, use 100 for growth room
-CREATE INDEX idx_embeddings_vector ON article_embeddings 
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- Supporting indexes
+-- Supporting indexes (created immediately)
 CREATE INDEX idx_embeddings_category ON article_embeddings(category_id);
 CREATE INDEX idx_embeddings_role ON article_embeddings(article_role);
-CREATE INDEX idx_embeddings_parent ON article_embeddings(parent_pillar_id);
+CREATE INDEX idx_embeddings_status ON article_embeddings(embedding_status);
 CREATE INDEX idx_embeddings_inbound ON article_embeddings(inbound_count);
 CREATE INDEX idx_embeddings_hash ON article_embeddings(content_hash);
+CREATE INDEX idx_embeddings_scan_due ON article_embeddings(next_scan_due_at) 
+  WHERE next_scan_due_at IS NOT NULL;
 
 -- Enable RLS
 ALTER TABLE article_embeddings ENABLE ROW LEVEL SECURITY;
@@ -211,6 +226,16 @@ CREATE POLICY "Admins can manage embeddings" ON article_embeddings
 
 CREATE POLICY "Service role full access" ON article_embeddings
   FOR ALL USING (auth.role() = 'service_role');
+
+-- STEP 3: Add FK after table exists (avoids circular reference issue)
+ALTER TABLE article_embeddings 
+  ADD CONSTRAINT fk_parent_pillar 
+  FOREIGN KEY (parent_pillar_id) REFERENCES article_embeddings(id);
+
+-- STEP 4: Create vector index AFTER data is loaded (separate migration)
+-- Run this AFTER embedding bootstrap completes:
+-- CREATE INDEX idx_embeddings_vector ON article_embeddings 
+--   USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
 ### New Table: `canonical_anchors`
@@ -718,12 +743,17 @@ Much faster than current AI-per-article scanning.
 
 | Issue | Risk | Mitigation |
 |-------|------|------------|
-| pgvector not available | High | Check extension; if unavailable, use external vector DB |
-| OpenAI API rate limits | Medium | Batch with 500ms delay; retry with exponential backoff |
-| Anchor collision | Medium | Canonical anchors table prevents same phrase linking to multiple targets |
-| Pillar conflicts | Medium | Explicit `parent_pillar_id` assignment per category |
-| Content changes | Low | `content_hash` triggers re-embedding automatically |
-| Orphan articles | Low | Pre-publish check; Link Health dashboard |
+| **pgvector not available** | High | Check extension first; if unavailable, store embeddings as FLOAT[] and compute cosine similarity in Edge Function |
+| **IVFFlat on empty table** | High | Create vector index AFTER bootstrap completes, not during table creation |
+| **OpenAI API rate limits** | Medium | Batch with 500ms delay; retry with exponential backoff; use `embedding_status` for resume |
+| **Anchor collision** | Medium | Canonical anchors table prevents same phrase linking to multiple targets |
+| **Anchor text repetition (SEO)** | Medium | Store `anchor_variants[]` and rotate through them |
+| **Pillar conflicts** | Medium | Explicit `parent_pillar_id` assignment per category |
+| **Content changes** | Low | `content_hash` triggers re-embedding automatically |
+| **Orphan articles** | Low | Pre-publish check; Link Health dashboard |
+| **Link decay** | Low | `next_scan_due_at` triggers periodic re-scans (30 days) |
+| **Template URL generation** | Medium | Store `subcategory_slug` in embeddings; update apply-links-bulk to build hierarchical URLs |
+| **Cross-category linking** | Low | `related_categories[]` allows controlled exceptions to hierarchy rules |
 
 ---
 
@@ -760,17 +790,27 @@ Much faster than current AI-per-article scanning.
 - [x] Smart content extraction (headings + paragraphs + keywords)
 - [x] Keyword transfer pipeline (content_queue → blog_posts)
 - [x] Guide integration as super-pillars
-- [x] Template URL fix for hierarchical routing
+- [x] Template URL fix for hierarchical routing (`category_id/subcategory_slug/slug`)
 - [x] Canonical anchor collision detection
 - [x] Hybrid embedding/keyword matching
 - [x] Content hash for change detection
 - [x] Outbound link counting
 - [x] Orphan detection pre-publish
 - [x] Explicit pillar assignment
-- [x] pgvector verification step
+- [x] pgvector verification step (with FLOAT[] fallback)
 - [x] Cost analysis included
 - [x] Performance estimates included
 - [x] Implementation phases defined
+
+### Additional Fixes (v2.1)
+- [x] IVFFlat index created AFTER data load (not on empty table)
+- [x] `embedding_status` for resume capability
+- [x] `article_type` column preserved for debugging
+- [x] `anchor_variants[]` for SEO-safe anchor rotation
+- [x] `next_scan_due_at` for link decay prevention
+- [x] `related_categories[]` for controlled cross-category linking
+- [x] Circular FK issue resolved (add constraint after table exists)
+- [x] Template URL generation uses `category_id + subcategory_slug`
 
 ---
 
