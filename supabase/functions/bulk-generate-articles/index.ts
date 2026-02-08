@@ -20,6 +20,9 @@ const STYLE_GUIDES: Record<StyleVariant, string> = {
   dramatic: 'high contrast, dynamic shadows, bold composition, striking visuals'
 };
 
+// Article types that benefit from infographics instead of photos
+const INFOGRAPHIC_ARTICLE_TYPES = ['comparison', 'checklist', 'how-to', 'mistakes', 'rights'] as const;
+
 interface BulkGenerateRequest {
   planId?: string;
   categoryId?: string;
@@ -710,6 +713,176 @@ async function fetchPixabayFallback(
   }
 }
 
+// Generate infographic via dedicated edge function
+async function generateInfographic(
+  supabase: SupabaseClient,
+  apiKey: string,
+  title: string,
+  articleType: string,
+  content: string,
+  storagePath: string
+): Promise<{ url: string | null; altText: string | null; isInfographic: boolean }> {
+  try {
+    console.log(`[INFOGRAPHIC] Attempting infographic for "${title}" (type: ${articleType})`);
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image',
+        messages: [{ role: 'user', content: buildInfographicPrompt(title, articleType, content) }],
+        modalities: ['image', 'text'],
+      }),
+    });
+
+    if (!response.ok) {
+      console.log('[INFOGRAPHIC] Generation failed, will fallback to photo');
+      return { url: null, altText: null, isInfographic: false };
+    }
+
+    const data = await response.json();
+    const message = data.choices[0]?.message;
+    let base64Data: string | null = null;
+    
+    // Extract image from response
+    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+      const imagePart = message.images.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
+    }
+    
+    if (!base64Data && message?.content && Array.isArray(message.content)) {
+      const imagePart = message.content.find((part: any) => part.type === 'image_url');
+      if (imagePart?.image_url?.url) {
+        base64Data = imagePart.image_url.url;
+      }
+    }
+
+    if (!base64Data) {
+      console.log('[INFOGRAPHIC] No image in response');
+      return { url: null, altText: null, isInfographic: false };
+    }
+
+    // Upload to storage
+    const base64Match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+    let imageBuffer: Uint8Array;
+    let imageExtension = 'png';
+    
+    if (base64Match) {
+      imageExtension = base64Match[1];
+      const base64String = base64Match[2];
+      imageBuffer = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+    } else {
+      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from('blog-images')
+      .upload(`${storagePath}-infographic.${imageExtension}`, imageBuffer, {
+        contentType: `image/${imageExtension}`,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('[INFOGRAPHIC] Upload error:', uploadError.message);
+      return { url: null, altText: null, isInfographic: false };
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(`${storagePath}-infographic.${imageExtension}`);
+
+    const altText = `Infographic: ${title.substring(0, 80)} - visual guide with key points`;
+    console.log(`[INFOGRAPHIC] Success: ${urlData.publicUrl}`);
+    
+    return { url: urlData.publicUrl, altText: altText.substring(0, 125), isInfographic: true };
+  } catch (error) {
+    console.error('[INFOGRAPHIC] Error:', error);
+    return { url: null, altText: null, isInfographic: false };
+  }
+}
+
+// Build infographic prompt based on article type
+function buildInfographicPrompt(title: string, articleType: string, content: string): string {
+  // Extract key items from content for the infographic
+  const headers = content.match(/<h[23][^>]*>([^<]+)<\/h[23]>/gi) || [];
+  const items = headers
+    .map(h => h.replace(/<[^>]*>/g, '').trim())
+    .filter(h => h.length > 5 && h.length < 60 && !h.toLowerCase().includes('conclusion'))
+    .slice(0, 6);
+
+  const baseStyle = `
+CRITICAL REQUIREMENTS:
+- Create a CLEAN, PROFESSIONAL INFOGRAPHIC (NOT a photograph)
+- Use MINIMAL text - rely on icons and visual hierarchy
+- 16:9 horizontal aspect ratio
+- White or light gray background
+- Modern, flat design style with subtle gradients
+- Use professional colors: blues, teals, and accent colors
+- Include a short title at the top
+- NO stock photos, NO realistic people, NO photographs
+- Vector-style icons and shapes only
+- All text must be in English`;
+
+  const itemsList = items.length > 0 ? items.map((item, i) => `${i + 1}. ${item}`).join('\n') : 'Key points from the article';
+
+  switch (articleType) {
+    case 'comparison':
+      return `Generate a COMPARISON INFOGRAPHIC for: "${title}"
+
+KEY POINTS TO COMPARE:
+${itemsList}
+
+STYLE: Side-by-side comparison chart, contrasting colors (blue vs orange), "VS" badge in center
+${baseStyle}`;
+
+    case 'checklist':
+      return `Generate a VISUAL CHECKLIST INFOGRAPHIC for: "${title}"
+
+CHECKLIST ITEMS:
+${itemsList}
+
+STYLE: Clean checkbox layout with green checkmarks, numbered items, professional icons
+${baseStyle}`;
+
+    case 'how-to':
+      return `Generate a STEP-BY-STEP PROCESS INFOGRAPHIC for: "${title}"
+
+PROCESS STEPS:
+${itemsList}
+
+STYLE: Horizontal flowchart with arrows between steps, numbered circles, gradient colors
+${baseStyle}`;
+
+    case 'mistakes':
+      return `Generate a WARNING INFOGRAPHIC for: "${title}"
+
+MISTAKES TO AVOID:
+${itemsList}
+
+STYLE: Red X marks for each mistake, warning symbols, red and orange accents, alert theme
+${baseStyle}`;
+
+    case 'rights':
+      return `Generate a RIGHTS/LEGAL INFOGRAPHIC for: "${title}"
+
+KEY RIGHTS/POINTS:
+${itemsList}
+
+STYLE: Shield or gavel icons, blue and gold colors, badges or cards for each right, professional legal aesthetic
+${baseStyle}`;
+
+    default:
+      return `Generate a professional infographic for: "${title}"
+Key points: ${itemsList}
+${baseStyle}`;
+  }
+}
+
 // ============================================
 // MAIN REQUEST HANDLER
 // ============================================
@@ -1060,35 +1233,58 @@ Respond with ONLY this JSON:
         let middleImage1Result: { url: string | null; altText: string | null } = { url: null, altText: null };
         let middleImage2Result: { url: string | null; altText: string | null } = { url: null, altText: null };
 
+        // Check if this article type benefits from infographics
+        const useInfographic = INFOGRAPHIC_ARTICLE_TYPES.includes(item.article_type as any);
+        
         if (hasMiddleImage1) {
-          logStep(item.suggested_title, 'IMAGE_MIDDLE1', 'Generating middle image 1');
+          logStep(item.suggested_title, 'IMAGE_MIDDLE1', useInfographic ? 'Generating infographic' : 'Generating middle image 1');
           // Wait before generating next image to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
           
-          const middleContext1 = await extractVisualKeywords(
-            apiKey,
-            `${item.suggested_keywords?.[0] || plan.template_name} consumer help`,
-            plan.category_id
-          );
-          middleImage1Result = await generateAIImage(
-            supabaseAdmin,
-            apiKey,
-            parsedContent.title,
-            middleContext1,
-            `articles/${slug}-middle1`,
-            imageStyles.middle1
-          );
-          
-          // Pixabay fallback
-          if (!middleImage1Result.url) {
-            logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 1 AI failed, using Pixabay');
-            middleImage1Result = await fetchPixabayFallback(
+          // Try infographic first for appropriate article types
+          if (useInfographic) {
+            const infographicResult = await generateInfographic(
               supabaseAdmin,
               apiKey,
+              parsedContent.title,
+              item.article_type,
+              parsedContent.content,
+              `articles/${slug}-middle1`
+            );
+            
+            if (infographicResult.url) {
+              logStep(item.suggested_title, 'INFOGRAPHIC_SUCCESS', 'Infographic generated successfully');
+              middleImage1Result = { url: infographicResult.url, altText: infographicResult.altText };
+            }
+          }
+          
+          // Fallback to AI photo if infographic failed or not applicable
+          if (!middleImage1Result.url) {
+            const middleContext1 = await extractVisualKeywords(
+              apiKey,
+              `${item.suggested_keywords?.[0] || plan.template_name} consumer help`,
+              plan.category_id
+            );
+            middleImage1Result = await generateAIImage(
+              supabaseAdmin,
+              apiKey,
+              parsedContent.title,
               middleContext1,
               `articles/${slug}-middle1`,
-              parsedContent.title
+              imageStyles.middle1
             );
+            
+            // Pixabay fallback
+            if (!middleImage1Result.url) {
+              logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 1 AI failed, using Pixabay');
+              middleImage1Result = await fetchPixabayFallback(
+                supabaseAdmin,
+                apiKey,
+                middleContext1,
+                `articles/${slug}-middle1`,
+                parsedContent.title
+              );
+            }
           }
         }
 

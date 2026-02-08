@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ImageIcon, Upload, RefreshCw, Loader2, X, Check } from 'lucide-react';
+import { ImageIcon, Upload, RefreshCw, Loader2, X, Check, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,9 @@ interface SuggestedImage {
   pixabay_id: number;
 }
 
+// Article types that benefit from infographics
+const INFOGRAPHIC_TYPES = ['comparison', 'checklist', 'how-to', 'mistakes', 'rights'];
+
 interface MiddleImagePickerProps {
   content: string;
   middleImage1Url: string;
@@ -21,6 +24,7 @@ interface MiddleImagePickerProps {
   onMiddleImage1Change: (url: string) => void;
   onMiddleImage2Change: (url: string) => void;
   title: string;
+  articleType?: string;
 }
 
 const MiddleImagePicker = ({
@@ -30,6 +34,7 @@ const MiddleImagePicker = ({
   onMiddleImage1Change,
   onMiddleImage2Change,
   title,
+  articleType,
 }: MiddleImagePickerProps) => {
   // Detect which placeholders exist in content
   const hasPlaceholder1 = content.includes('{{MIDDLE_IMAGE_1}}') || content.includes('{{MIDDLE_IMAGE}}');
@@ -40,12 +45,17 @@ const MiddleImagePicker = ({
     return null;
   }
 
+  // Check if this article type supports infographics
+  const supportsInfographic = articleType && INFOGRAPHIC_TYPES.includes(articleType);
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium">Middle Images</CardTitle>
         <p className="text-xs text-muted-foreground">
-          These appear at placeholders in your content
+          {supportsInfographic 
+            ? 'Generate an infographic or select a photo'
+            : 'These appear at placeholders in your content'}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -55,7 +65,10 @@ const MiddleImagePicker = ({
             imageUrl={middleImage1Url}
             onImageChange={onMiddleImage1Change}
             title={title}
-            offset={8} // Different offset than featured image
+            offset={8}
+            articleType={articleType}
+            content={content}
+            supportsInfographic={supportsInfographic}
           />
         )}
         {hasPlaceholder2 && (
@@ -64,7 +77,7 @@ const MiddleImagePicker = ({
             imageUrl={middleImage2Url}
             onImageChange={onMiddleImage2Change}
             title={title}
-            offset={12} // Different offset for variety
+            offset={12}
           />
         )}
       </CardContent>
@@ -78,11 +91,24 @@ interface ImageSlotProps {
   onImageChange: (url: string) => void;
   title: string;
   offset: number;
+  articleType?: string;
+  content?: string;
+  supportsInfographic?: boolean;
 }
 
-const ImageSlot = ({ label, imageUrl, onImageChange, title, offset }: ImageSlotProps) => {
+const ImageSlot = ({ 
+  label, 
+  imageUrl, 
+  onImageChange, 
+  title, 
+  offset, 
+  articleType,
+  content,
+  supportsInfographic = false 
+}: ImageSlotProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isGeneratingInfographic, setIsGeneratingInfographic] = useState(false);
   const [suggestedImages, setSuggestedImages] = useState<SuggestedImage[]>([]);
   const [imageOffset, setImageOffset] = useState(offset);
   const [hasFetched, setHasFetched] = useState(false);
@@ -187,6 +213,58 @@ const ImageSlot = ({ label, imageUrl, onImageChange, title, offset }: ImageSlotP
     onImageChange('');
   };
 
+  const handleGenerateInfographic = async () => {
+    if (!articleType || !content || !title) {
+      toast({
+        title: 'Missing data',
+        description: 'Article type, content, and title are required for infographic generation.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingInfographic(true);
+    try {
+      // Generate a unique storage path
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
+      const storagePath = `articles/${slug}-infographic-${Date.now()}`;
+
+      const { data, error } = await supabase.functions.invoke('generate-infographic', {
+        body: {
+          title,
+          articleType,
+          content,
+          storagePath,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.url) {
+        onImageChange(data.url);
+        toast({ 
+          title: 'Infographic generated!',
+          description: `${data.type} visualization with ${data.itemCount} key points`,
+        });
+      } else {
+        throw new Error(data?.reason || 'Failed to generate infographic');
+      }
+    } catch (error) {
+      console.error('Error generating infographic:', error);
+      toast({
+        title: 'Generation failed',
+        description: error instanceof Error ? error.message : 'Could not generate infographic',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingInfographic(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
@@ -246,6 +324,27 @@ const ImageSlot = ({ label, imageUrl, onImageChange, title, offset }: ImageSlotP
       )}
 
       <div className="flex gap-1">
+        {/* Infographic generation button - only for supported types */}
+        {supportsInfographic && !imageUrl && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleGenerateInfographic}
+            disabled={isGeneratingInfographic || !content}
+            className="flex-1 h-6 text-[10px] bg-accent hover:bg-accent/90"
+            title="Generate AI infographic based on article content"
+          >
+            {isGeneratingInfographic ? (
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            ) : (
+              <>
+                <BarChart3 className="h-2.5 w-2.5 mr-1" />
+                Infographic
+              </>
+            )}
+          </Button>
+        )}
+        
         {!imageUrl && suggestedImages.length > 0 && (
           <Button
             variant="outline"

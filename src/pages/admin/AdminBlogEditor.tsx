@@ -44,6 +44,7 @@ const AdminBlogEditor = () => {
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [middleImage1Url, setMiddleImage1Url] = useState('');
   const [middleImage2Url, setMiddleImage2Url] = useState('');
+  const [articleType, setArticleType] = useState<string | null>(null);
 
   // Fetch categories for auto-suggest
   useEffect(() => {
@@ -133,6 +134,7 @@ const AdminBlogEditor = () => {
         setFeaturedImageUrl(data.featured_image_url || '');
         setMiddleImage1Url((data as any).middle_image_1_url || '');
         setMiddleImage2Url((data as any).middle_image_2_url || '');
+        setArticleType((data as any).article_type || null);
       }
     } catch (error) {
       console.error('Error fetching post:', error);
@@ -299,6 +301,7 @@ const AdminBlogEditor = () => {
             onMiddleImage1Change={setMiddleImage1Url}
             onMiddleImage2Change={setMiddleImage2Url}
             title={title}
+            articleType={articleType || undefined}
           />
         </div>
       </div>
