@@ -1,38 +1,74 @@
 
-# Fix Google OAuth Login (Token Processing Issue)
+# Fix Google OAuth Login & Update Template Count
 
-## Problem Analysis
+## Issue Analysis
 
-Google OAuth authentication completes successfully on the backend (confirmed via auth logs showing status 200 for `/token` endpoint), but users are not logged in after being redirected back to the homepage.
+### Issue 1: Google OAuth Login Broken
 
-**Root Cause Identified**: When the OAuth broker redirects back with `__lovable_token`, our token processing has several issues:
+**Evidence from Console Logs:**
+```
+[OAuth] Processing token, payload keys: ["user_id", "project_id", "access_type", "iss", "sub", "aud", "exp", "nbf", "iat"]
+[OAuth] No tokens in payload, checking existing session  
+[OAuth] Could not establish session - no tokens and no existing session
+```
 
-1. **Race Condition**: The `getSession()` call in `oauthTokenHandler.ts` runs BEFORE the token can be properly set, causing it to find no session
-2. **Token Structure**: The JWT payload from the OAuth broker may have a different structure than expected
-3. **Missing Await**: The `processOAuthToken()` may not be properly awaiting the session to be established before `getSession()` is called in `useAuth.tsx`
+**Root Cause:** The `__lovable_token` parameter returned by the OAuth broker contains **metadata only** (user_id, project_id, etc.), NOT the actual `access_token` and `refresh_token` needed to establish a Supabase session.
 
-## Solution
+The Lovable OAuth broker handles two modes:
+1. **Iframe mode (preview)**: Uses popup with `postMessage` to return tokens directly - this works
+2. **Redirect mode (live site)**: Full page redirect - this is broken because the token exchange isn't completing
 
-Fix the OAuth token handler to properly:
-1. Decode the `__lovable_token` JWT correctly
-2. Call `setSession()` FIRST (don't check for existing session beforehand)
-3. Ensure proper error handling and logging
-4. Add debug logging to help diagnose issues
+The backend authentication succeeds (auth logs show status 200), but the frontend doesn't receive the actual auth tokens.
+
+**Solution:** The OAuth broker should be sending the tokens via a different mechanism. Since we can't modify the OAuth broker, we need to work with how Lovable Cloud auth is designed. The `__lovable_token` is likely a **one-time code** that should be exchanged for tokens via a specific endpoint, OR the broker should be setting cookies/localStorage that Supabase can use.
+
+**Proposed Fix:** 
+1. Remove the custom `oauthTokenHandler.ts` that's trying to decode tokens from `__lovable_token`
+2. Instead, check if the Supabase session was set via cookies by the broker
+3. Add a callback endpoint handler that exchanges the token with the broker
+
+### Issue 2: Incorrect Template Count in Meta Description
+
+**Location:** `index.html` - lines 16-17, 28, 38, 48
+
+Currently shows "105+" templates when you have 500+ templates.
+
+**Files to Update:**
+- `index.html` - Update meta description, OG tags, Twitter cards, and JSON-LD schema
 
 ---
 
-## Implementation Details
+## Implementation Plan
 
-### File 1: src/lib/oauthTokenHandler.ts
+### Part 1: Fix Google OAuth
+
+Since the `__lovable_token` doesn't contain auth tokens, we need to investigate what the OAuth broker expects. There are two possibilities:
+
+**Option A: Token Exchange Required**
+The `__lovable_token` may be a one-time code that needs to be exchanged via an API call to the broker.
+
+**Option B: Session via Cookies**
+The OAuth broker may have already set the session via HTTP-only cookies, and we just need to call `getSession()` with proper timing.
+
+Based on the library code (`cloud-auth-js`), when in redirect mode, it simply redirects to the broker. The broker should handle setting the session. Our custom `oauthTokenHandler.ts` is interfering with this process.
+
+**Action Items:**
+
+1. **Simplify the OAuth flow** - Remove the complex token decoding logic
+2. **Let the broker set the session** - The Lovable OAuth infrastructure should handle this
+3. **Add a delay and retry mechanism** - Give the broker time to establish the session
+4. **Update `oauthTokenHandler.ts`**:
+   - Just detect `__lovable_token` is present
+   - Clean up the URL
+   - Wait for session to be available (with retries)
+   - Don't try to decode/extract tokens from the JWT
 
 ```typescript
-import { supabase } from '@/integrations/supabase/client';
-
+// src/lib/oauthTokenHandler.ts - Simplified approach
 export async function processOAuthToken(): Promise<{
   processed: boolean;
   error?: Error;
 }> {
-  // Check for the __lovable_token parameter
   const urlParams = new URLSearchParams(window.location.search);
   const lovableToken = urlParams.get('__lovable_token');
   
@@ -41,68 +77,29 @@ export async function processOAuthToken(): Promise<{
   }
 
   try {
-    // Decode the JWT payload (base64url decode the middle part)
-    const parts = lovableToken.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
-
-    // The token payload is in the second part - handle base64url properly
-    const payloadBase64 = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
+    // Clean up URL immediately
+    cleanupUrl();
     
-    // Add padding if needed
-    const paddedPayload = payloadBase64.padEnd(
-      payloadBase64.length + (4 - payloadBase64.length % 4) % 4, 
-      '='
-    );
-    
-    const payloadJson = atob(paddedPayload);
-    const payload = JSON.parse(payloadJson);
-
-    console.log('[OAuth] Processing token, payload keys:', Object.keys(payload));
-
-    // The payload might have tokens at different paths
-    // Try direct access first, then nested access
-    const accessToken = payload.access_token || payload.tokens?.access_token;
-    const refreshToken = payload.refresh_token || payload.tokens?.refresh_token;
-
-    if (accessToken && refreshToken) {
-      console.log('[OAuth] Setting session with tokens');
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+    // The OAuth broker should have set the session via cookies
+    // Wait and retry to get the session
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (error) {
-        console.error('[OAuth] Failed to set session:', error);
-        cleanupUrl();
-        return { processed: false, error };
+      if (session) {
+        console.log('[OAuth] Session found after redirect');
+        sessionStorage.setItem('oauth_just_processed', 'true');
+        return { processed: true };
       }
       
-      console.log('[OAuth] Session set successfully');
-      cleanupUrl();
-      return { processed: true };
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    // If no tokens in payload, try to get session (maybe broker set it via cookies)
-    console.log('[OAuth] No tokens in payload, checking existing session');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-      console.log('[OAuth] Found existing session');
-      cleanupUrl();
-      return { processed: true };
-    }
-
-    // Clean up URL even if we couldn't process
-    console.warn('[OAuth] Could not establish session - no tokens and no existing session');
-    cleanupUrl();
+    console.warn('[OAuth] No session found after multiple attempts');
     return { processed: false };
 
   } catch (error) {
-    console.error('[OAuth] Failed to process OAuth token:', error);
+    console.error('[OAuth] Error processing redirect:', error);
     cleanupUrl();
     return { 
       processed: false, 
@@ -110,98 +107,81 @@ export async function processOAuthToken(): Promise<{
     };
   }
 }
+```
 
-function cleanupUrl() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete('__lovable_token');
-  window.history.replaceState({}, '', url.toString());
+5. **Update `useAuth.tsx`**:
+   - Increase delay after OAuth processing
+   - Add retry logic for session fetch
+
+### Part 2: Fix Template Count
+
+Update `index.html` with correct template count (500+):
+
+- Line 16: Title - "105+ Templates" -> "500+ Templates"
+- Line 17: Meta description - "105+ legally-referenced" -> "500+ legally-referenced"
+- Line 28: OG description - "105+ templates" -> "500+ templates"
+- Line 38: Twitter description - "105+ legally-referenced" -> "500+ legally-referenced"
+- Line 48: JSON-LD description - "105+ templates" -> "500+ templates"
+
+---
+
+## Technical Details
+
+### Why the Current Approach Fails
+
+The current `oauthTokenHandler.ts` assumes the JWT contains:
+```json
+{
+  "access_token": "...",
+  "refresh_token": "..."
 }
 ```
 
-### File 2: src/hooks/useAuth.tsx
-
-Add a small delay after OAuth processing to allow the session to propagate:
-
-```typescript
-const initializeAuth = async () => {
-  try {
-    // STEP 1: Process OAuth token if present in URL
-    const oauthResult = await processOAuthToken();
-    
-    // If OAuth was processed, give a moment for session to propagate
-    if (oauthResult.processed) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // STEP 2: Get the session (may have been set by OAuth processing)
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!isMounted) return;
-
-    setSession(session);
-    setUser(session?.user ?? null);
-    
-    if (session?.user) {
-      await fetchProfile(session.user.id);
-    }
-  } finally {
-    if (isMounted) {
-      setIsLoading(false);
-    }
-  }
-};
+But the actual payload contains:
+```json
+{
+  "user_id": "...",
+  "project_id": "...",
+  "access_type": "...",
+  "iss": "...",
+  "sub": "...",
+  "aud": "...",
+  "exp": "...",
+  "nbf": "...",
+  "iat": "..."
+}
 ```
 
-### File 3: src/components/auth/AuthRedirectHandler.tsx
+This is a **reference token** (JWT claims about the auth event), not the actual Supabase auth tokens.
 
-Also detect OAuth return via URL token (in case sessionStorage flag is lost):
+### The Correct Flow
 
-```typescript
-useEffect(() => {
-  if (isLoading || hasRedirected.current) return;
-
-  // Check if we just came back from OAuth (flag set before redirect OR token was in URL)
-  const oauthPending = sessionStorage.getItem('oauth_pending');
-  const justProcessedOAuth = sessionStorage.getItem('oauth_just_processed');
-  
-  // If user is logged in and on home page after OAuth
-  if (user && location.pathname === '/' && (oauthPending || justProcessedOAuth)) {
-    hasRedirected.current = true;
-    sessionStorage.removeItem('oauth_pending');
-    sessionStorage.removeItem('oauth_just_processed');
-    navigate('/dashboard', { replace: true });
-  }
-}, [user, isLoading, location.pathname, navigate]);
-```
-
-Then update oauthTokenHandler.ts to set this flag:
-```typescript
-// After successfully setting session
-sessionStorage.setItem('oauth_just_processed', 'true');
-cleanupUrl();
-return { processed: true };
-```
+When the Lovable OAuth broker redirects back with `__lovable_token`:
+1. The broker has already completed authentication
+2. The broker should have set the Supabase session (either via cookies or the token is meant for something else)
+3. We should NOT try to decode the JWT to extract tokens
+4. We should simply check if a session exists and redirect to dashboard
 
 ---
 
-## Summary of Changes
+## Files to Modify
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/lib/oauthTokenHandler.ts` | Update | Fix base64 padding, add nested token access, add debug logging, set redirect flag |
-| `src/hooks/useAuth.tsx` | Update | Add small delay after OAuth processing for session propagation |
-| `src/components/auth/AuthRedirectHandler.tsx` | Update | Detect OAuth completion via secondary flag |
+| File | Changes |
+|------|---------|
+| `src/lib/oauthTokenHandler.ts` | Simplify - remove token decoding, just check for session |
+| `src/hooks/useAuth.tsx` | Add retry logic for session fetch |
+| `index.html` | Update template count from 105+ to 500+ |
 
 ---
 
-## Technical Notes
+## Alternative Investigation
 
-1. **Base64 Padding**: JWT base64url encoding often omits padding, which can cause `atob()` to fail. Added proper padding calculation.
+If the simplified approach doesn't work, we may need to:
+1. Check if there's a `/~oauth/callback` endpoint that processes the token
+2. Investigate if the token needs to be sent to an API endpoint for exchange
+3. Check Lovable Cloud documentation for the expected redirect flow
 
-2. **Token Structure**: The OAuth broker may nest tokens differently. Checking both `payload.access_token` and `payload.tokens?.access_token`.
-
-3. **Debug Logging**: Added console logs to help diagnose issues in production without needing to reproduce locally.
-
-4. **Redundant Flag**: Using both `oauth_pending` and `oauth_just_processed` ensures the redirect happens even if the first flag is cleared prematurely.
-
-5. **Session Propagation Delay**: Small 100ms delay allows Supabase's internal state to update before we query `getSession()`.
+The user mentioned this worked yesterday, which suggests either:
+- A recent change in the OAuth broker behavior
+- Our recent code changes broke something that was working
+- A configuration issue on the Lovable Cloud side
