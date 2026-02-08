@@ -40,13 +40,20 @@ const MiddleImagePicker = ({
   const hasPlaceholder1 = content.includes('{{MIDDLE_IMAGE_1}}') || content.includes('{{MIDDLE_IMAGE}}');
   const hasPlaceholder2 = content.includes('{{MIDDLE_IMAGE_2}}');
 
-  // Don't render if no placeholders
-  if (!hasPlaceholder1 && !hasPlaceholder2) {
+  // Check if this article type supports infographics
+  const supportsInfographic = articleType && INFOGRAPHIC_TYPES.includes(articleType);
+
+  // Show component if:
+  // 1. Content has placeholders, OR
+  // 2. Article type supports infographics (allow manual generation), OR
+  // 3. Already has middle images set
+  if (!hasPlaceholder1 && !hasPlaceholder2 && !supportsInfographic && !middleImage1Url && !middleImage2Url) {
     return null;
   }
 
-  // Check if this article type supports infographics
-  const supportsInfographic = articleType && INFOGRAPHIC_TYPES.includes(articleType);
+  // If no placeholders but showing for infographic, default to single slot
+  const showSlot1 = hasPlaceholder1 || supportsInfographic || !!middleImage1Url;
+  const showSlot2 = hasPlaceholder2 || !!middleImage2Url;
 
   return (
     <Card>
@@ -59,9 +66,9 @@ const MiddleImagePicker = ({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {hasPlaceholder1 && (
+        {showSlot1 && (
           <ImageSlot
-            label={hasPlaceholder2 ? "Image 1 (at ~33%)" : "Middle Image"}
+            label={showSlot2 ? "Image 1 (at ~33%)" : "Middle Image"}
             imageUrl={middleImage1Url}
             onImageChange={onMiddleImage1Change}
             title={title}
@@ -71,7 +78,7 @@ const MiddleImagePicker = ({
             supportsInfographic={supportsInfographic}
           />
         )}
-        {hasPlaceholder2 && (
+        {showSlot2 && (
           <ImageSlot
             label="Image 2 (at ~66%)"
             imageUrl={middleImage2Url}
