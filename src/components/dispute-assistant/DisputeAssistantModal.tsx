@@ -5,6 +5,8 @@ import { X, MessageCircle, Sparkles } from 'lucide-react';
 import ChatInterface from './ChatInterface';
 import ChatInput from './ChatInput';
 import LetterRecommendation from './LetterRecommendation';
+import CustomLetterOffer from './CustomLetterOffer';
+import LegalExpertChat from './LegalExpertChat';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,6 +17,11 @@ interface Recommendation {
   category: string;
   letter: string;
   reason: string;
+}
+
+interface CustomLetterOfferData {
+  reason: string;
+  suggestedApproach: string;
 }
 
 interface DisputeAssistantModalProps {
@@ -31,6 +38,9 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [customLetterOffer, setCustomLetterOffer] = useState<CustomLetterOfferData | null>(null);
+  const [showLegalExpert, setShowLegalExpert] = useState(false);
+  const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
 
   const parseRecommendation = (content: string): Recommendation | null => {
     const match = content.match(/\[RECOMMENDATION\]([\s\S]*?)\[\/RECOMMENDATION\]/);
@@ -51,8 +61,28 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
     return null;
   };
 
+  const parseCustomLetterOffer = (content: string): CustomLetterOfferData | null => {
+    const match = content.match(/\[CUSTOM_LETTER_OFFER\]([\s\S]*?)\[\/CUSTOM_LETTER_OFFER\]/);
+    if (!match) return null;
+
+    const block = match[1];
+    const reasonMatch = block.match(/reason:\s*([^\n]+)/);
+    const approachMatch = block.match(/suggested_approach:\s*([^\n]+)/);
+
+    if (reasonMatch && approachMatch) {
+      return {
+        reason: reasonMatch[1].trim(),
+        suggestedApproach: approachMatch[1].trim(),
+      };
+    }
+    return null;
+  };
+
   const cleanContentForDisplay = (content: string): string => {
-    return content.replace(/\[RECOMMENDATION\][\s\S]*?\[\/RECOMMENDATION\]/g, '').trim();
+    return content
+      .replace(/\[RECOMMENDATION\][\s\S]*?\[\/RECOMMENDATION\]/g, '')
+      .replace(/\[CUSTOM_LETTER_OFFER\][\s\S]*?\[\/CUSTOM_LETTER_OFFER\]/g, '')
+      .trim();
   };
 
   const streamChat = useCallback(async (userMessage: string) => {
@@ -78,6 +108,12 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
       const rec = parseRecommendation(assistantContent);
       if (rec) {
         setRecommendation(rec);
+      }
+
+      // Check for custom letter offer
+      const offer = parseCustomLetterOffer(assistantContent);
+      if (offer) {
+        setCustomLetterOffer(offer);
       }
     };
 
@@ -147,6 +183,9 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
   const handleReset = () => {
     setMessages([INITIAL_MESSAGE]);
     setRecommendation(null);
+    setCustomLetterOffer(null);
+    setShowLegalExpert(false);
+    setGeneratedLetter(null);
   };
 
   const handleClose = () => {
@@ -154,57 +193,94 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
     onClose();
   };
 
+  const handleStartCustomLetter = () => {
+    setShowLegalExpert(true);
+  };
+
+  const handleLetterGenerated = (letterContent: string) => {
+    setGeneratedLetter(letterContent);
+    // TODO: Open a purchase modal with the generated letter
+    console.log('Custom letter generated:', letterContent);
+  };
+
+  const handleBackFromLegalExpert = () => {
+    setShowLegalExpert(false);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[700px] flex flex-col p-0 gap-0 [&>button]:hidden">
-        <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-accent" />
+        {!showLegalExpert ? (
+          <>
+            <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-left font-serif">Dispute Assistant</DialogTitle>
+                    <p className="text-sm text-muted-foreground">I'll help you find the right letter</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <div>
-                <DialogTitle className="text-left font-serif">Dispute Assistant</DialogTitle>
-                <p className="text-sm text-muted-foreground">I'll help you find the right letter</p>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <ChatInterface messages={messages} isLoading={isLoading} />
+              
+              {/* Show recommendation if available */}
+              {recommendation && (
+                <div className="px-4 py-3 border-t border-border bg-muted/30">
+                  <LetterRecommendation 
+                    recommendation={recommendation} 
+                    onClose={handleClose}
+                  />
+                </div>
+              )}
+
+              {/* Show custom letter offer if available (and no recommendation) */}
+              {customLetterOffer && !recommendation && (
+                <div className="px-4 py-3 border-t border-border bg-muted/30">
+                  <CustomLetterOffer 
+                    reason={customLetterOffer.reason}
+                    suggestedApproach={customLetterOffer.suggestedApproach}
+                    onStartCustomLetter={handleStartCustomLetter}
+                  />
+                </div>
+              )}
+
+              <div className="border-t border-border p-4 flex-shrink-0">
+                <ChatInput 
+                  onSend={streamChat} 
+                  isLoading={isLoading}
+                  placeholder="Describe what happened..."
+                />
+                {messages.length > 1 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleReset}
+                    className="mt-2 text-xs text-muted-foreground"
+                  >
+                    <MessageCircle className="h-3 w-3 mr-1" />
+                    Start over
+                  </Button>
+                )}
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <ChatInterface messages={messages} isLoading={isLoading} />
-          
-          {recommendation && (
-            <div className="px-4 py-3 border-t border-border bg-muted/30">
-              <LetterRecommendation 
-                recommendation={recommendation} 
-                onClose={handleClose}
-              />
-            </div>
-          )}
-
-          <div className="border-t border-border p-4 flex-shrink-0">
-            <ChatInput 
-              onSend={streamChat} 
-              isLoading={isLoading}
-              placeholder="Describe what happened..."
-            />
-            {messages.length > 1 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleReset}
-                className="mt-2 text-xs text-muted-foreground"
-              >
-                <MessageCircle className="h-3 w-3 mr-1" />
-                Start over
-              </Button>
-            )}
-          </div>
-        </div>
+          </>
+        ) : (
+          <LegalExpertChat 
+            initialContext={customLetterOffer || undefined}
+            previousMessages={messages.filter(m => m !== INITIAL_MESSAGE)}
+            onBack={handleBackFromLegalExpert}
+            onLetterGenerated={handleLetterGenerated}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -46,6 +46,7 @@ const LetterGenerator = ({
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
   const [showEvidenceChecklist, setShowEvidenceChecklist] = useState(false);
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
+  const [uploadedEvidencePaths, setUploadedEvidencePaths] = useState<{ storagePath: string; description: string }[]>([]);
   const formStartedRef = useRef(false);
   const {
     suggestions,
@@ -327,9 +328,11 @@ const LetterGenerator = ({
                     setShowGeneratingOverlay(true);
                     
                     // Upload evidence photos first if user is logged in and has photos
+                    // Store paths directly from the returned value to avoid async state issues
                     if (evidenceUpload.hasPhotos && user) {
                       try {
-                        await evidenceUpload.uploadAllPhotos(user.id);
+                        const paths = await evidenceUpload.uploadAllPhotos(user.id);
+                        setUploadedEvidencePaths(paths);
                       } catch (err) {
                         console.error('Failed to upload evidence photos:', err);
                         toast.error('Failed to upload some evidence photos, but continuing with letter generation');
@@ -395,10 +398,7 @@ const LetterGenerator = ({
         templateSlug={template.slug} 
         templateName={template.title} 
         letterContent={generatedLetterContent} 
-        evidencePhotoPaths={evidenceUpload.photos
-          .filter(p => p.uploaded && p.storagePath)
-          .map(p => ({ storagePath: p.storagePath!, description: p.description }))
-        }
+        evidencePhotoPaths={uploadedEvidencePaths}
         onClose={() => setShowPricing(false)} 
       />}
 
