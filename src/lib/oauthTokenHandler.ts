@@ -12,72 +12,40 @@ export async function processOAuthToken(): Promise<{
     return { processed: false };
   }
 
+  console.log('[OAuth] Token detected in URL, processing redirect...');
+
   try {
-    // Decode the JWT payload (base64url decode the middle part)
-    const parts = lovableToken.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
-
-    // The token payload is in the second part - handle base64url properly
-    const payloadBase64 = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
+    // Clean up URL immediately to prevent reprocessing
+    cleanupUrl();
     
-    // Add padding if needed
-    const paddedPayload = payloadBase64.padEnd(
-      payloadBase64.length + (4 - payloadBase64.length % 4) % 4, 
-      '='
-    );
+    // The OAuth broker should have set the session via cookies/storage
+    // Wait and retry to get the session with increasing delays
+    const delays = [100, 200, 300, 500, 800];
     
-    const payloadJson = atob(paddedPayload);
-    const payload = JSON.parse(payloadJson);
-
-    console.log('[OAuth] Processing token, payload keys:', Object.keys(payload));
-
-    // The payload might have tokens at different paths
-    // Try direct access first, then nested access
-    const accessToken = payload.access_token || payload.tokens?.access_token;
-    const refreshToken = payload.refresh_token || payload.tokens?.refresh_token;
-
-    if (accessToken && refreshToken) {
-      console.log('[OAuth] Setting session with tokens');
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('[OAuth] Failed to set session:', error);
-        cleanupUrl();
-        return { processed: false, error };
+        console.error('[OAuth] Error getting session:', error);
+        continue;
       }
       
-      console.log('[OAuth] Session set successfully');
-      sessionStorage.setItem('oauth_just_processed', 'true');
-      cleanupUrl();
-      return { processed: true };
+      if (session) {
+        console.log('[OAuth] Session found after redirect, attempt:', attempt + 1);
+        sessionStorage.setItem('oauth_just_processed', 'true');
+        return { processed: true };
+      }
+      
+      console.log('[OAuth] No session yet, attempt:', attempt + 1);
     }
 
-    // If no tokens in payload, try to get session (maybe broker set it via cookies)
-    console.log('[OAuth] No tokens in payload, checking existing session');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-      console.log('[OAuth] Found existing session');
-      sessionStorage.setItem('oauth_just_processed', 'true');
-      cleanupUrl();
-      return { processed: true };
-    }
-
-    // Clean up URL even if we couldn't process
-    console.warn('[OAuth] Could not establish session - no tokens and no existing session');
-    cleanupUrl();
+    console.warn('[OAuth] No session found after multiple attempts');
     return { processed: false };
 
   } catch (error) {
-    console.error('[OAuth] Failed to process OAuth token:', error);
-    cleanupUrl();
+    console.error('[OAuth] Error processing redirect:', error);
     return { 
       processed: false, 
       error: error instanceof Error ? error : new Error(String(error))
