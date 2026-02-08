@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.legal-expert-letter]
 verify_jwt = false
+
+[functions.generate-infographic]
+verify_jwt = false
