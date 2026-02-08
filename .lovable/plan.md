@@ -1,264 +1,168 @@
 
+# Fix Letter Generation Flow: Download Button, Evidence Images, and Email Notification
 
-# Fix Google OAuth on Custom Domain (letterofdispute.com)
+## Issues Identified
 
-## Problem Identified
+After analyzing the codebase, I've found **three separate issues** that are all related to the letter generation and purchase flow:
 
-The Lovable OAuth broker (`/~oauth/initiate`) is designed for Lovable's preview environment. On custom domains like `letterofdispute.com`, the broker returns a `__lovable_token` that contains only metadata (user_id, project_id), NOT the actual Supabase access_token and refresh_token needed to establish a session.
+### Issue 1: Download PDF Button Disabled (Grayed Out)
 
-**Why it worked before:** The broker may have been updated, or previous code was using a different flow.
+**Root Cause:** The `pdfUrl` is not being returned properly from the verification/generation flow.
 
-**Root Cause:** The Lovable Cloud auth library (`@lovable.dev/cloud-auth-js`) only fully handles the popup/iframe flow. For the redirect flow (used on live sites), it just redirects and returns `{ redirected: true }` without any callback handling.
+Looking at the data flow:
+1. `verify-letter-purchase/index.ts` (lines 98-129) calls `generate-letter-documents` and passes the result
+2. `generate-letter-documents/index.ts` generates the PDF and returns `pdfUrl`
+3. However, it's storing a **signed URL** in the database (line 282), which expires in 7 days
+
+The issue is that when the **credit redemption flow** is used (`redeem-credit/index.ts`), the function calls `generate-letter-documents` but:
+- It's missing the `templateName` parameter (line 130-133)
+- The PurchaseSuccessPage tries to fetch and regenerate a signed URL but the original path format is a signed URL, not a storage path
+
+In `PurchaseSuccessPage.tsx` (lines 60-66), the code tries to create a signed URL from `pdf_url`:
+```typescript
+if (pdfUrl && pdfUrl.startsWith('letters/')) {
+  const { data: signedData } = await supabase.storage
+    .from('letters')
+    .createSignedUrl(pdfUrl.replace('letters/', ''), 3600);
+```
+
+But `generate-letter-documents` stores the **full signed URL** (not just the path) in the `pdf_url` column (line 282). So the check `pdfUrl.startsWith('letters/')` fails, and the button stays disabled because the old signed URL has likely expired.
+
+**Fix:** Store only the storage path (not the full signed URL) in the database, then generate fresh signed URLs when needed.
 
 ---
 
-## Solution
+### Issue 2: Evidence Photos Not Included in PDF
 
-Bypass the Lovable OAuth broker on custom domains and use Supabase's native OAuth directly with `skipBrowserRedirect: true`. This gives us the OAuth URL directly, which we can then use to redirect the user. When they return, the tokens will be in the URL hash fragment which Supabase can process automatically.
+**Root Cause:** Evidence photos are **never passed** from the frontend to the backend.
+
+The flow should be:
+1. User uploads photos via `EvidenceUploader` component (stored in `useEvidenceUpload` hook)
+2. Before purchase, photos should be uploaded to storage and paths collected
+3. The `evidencePhotoPaths` should be passed to `create-letter-checkout` and then to `generate-letter-documents`
+
+**Current problem:**
+- `PricingModal.tsx` (line 100-107) calls `create-letter-checkout` but does NOT pass `evidencePhotoPaths`
+- `create-letter-checkout/index.ts` (lines 32-37) doesn't accept evidence photos
+- `verify-letter-purchase/index.ts` (lines 109-114) doesn't pass evidence photos to `generate-letter-documents`
+
+**Fix:** 
+1. Pass evidence photos from `LetterGenerator` → `PricingModal` → `create-letter-checkout`
+2. Store evidence paths in `letter_purchases` table
+3. Pass them through `verify-letter-purchase` → `generate-letter-documents`
+
+---
+
+### Issue 3: No Email Notification
+
+**Root Cause:** The email is only sent in the **Stripe payment flow**, not in the credit redemption flow.
+
+Looking at:
+- `verify-letter-purchase/index.ts` (lines 131-162): Sends email after Stripe verification
+- `redeem-credit/index.ts`: Does NOT call `send-purchase-email` at all
+
+Also, the email sending depends on `customerEmail` which comes from Stripe's checkout session. For credit redemptions, we already have the user's email but don't use it to send an email.
+
+**Fix:** Add email sending to the credit redemption flow.
 
 ---
 
 ## Implementation Plan
 
-### File 1: src/pages/LoginPage.tsx
+### Step 1: Fix Database Schema - Add Evidence Column
 
-Update `handleGoogleSignIn` to detect custom domain and bypass the broker:
+Add a column to store evidence photo paths:
 
-```typescript
-import { supabase } from '@/integrations/supabase/client';
-
-const handleGoogleSignIn = async () => {
-  setIsGoogleLoading(true);
-  trackGoogleAuthClick('login');
-  
-  // Detect if we're on a custom domain (not Lovable preview)
-  const isCustomDomain = !window.location.hostname.includes('lovable.app') &&
-                         !window.location.hostname.includes('lovableproject.com');
-  
-  if (isCustomDomain) {
-    // Bypass Lovable OAuth broker - use Supabase directly
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-        skipBrowserRedirect: true,
-      },
-    });
-    
-    if (error) {
-      toast({
-        title: 'Error signing in with Google',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsGoogleLoading(false);
-      return;
-    }
-    
-    // Redirect to OAuth URL
-    if (data?.url) {
-      window.location.href = data.url;
-    }
-    return;
-  }
-  
-  // For Lovable preview domains, use the managed OAuth
-  sessionStorage.setItem('oauth_pending', 'true');
-  
-  const { error } = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.origin,
-  });
-
-  if (error) {
-    sessionStorage.removeItem('oauth_pending');
-    toast({
-      title: 'Error signing in with Google',
-      description: error.message,
-      variant: 'destructive',
-    });
-    setIsGoogleLoading(false);
-  }
-};
+```sql
+ALTER TABLE letter_purchases 
+ADD COLUMN IF NOT EXISTS evidence_photos JSONB DEFAULT '[]';
 ```
 
-### File 2: src/pages/SignupPage.tsx
+### Step 2: Update `create-letter-checkout` to Accept Evidence Photos
 
-Apply the same fix:
+**File:** `supabase/functions/create-letter-checkout/index.ts`
 
-```typescript
-import { supabase } from '@/integrations/supabase/client';
+- Accept `evidencePhotoPaths` in request body
+- Store in the `letter_purchases` record
 
-const handleGoogleSignIn = async () => {
-  setIsGoogleLoading(true);
-  trackGoogleAuthClick('signup');
-  
-  // Detect if we're on a custom domain (not Lovable preview)
-  const isCustomDomain = !window.location.hostname.includes('lovable.app') &&
-                         !window.location.hostname.includes('lovableproject.com');
-  
-  if (isCustomDomain) {
-    // Bypass Lovable OAuth broker - use Supabase directly
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-        skipBrowserRedirect: true,
-      },
-    });
-    
-    if (error) {
-      toast({
-        title: 'Error signing in with Google',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsGoogleLoading(false);
-      return;
-    }
-    
-    // Redirect to OAuth URL
-    if (data?.url) {
-      window.location.href = data.url;
-    }
-    return;
-  }
-  
-  // For Lovable preview domains, use the managed OAuth
-  sessionStorage.setItem('oauth_pending', 'true');
-  
-  const { error } = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.origin,
-  });
+### Step 3: Update `verify-letter-purchase` to Pass Evidence Photos
 
-  if (error) {
-    sessionStorage.removeItem('oauth_pending');
-    toast({
-      title: 'Error signing in with Google',
-      description: error.message,
-      variant: 'destructive',
-    });
-    setIsGoogleLoading(false);
-  }
-};
-```
+**File:** `supabase/functions/verify-letter-purchase/index.ts`
 
-### File 3: src/lib/oauthTokenHandler.ts
+- Retrieve `evidence_photos` from the purchase record
+- Pass to `generate-letter-documents`
 
-This file can be simplified since the native Supabase OAuth handles token exchange automatically via URL hash fragments. The `__lovable_token` handling is only needed for the Lovable preview environment.
+### Step 4: Update `generate-letter-documents` to Store Path, Not Signed URL
 
-```typescript
-import { supabase } from '@/integrations/supabase/client';
+**File:** `supabase/functions/generate-letter-documents/index.ts`
 
-export async function processOAuthToken(): Promise<{
-  processed: boolean;
-  error?: Error;
-}> {
-  // Check for Lovable broker token (preview environment only)
-  const urlParams = new URLSearchParams(window.location.search);
-  const lovableToken = urlParams.get('__lovable_token');
-  
-  if (!lovableToken) {
-    return { processed: false };
-  }
+- Store the storage path (e.g., `purchaseId/letter.pdf`) instead of the full signed URL
+- This allows generating fresh signed URLs when needed
 
-  console.log('[OAuth] Token detected in URL, processing redirect...');
+### Step 5: Update `PurchaseSuccessPage` to Handle URL Generation
 
-  try {
-    // Clean up URL immediately to prevent reprocessing
-    cleanupUrl();
-    
-    // The OAuth broker should have set the session via cookies/storage
-    // Wait and retry to get the session with increasing delays
-    const delays = [100, 200, 300, 500, 800];
-    
-    for (let attempt = 0; attempt < delays.length; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
-      
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('[OAuth] Error getting session:', error);
-        continue;
-      }
-      
-      if (session) {
-        console.log('[OAuth] Session found after redirect, attempt:', attempt + 1);
-        sessionStorage.setItem('oauth_just_processed', 'true');
-        return { processed: true };
-      }
-      
-      console.log('[OAuth] No session yet, attempt:', attempt + 1);
-    }
+**File:** `src/pages/PurchaseSuccessPage.tsx`
 
-    console.warn('[OAuth] No session found after multiple attempts');
-    return { processed: false };
+- Generate signed URL from storage path for both flows
+- Handle the case where a full URL is already stored (backwards compatibility)
 
-  } catch (error) {
-    console.error('[OAuth] Error processing redirect:', error);
-    return { 
-      processed: false, 
-      error: error instanceof Error ? error : new Error(String(error))
-    };
-  }
-}
+### Step 6: Update `redeem-credit` to Send Email
 
-function cleanupUrl() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete('__lovable_token');
-  window.history.replaceState({}, '', url.toString());
-}
-```
+**File:** `supabase/functions/redeem-credit/index.ts`
+
+- Pass `templateName` to `generate-letter-documents`
+- Add email sending after successful redemption
+
+### Step 7: Update Frontend to Pass Evidence Photos
+
+**Files:**
+- `src/components/letter/LetterGenerator.tsx` - Pass evidence to PricingModal
+- `src/components/letter/PricingModal.tsx` - Accept and pass evidence to checkout
 
 ---
 
-## How This Works
+## File Changes Summary
 
-### On Custom Domain (letterofdispute.com):
-1. User clicks "Sign in with Google"
-2. Code detects custom domain and calls `supabase.auth.signInWithOAuth` with `skipBrowserRedirect: true`
-3. Supabase returns the OAuth URL directly (accounts.google.com)
-4. We manually redirect to that URL
-5. After authentication, Google redirects to `https://letterofdispute.com/dashboard` (via Supabase callback)
-6. Supabase's client library automatically picks up the tokens from the URL hash
-7. Session is established, user is logged in
-
-### On Lovable Preview (disputeit.lovable.app):
-1. User clicks "Sign in with Google"
-2. Code uses the managed `lovable.auth.signInWithOAuth`
-3. Popup/iframe flow handles authentication
-4. Tokens returned via postMessage
-5. Session is set via `supabase.auth.setSession`
-
----
-
-## Google Cloud Console Requirements
-
-Ensure the following redirect URI is configured:
-
-**Authorized redirect URIs:**
-- `https://koulmtfnkuapzigcplov.supabase.co/auth/v1/callback`
-
-This is the Supabase callback URL that handles the OAuth code exchange. The Supabase project ID is `koulmtfnkuapzigcplov`.
-
----
-
-## Summary of Changes
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/pages/LoginPage.tsx` | Update | Bypass OAuth broker on custom domains |
-| `src/pages/SignupPage.tsx` | Update | Bypass OAuth broker on custom domains |
-| `src/lib/oauthTokenHandler.ts` | Keep | Still needed for Lovable preview environment |
+| File | Changes |
+|------|---------|
+| Database migration | Add `evidence_photos` JSONB column |
+| `supabase/functions/create-letter-checkout/index.ts` | Accept and store evidence photos |
+| `supabase/functions/verify-letter-purchase/index.ts` | Pass evidence photos to document generation |
+| `supabase/functions/generate-letter-documents/index.ts` | Store path instead of signed URL |
+| `supabase/functions/redeem-credit/index.ts` | Pass templateName, add email sending |
+| `src/pages/PurchaseSuccessPage.tsx` | Improve signed URL generation |
+| `src/components/letter/LetterGenerator.tsx` | Pass evidence photos to PricingModal |
+| `src/components/letter/PricingModal.tsx` | Accept evidence photos and upload before checkout |
 
 ---
 
 ## Technical Notes
 
-1. **Why `skipBrowserRedirect: true`**: This gives us the OAuth URL directly instead of letting Supabase redirect automatically. We need this to control the flow.
+### Evidence Photo Flow (After Fix)
 
-2. **Why `redirectTo: /dashboard`**: After successful OAuth, users land directly on the dashboard.
+```text
+User uploads photos (EvidenceUploader)
+         ↓
+Photos stored in useEvidenceUpload state
+         ↓
+User clicks "Generate Letter" → Pricing Modal opens
+         ↓
+User clicks "Buy" → uploadAllPhotos() called → returns storage paths
+         ↓
+create-letter-checkout called with evidencePhotoPaths
+         ↓
+Paths stored in letter_purchases.evidence_photos
+         ↓
+After payment → verify-letter-purchase retrieves evidence_photos
+         ↓
+generate-letter-documents embeds photos in PDF
+```
 
-3. **Supabase URL hash handling**: The Supabase JS client automatically detects tokens in URL hash fragments (`#access_token=...`) and establishes the session.
+### PDF URL Storage (After Fix)
 
-4. **Dual flow support**: The code supports both custom domains (direct Supabase OAuth) and Lovable preview (managed OAuth broker).
+```text
+Before: pdf_url = "https://supabase.../storage/v1/...?token=..."  (expires!)
+After:  pdf_url = "purchaseId/letter.pdf"  (storage path)
+```
 
+Fresh signed URLs are generated on-demand when the user views or downloads.
