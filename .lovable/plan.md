@@ -1,89 +1,65 @@
 
+# Update Email Functions to Use Verified Domain
 
-# Add Mobile Header Sign-In Indicator
-
-## Issue
-When a user is signed in and viewing the site on mobile, there is no visible indication in the header that they are logged in. The only elements visible are the logo and the hamburger menu icon. Users must open the menu to see their account information.
+## Problem
+All email edge functions are configured to send from `noreply@letterofdispute.com`, but only `mail.letterofdispute.com` is verified in Resend (free plan limitation). This causes all emails to fail with a domain verification error.
 
 ## Solution
-Add a small user avatar with a green "online" dot next to the hamburger menu icon on mobile screens. This provides immediate visual feedback that the user is signed in.
-
-## Visual Representation
-
-**Before (Mobile Header - Signed In):**
-```text
-+----------------------------------------+
-| [Logo]                        [≡ Menu] |
-+----------------------------------------+
-```
-
-**After (Mobile Header - Signed In):**
-```text
-+----------------------------------------+
-| [Logo]                   [👤●] [≡ Menu] |
-+----------------------------------------+
-```
-
-The avatar will:
-- Show the user's Google profile picture if available
-- Fall back to showing their initials
-- Include a small green dot indicating "signed in" status
-- Be clickable to open the mobile menu
+Update the "from" address in all 4 email edge functions to use the verified subdomain: `noreply@mail.letterofdispute.com`
 
 ---
 
-## Implementation Details
+## Files to Update
 
-### File to Modify
-`src/components/layout/Header.tsx`
+| File | Current "from" Address | New "from" Address |
+|------|------------------------|-------------------|
+| `supabase/functions/send-purchase-email/index.ts` | `noreply@letterofdispute.com` | `noreply@mail.letterofdispute.com` |
+| `supabase/functions/send-contact-email/index.ts` | `noreply@letterofdispute.com` | `noreply@mail.letterofdispute.com` |
+| `supabase/functions/send-admin-email/index.ts` | `noreply@letterofdispute.com` | `noreply@mail.letterofdispute.com` |
+| `supabase/functions/send-credit-email/index.ts` | `noreply@letterofdispute.com` | `noreply@mail.letterofdispute.com` |
 
-### Changes
-Add a mobile-only user indicator element between the logo and hamburger menu that is:
-1. Only visible on mobile (`lg:hidden`)
-2. Only shown when user is signed in
-3. Displays a small avatar (28x28px) with initials fallback
-4. Includes the green status dot
-5. Tapping it opens the mobile menu sheet
+---
 
-### Code Change (lines 72-79)
+## Changes per File
 
-```tsx
-{/* Mobile menu */}
-<div className="flex items-center gap-2 lg:hidden">
-  {/* Mobile user indicator - only when signed in */}
-  {user && (
-    <button 
-      onClick={() => setOpen(true)}
-      className="flex items-center gap-1"
-    >
-      <Avatar className="h-7 w-7">
-        <AvatarImage src={profile?.avatar_url || undefined} />
-        <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-          {profile?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-        </AvatarFallback>
-      </Avatar>
-      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-    </button>
-  )}
-  
-  <Sheet open={open} onOpenChange={setOpen}>
-    <SheetTrigger asChild>
-      <Button variant="ghost" size="icon">
-        <Menu className="h-6 w-6" />
-        <span className="sr-only">Toggle menu</span>
-      </Button>
-    </SheetTrigger>
-    {/* ... rest of sheet content ... */}
-  </Sheet>
-</div>
+### 1. send-purchase-email/index.ts (Line 78)
+```typescript
+// Before
+from: "Letter of Dispute <noreply@letterofdispute.com>",
+
+// After
+from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
+```
+
+### 2. send-contact-email/index.ts (Lines 50 & 78)
+```typescript
+// Before (two locations)
+from: "Letter of Dispute <noreply@letterofdispute.com>",
+
+// After
+from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
+```
+
+### 3. send-admin-email/index.ts (Line 68)
+```typescript
+// Before
+from: "Letter of Dispute <noreply@letterofdispute.com>",
+
+// After
+from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
+```
+
+### 4. send-credit-email/index.ts (Line 131)
+```typescript
+// Before
+from: "Letter of Dispute <noreply@letterofdispute.com>",
+
+// After
+from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
 ```
 
 ---
 
-## Technical Notes
+## After Implementation
 
-- The avatar uses the same styling as the desktop `UserAccountMenu` for consistency
-- The green dot matches the `emerald-500` color used elsewhere in the app
-- Clicking the avatar opens the same mobile menu sheet, providing quick access to account options
-- The indicator is compact (28px avatar) to fit well in the mobile header without crowding
-
+Once deployed, I will test the contact form to verify emails are delivered successfully with the new sender address.
