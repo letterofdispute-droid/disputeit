@@ -96,12 +96,11 @@ const Footer = () => {
         <div className="pt-6 border-t border-border">
           <div className="bg-muted/50 rounded-lg p-4 mb-6 space-y-2">
             <p className="text-xs text-muted-foreground text-center">
-              <strong>Important Disclaimer:</strong> This service provides letter templates and does not constitute legal advice. 
-              The letters generated are not reviewed by legal professionals and do not guarantee any specific outcome. 
-              For legal matters, please consult a qualified attorney in your jurisdiction.
-            </p>
-            <p className="text-xs text-muted-foreground text-center">
-              All content on this site is reviewed and moderated by our editorial team.
+              <strong>Important:</strong> Letters are generated using AI technology with editorial oversight. 
+              Letter of Dispute is an independent service with no affiliation with any government agency, 
+              regulatory body, or the institutions mentioned in our content. We are not a law firm and do not 
+              provide legal advice. All templates are provided "as is" without guarantee of any outcome. 
+              For legal matters, please consult a licensed attorney in your jurisdiction.
             </p>
           </div>
           <p className="text-sm text-muted-foreground text-center">
