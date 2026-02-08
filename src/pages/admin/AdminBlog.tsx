@@ -182,29 +182,59 @@ const AdminBlog = () => {
     if (selectedIds.size === 0) return;
     
     setIsBulkPublishing(true);
-    const { error } = await supabase
-      .from('blog_posts')
-      .update({ 
-        status: 'published', 
-        published_at: new Date().toISOString() 
-      })
-      .in('id', Array.from(selectedIds));
-
-    if (error) {
-      toast({
-        title: 'Error publishing posts',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
+    const idsArray = Array.from(selectedIds);
+    const BATCH_SIZE = 50;
+    let successCount = 0;
+    let errorOccurred = false;
+    
+    // Process in batches to prevent timeout
+    for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
+      const batch = idsArray.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('blog_posts')
+        .update({ 
+          status: 'published', 
+          published_at: new Date().toISOString() 
+        })
+        .in('id', batch);
+      
+      if (error) {
+        errorOccurred = true;
+        toast({
+          title: 'Error publishing posts',
+          description: error.message,
+          variant: 'destructive',
+        });
+        break;
+      }
+      
+      // Also update content_queue status for synced items
+      await supabase
+        .from('content_queue')
+        .update({ 
+          status: 'published', 
+          published_at: new Date().toISOString() 
+        })
+        .in('blog_post_id', batch);
+      
+      successCount += batch.length;
+    }
+    
+    if (!errorOccurred) {
       toast({
         title: 'Posts published',
-        description: `Successfully published ${selectedIds.size} posts.`,
+        description: `Successfully published ${successCount} posts.`,
       });
-      setSelectedIds(new Set());
-      fetchPosts();
-      fetchDraftCount();
+    } else if (successCount > 0) {
+      toast({
+        title: 'Partial publish',
+        description: `Published ${successCount} of ${selectedIds.size} posts.`,
+      });
     }
+    
+    setSelectedIds(new Set());
+    fetchPosts();
+    fetchDraftCount();
     setIsBulkPublishing(false);
   };
 
@@ -294,12 +324,12 @@ const AdminBlog = () => {
       {selectedIds.size > 0 && (
         <Card className="mb-4 border-primary/50 bg-primary/5">
           <CardContent className="py-3 px-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-primary" />
                 <span className="font-medium">{selectedIds.size} selected</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
