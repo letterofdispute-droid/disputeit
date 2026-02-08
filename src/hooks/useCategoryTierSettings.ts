@@ -52,6 +52,9 @@ export function useCategoryTierSettings() {
         return DEFAULT_CATEGORY_TIERS;
       }
     },
+    // Override global staleTime - admin settings should always be fresh
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const updateTierSettings = useMutation({
@@ -82,7 +85,10 @@ export function useCategoryTierSettings() {
       return newSettings;
     },
     onSuccess: (newSettings) => {
+      // Update cache immediately for optimistic UI
       queryClient.setQueryData(['category-tier-settings'], newSettings);
+      // Also invalidate to ensure other components get fresh data
+      queryClient.invalidateQueries({ queryKey: ['category-tier-settings'] });
       toast.success('Category tier settings saved');
     },
     onError: (error) => {
