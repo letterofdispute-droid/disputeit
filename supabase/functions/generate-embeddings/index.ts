@@ -197,7 +197,8 @@ serve(async (req) => {
 
           // Get full content based on type
           let rawContent = "";
-          if (item.content_type === "blog_post" && item.content_id) {
+          // Get full content based on type - 'article' = blog posts
+          if (item.content_type === "article" && item.content_id) {
             const { data: post } = await supabase
               .from("blog_posts")
               .select("content")
@@ -228,11 +229,11 @@ serve(async (req) => {
             item.secondary_keywords
           );
 
-          // Update record
+          // Update record - use JSON.stringify for pgvector compatibility
           await supabase
             .from("article_embeddings")
             .update({
-              embedding: `[${embedding.join(",")}]`,
+              embedding: JSON.stringify(embedding),
               embedding_status: "completed",
               content_hash: contentHash,
               anchor_variants: anchorVariants,
@@ -266,7 +267,7 @@ serve(async (req) => {
       });
     }
 
-    // Process a specific content item
+    // Process a specific content item - blog posts mapped to 'article'
     if (content_type === "blog_post") {
       // Get blog post data
       let query = supabase.from("blog_posts").select("*");
@@ -289,11 +290,12 @@ serve(async (req) => {
         articleRole = "super-pillar";
       }
 
-      // Check if embedding record exists
+      // Check if embedding record exists (using article as content_type)
       const { data: existing } = await supabase
         .from("article_embeddings")
         .select("id, content_hash")
         .eq("content_id", post.id)
+        .eq("content_type", "article")
         .single();
 
       const embeddingText = extractEmbeddingText({
@@ -335,9 +337,9 @@ serve(async (req) => {
         .join(" | ")
         .slice(0, 500);
 
-      // Upsert embedding record
+      // Upsert embedding record - use 'article' for blog posts per DB constraint
       const embeddingData = {
-        content_type: "blog_post",
+        content_type: "article", // DB constraint: 'article', 'template', 'guide'
         content_id: post.id,
         slug: post.slug,
         title: post.title,
@@ -349,7 +351,7 @@ serve(async (req) => {
         secondary_keywords: post.secondary_keywords,
         anchor_variants: anchorVariants,
         headings_text: headingsText,
-        embedding: `[${embedding.join(",")}]`,
+        embedding: JSON.stringify(embedding),
         embedding_status: "completed",
         content_hash: newHash,
         last_embedded_at: new Date().toISOString(),
@@ -357,12 +359,22 @@ serve(async (req) => {
       };
 
       if (existing) {
-        await supabase
+        const { error: updateError } = await supabase
           .from("article_embeddings")
           .update(embeddingData)
           .eq("id", existing.id);
+        if (updateError) {
+          console.error("Update embedding error:", updateError);
+          throw updateError;
+        }
       } else {
-        await supabase.from("article_embeddings").insert(embeddingData);
+        const { error: insertError } = await supabase
+          .from("article_embeddings")
+          .insert(embeddingData);
+        if (insertError) {
+          console.error("Insert embedding error:", insertError);
+          throw insertError;
+        }
       }
 
       // Also update blog_posts content_hash
@@ -447,7 +459,7 @@ serve(async (req) => {
         primary_keyword: templateData.keywords?.[0],
         secondary_keywords: templateData.keywords?.slice(1),
         anchor_variants: anchorVariants,
-        embedding: `[${embedding.join(",")}]`,
+        embedding: JSON.stringify(embedding),
         embedding_status: "completed",
         content_hash: newHash,
         last_embedded_at: new Date().toISOString(),
@@ -470,7 +482,7 @@ serve(async (req) => {
       });
     }
 
-    // Category guide embedding
+    // Category guide embedding - maps to 'guide' content_type
     if (content_type === "category_guide") {
       if (!slug) {
         throw new Error("slug (category_id) is required for category_guide embedding");
@@ -502,7 +514,7 @@ serve(async (req) => {
         .from("article_embeddings")
         .select("id, content_hash")
         .eq("slug", slug)
-        .eq("content_type", "category_guide")
+        .eq("content_type", "guide")
         .single();
 
       if (existing?.content_hash === newHash) {
@@ -523,7 +535,7 @@ serve(async (req) => {
       );
 
       const embeddingData = {
-        content_type: "category_guide",
+        content_type: "guide", // DB constraint: 'article', 'template', 'guide'
         slug: slug,
         title: guideData.title,
         category_id: slug,
@@ -531,7 +543,7 @@ serve(async (req) => {
         primary_keyword: guideData.keywords?.[0],
         secondary_keywords: guideData.keywords?.slice(1),
         anchor_variants: anchorVariants,
-        embedding: `[${embedding.join(",")}]`,
+        embedding: JSON.stringify(embedding),
         embedding_status: "completed",
         content_hash: newHash,
         last_embedded_at: new Date().toISOString(),
