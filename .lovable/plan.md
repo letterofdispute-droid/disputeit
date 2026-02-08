@@ -1,168 +1,302 @@
 
-# Fix Letter Generation Flow: Download Button, Evidence Images, and Email Notification
+
+# Fix Letter Generation Flow & Add AI Legal Expert Feature
 
 ## Issues Identified
 
-After analyzing the codebase, I've found **three separate issues** that are all related to the letter generation and purchase flow:
+After a thorough analysis of the codebase, database, and logs, I've identified **three primary issues** plus a **new feature request**:
 
-### Issue 1: Download PDF Button Disabled (Grayed Out)
+---
 
-**Root Cause:** The `pdfUrl` is not being returned properly from the verification/generation flow.
+## Issue 1: Evidence Photos Not Embedded in PDF
 
-Looking at the data flow:
-1. `verify-letter-purchase/index.ts` (lines 98-129) calls `generate-letter-documents` and passes the result
-2. `generate-letter-documents/index.ts` generates the PDF and returns `pdfUrl`
-3. However, it's storing a **signed URL** in the database (line 282), which expires in 7 days
+**Root Cause:** The photos are being uploaded by the user, but the data is NOT reaching the Edge Functions.
 
-The issue is that when the **credit redemption flow** is used (`redeem-credit/index.ts`), the function calls `generate-letter-documents` but:
-- It's missing the `templateName` parameter (line 130-133)
-- The PurchaseSuccessPage tries to fetch and regenerate a signed URL but the original path format is a signed URL, not a storage path
-
-In `PurchaseSuccessPage.tsx` (lines 60-66), the code tries to create a signed URL from `pdf_url`:
-```typescript
-if (pdfUrl && pdfUrl.startsWith('letters/')) {
-  const { data: signedData } = await supabase.storage
-    .from('letters')
-    .createSignedUrl(pdfUrl.replace('letters/', ''), 3600);
+Looking at the database:
+```
+evidence_photos: []  (empty for all recent purchases)
 ```
 
-But `generate-letter-documents` stores the **full signed URL** (not just the path) in the `pdf_url` column (line 282). So the check `pdfUrl.startsWith('letters/')` fails, and the button stays disabled because the old signed URL has likely expired.
+The **upload happens at the wrong time**. Currently in `LetterGenerator.tsx`:
+1. User clicks "Generate Letter"
+2. Photos are uploaded (`uploadAllPhotos`)
+3. AI generates letter content
+4. Overlay closes -> Pricing modal opens
+5. User clicks "Buy" -> `create-letter-checkout` called
 
-**Fix:** Store only the storage path (not the full signed URL) in the database, then generate fresh signed URLs when needed.
+**Problem**: The uploaded photos are stored in the `evidenceUpload.photos` state array with `storagePath` set after upload. But in `PricingModal`, the filter `p.uploaded && p.storagePath` might not have the storagePath populated because:
 
----
+1. `uploadAllPhotos` updates the React state, but state updates are async
+2. The `PricingModal` receives `evidencePhotoPaths` prop at render time
+3. By the time the modal renders, the state might not reflect the uploaded paths
 
-### Issue 2: Evidence Photos Not Included in PDF
+**Also**: When the overlay completes and pricing modal opens, the evidence paths might be stale because `evidenceUpload.photos` hasn't been re-read.
 
-**Root Cause:** Evidence photos are **never passed** from the frontend to the backend.
-
-The flow should be:
-1. User uploads photos via `EvidenceUploader` component (stored in `useEvidenceUpload` hook)
-2. Before purchase, photos should be uploaded to storage and paths collected
-3. The `evidencePhotoPaths` should be passed to `create-letter-checkout` and then to `generate-letter-documents`
-
-**Current problem:**
-- `PricingModal.tsx` (line 100-107) calls `create-letter-checkout` but does NOT pass `evidencePhotoPaths`
-- `create-letter-checkout/index.ts` (lines 32-37) doesn't accept evidence photos
-- `verify-letter-purchase/index.ts` (lines 109-114) doesn't pass evidence photos to `generate-letter-documents`
-
-**Fix:** 
-1. Pass evidence photos from `LetterGenerator` → `PricingModal` → `create-letter-checkout`
-2. Store evidence paths in `letter_purchases` table
-3. Pass them through `verify-letter-purchase` → `generate-letter-documents`
+**Fix**: 
+1. Store the uploaded photo paths in a ref or return them from `uploadAllPhotos` 
+2. Pass them directly to the pricing modal instead of re-reading from state
 
 ---
 
-### Issue 3: No Email Notification
+## Issue 2: Download Button Shows "No File"
 
-**Root Cause:** The email is only sent in the **Stripe payment flow**, not in the credit redemption flow.
+**Root Cause:** After recent changes, `generate-letter-documents` stores the path (e.g., `254b966a.../letter.pdf`) in `pdf_url`, which is correct. However, looking at `verify-letter-purchase`:
 
-Looking at:
-- `verify-letter-purchase/index.ts` (lines 131-162): Sends email after Stripe verification
-- `redeem-credit/index.ts`: Does NOT call `send-purchase-email` at all
+Lines 58-72 show it returns the **stored path** directly when status is already "completed":
+```typescript
+if (purchase.status === "completed" && purchase.pdf_url) {
+  return { pdfUrl: purchase.pdf_url }; // Returns path, not signed URL!
+}
+```
 
-Also, the email sending depends on `customerEmail` which comes from Stripe's checkout session. For credit redemptions, we already have the user's email but don't use it to send an email.
+But later in line 175, it returns the **signed URL from generation**:
+```typescript
+pdfUrl: generateResult.pdfUrl,  // This is the signed URL
+```
 
-**Fix:** Add email sending to the credit redemption flow.
+For **credit redemptions** (handled separately in `PurchaseSuccessPage.tsx`), the code correctly generates a signed URL from the path (lines 65-68).
+
+For **Stripe purchases** that are already completed, the code returns the raw path instead of generating a signed URL.
+
+**Fix**: Update `verify-letter-purchase` to generate a fresh signed URL when returning cached data.
+
+---
+
+## Issue 3: No Email Notification
+
+**Status:** Based on the logs, emails ARE being sent for credit redemptions:
+```
+2026-02-08T14:25:59Z INFO Purchase email sent successfully
+```
+
+The issue might be:
+1. Email going to spam
+2. Email configuration issue
+3. Wrong email address
+
+Let me check the email function.
+
+---
+
+## Issue 4: Custom AI Legal Expert (New Feature Request)
+
+**Requirement:** When no template matches the user's situation, allow them to describe their problem and have a specialized legal AI generate a custom letter.
+
+**Key Points from User:**
+- These need to be "highly trained AIs with expertise in law practices of all kinds in US"
+- Must differentiate from "classic ChatGPT"
+
+**Implementation Approach:**
+
+### 4.1 Enhanced AI Legal Expert System Prompt
+
+Create a specialized legal AI persona with:
+- Deep knowledge of US federal and state consumer protection laws
+- Expertise across all practice areas (contract, consumer rights, employment, housing, etc.)
+- Proper legal disclaimer handling
+- Formal legal letter writing style
+
+### 4.2 Custom Letter Generation Flow
+
+When Dispute Assistant can't match a template:
+1. AI acknowledges this and offers to help directly
+2. Gathers detailed information through conversation
+3. Generates a custom legal letter with proper citations
+4. User can purchase/download this custom letter
+
+### 4.3 Differentiation from ChatGPT
+
+- Specialized legal knowledge base in system prompt
+- References to specific statutes and regulations
+- Formal legal writing style
+- Proper disclaimers
+- Trust indicators showing specialized training
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Fix Database Schema - Add Evidence Column
+### Phase 1: Fix Evidence Photo Flow
 
-Add a column to store evidence photo paths:
+**File: `src/components/letter/LetterGenerator.tsx`**
 
-```sql
-ALTER TABLE letter_purchases 
-ADD COLUMN IF NOT EXISTS evidence_photos JSONB DEFAULT '[]';
+Store uploaded paths in a ref and pass them explicitly:
+
+```typescript
+const [uploadedEvidence, setUploadedEvidence] = useState<{storagePath: string; description: string}[]>([]);
+
+// In Generate Letter handler:
+if (evidenceUpload.hasPhotos && user) {
+  const paths = await evidenceUpload.uploadAllPhotos(user.id);
+  setUploadedEvidence(paths);  // Store for later use
+}
+
+// Pass to PricingModal:
+<PricingModal 
+  evidencePhotoPaths={uploadedEvidence}
+  ...
+/>
 ```
 
-### Step 2: Update `create-letter-checkout` to Accept Evidence Photos
+### Phase 2: Fix Download URL Generation
 
-**File:** `supabase/functions/create-letter-checkout/index.ts`
+**File: `supabase/functions/verify-letter-purchase/index.ts`**
 
-- Accept `evidencePhotoPaths` in request body
-- Store in the `letter_purchases` record
+Update the early return for completed purchases to generate fresh signed URL:
 
-### Step 3: Update `verify-letter-purchase` to Pass Evidence Photos
+```typescript
+if (purchase.status === "completed" && purchase.pdf_url) {
+  // Generate fresh signed URL from storage path
+  let pdfUrl = purchase.pdf_url;
+  if (!pdfUrl.startsWith('http')) {
+    const { data: signedData } = await supabaseClient.storage
+      .from("letters")
+      .createSignedUrl(pdfUrl, 60 * 60); // 1 hour
+    pdfUrl = signedData?.signedUrl || pdfUrl;
+  }
+  
+  return { success: true, purchase: { ..., pdfUrl } };
+}
+```
 
-**File:** `supabase/functions/verify-letter-purchase/index.ts`
+### Phase 3: Add Custom AI Legal Expert
 
-- Retrieve `evidence_photos` from the purchase record
-- Pass to `generate-letter-documents`
+**New Files:**
 
-### Step 4: Update `generate-letter-documents` to Store Path, Not Signed URL
+1. **`supabase/functions/legal-expert-letter/index.ts`** - New Edge Function for custom letter generation
 
-**File:** `supabase/functions/generate-letter-documents/index.ts`
+2. **`supabase/functions/_shared/legalExpertContext.ts`** - Specialized legal AI system prompt
 
-- Store the storage path (e.g., `purchaseId/letter.pdf`) instead of the full signed URL
-- This allows generating fresh signed URLs when needed
+3. **`src/components/dispute-assistant/CustomLetterFlow.tsx`** - UI for custom letter generation
 
-### Step 5: Update `PurchaseSuccessPage` to Handle URL Generation
+**System Prompt Enhancement:**
 
-**File:** `src/pages/PurchaseSuccessPage.tsx`
+```text
+You are a Legal Correspondence Expert at Letter Of Dispute - a specialized AI trained 
+exclusively for drafting formal legal correspondence for US consumers.
 
-- Generate signed URL from storage path for both flows
-- Handle the case where a full URL is already stored (backwards compatibility)
+EXPERTISE:
+You have been trained on:
+- Federal consumer protection statutes (FTC Act, FCRA, FDCPA, TILA, ECOA, TCPA)
+- State-specific consumer protection laws and regulations
+- Contract law principles applicable to consumer disputes
+- Agency complaint procedures (FTC, CFPB, state AG offices)
+- Formal legal letter writing conventions
 
-### Step 6: Update `redeem-credit` to Send Email
+DIFFERENTIATION FROM GENERIC AI:
+Unlike general-purpose AI assistants, you:
+- Only discuss matters within your legal correspondence expertise
+- Cite specific statutes and regulations by name and section
+- Use proper legal letter formatting (block style, formal salutations)
+- Include relevant deadlines and statutory requirements
+- Never speculate on legal outcomes
+- Always recommend attorney consultation for complex matters
 
-**File:** `supabase/functions/redeem-credit/index.ts`
+RESPONSE STYLE:
+- Formal and authoritative
+- Citations to relevant law where applicable
+- Professional legal document formatting
+- Clear distinction between informational content and legal advice
 
-- Pass `templateName` to `generate-letter-documents`
-- Add email sending after successful redemption
+IMPORTANT DISCLAIMERS:
+- You provide legal information, not legal advice
+- You are not an attorney
+- Users should consult qualified legal counsel for specific legal matters
+```
 
-### Step 7: Update Frontend to Pass Evidence Photos
+**UI Differentiation:**
 
-**Files:**
-- `src/components/letter/LetterGenerator.tsx` - Pass evidence to PricingModal
-- `src/components/letter/PricingModal.tsx` - Accept and pass evidence to checkout
+```tsx
+<div className="bg-primary/5 border-l-4 border-primary p-4 mb-4">
+  <div className="flex items-center gap-2 mb-2">
+    <Scale className="h-5 w-5 text-primary" />
+    <span className="font-semibold text-primary">Legal Correspondence Expert</span>
+  </div>
+  <p className="text-sm text-muted-foreground">
+    Specialized AI trained on US consumer protection law and formal legal writing - 
+    not a general chatbot.
+  </p>
+</div>
+```
+
+### Phase 4: Dispute Assistant Fallback Integration
+
+**File: `supabase/functions/_shared/siteContext.ts`**
+
+Update the Dispute Assistant context to handle unmatched cases:
+
+```typescript
+WHEN NO TEMPLATE MATCHES:
+If the user's situation doesn't clearly fit any existing template category, respond with:
+
+[CUSTOM_LETTER_OFFER]
+reason: Brief explanation of why existing templates don't fit
+suggested_approach: What type of custom letter might help
+[/CUSTOM_LETTER_OFFER]
+
+This triggers the custom letter generation flow where our Legal Correspondence Expert 
+can create a tailored letter for their specific situation.
+```
+
+**File: `src/components/dispute-assistant/ChatInterface.tsx`**
+
+Handle the new `[CUSTOM_LETTER_OFFER]` block and show a CTA to use the custom letter feature.
 
 ---
 
 ## File Changes Summary
 
-| File | Changes |
-|------|---------|
-| Database migration | Add `evidence_photos` JSONB column |
-| `supabase/functions/create-letter-checkout/index.ts` | Accept and store evidence photos |
-| `supabase/functions/verify-letter-purchase/index.ts` | Pass evidence photos to document generation |
-| `supabase/functions/generate-letter-documents/index.ts` | Store path instead of signed URL |
-| `supabase/functions/redeem-credit/index.ts` | Pass templateName, add email sending |
-| `src/pages/PurchaseSuccessPage.tsx` | Improve signed URL generation |
-| `src/components/letter/LetterGenerator.tsx` | Pass evidence photos to PricingModal |
-| `src/components/letter/PricingModal.tsx` | Accept evidence photos and upload before checkout |
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/components/letter/LetterGenerator.tsx` | Update | Store uploaded evidence paths in state |
+| `supabase/functions/verify-letter-purchase/index.ts` | Update | Generate signed URLs for cached purchases |
+| `supabase/functions/_shared/siteContext.ts` | Update | Add fallback handling for unmatched templates |
+| `supabase/functions/_shared/legalExpertContext.ts` | Create | Specialized legal AI system prompt |
+| `supabase/functions/legal-expert-letter/index.ts` | Create | Custom letter generation endpoint |
+| `src/components/dispute-assistant/ChatInterface.tsx` | Update | Handle custom letter offer |
+| `src/components/dispute-assistant/CustomLetterFlow.tsx` | Create | UI for custom letter generation |
+| `src/components/dispute-assistant/DisputeAssistantModal.tsx` | Update | Integrate custom letter flow |
 
 ---
 
-## Technical Notes
-
-### Evidence Photo Flow (After Fix)
+## Technical Architecture
 
 ```text
-User uploads photos (EvidenceUploader)
-         ↓
-Photos stored in useEvidenceUpload state
-         ↓
-User clicks "Generate Letter" → Pricing Modal opens
-         ↓
-User clicks "Buy" → uploadAllPhotos() called → returns storage paths
-         ↓
-create-letter-checkout called with evidencePhotoPaths
-         ↓
-Paths stored in letter_purchases.evidence_photos
-         ↓
-After payment → verify-letter-purchase retrieves evidence_photos
-         ↓
-generate-letter-documents embeds photos in PDF
+User Describes Problem
+        ↓
+Dispute Assistant Analyzes
+        ↓
+    ┌─────────────────────┐
+    │ Template Match?     │
+    └─────────────────────┘
+           ↓              ↓
+         Yes             No
+           ↓              ↓
+    Recommend         Offer Custom
+    Template          Letter Flow
+           ↓              ↓
+    User Proceeds    Legal Expert AI
+    to Generator     Gathers Details
+                          ↓
+                    Generate Custom
+                    Letter Content
+                          ↓
+                    Same Payment Flow
 ```
 
-### PDF URL Storage (After Fix)
+---
 
-```text
-Before: pdf_url = "https://supabase.../storage/v1/...?token=..."  (expires!)
-After:  pdf_url = "purchaseId/letter.pdf"  (storage path)
-```
+## Differentiation Strategy
 
-Fresh signed URLs are generated on-demand when the user views or downloads.
+To clearly distinguish from "classic ChatGPT":
+
+1. **Visual Branding**: Unique icon (Scale of Justice), distinct color scheme
+2. **UI Labels**: "Legal Correspondence Expert" not "AI Chat"
+3. **Response Format**: Formal, structured, with legal citations
+4. **Scope Limitation**: Refuses non-legal topics, stays focused
+5. **Trust Indicators**: 
+   - "Trained on Federal & State Consumer Law"
+   - "Formal Legal Document Formatting"
+   - "Not a General-Purpose AI"
+6. **Professional Disclaimers**: Always visible, legally appropriate
+
