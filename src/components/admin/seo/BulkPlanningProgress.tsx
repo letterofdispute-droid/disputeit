@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle2, AlertCircle, X, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, X, RefreshCw, XCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,14 +13,18 @@ interface BulkPlanningProgressProps {
   job: BulkPlanningJob;
   onDismiss?: () => void;
   onRetryFailed?: () => void;
+  onCancelJob?: () => void;
   isRetrying?: boolean;
+  isCancelling?: boolean;
 }
 
 export default function BulkPlanningProgress({ 
   job, 
   onDismiss, 
   onRetryFailed,
-  isRetrying 
+  onCancelJob,
+  isRetrying,
+  isCancelling,
 }: BulkPlanningProgressProps) {
   const totalProcessed = job.completed_templates + job.failed_templates;
   const progress = job.total_templates > 0 
@@ -30,6 +34,11 @@ export default function BulkPlanningProgress({
   const isComplete = job.status === 'completed' || job.status === 'failed';
   const hasFailures = job.failed_templates > 0;
   const canRetry = isComplete && hasFailures && !isRetrying;
+
+  // Detect if job is stuck (no progress for 5+ minutes)
+  const lastUpdate = new Date(job.updated_at);
+  const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / 60000;
+  const isStuck = job.status === 'processing' && minutesSinceUpdate > 5;
 
   // Get current template being processed
   const currentTemplateIndex = totalProcessed;
@@ -48,8 +57,11 @@ export default function BulkPlanningProgress({
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-lg border">
       {/* Status Icon */}
-      {job.status === 'processing' && (
+      {job.status === 'processing' && !isStuck && (
         <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+      )}
+      {job.status === 'processing' && isStuck && (
+        <AlertCircle className="h-4 w-4 text-warning shrink-0" />
       )}
       {job.status === 'completed' && !hasFailures && (
         <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
@@ -71,9 +83,14 @@ export default function BulkPlanningProgress({
         </div>
         
         <div className="flex items-center gap-2 text-xs">
-          {job.status === 'processing' && currentTemplate && (
+          {job.status === 'processing' && !isStuck && currentTemplate && (
             <span className="text-muted-foreground truncate">
               Planning: {currentTemplate.replace(/-/g, ' ')}
+            </span>
+          )}
+          {isStuck && (
+            <span className="text-warning font-medium">
+              Job appears stuck (no progress for {Math.floor(minutesSinceUpdate)}m)
             </span>
           )}
           {isComplete && (
@@ -100,6 +117,24 @@ export default function BulkPlanningProgress({
 
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
+        {/* Cancel Stuck Job Button */}
+        {isStuck && onCancelJob && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={onCancelJob}
+            disabled={isCancelling}
+          >
+            {isCancelling ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <XCircle className="h-3 w-3" />
+            )}
+            Cancel
+          </Button>
+        )}
+        
         {/* Retry Failed Button */}
         {canRetry && onRetryFailed && (
           <Button
