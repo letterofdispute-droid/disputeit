@@ -98,7 +98,7 @@ const Header = () => {
               <SheetHeader>
                 <SheetTitle className="text-left">Menu</SheetTitle>
               </SheetHeader>
-              <div className="flex flex-col gap-4 mt-6">
+              <div className="flex flex-col gap-4 mt-6 overflow-y-auto max-h-[calc(100vh-80px)] pb-6">
               <Accordion type="single" collapsible>
                   <AccordionItem value="templates">
                     <AccordionTrigger className="text-base font-medium">

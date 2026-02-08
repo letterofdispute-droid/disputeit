@@ -27,6 +27,7 @@ interface CustomLetterOfferData {
 interface DisputeAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
+  startInLegalExpertMode?: boolean;
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -34,12 +35,12 @@ const INITIAL_MESSAGE: Message = {
   content: "Hi! I'm here to help you resolve your dispute. Tell me what happened, and I'll find the right letter for you.",
 };
 
-const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) => {
+const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false }: DisputeAssistantModalProps) => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [customLetterOffer, setCustomLetterOffer] = useState<CustomLetterOfferData | null>(null);
-  const [showLegalExpert, setShowLegalExpert] = useState(false);
+  const [showLegalExpert, setShowLegalExpert] = useState(startInLegalExpertMode);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
 
   const parseRecommendation = (content: string): Recommendation | null => {
@@ -184,7 +185,7 @@ const DisputeAssistantModal = ({ isOpen, onClose }: DisputeAssistantModalProps) 
     setMessages([INITIAL_MESSAGE]);
     setRecommendation(null);
     setCustomLetterOffer(null);
-    setShowLegalExpert(false);
+    setShowLegalExpert(startInLegalExpertMode);
     setGeneratedLetter(null);
   };
 
