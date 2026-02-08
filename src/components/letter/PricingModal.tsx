@@ -285,10 +285,25 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
             </p>
           </div>
 
-          {/* Security Note */}
-          <div className="mt-4 text-center text-xs text-muted-foreground">
-            <p>🔒 Secure payment powered by Stripe</p>
-            <p className="mt-1">Your payment information is never stored on our servers</p>
+          {/* Trust Badges */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="text-primary">🔒</span>
+                <span>Secure Payment</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-primary">⚡</span>
+                <span>Instant Download</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-primary">⚖️</span>
+                <span>Cites US Federal Law</span>
+              </div>
+            </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Powered by Stripe • Your payment info is never stored on our servers
+            </p>
           </div>
         </div>
       </div>
