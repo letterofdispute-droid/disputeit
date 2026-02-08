@@ -102,6 +102,7 @@ export function useSemanticLinkScan() {
   const bulkEmbeddingMutation = useMutation({
     mutationFn: async (params: {
       category_filter?: string;
+      forceReembed?: boolean;
     }) => {
       const { data, error } = await supabase.functions.invoke('generate-embeddings', {
         body: {
@@ -126,6 +127,69 @@ export function useSemanticLinkScan() {
     onError: (error) => {
       toast({
         title: 'Bulk embedding failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Retry failed embeddings from a job
+  const retryFailedMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const { data, error } = await supabase.functions.invoke('generate-embeddings', {
+        body: { retryJobId: jobId },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Retry failed');
+      return data as { success: boolean; jobId: string; totalItems: number };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['embedding-job-active'] });
+      queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
+      toast({
+        title: 'Retrying failed embeddings',
+        description: `Processing ${data.totalItems} failed articles...`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Reset all embeddings (clear and start fresh)
+  const resetEmbeddingsMutation = useMutation({
+    mutationFn: async (params: { category_filter?: string }) => {
+      // Delete all embeddings for the category
+      let query = supabase.from('article_embeddings').delete();
+      
+      if (params.category_filter) {
+        query = query.eq('category_id', params.category_filter);
+      } else {
+        // Must have a filter for delete, so use content_type
+        query = query.eq('content_type', 'article');
+      }
+      
+      const { error } = await query;
+      if (error) throw error;
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['embedding-job-active'] });
+      queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
+      toast({
+        title: 'Embeddings reset',
+        description: 'All embeddings have been cleared. Run bulk generation to recreate.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Reset failed',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -229,6 +293,14 @@ export function useSemanticLinkScan() {
     // Single embedding
     generateEmbedding: generateEmbeddingMutation.mutate,
     isGeneratingEmbedding: generateEmbeddingMutation.isPending,
+    
+    // Retry failed
+    retryFailed: retryFailedMutation.mutate,
+    isRetrying: retryFailedMutation.isPending,
+    
+    // Reset embeddings
+    resetEmbeddings: resetEmbeddingsMutation.mutate,
+    isResetting: resetEmbeddingsMutation.isPending,
     
     // Job tracking
     activeJob,

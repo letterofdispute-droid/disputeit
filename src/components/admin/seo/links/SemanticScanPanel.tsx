@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, Pause } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, Pause, RotateCcw, AlertTriangle, Trash2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSemanticLinkScan, EmbeddingStats, ScanResult, EmbeddingJob } from '@/hooks/useSemanticLinkScan';
 
 interface SemanticScanPanelProps {
@@ -31,6 +33,10 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     cancelJob,
     isCancelling,
     fetchEmbeddingStats,
+    retryFailed,
+    isRetrying,
+    resetEmbeddings,
+    isResetting,
   } = useSemanticLinkScan();
 
   // Fetch embedding stats on mount and when job changes
@@ -46,8 +52,21 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     });
   };
 
-  const handleStartBulkEmbedding = () => {
+  const handleStartBulkEmbedding = (forceReembed = false) => {
     startBulkEmbedding({
+      category_filter: categoryFilter !== 'all' ? categoryFilter : undefined,
+      forceReembed,
+    });
+  };
+
+  const handleRetryFailed = () => {
+    if (activeJob?.id) {
+      retryFailed(activeJob.id);
+    }
+  };
+
+  const handleResetEmbeddings = () => {
+    resetEmbeddings({
       category_filter: categoryFilter !== 'all' ? categoryFilter : undefined,
     });
   };
@@ -146,41 +165,129 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
         {/* Completed Job Summary */}
         {activeJob?.status === 'completed' && (
           <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-primary">✓</span>
-              <span>
-                Last job completed: {activeJob.processed_items} processed
-                {activeJob.failed_items > 0 && `, ${activeJob.failed_items} failed`}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-primary">✓</span>
+                <span>
+                  Last job completed: {activeJob.processed_items} processed
+                  {activeJob.failed_items > 0 && `, ${activeJob.failed_items} failed`}
+                </span>
+              </div>
+              {activeJob.failed_items > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetryFailed}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ) : (
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                  )}
+                  Retry Failed
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Failed Job with Retry */}
+        {activeJob?.status === 'failed' && (
+          <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <span>
+                  Job failed: {activeJob.processed_items} processed, {activeJob.failed_items} failed
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetryFailed}
+                disabled={isRetrying}
+              >
+                {isRetrying ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                )}
+                Retry Failed
+              </Button>
             </div>
           </div>
         )}
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={handleStartBulkEmbedding}
-            disabled={isStartingBulk || isJobProcessing}
-            variant="outline"
-            size="sm"
-          >
-            {isStartingBulk ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Starting...
-              </>
-            ) : isJobProcessing ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Bulk Generate Embeddings
-              </>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                disabled={isStartingBulk || isJobProcessing || isResetting}
+                variant="outline"
+                size="sm"
+              >
+                {isStartingBulk ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Starting...
+                  </>
+                ) : isJobProcessing ? (
+                  <>
+                    <Pause className="h-4 w-4 mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Generate Embeddings
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => handleStartBulkEmbedding(false)}>
+                <Database className="h-4 w-4 mr-2" />
+                Generate New Only
+                <span className="text-xs text-muted-foreground ml-2">Skip unchanged</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStartBulkEmbedding(true)}>
+                <Zap className="h-4 w-4 mr-2" />
+                Force Re-embed All
+                <span className="text-xs text-muted-foreground ml-2">Ignore cache</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                    <span className="text-destructive">Reset All Embeddings</span>
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset All Embeddings?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete all stored embeddings{categoryFilter && categoryFilter !== 'all' ? ` for the "${categoryFilter}" category` : ''}. 
+                      You'll need to run bulk generation again to recreate them.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleResetEmbeddings}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Reset Embeddings
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             onClick={handleSemanticScan}

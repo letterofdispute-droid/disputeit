@@ -21,6 +21,10 @@ interface EmbeddingRequest {
   // Continuation params
   jobId?: string;
   authToken?: string;
+  // Retry params
+  retryJobId?: string;
+  // Force re-embed (ignore hash)
+  forceReembed?: boolean;
 }
 
 interface ContentData {
@@ -418,6 +422,190 @@ serve(async (req) => {
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Handle retry failed articles from a previous job
+    if (body.retryJobId) {
+      console.log(`[EMBEDDINGS] Retrying failed items from job ${body.retryJobId}`);
+      
+      const { data: oldJob, error: oldJobError } = await supabase
+        .from('embedding_jobs')
+        .select('*')
+        .eq('id', body.retryJobId)
+        .single();
+      
+      if (oldJobError || !oldJob) {
+        throw new Error(`Could not find job ${body.retryJobId}`);
+      }
+      
+      const failedIds = oldJob.failed_ids || [];
+      if (failedIds.length === 0) {
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'No failed items to retry',
+          jobId: null,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      // Create new job for retry
+      const { data: job, error: jobError } = await supabase
+        .from('embedding_jobs')
+        .insert({
+          content_type: oldJob.content_type,
+          category_filter: oldJob.category_filter,
+          total_items: failedIds.length,
+          status: 'processing',
+        })
+        .select()
+        .single();
+      
+      if (jobError) throw jobError;
+      
+      console.log(`[EMBEDDINGS] Created retry job ${job.id} for ${failedIds.length} failed items`);
+      
+      // Process failed items
+      let processed = 0;
+      let failed = 0;
+      const newProcessedIds: string[] = [];
+      const newFailedIds: string[] = [];
+      const errorMessages: Record<string, string> = {};
+      
+      for (const postId of failedIds.slice(0, BATCH_SIZE)) {
+        const { data: post, error: postError } = await supabase
+          .from('blog_posts')
+          .select('id, slug, title, content, category_slug, primary_keyword, secondary_keywords, article_type')
+          .eq('id', postId)
+          .single();
+        
+        if (postError || !post) {
+          newFailedIds.push(postId);
+          errorMessages[postId] = 'Post not found';
+          failed++;
+          continue;
+        }
+        
+        try {
+          let articleRole: "super-pillar" | "pillar" | "cluster" = "cluster";
+          if (post.article_type === "pillar") articleRole = "pillar";
+          else if (post.article_type === "category-guide" || post.article_type === "category_guide") articleRole = "super-pillar";
+          
+          const embeddingText = extractEmbeddingText({
+            id: post.id,
+            slug: post.slug,
+            title: post.title,
+            category_id: post.category_slug,
+            primary_keyword: post.primary_keyword,
+            secondary_keywords: post.secondary_keywords,
+            article_type: post.article_type,
+            article_role: articleRole,
+          }, post.content);
+          
+          const newHash = calculateContentHash(embeddingText);
+          const embedding = await generateEmbedding(embeddingText, OPENAI_API_KEY);
+          const anchorVariants = generateAnchorVariants(post.title, post.primary_keyword, post.secondary_keywords);
+          
+          const headingsMatch = post.content?.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || [];
+          const headingsText = headingsMatch.map((h: string) => h.replace(/<[^>]+>/g, "")).join(" | ").slice(0, 500);
+          
+          const embeddingData = {
+            content_type: "article",
+            content_id: post.id,
+            slug: post.slug,
+            title: post.title,
+            category_id: post.category_slug,
+            article_role: articleRole,
+            article_type: post.article_type,
+            primary_keyword: post.primary_keyword,
+            secondary_keywords: post.secondary_keywords,
+            anchor_variants: anchorVariants,
+            headings_text: headingsText,
+            embedding: JSON.stringify(embedding),
+            embedding_status: "completed",
+            content_hash: newHash,
+            last_embedded_at: new Date().toISOString(),
+            error_message: null,
+          };
+          
+          const { data: existing } = await supabase
+            .from("article_embeddings")
+            .select("id")
+            .eq("content_id", post.id)
+            .single();
+          
+          if (existing) {
+            await supabase.from("article_embeddings").update(embeddingData).eq("id", existing.id);
+          } else {
+            await supabase.from("article_embeddings").insert(embeddingData);
+          }
+          
+          newProcessedIds.push(post.id);
+          processed++;
+          console.log(`[EMBEDDINGS] Retry success: ${post.slug}`);
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "Unknown error";
+          console.error(`[EMBEDDINGS] Retry failed ${post.slug}:`, errorMsg);
+          newFailedIds.push(post.id);
+          errorMessages[post.slug] = errorMsg;
+          failed++;
+        }
+      }
+      
+      // Update new job
+      const remainingFailed = failedIds.slice(BATCH_SIZE);
+      const allFailedIds = [...newFailedIds, ...remainingFailed];
+      const complete = allFailedIds.length === 0 && failedIds.length <= BATCH_SIZE;
+      
+      await supabase
+        .from('embedding_jobs')
+        .update({
+          processed_items: newProcessedIds.length,
+          failed_items: allFailedIds.length,
+          processed_ids: newProcessedIds,
+          failed_ids: allFailedIds,
+          error_messages: errorMessages,
+          status: complete ? 'completed' : 'processing',
+          completed_at: complete ? new Date().toISOString() : null,
+        })
+        .eq('id', job.id);
+      
+      // Continue if more to process
+      if (!complete && remainingFailed.length > 0) {
+        invokeSelf(job.id, authToken);
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        jobId: job.id,
+        totalItems: failedIds.length,
+        processed,
+        failed,
+        message: `Retrying ${failedIds.length} failed items`,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle force re-embed (ignore content hash)
+    if (body.forceReembed) {
+      console.log(`[EMBEDDINGS] Force re-embed, category: ${body.category_filter || 'all'}`);
+      
+      // Reset embedding status to pending
+      let resetQuery = supabase
+        .from('article_embeddings')
+        .update({ embedding_status: 'pending', content_hash: null })
+        .eq('content_type', 'article');
+      
+      if (body.category_filter) {
+        resetQuery = resetQuery.eq('category_id', body.category_filter);
+      }
+      
+      await resetQuery;
+      
+      // Now trigger normal bulk processing
+      body.bulk = true;
     }
 
     // Handle bulk processing request
