@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { processOAuthToken } from '@/lib/oauthTokenHandler';
 
 interface Profile {
   first_name: string | null;
@@ -28,50 +29,80 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('is_admin, first_name, last_name, avatar_url')
-      .eq('user_id', userId)
-      .single();
-    
-    if (data) {
-      setIsAdmin(data.is_admin ?? false);
-      setProfile({
-        first_name: data.first_name,
-        last_name: data.last_name,
-        avatar_url: data.avatar_url,
-      });
-    }
-  };
-
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
+    let isMounted = true;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const fetchProfile = async (userId: string) => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_admin, first_name, last_name, avatar_url')
+          .eq('user_id', userId)
+          .single();
+        
+        if (isMounted && data) {
+          setIsAdmin(data.is_admin ?? false);
+          setProfile({
+            first_name: data.first_name,
+            last_name: data.last_name,
+            avatar_url: data.avatar_url,
+          });
+        }
+      } catch {
+        if (isMounted) {
+          setIsAdmin(false);
+          setProfile(null);
+        }
+      }
+    };
+
+    const initializeAuth = async () => {
+      try {
+        // STEP 1: Process OAuth token if present in URL
+        await processOAuthToken();
+
+        // STEP 2: Get the session (may have been set by OAuth processing)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
+        
         if (session?.user) {
-          fetchProfile(session.user.id);
+          await fetchProfile(session.user.id);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Use setTimeout to avoid Supabase deadlock
+          setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setIsAdmin(false);
           setProfile(null);
         }
-        setIsLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
@@ -97,12 +128,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    // Immediately clear state for instant UI update
+    // Clear state FIRST for instant UI update
     setUser(null);
     setSession(null);
     setIsAdmin(false);
     setProfile(null);
+    // Then sign out from Supabase
+    await supabase.auth.signOut();
   };
 
   return (

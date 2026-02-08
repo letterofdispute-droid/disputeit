@@ -89,12 +89,15 @@ const SignupPage = () => {
     setIsGoogleLoading(true);
     trackGoogleAuthClick('signup');
     
-    // Always use Lovable's managed OAuth
+    // Set flag so we know to redirect after OAuth return
+    sessionStorage.setItem('oauth_pending', 'true');
+    
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
 
     if (error) {
+      sessionStorage.removeItem('oauth_pending');
       toast({
         title: 'Error signing in with Google',
         description: error.message,
