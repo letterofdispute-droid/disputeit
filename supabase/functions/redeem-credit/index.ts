@@ -10,6 +10,7 @@ interface RedeemCreditRequest {
   templateSlug: string;
   templateName: string;
   letterContent: string;
+  evidencePhotoPaths?: { storagePath: string; description?: string }[];
 }
 
 serve(async (req) => {
@@ -49,7 +50,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { templateSlug, templateName, letterContent }: RedeemCreditRequest = await req.json();
+    const { templateSlug, templateName, letterContent, evidencePhotoPaths }: RedeemCreditRequest = await req.json();
 
     if (!templateSlug || !templateName || !letterContent) {
       throw new Error("Missing required fields: templateSlug, templateName, letterContent");
@@ -89,6 +90,7 @@ serve(async (req) => {
         amount_cents: 0,
         status: "completed",
         edit_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days edit access
+        evidence_photos: evidencePhotoPaths || [],
       })
       .select()
       .single();
@@ -118,6 +120,7 @@ serve(async (req) => {
     }
 
     // Generate the letter documents (call the existing edge function)
+    console.log(`Generating documents for credit redemption purchase ${purchase.id}`);
     const generateResponse = await fetch(
       `${supabaseUrl}/functions/v1/generate-letter-documents`,
       {
@@ -129,12 +132,48 @@ serve(async (req) => {
         body: JSON.stringify({
           purchaseId: purchase.id,
           letterContent: letterContent,
+          templateName: templateName,
+          evidencePhotoPaths: evidencePhotoPaths || [],
         }),
       }
     );
 
+    let pdfUrl: string | undefined;
     if (!generateResponse.ok) {
       console.error("Failed to generate documents, but credit was redeemed");
+    } else {
+      const generateResult = await generateResponse.json();
+      pdfUrl = generateResult.pdfUrl;
+    }
+
+    // Send email notification (non-blocking)
+    console.log(`Sending purchase email to ${user.email}`);
+    try {
+      const emailResponse = await fetch(
+        `${supabaseUrl}/functions/v1/send-purchase-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            email: user.email,
+            templateName: templateName,
+            purchaseType: "pdf-editable",
+            pdfUrl: pdfUrl,
+          }),
+        }
+      );
+
+      if (!emailResponse.ok) {
+        const emailError = await emailResponse.text();
+        console.error("Email sending failed (non-blocking):", emailError);
+      } else {
+        console.log("Purchase email sent successfully");
+      }
+    } catch (emailError) {
+      console.error("Email sending error (non-blocking):", emailError);
     }
 
     // Return success

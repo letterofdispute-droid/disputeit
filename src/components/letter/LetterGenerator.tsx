@@ -20,6 +20,8 @@ import GeneratingOverlay from './GeneratingOverlay';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
 import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
 import { useEvidenceUpload } from '@/hooks/useEvidenceUpload';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import {
   trackLetterFormStart, 
   trackLetterFormStep, 
@@ -53,6 +55,7 @@ const LetterGenerator = ({
   const { generateLetter, isGenerating, generatedContent } = useGenerateLegalLetter();
   const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
   const evidenceUpload = useEvidenceUpload();
+  const { user } = useAuth();
   const totalSteps = 3;
 
   // Generate fallback letter content (for preview only)
@@ -318,10 +321,20 @@ const LetterGenerator = ({
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button> : <Button 
                   variant="hero" 
-                  disabled={isGenerating || showGeneratingOverlay}
+                  disabled={isGenerating || showGeneratingOverlay || evidenceUpload.isUploading}
                   onClick={async () => {
                     trackGenerateLetterClick(template.slug);
                     setShowGeneratingOverlay(true);
+                    
+                    // Upload evidence photos first if user is logged in and has photos
+                    if (evidenceUpload.hasPhotos && user) {
+                      try {
+                        await evidenceUpload.uploadAllPhotos(user.id);
+                      } catch (err) {
+                        console.error('Failed to upload evidence photos:', err);
+                        toast.error('Failed to upload some evidence photos, but continuing with letter generation');
+                      }
+                    }
                     
                     // Generate AI-powered legal letter
                     const aiContent = await generateLetter({
@@ -378,7 +391,16 @@ const LetterGenerator = ({
       {/* Modals */}
       {showPreview && <LetterPreview template={template} formData={formData} tone={selectedTone} jurisdiction={selectedJurisdiction} onClose={() => setShowPreview(false)} />}
 
-      {showPricing && <PricingModal templateSlug={template.slug} templateName={template.title} letterContent={generatedLetterContent} onClose={() => setShowPricing(false)} />}
+      {showPricing && <PricingModal 
+        templateSlug={template.slug} 
+        templateName={template.title} 
+        letterContent={generatedLetterContent} 
+        evidencePhotoPaths={evidenceUpload.photos
+          .filter(p => p.uploaded && p.storagePath)
+          .map(p => ({ storagePath: p.storagePath!, description: p.description }))
+        }
+        onClose={() => setShowPricing(false)} 
+      />}
 
       {/* Generating Overlay with Progress */}
       <GeneratingOverlay 

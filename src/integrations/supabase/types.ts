@@ -446,6 +446,7 @@ export type Database = {
           docx_url: string | null
           edit_expires_at: string | null
           email: string
+          evidence_photos: Json | null
           id: string
           last_edited_at: string | null
           last_edited_content: string | null
@@ -468,6 +469,7 @@ export type Database = {
           docx_url?: string | null
           edit_expires_at?: string | null
           email: string
+          evidence_photos?: Json | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
@@ -490,6 +492,7 @@ export type Database = {
           docx_url?: string | null
           edit_expires_at?: string | null
           email?: string
+          evidence_photos?: Json | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
