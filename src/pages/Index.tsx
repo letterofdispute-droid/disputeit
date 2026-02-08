@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import Hero from '@/components/home/Hero';
+import TrustBadgesStrip from '@/components/shared/TrustBadgesStrip';
 import WhatIsDisputeLetter from '@/components/home/WhatIsDisputeLetter';
 import RealWorldScenarios from '@/components/home/RealWorldScenarios';
 import SuccessStories from '@/components/home/SuccessStories';
@@ -20,6 +21,14 @@ const Index = () => {
   return (
     <Layout>
       <Hero />
+      
+      {/* Trust Bar */}
+      <div className="py-4 bg-muted/30 border-y border-border">
+        <div className="container-wide">
+          <TrustBadgesStrip variant="compact" />
+        </div>
+      </div>
+      
       <WhatIsDisputeLetter />
       <RealWorldScenarios />
       <SuccessStories />

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import TrustBadgesStrip from '@/components/shared/TrustBadgesStrip';
 
 const Footer = () => {
   return (
@@ -86,8 +87,13 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Disclaimer */}
+        {/* Trust Badges */}
         <div className="mt-12 pt-8 border-t border-border">
+          <TrustBadgesStrip variant="footer" className="mb-8" />
+        </div>
+
+        {/* Disclaimer */}
+        <div className="pt-6 border-t border-border">
           <div className="bg-muted/50 rounded-lg p-4 mb-6 space-y-2">
             <p className="text-xs text-muted-foreground text-center">
               <strong>Important Disclaimer:</strong> This service provides letter templates and does not constitute legal advice. 
