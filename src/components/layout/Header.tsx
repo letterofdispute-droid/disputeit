@@ -70,13 +70,30 @@ const Header = () => {
           </div>
 
           {/* Mobile menu */}
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
+          <div className="flex items-center gap-2 lg:hidden">
+            {/* Mobile user indicator - only when signed in */}
+            {user && (
+              <button 
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-1"
+              >
+                <Avatar className="h-7 w-7">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                    {profile?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              </button>
+            )}
+            
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[350px]">
               <SheetHeader>
                 <SheetTitle className="text-left">Menu</SheetTitle>
@@ -255,7 +272,8 @@ const Header = () => {
                 </div>
               </div>
             </SheetContent>
-          </Sheet>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>
