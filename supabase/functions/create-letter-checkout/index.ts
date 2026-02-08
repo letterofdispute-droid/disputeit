@@ -33,7 +33,8 @@ serve(async (req) => {
       purchaseType, 
       templateSlug, 
       templateName, 
-      letterContent 
+      letterContent,
+      evidencePhotoPaths,
     } = await req.json();
 
     if (!purchaseType || !templateSlug || !templateName || !letterContent) {
@@ -82,6 +83,7 @@ serve(async (req) => {
         purchase_type: purchaseType,
         amount_cents: AMOUNTS[purchaseType as keyof typeof AMOUNTS],
         status: "pending",
+        evidence_photos: evidencePhotoPaths || [],
       })
       .select()
       .single();

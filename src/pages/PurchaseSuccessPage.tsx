@@ -56,13 +56,21 @@ const PurchaseSuccessPage = () => {
             return;
           }
 
-          // Generate signed URL for PDF
-          let pdfUrl = purchaseData.pdf_url;
-          if (pdfUrl && pdfUrl.startsWith('letters/')) {
-            const { data: signedData } = await supabase.storage
-              .from('letters')
-              .createSignedUrl(pdfUrl.replace('letters/', ''), 3600);
-            pdfUrl = signedData?.signedUrl || null;
+          // Generate signed URL for PDF from storage path
+          let signedPdfUrl: string | null = null;
+          const storedPath = purchaseData.pdf_url;
+          
+          if (storedPath) {
+            // Check if it's a storage path (not a full URL)
+            if (!storedPath.startsWith('http')) {
+              const { data: signedData } = await supabase.storage
+                .from('letters')
+                .createSignedUrl(storedPath, 3600);
+              signedPdfUrl = signedData?.signedUrl || null;
+            } else {
+              // Backwards compatibility: if it's already a full URL, use it
+              signedPdfUrl = storedPath;
+            }
           }
 
           setPurchase({
@@ -70,7 +78,7 @@ const PurchaseSuccessPage = () => {
             templateName: purchaseData.template_name,
             purchaseType: purchaseData.purchase_type,
             letterContent: purchaseData.letter_content,
-            pdfUrl: pdfUrl || undefined,
+            pdfUrl: signedPdfUrl || undefined,
             editExpiresAt: purchaseData.edit_expires_at || undefined,
           });
 

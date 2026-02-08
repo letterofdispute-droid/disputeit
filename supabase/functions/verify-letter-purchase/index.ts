@@ -111,6 +111,7 @@ serve(async (req) => {
           letterContent: purchase.letter_content,
           templateName: purchase.template_name,
           generateDocx: false, // No longer generating DOCX
+          evidencePhotoPaths: purchase.evidence_photos || [],
         }),
       }
     );

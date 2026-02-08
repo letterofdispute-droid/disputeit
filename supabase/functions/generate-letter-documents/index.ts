@@ -275,11 +275,11 @@ serve(async (req) => {
       throw new Error(`Failed to create PDF signed URL: ${pdfUrlError.message}`);
     }
 
-    // Update purchase record with PDF URL
+    // Update purchase record with storage path (not signed URL - allows fresh URLs)
     const { error: updateError } = await supabaseClient
       .from("letter_purchases")
       .update({
-        pdf_url: pdfUrlData.signedUrl,
+        pdf_url: pdfFileName, // Store path, not signed URL
         docx_url: null, // No longer generating DOCX
       })
       .eq("id", purchaseId);

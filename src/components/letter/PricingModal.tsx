@@ -11,10 +11,16 @@ import { useUserCredits } from '@/hooks/useUserCredits';
 import { useAuth } from '@/hooks/useAuth';
 import { differenceInDays } from 'date-fns';
 
+interface EvidencePhotoPath {
+  storagePath: string;
+  description?: string;
+}
+
 interface PricingModalProps {
   templateSlug: string;
   templateName: string;
   letterContent: string;
+  evidencePhotoPaths?: EvidencePhotoPath[];
   onClose: () => void;
 }
 
@@ -45,7 +51,7 @@ const pricingOptions = [
   },
 ];
 
-const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: PricingModalProps) => {
+const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhotoPaths, onClose }: PricingModalProps) => {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { toast } = useToast();
@@ -67,6 +73,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
           templateSlug,
           templateName,
           letterContent,
+          evidencePhotoPaths: evidencePhotoPaths || [],
         },
       });
 
@@ -103,6 +110,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, onClose }: Pr
           templateSlug,
           templateName,
           letterContent,
+          evidencePhotoPaths: evidencePhotoPaths || [],
         },
       });
 
