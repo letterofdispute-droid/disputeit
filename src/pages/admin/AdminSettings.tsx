@@ -23,11 +23,11 @@ interface Settings {
 }
 
 const defaultSettings: Settings = {
-  site_name: 'DisputeLetters',
-  site_url: 'https://disputeletters.com',
-  site_description: 'Professional dispute letters, without the guesswork.',
-  from_email: 'noreply@disputeletters.com',
-  support_email: 'support@disputeletters.com',
+  site_name: 'Letter of Dispute',
+  site_url: 'https://letterofdispute.com',
+  site_description: 'Professional AI-powered dispute letters, without the guesswork.',
+  from_email: 'noreply@letterofdispute.com',
+  support_email: 'support@letterofdispute.com',
   welcome_email_enabled: true,
   letter_delivery_email_enabled: true,
   pdf_only_price: '5.99',

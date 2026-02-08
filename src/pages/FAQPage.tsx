@@ -124,7 +124,7 @@ const faqCategories = [
       },
       {
         question: 'Is this legal advice?',
-        answer: 'No. DisputeLetters provides document templates only and does not constitute legal advice. Our letters are professionally structured but are not reviewed by legal professionals. For complex legal matters, we recommend consulting a qualified attorney in your jurisdiction.',
+        answer: 'No. Letter of Dispute provides AI-generated letter templates with editorial oversight. We are not a law firm, do not provide legal advice, and have no affiliation with any government agency or regulatory body (including the FTC, CFPB, or state attorneys general). Our templates are starting points that you customize for your situation. For complex legal matters, we recommend consulting a qualified attorney in your jurisdiction.',
       },
       {
         question: 'Can I use this for court or legal proceedings?',
@@ -136,11 +136,11 @@ const faqCategories = [
       },
       {
         question: 'Can I use this for any country?',
-        answer: 'Our templates are designed to be jurisdiction-agnostic at their core, but we offer optional legal reference add-ons for EU, UK, and US contexts. The upgraded versions include region-specific phrasing approved by our content team.',
+        answer: 'Our templates are designed to be jurisdiction-agnostic at their core, but we offer optional legal reference add-ons for EU, UK, and US contexts. The upgraded versions include region-specific phrasing reviewed by our editorial team.',
       },
       {
         question: 'Is my information secure?',
-        answer: 'Yes. We do not store your personal information after your letter is generated. Your data is used only to populate the letter template and is not retained on our servers.',
+        answer: 'Yes. Your data is processed by AI systems only to generate your letter. We do not use your information to train AI models. Uploaded evidence files are encrypted and automatically deleted after 90 days.',
       },
       {
         question: 'Will my letter guarantee results?',
@@ -190,8 +190,8 @@ const FAQPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="FAQ - Frequently Asked Questions | DisputeLetters"
-        description="Find answers to common questions about creating dispute letters, pricing, sending letters, legal considerations, and more. Get help with your consumer disputes."
+        title="FAQ - Frequently Asked Questions | Letter of Dispute"
+        description="Find answers to common questions about creating AI-powered dispute letters, pricing, sending letters, legal considerations, and more. Get help with your consumer disputes."
         canonicalPath="/faq"
       />
       <Helmet>

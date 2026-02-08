@@ -3,13 +3,13 @@ import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
 
 const TermsPage = () => {
-  const lastUpdated = "February 1, 2026";
+  const lastUpdated = "February 8, 2026";
 
   return (
     <Layout>
       <SEOHead
-        title="Terms of Service | DisputeLetters"
-        description="Read the Terms of Service for DisputeLetters. Understand your rights and responsibilities when using our dispute letter generation service."
+        title="Terms of Service | Letter of Dispute"
+        description="Read the Terms of Service for Letter of Dispute. Understand your rights and responsibilities when using our AI-powered dispute letter generation service."
         canonicalPath="/terms"
         type="website"
       />
@@ -35,7 +35,7 @@ const TermsPage = () => {
             <section>
               <h2 className="text-2xl font-semibold text-foreground mb-4">1. Introduction</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Welcome to DisputeLetters ("we," "our," or "us"). These Terms of Service ("Terms") govern your access to and use of our website at disputeletters.com and our letter generation services (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, please do not use our Service.
+                Welcome to Letter of Dispute ("we," "our," or "us"). These Terms of Service ("Terms") govern your access to and use of our website at letterofdispute.com and our letter generation services (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, please do not use our Service.
               </p>
             </section>
 
@@ -54,22 +54,68 @@ const TermsPage = () => {
             <section>
               <h2 className="text-2xl font-semibold text-foreground mb-4">3. Description of Service</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                DisputeLetters provides a platform for generating professional dispute and complaint letters. Our Service includes:
+                Letter of Dispute provides a platform for generating professional dispute and complaint letters. Our Service includes:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Access to letter templates for various dispute categories</li>
-                <li>A letter generation tool that creates personalized letters based on your input</li>
+                <li>An AI-powered letter generation tool that creates personalized letters based on your input</li>
                 <li>Downloadable letter documents in PDF and DOCX formats</li>
                 <li>Educational content about consumer rights and dispute resolution</li>
               </ul>
             </section>
 
-            {/* Important Disclaimer */}
+            {/* AI-Generated Content */}
             <section className="bg-muted/50 rounded-lg p-6 border border-border">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">4. Important Legal Disclaimer — "As Is" Use</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">4. AI-Generated Content Disclosure</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="font-semibold text-foreground">
-                  DISPUTELETTERS IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.
+                  LETTERS ARE GENERATED USING ARTIFICIAL INTELLIGENCE TECHNOLOGY.
+                </p>
+                <p>
+                  By using our Service, you acknowledge and agree that:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>AI Generation:</strong> Our letter templates and generated content are created using artificial intelligence (AI) technology with editorial oversight by our content team.</li>
+                  <li><strong>Not Attorney-Reviewed:</strong> Individual letters generated through our Service are NOT reviewed by licensed attorneys or legal professionals for your specific situation.</li>
+                  <li><strong>Editorial Oversight:</strong> While our editorial team reviews template structures and formatting for quality, this does NOT constitute legal review or validation.</li>
+                  <li><strong>No Legal Training:</strong> AI systems do not have legal training and may produce content that is not appropriate for your specific jurisdiction or circumstances.</li>
+                  <li><strong>User Verification Required:</strong> You are solely responsible for reviewing, verifying, and customizing any AI-generated content before use.</li>
+                </ul>
+              </div>
+            </section>
+
+            {/* No Government Affiliation */}
+            <section className="bg-destructive/10 rounded-lg p-6 border border-destructive/30">
+              <h2 className="text-2xl font-semibold text-foreground mb-4">5. No Government Affiliation</h2>
+              <div className="text-muted-foreground space-y-4">
+                <p className="font-semibold text-foreground">
+                  LETTER OF DISPUTE IS AN INDEPENDENT PRIVATE SERVICE.
+                </p>
+                <p>
+                  We are NOT affiliated with, endorsed by, sponsored by, or connected to any government agency, regulatory body, or official institution, including but not limited to:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>The Federal Trade Commission (FTC)</li>
+                  <li>The Consumer Financial Protection Bureau (CFPB)</li>
+                  <li>State Attorneys General offices</li>
+                  <li>Any local, state, federal, or international government agency</li>
+                  <li>Any consumer protection agency or ombudsman service</li>
+                </ul>
+                <p>
+                  Any references to laws, regulations, consumer rights, or government agencies within our Service, templates, or educational content are for <strong>informational purposes only</strong> and should not be interpreted as an official endorsement, affiliation, or recommendation from those entities.
+                </p>
+                <p>
+                  We do not represent, act on behalf of, or have any official relationship with any government body or regulatory authority.
+                </p>
+              </div>
+            </section>
+
+            {/* Important Disclaimer */}
+            <section className="bg-muted/50 rounded-lg p-6 border border-border">
+              <h2 className="text-2xl font-semibold text-foreground mb-4">6. Important Legal Disclaimer — "As Is" Use</h2>
+              <div className="text-muted-foreground space-y-4">
+                <p className="font-semibold text-foreground">
+                  LETTER OF DISPUTE IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.
                 </p>
                 <p>
                   The letters, templates, and information provided through our Service are for informational and educational purposes only. They do not constitute legal advice, and no attorney-client relationship is created by your use of the Service.
@@ -84,7 +130,7 @@ const TermsPage = () => {
                   <li><strong>Templates are guidelines only:</strong> Our letters serve as starting points and general guidance for your communications. They are not tailored to your specific legal situation or jurisdiction.</li>
                   <li><strong>You assume all responsibility:</strong> You are solely responsible for reviewing, customizing, and sending any letter generated through our Service. The outcome and consequences of using our templates are entirely your responsibility.</li>
                   <li><strong>No guaranteed outcomes:</strong> We make no representations or warranties that using our templates will result in any particular outcome, resolution, refund, or response from the recipient.</li>
-                  <li><strong>No liability accepted:</strong> DisputeLetters, its owners, employees, and affiliates shall not be held liable for any damages, losses, or negative consequences arising from your use of our templates.</li>
+                  <li><strong>No liability accepted:</strong> Letter of Dispute, its owners, employees, and affiliates shall not be held liable for any damages, losses, or negative consequences arising from your use of our templates.</li>
                   <li>Are not reviewed by attorneys for your specific situation</li>
                   <li>Should not be relied upon as a substitute for professional legal counsel</li>
                   <li>May not be appropriate for all situations or jurisdictions</li>
@@ -97,7 +143,7 @@ const TermsPage = () => {
 
             {/* User Accounts */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">5. User Accounts</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">7. User Accounts</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 To access certain features of our Service, you may need to create an account. When creating an account, you agree to:
               </p>
@@ -115,7 +161,7 @@ const TermsPage = () => {
 
             {/* Purchases and Payments */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">6. Purchases and Payments</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">8. Purchases and Payments</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Our Service offers letter generation on a per-letter basis. By making a purchase, you agree to the following:
               </p>
@@ -129,9 +175,9 @@ const TermsPage = () => {
 
             {/* Refund Policy */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">7. Refund Policy</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">9. Refund Policy</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                We offer a 30-day money-back guarantee on all letter purchases. If you are not satisfied with your purchase, you may request a refund within 30 days of purchase by contacting us at support@disputeletters.com.
+                We offer a 30-day money-back guarantee on all letter purchases. If you are not satisfied with your purchase, you may request a refund within 30 days of purchase by contacting us at support@letterofdispute.com.
               </p>
               <p className="text-muted-foreground leading-relaxed">
                 Please note that refunds are provided at our discretion and may be denied in cases of abuse or if we determine the Service was used as intended. Once a refund is processed, your access to the purchased letter may be revoked.
@@ -140,9 +186,9 @@ const TermsPage = () => {
 
             {/* Intellectual Property */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">8. Intellectual Property</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">10. Intellectual Property</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                All content on our website, including text, graphics, logos, templates, and software, is the property of DisputeLetters or our licensors and is protected by copyright and other intellectual property laws.
+                All content on our website, including text, graphics, logos, templates, and software, is the property of Letter of Dispute or our licensors and is protected by copyright and other intellectual property laws.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 When you purchase a letter through our Service:
@@ -156,7 +202,7 @@ const TermsPage = () => {
 
             {/* Prohibited Uses */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">9. Prohibited Uses</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">11. Prohibited Uses</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 You agree not to use our Service to:
               </p>
@@ -174,9 +220,9 @@ const TermsPage = () => {
 
             {/* Limitation of Liability */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">10. Limitation of Liability</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Limitation of Liability</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, DISPUTELETTERS AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR:
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, LETTER OF DISPUTE AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Any indirect, incidental, special, consequential, or punitive damages</li>
@@ -192,7 +238,7 @@ const TermsPage = () => {
 
             {/* Disclaimer of Warranties */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">11. Disclaimer of Warranties</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">13. Disclaimer of Warranties</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="leading-relaxed">
                   THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
@@ -208,15 +254,15 @@ const TermsPage = () => {
 
             {/* Indemnification */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Indemnification</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">14. Indemnification</h2>
               <p className="text-muted-foreground leading-relaxed">
-                You agree to indemnify, defend, and hold harmless DisputeLetters and its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of another.
+                You agree to indemnify, defend, and hold harmless Letter of Dispute and its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of another.
               </p>
             </section>
 
             {/* Governing Law */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">13. Governing Law and Dispute Resolution</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">15. Governing Law and Dispute Resolution</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without regard to its conflict of law provisions.
               </p>
@@ -227,7 +273,7 @@ const TermsPage = () => {
 
             {/* Severability */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">14. Severability</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">16. Severability</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that these Terms shall otherwise remain in full force and effect.
               </p>
@@ -235,22 +281,22 @@ const TermsPage = () => {
 
             {/* Entire Agreement */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">15. Entire Agreement</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">17. Entire Agreement</h2>
               <p className="text-muted-foreground leading-relaxed">
-                These Terms, together with our Privacy Policy and any other legal notices published on our website, constitute the entire agreement between you and DisputeLetters regarding your use of the Service and supersede any prior agreements.
+                These Terms, together with our Privacy Policy and any other legal notices published on our website, constitute the entire agreement between you and Letter of Dispute regarding your use of the Service and supersede any prior agreements.
               </p>
             </section>
 
             {/* Contact */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">16. Contact Information</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">18. Contact Information</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
               <div className="bg-muted/30 rounded-lg p-4 text-muted-foreground">
-                <p><strong>DisputeLetters</strong></p>
-                <p>Email: legal@disputeletters.com</p>
-                <p>Website: disputeletters.com/contact</p>
+                <p><strong>Letter of Dispute</strong></p>
+                <p>Email: legal@letterofdispute.com</p>
+                <p>Website: letterofdispute.com/contact</p>
               </div>
             </section>
 

@@ -16,7 +16,7 @@ const contactMethods = [
     icon: Mail,
     title: 'Email Support',
     description: 'Get a response within 24 hours',
-    contact: 'support@disputeletters.com',
+    contact: 'support@letterofdispute.com',
   },
   {
     icon: MessageSquare,
@@ -90,8 +90,8 @@ const ContactPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Contact Us | DisputeLetters"
-        description="Get in touch with the DisputeLetters team. We're here to help with your questions and support needs."
+        title="Contact Us | Letter of Dispute"
+        description="Get in touch with the Letter of Dispute team. We're here to help with your questions and support needs."
         canonicalPath="/contact"
       />
 

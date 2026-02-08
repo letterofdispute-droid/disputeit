@@ -6,7 +6,7 @@ const trustBadges = [
   { icon: Lock, label: 'Secure Payment' },
   { icon: FileText, label: '500+ Templates' },
   { icon: Scale, label: 'Cites US Federal Law' },
-  { icon: Building2, label: 'FTC & CFPB Escalation Paths' },
+  { icon: Building2, label: 'Includes Escalation Guidance' },
   { icon: Zap, label: 'Instant Download' },
 ];
 

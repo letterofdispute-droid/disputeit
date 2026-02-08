@@ -133,9 +133,10 @@ const SEOContent = ({
       <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border flex gap-3 not-prose">
         <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
-          <strong>Important:</strong> This service provides document templates and does not constitute legal advice. 
-          The letters generated are professionally structured but are not reviewed by legal professionals. 
-          For complex legal matters, we recommend consulting a qualified attorney in your jurisdiction.
+          <strong>Important:</strong> This service provides AI-generated letter templates with editorial oversight. 
+          Letter of Dispute is an independent service with no affiliation with any government agency or the institutions 
+          mentioned in our content. We are not a law firm and do not provide legal advice. All templates are provided 
+          "as is" without guarantee of outcome. For complex legal matters, we recommend consulting a qualified attorney.
         </p>
       </div>
     </article>;
