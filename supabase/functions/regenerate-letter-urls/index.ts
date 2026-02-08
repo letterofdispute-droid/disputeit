@@ -75,6 +75,7 @@ serve(async (req) => {
           purchaseId: purchase.id,
           letterContent: letterContent,
           templateName: purchase.template_name,
+          evidencePhotoPaths: purchase.evidence_photos || [],
         }),
       }
     );
