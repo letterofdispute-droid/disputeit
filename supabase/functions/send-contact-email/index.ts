@@ -81,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send notification email to support
     await sendEmail(
       ["support@letterofdispute.com"],
-      "Letter of Dispute <noreply@letterofdispute.com>",
+      "Letter of Dispute <noreply@mail.letterofdispute.com>",
       `Contact Form: ${sanitizedSubject}`,
       `
         <!DOCTYPE html>
@@ -133,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to the user
     await sendEmail(
       [email],
-      "Letter of Dispute <noreply@letterofdispute.com>",
+      "Letter of Dispute <noreply@mail.letterofdispute.com>",
       "We received your message - Letter of Dispute",
       `
         <!DOCTYPE html>
