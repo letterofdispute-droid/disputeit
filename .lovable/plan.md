@@ -1,248 +1,105 @@
 
+# Fix: Middle Image Section Missing + Draft Preview Not Working
 
-# Smart Infographic Generation for Middle Images
+## Issues Identified
 
-## Overview
+### Issue 1: Middle Image Section Not Showing
 
-You're absolutely right - AI can generate contextual infographics, comparison charts, process diagrams, and visual explainers that add real value instead of generic stock photos. This is a high-value enhancement that will differentiate your content.
+**Root Cause:** The `MiddleImagePicker` component (in `src/components/admin/blog/MiddleImagePicker.tsx`) only displays when the article content contains specific placeholders:
+- `{{MIDDLE_IMAGE_1}}`
+- `{{MIDDLE_IMAGE_2}}`
+- `{{MIDDLE_IMAGE}}`
 
-## How It Would Work
+The test article's content has only H2 headers and paragraphs - no image placeholders - so the component returns `null` and doesn't render.
 
-The system will intelligently decide **when** an infographic is appropriate based on article type, then generate a custom visual that matches the content.
-
-### Article Types That Benefit Most
-
-| Article Type | Infographic Style | Example |
-|-------------|-------------------|---------|
-| **Comparison** | Side-by-side chart | "Small Claims vs Civil Court: Which is Right for Your Case?" |
-| **Checklist** | Visual checklist with checkboxes | "Pre-Filing Checklist: 8 Items to Gather" |
-| **How-To Guide** | Step process diagram | "5-Step Dispute Resolution Process" |
-| **Mistakes to Avoid** | Warning infographic with X marks | "Top 5 Claim Mistakes" |
-| **Rights Explainer** | Timeline or hierarchy chart | "Your 30-Day Refund Rights Window" |
-| **FAQ** | Q&A visual grid | Key questions answered visually |
-
-### When NOT to Generate Infographics
-
-- Case studies (personal stories work better with realistic photos)
-- Sample/Example articles (letter examples are better as text)
-- When the topic is too abstract or emotional
+**Solution:** Make the Middle Images section always visible in the editor for articles that support infographics (comparison, checklist, how-to, mistakes, rights types). This allows admins to generate infographics even when the content doesn't have explicit placeholders. The images will be auto-injected at display time using the existing smart injection logic in `ArticlePage.tsx`.
 
 ---
 
-## Technical Architecture
+### Issue 2: Draft Preview Redirecting to Archive
 
-```text
-+---------------------------+
-|    Content Generation     |
-|     (bulk-generate)       |
-+------------+--------------+
-             |
-             v
-+---------------------------+
-|   Analyze Article Type    |
-|   + Extract Key Data      |
-+------------+--------------+
-             |
-    +--------+--------+
-    |                 |
-    v                 v
-+----------+    +------------+
-| Standard |    | Infographic|
-| Photo    |    | Generation |
-+----------+    +------------+
-    |                 |
-    v                 v
-+---------------------------+
-|   Store in blog-images    |
-|   bucket + save URL/alt   |
-+---------------------------+
-```
+**Root Cause:** The `ArticlePage.tsx` uses `window.location.search` directly instead of React Router's `useSearchParams` hook. This can cause timing issues where the search params aren't properly read during initial render, especially with lazy-loaded components.
 
-### New Edge Function: `generate-infographic`
+Additionally, the query parameter check happens outside the component's reactive flow, which can lead to stale values.
 
-This function will:
-
-1. Receive article metadata (title, type, key data points)
-2. Build a specialized prompt based on article type
-3. Request Gemini to generate an infographic (not a photo)
-4. Upload to storage and return URL
-
-### Modified Content Generation Flow
-
-In `bulk-generate-articles/index.ts`, after content generation:
-
-1. Check if article type is "infographic-worthy" (comparison, checklist, how-to, mistakes)
-2. Extract key data points from the generated content (e.g., comparison items, checklist items, process steps)
-3. Call the infographic generator with this structured data
-4. Use the infographic for middle image(s)
+**Solution:** Replace `window.location.search` with the proper `useSearchParams` hook from React Router for reliable query parameter handling.
 
 ---
 
-## Implementation Details
+## Changes
 
-### 1. Create `supabase/functions/generate-infographic/index.ts`
+### File 1: `src/components/admin/blog/MiddleImagePicker.tsx`
 
-**Key Features:**
-- Accept article type, title, and extracted data points
-- Build type-specific prompts (comparison vs checklist vs process)
-- Request infographic-style generation from Gemini
-- Upload to `blog-images` bucket
-- Return URL and auto-generated alt text
-
-**Prompt Strategy by Type:**
-
-**Comparison:**
-```
-Generate a clean INFOGRAPHIC comparing:
-- Option A: [extracted]
-- Option B: [extracted]
-
-Style: Professional side-by-side comparison chart
-Colors: Blue vs Orange contrast
-Include: Key differentiators, pros/cons icons
-Format: 16:9 horizontal, clean white background
-```
-
-**Checklist:**
-```
-Generate a visual CHECKLIST INFOGRAPHIC:
-Items: [8 extracted checklist items]
-
-Style: Clean checkbox layout with icons
-Colors: Green checkmarks, professional palette
-Format: 16:9, numbered or bulleted items
-```
-
-**How-To Process:**
-```
-Generate a STEP-BY-STEP PROCESS INFOGRAPHIC:
-Steps: [5 extracted steps]
-
-Style: Flowchart or numbered progression
-Colors: Gradient from start to finish
-Include: Arrow connectors between steps
-Format: 16:9 horizontal flow
-```
-
-### 2. Add Data Extraction Logic
-
-Before image generation, extract structured data from content:
+**Change:** Update the visibility logic to show the component for infographic-eligible articles even without placeholders.
 
 ```typescript
-function extractInfographicData(content: string, articleType: string): InfographicData | null {
-  switch (articleType) {
-    case 'comparison':
-      // Extract Option A vs Option B points from content
-      return extractComparisonPoints(content);
-    
-    case 'checklist':
-      // Extract numbered/bulleted items
-      return extractChecklistItems(content);
-    
-    case 'how-to':
-      // Extract step headers (H2/H3 tags)
-      return extractProcessSteps(content);
-    
-    case 'mistakes':
-      // Extract mistake items
-      return extractMistakesList(content);
-    
-    default:
-      return null; // Use standard photo for other types
-  }
+// BEFORE (lines 40-46):
+const hasPlaceholder1 = content.includes('{{MIDDLE_IMAGE_1}}') || content.includes('{{MIDDLE_IMAGE}}');
+const hasPlaceholder2 = content.includes('{{MIDDLE_IMAGE_2}}');
+
+// Don't render if no placeholders
+if (!hasPlaceholder1 && !hasPlaceholder2) {
+  return null;
 }
-```
 
-### 3. Modify `bulk-generate-articles/index.ts`
+// AFTER:
+const hasPlaceholder1 = content.includes('{{MIDDLE_IMAGE_1}}') || content.includes('{{MIDDLE_IMAGE}}');
+const hasPlaceholder2 = content.includes('{{MIDDLE_IMAGE_2}}');
 
-Add decision logic after content generation:
+// Check if this article type supports infographics
+const supportsInfographic = articleType && INFOGRAPHIC_TYPES.includes(articleType);
 
-```typescript
-// Determine image strategy based on article type
-const infographicTypes = ['comparison', 'checklist', 'how-to', 'mistakes'];
-const useInfographic = infographicTypes.includes(queueItem.article_type);
-
-if (useInfographic) {
-  const infographicData = extractInfographicData(generatedContent, queueItem.article_type);
-  if (infographicData) {
-    // Generate infographic
-    middleImage1Url = await generateInfographic(supabase, apiKey, {
-      title: articleTitle,
-      type: queueItem.article_type,
-      data: infographicData
-    });
-  }
-} else {
-  // Use existing Pixabay photo flow
-  middleImage1Url = await selectBestImage(supabase, apiKey, searchResults, title);
+// Show component if:
+// 1. Content has placeholders, OR
+// 2. Article type supports infographics (allow manual generation)
+// 3. Already has middle images set
+if (!hasPlaceholder1 && !hasPlaceholder2 && !supportsInfographic && !middleImage1Url && !middleImage2Url) {
+  return null;
 }
+
+// If no placeholders but showing for infographic, default to single slot
+const showSlot1 = hasPlaceholder1 || supportsInfographic || middleImage1Url;
+const showSlot2 = hasPlaceholder2 || middleImage2Url;
 ```
 
-### 4. Update MiddleImagePicker for Manual Override
+This ensures the infographic button appears for how-to, comparison, checklist, mistakes, and rights article types.
 
-Add "Generate Infographic" button alongside existing photo selection:
+---
+
+### File 2: `src/pages/ArticlePage.tsx`
+
+**Change:** Replace `window.location.search` with React Router's `useSearchParams` hook for proper reactivity.
 
 ```typescript
-<Button onClick={handleGenerateInfographic}>
-  <BarChart3 className="h-4 w-4" />
-  Generate Infographic
-</Button>
+// BEFORE (lines 80-82):
+const urlParams = new URLSearchParams(window.location.search);
+const isPreviewMode = urlParams.get('preview') === 'true';
+
+// AFTER:
+import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom';
+// ... at top of component ...
+const [searchParams] = useSearchParams();
+const isPreviewMode = searchParams.get('preview') === 'true';
 ```
 
----
-
-## Quality Control Considerations
-
-### Accuracy Safeguards
-
-Since you mentioned infographics need to be **accurate**, the system will:
-
-1. **Extract data from generated content** - Not make up statistics
-2. **Use only information from the article** - No external data claims
-3. **Avoid numbers unless explicitly in content** - "5 Steps" is fine, "87% success rate" is not
-4. **Focus on structure, not statistics** - Process flows, checklists, comparisons
-
-### Fallback Strategy
-
-If infographic generation fails or looks poor:
-- System falls back to Pixabay photo (existing behavior)
-- Admin can manually regenerate in editor
+This ensures the preview mode is properly detected within React's rendering cycle.
 
 ---
 
-## Database Schema
+## Summary of Changes
 
-No changes needed - existing columns are sufficient:
-- `middle_image_1_url` - Store infographic URL
-- `middle_image_1_alt` - Store infographic description
-
----
-
-## Files to Create/Modify
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `supabase/functions/generate-infographic/index.ts` | **Create** - New function for infographic generation |
-| `supabase/functions/bulk-generate-articles/index.ts` | **Modify** - Add infographic decision logic and data extraction |
-| `src/components/admin/blog/MiddleImagePicker.tsx` | **Modify** - Add "Generate Infographic" option |
-| `supabase/config.toml` | **Modify** - Register new function |
+| `src/components/admin/blog/MiddleImagePicker.tsx` | Always show for infographic-eligible article types |
+| `src/pages/ArticlePage.tsx` | Use `useSearchParams` instead of `window.location.search` |
 
 ---
 
-## Cost Impact
+## Expected Results
 
-- **Infographic generation**: Uses `google/gemini-2.5-flash-image` (same as current photo AI)
-- **No additional API calls** when using Pixabay photos for non-applicable types
-- **Estimated**: ~30-40% of articles would get infographics (comparison, checklist, how-to, mistakes types)
+After these changes:
 
----
-
-## Expected Outcome
-
-| Before | After |
-|--------|-------|
-| Random "contractor in bathroom" photo | Comparison chart showing options |
-| Generic stock photo | Visual checklist readers can reference |
-| One-size-fits-all images | Type-appropriate visual content |
-| Images add padding | Images add genuine value |
-
+1. **Middle Image section will appear** in the blog editor for the test article (since it's a "how-to" type)
+2. **Infographic button will be visible** allowing you to generate an infographic
+3. **Draft preview will work** - clicking Preview will open the article with `?preview=true` and properly display the draft
+4. Generated infographics will be auto-injected into the article at ~45% depth when displayed
