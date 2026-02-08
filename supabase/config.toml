@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.generate-embeddings]
 verify_jwt = false
+
+[functions.scan-for-semantic-links]
+verify_jwt = false
