@@ -44,6 +44,104 @@ export type Database = {
         }
         Relationships: []
       }
+      article_embeddings: {
+        Row: {
+          anchor_variants: string[] | null
+          article_role: string
+          article_type: string | null
+          category_id: string
+          content_hash: string | null
+          content_id: string | null
+          content_type: string
+          created_at: string | null
+          embedding: string | null
+          embedding_status: string | null
+          error_message: string | null
+          headings_text: string | null
+          id: string
+          inbound_count: number | null
+          last_embedded_at: string | null
+          max_inbound: number | null
+          next_scan_due_at: string | null
+          outbound_count: number | null
+          parent_pillar_id: string | null
+          primary_keyword: string | null
+          related_categories: string[] | null
+          secondary_keywords: string[] | null
+          slug: string
+          subcategory_slug: string | null
+          title: string
+          topic_summary: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          anchor_variants?: string[] | null
+          article_role?: string
+          article_type?: string | null
+          category_id: string
+          content_hash?: string | null
+          content_id?: string | null
+          content_type: string
+          created_at?: string | null
+          embedding?: string | null
+          embedding_status?: string | null
+          error_message?: string | null
+          headings_text?: string | null
+          id?: string
+          inbound_count?: number | null
+          last_embedded_at?: string | null
+          max_inbound?: number | null
+          next_scan_due_at?: string | null
+          outbound_count?: number | null
+          parent_pillar_id?: string | null
+          primary_keyword?: string | null
+          related_categories?: string[] | null
+          secondary_keywords?: string[] | null
+          slug: string
+          subcategory_slug?: string | null
+          title: string
+          topic_summary?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          anchor_variants?: string[] | null
+          article_role?: string
+          article_type?: string | null
+          category_id?: string
+          content_hash?: string | null
+          content_id?: string | null
+          content_type?: string
+          created_at?: string | null
+          embedding?: string | null
+          embedding_status?: string | null
+          error_message?: string | null
+          headings_text?: string | null
+          id?: string
+          inbound_count?: number | null
+          last_embedded_at?: string | null
+          max_inbound?: number | null
+          next_scan_due_at?: string | null
+          outbound_count?: number | null
+          parent_pillar_id?: string | null
+          primary_keyword?: string | null
+          related_categories?: string[] | null
+          secondary_keywords?: string[] | null
+          slug?: string
+          subcategory_slug?: string | null
+          title?: string
+          topic_summary?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_parent_pillar"
+            columns: ["parent_pillar_id"]
+            isOneToOne: false
+            referencedRelation: "article_embeddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -76,6 +174,7 @@ export type Database = {
           category: string
           category_slug: string
           content: string
+          content_hash: string | null
           content_plan_id: string | null
           created_at: string
           excerpt: string | null
@@ -83,16 +182,19 @@ export type Database = {
           featured_image_alt: string | null
           featured_image_url: string | null
           id: string
+          last_link_scan_at: string | null
           meta_description: string | null
           meta_title: string | null
           middle_image_1_alt: string | null
           middle_image_1_url: string | null
           middle_image_2_alt: string | null
           middle_image_2_url: string | null
+          primary_keyword: string | null
           published_at: string | null
           read_time: string | null
           related_templates: string[] | null
           scheduled_at: string | null
+          secondary_keywords: string[] | null
           slug: string
           status: string
           tags: string[] | null
@@ -107,6 +209,7 @@ export type Database = {
           category: string
           category_slug: string
           content: string
+          content_hash?: string | null
           content_plan_id?: string | null
           created_at?: string
           excerpt?: string | null
@@ -114,16 +217,19 @@ export type Database = {
           featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
+          last_link_scan_at?: string | null
           meta_description?: string | null
           meta_title?: string | null
           middle_image_1_alt?: string | null
           middle_image_1_url?: string | null
           middle_image_2_alt?: string | null
           middle_image_2_url?: string | null
+          primary_keyword?: string | null
           published_at?: string | null
           read_time?: string | null
           related_templates?: string[] | null
           scheduled_at?: string | null
+          secondary_keywords?: string[] | null
           slug: string
           status?: string
           tags?: string[] | null
@@ -138,6 +244,7 @@ export type Database = {
           category?: string
           category_slug?: string
           content?: string
+          content_hash?: string | null
           content_plan_id?: string | null
           created_at?: string
           excerpt?: string | null
@@ -145,16 +252,19 @@ export type Database = {
           featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
+          last_link_scan_at?: string | null
           meta_description?: string | null
           meta_title?: string | null
           middle_image_1_alt?: string | null
           middle_image_1_url?: string | null
           middle_image_2_alt?: string | null
           middle_image_2_url?: string | null
+          primary_keyword?: string | null
           published_at?: string | null
           read_time?: string | null
           related_templates?: string[] | null
           scheduled_at?: string | null
+          secondary_keywords?: string[] | null
           slug?: string
           status?: string
           tags?: string[] | null
@@ -253,6 +363,41 @@ export type Database = {
           value_tier?: string
         }
         Relationships: []
+      }
+      canonical_anchors: {
+        Row: {
+          anchor_normalized: string
+          anchor_phrase: string
+          canonical_target_id: string
+          category_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          anchor_normalized: string
+          anchor_phrase: string
+          canonical_target_id: string
+          category_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          anchor_normalized?: string
+          anchor_phrase?: string
+          canonical_target_id?: string
+          category_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canonical_anchors_canonical_target_id_fkey"
+            columns: ["canonical_target_id"]
+            isOneToOne: false
+            referencedRelation: "article_embeddings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       category_images: {
         Row: {
@@ -513,43 +658,61 @@ export type Database = {
       }
       link_suggestions: {
         Row: {
+          anchor_source: string | null
           anchor_text: string
           applied_at: string | null
           context_snippet: string | null
           created_at: string
+          hierarchy_valid: boolean | null
+          hierarchy_violation: string | null
           id: string
           insert_position: number | null
+          keyword_overlap_score: number | null
           relevance_score: number | null
+          semantic_score: number | null
           source_post_id: string
           status: string
+          target_embedding_id: string | null
           target_slug: string
           target_title: string
           target_type: string
         }
         Insert: {
+          anchor_source?: string | null
           anchor_text: string
           applied_at?: string | null
           context_snippet?: string | null
           created_at?: string
+          hierarchy_valid?: boolean | null
+          hierarchy_violation?: string | null
           id?: string
           insert_position?: number | null
+          keyword_overlap_score?: number | null
           relevance_score?: number | null
+          semantic_score?: number | null
           source_post_id: string
           status?: string
+          target_embedding_id?: string | null
           target_slug: string
           target_title: string
           target_type: string
         }
         Update: {
+          anchor_source?: string | null
           anchor_text?: string
           applied_at?: string | null
           context_snippet?: string | null
           created_at?: string
+          hierarchy_valid?: boolean | null
+          hierarchy_violation?: string | null
           id?: string
           insert_position?: number | null
+          keyword_overlap_score?: number | null
           relevance_score?: number | null
+          semantic_score?: number | null
           source_post_id?: string
           status?: string
+          target_embedding_id?: string | null
           target_slug?: string
           target_title?: string
           target_type?: string
@@ -560,6 +723,13 @@ export type Database = {
             columns: ["source_post_id"]
             isOneToOne: false
             referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_suggestions_target_embedding_id_fkey"
+            columns: ["target_embedding_id"]
+            isOneToOne: false
+            referencedRelation: "article_embeddings"
             referencedColumns: ["id"]
           },
         ]
@@ -858,6 +1028,21 @@ export type Database = {
         }
         Returns: string
       }
+      calculate_keyword_overlap: {
+        Args: { keywords_a: string[]; keywords_b: string[] }
+        Returns: number
+      }
+      get_orphan_articles: {
+        Args: { category_filter?: string }
+        Returns: {
+          category_slug: string
+          id: string
+          inbound_count: number
+          published_at: string
+          slug: string
+          title: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -867,6 +1052,31 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
+      match_semantic_links: {
+        Args: {
+          max_results?: number
+          query_embedding: string
+          similarity_threshold?: number
+          source_category: string
+          source_role: string
+        }
+        Returns: {
+          article_role: string
+          category_id: string
+          content_type: string
+          hierarchy_note: string
+          hierarchy_valid: boolean
+          id: string
+          inbound_count: number
+          max_inbound: number
+          primary_keyword: string
+          secondary_keywords: string[]
+          similarity: number
+          slug: string
+          subcategory_slug: string
+          title: string
+        }[]
+      }
       recover_stale_generating_items: { Args: never; Returns: undefined }
       recover_stale_planning_jobs: { Args: never; Returns: undefined }
       revoke_role: {
