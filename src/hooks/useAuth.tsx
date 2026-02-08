@@ -59,7 +59,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initializeAuth = async () => {
       try {
         // STEP 1: Process OAuth token if present in URL
-        await processOAuthToken();
+        const oauthResult = await processOAuthToken();
+        
+        // If OAuth was processed, give a moment for session to propagate
+        if (oauthResult.processed) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
 
         // STEP 2: Get the session (may have been set by OAuth processing)
         const { data: { session } } = await supabase.auth.getSession();
