@@ -6,6 +6,7 @@ import LinkFilters from './links/LinkFilters';
 import LinkActions from './links/LinkActions';
 import LinkCard from './links/LinkCard';
 import ScanProgress from './links/ScanProgress';
+import SemanticScanPanel from './links/SemanticScanPanel';
 
 export default function LinkSuggestions() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
@@ -114,6 +115,9 @@ export default function LinkSuggestions() {
 
   return (
     <div className="space-y-4">
+      {/* Semantic Scan Panel */}
+      <SemanticScanPanel categoryFilter={categoryFilter} />
+
       {/* Stats */}
       <LinkStats stats={stats} />
 
