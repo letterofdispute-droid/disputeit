@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { lovable } from '@/integrations/lovable';
+import { supabase } from '@/integrations/supabase/client';
 import { trackLoginComplete, trackGoogleAuthClick } from '@/hooks/useGTM';
 
 const LoginPage = () => {
@@ -64,7 +65,38 @@ const LoginPage = () => {
     setIsGoogleLoading(true);
     trackGoogleAuthClick('login');
     
-    // Set flag so we know to redirect after OAuth return
+    // Detect if we're on a custom domain (not Lovable preview)
+    const isCustomDomain = !window.location.hostname.includes('lovable.app') &&
+                           !window.location.hostname.includes('lovableproject.com');
+    
+    if (isCustomDomain) {
+      // Bypass Lovable OAuth broker - use Supabase directly
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          skipBrowserRedirect: true,
+        },
+      });
+      
+      if (error) {
+        toast({
+          title: 'Error signing in with Google',
+          description: error.message,
+          variant: 'destructive',
+        });
+        setIsGoogleLoading(false);
+        return;
+      }
+      
+      // Redirect to OAuth URL
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+      return;
+    }
+    
+    // For Lovable preview domains, use the managed OAuth
     sessionStorage.setItem('oauth_pending', 'true');
     
     const { error } = await lovable.auth.signInWithOAuth("google", {
