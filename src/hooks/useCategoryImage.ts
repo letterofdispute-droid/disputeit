@@ -51,25 +51,36 @@ export function useCategoryImage(
   categoryName?: string
 ): UseCategoryImageResult {
   const [image, setImage] = useState<CategoryImage | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Initialize loading state based on whether we have valid params and no cached image
+  const [isLoading, setIsLoading] = useState(() => {
+    if (categoryId && searchQuery) {
+      const cacheKey = `${categoryId}-${contextKey}`;
+      return !imageCache.has(cacheKey);
+    }
+    return false;
+  });
   const [error, setError] = useState<string | null>(null);
   const [fallbackGradient, setFallbackGradient] = useState<string | null>(null);
 
   useEffect(() => {
     if (!categoryId || !searchQuery) {
+      setIsLoading(false);
       return;
     }
 
     const cacheKey = `${categoryId}-${contextKey}`;
 
-    // Check in-memory cache first
+    // Check in-memory cache first - if found, no loading needed
     if (imageCache.has(cacheKey)) {
       setImage(imageCache.get(cacheKey)!);
+      setIsLoading(false);
       return;
     }
 
+    // Ensure loading state is true before fetching
+    setIsLoading(true);
+
     const fetchImage = async () => {
-      setIsLoading(true);
       setError(null);
 
       try {
