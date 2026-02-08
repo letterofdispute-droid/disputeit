@@ -1,92 +1,170 @@
 
+# Fix: Images Not Showing on First Page Load
 
-# Updated Trust Badges Plan
+## Problem Analysis
 
-## Changes from Previous Plan
+Based on reviewing the code and session replay, the issue is a **race condition in the loading state initialization**:
 
-1. **Remove** "30-Day Money-Back Guarantee" badge (as requested)
-2. **Add** a reference to FTC/CFPB using legally safe wording
+### Current Flow (Broken)
 
----
+```text
+1. CategoryCard renders
+2. useCategoryImage hook initializes with: isLoading=FALSE, image=NULL
+3. Component renders with NO loading indicator, NO image
+4. useEffect fires (async)
+5. setIsLoading(true) happens
+6. Loading indicator appears
+7. Image fetches from cache
+8. Image displays
+```
 
-## Recommended FTC/CFPB Wording
+The problem is step 2-3: there's a brief moment where `isLoading` is false but there's no image yet, causing a flash of empty content.
 
-After reviewing the codebase and disclaimer, here are safe options:
-
-| Wording | Assessment |
-|---------|------------|
-| ❌ "Consumer protection support FROM FTC & CFPB" | Could imply endorsement |
-| ✅ "Cites Federal Consumer Protection Laws" | Accurate - we cite USC sections |
-| ✅ "FTC & CFPB Escalation Guidance" | Accurate - we guide to file complaints |
-| ✅ "References FTC & CFPB Regulations" | Accurate - templates cite their rules |
-
-**Recommended badge text**: **"FTC & CFPB Escalation Paths"** or **"Cites Federal Consumer Law"**
-
-This accurately describes what we do (guide users to file complaints with these agencies and cite their regulations) without implying endorsement or affiliation.
-
----
-
-## Updated Trust Badges List
-
-1. **Secure Payments** (Lock icon) - "Secure Payments by Stripe"
-2. **Templates** (FileText icon) - "500+ Letter Templates"  
-3. **Federal Law** (Scale icon) - "Cites US Federal Law"
-4. **Escalation** (Building icon) - "FTC & CFPB Escalation Paths"
-5. **Download** (Zap icon) - "Instant Download"
-
----
-
-## Implementation
-
-### File: `src/components/shared/TrustBadgesStrip.tsx` (New)
+### Current Rendering Logic (lines 35-57 of LetterCategories.tsx)
 
 ```tsx
-const trustBadges = [
-  { icon: Lock, label: 'Secure Payment' },
-  { icon: FileText, label: '500+ Templates' },
-  { icon: Scale, label: 'Cites US Federal Law' },
-  { icon: Building, label: 'FTC & CFPB Escalation Paths' },
-  { icon: Zap, label: 'Instant Download' },
-];
+{/* Only shows image if imageUrl exists */}
+{imageUrl && (
+  <img src={imageUrl} ... />
+)}
+
+{/* Only shows loading if isLoading AND no imageUrl */}
+{isLoading && !imageUrl && (
+  <div className="animate-pulse" />
+)}
+
+{/* Fallback only if no image AND not loading */}
+{!imageUrl && !isLoading && (
+  <div className="fallback gradient" />
+)}
 ```
 
-### File: `src/components/layout/Footer.tsx` (Update)
-
-Add trust badges row above the disclaimer section
-
-### File: `src/pages/Index.tsx` (Update)
-
-Add compact trust bar below Hero
-
-### File: `src/components/letter/PricingModal.tsx` (Update)
-
-Enhance the security section with visual badges
+On first render: `isLoading=false`, `imageUrl=null` → shows fallback gradient briefly, then switches to loading, then to image. This creates a visual "flash".
 
 ---
 
-## Visual Placement
+## Solution
 
-**Footer Layout:**
+**Initialize `isLoading` to `true`** in the `useCategoryImage` hook when valid parameters are provided. This ensures the loading state shows immediately while waiting for the cache check.
+
+### File Changes
+
+| File | Change |
+|------|--------|
+| `src/hooks/useCategoryImage.ts` | Initialize `isLoading` to `true` when categoryId and searchQuery exist |
+
+---
+
+## Technical Implementation
+
+### Before (Current)
+
+```tsx
+const [isLoading, setIsLoading] = useState(false);
+
+useEffect(() => {
+  if (!categoryId || !searchQuery) {
+    return;
+  }
+  // ...
+  const fetchImage = async () => {
+    setIsLoading(true);  // Too late! Component already rendered
+    // ...
+  };
+  fetchImage();
+}, [categoryId, searchQuery, contextKey, categoryName]);
+```
+
+### After (Fixed)
+
+```tsx
+// Initialize loading state based on whether we have valid params
+const [isLoading, setIsLoading] = useState(() => {
+  // If we have valid params and no cached image, start in loading state
+  if (categoryId && searchQuery) {
+    const cacheKey = `${categoryId}-${contextKey}`;
+    return !imageCache.has(cacheKey);
+  }
+  return false;
+});
+
+useEffect(() => {
+  if (!categoryId || !searchQuery) {
+    setIsLoading(false);
+    return;
+  }
+  
+  const cacheKey = `${categoryId}-${contextKey}`;
+  
+  // Check in-memory cache first - if found, no loading needed
+  if (imageCache.has(cacheKey)) {
+    setImage(imageCache.get(cacheKey)!);
+    setIsLoading(false);
+    return;
+  }
+  
+  // Only set loading if not already loading
+  setIsLoading(true);
+  
+  const fetchImage = async () => {
+    // ... rest of fetch logic
+  };
+  fetchImage();
+}, [categoryId, searchQuery, contextKey, categoryName]);
+```
+
+---
+
+## Additional Fix: TrustBadgesStrip Ref Warning
+
+The console shows a warning about refs being passed to `TrustBadgesStrip`. While investigating, I found the Footer uses this component. Although no explicit ref is passed, some parent components may be attempting to forward refs.
+
+### Solution: Wrap with forwardRef
+
+```tsx
+import { forwardRef } from 'react';
+
+const TrustBadgesStrip = forwardRef<HTMLDivElement, TrustBadgesStripProps>(
+  ({ variant = 'default', className, badges }, ref) => {
+    // ... existing implementation
+    return (
+      <div ref={ref} className={...}>
+        {/* existing content */}
+      </div>
+    );
+  }
+);
+
+TrustBadgesStrip.displayName = 'TrustBadgesStrip';
+```
+
+---
+
+## Expected Behavior After Fix
+
 ```text
-[Column 1] [Column 2] [Column 3] [Column 4]
-           Letter Types  Resources   Legal
-           
-──────────────────────────────────────────
+1. CategoryCard renders
+2. useCategoryImage initializes with: isLoading=TRUE (no cache hit)
+3. Component shows loading indicator immediately
+4. useEffect fires
+5. Image fetches from database cache
+6. Image displays smoothly
+```
 
-🔒 Secure Payment  📄 500+ Templates  ⚖️ Cites US Federal Law  🏛️ FTC & CFPB Escalation Paths  ⚡ Instant Download
+For returning users (in-memory cache populated):
 
-──────────────────────────────────────────
-
-[Disclaimer text...]
-[Copyright]
+```text
+1. CategoryCard renders
+2. useCategoryImage initializes with: isLoading=FALSE (cache hit detected)
+3. useEffect fires, finds cache, sets image immediately
+4. Image displays instantly
 ```
 
 ---
 
-## Technical Notes
+## Summary
 
-- Component is reusable with `variant` prop for different contexts
-- Responsive: wraps nicely on mobile
-- Icons use primary color, text uses muted-foreground
-- No logos - just icons and text as requested
-
+| Issue | Fix |
+|-------|-----|
+| Flash of empty content | Initialize `isLoading` based on cache state |
+| Console ref warning | Add `forwardRef` to TrustBadgesStrip |
