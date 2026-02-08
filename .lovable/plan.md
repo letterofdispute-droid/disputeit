@@ -1,170 +1,83 @@
 
-# Fix: Images Not Showing on First Page Load
+# Fix: Category Tier Settings Not Reflected in Template Coverage Map
 
 ## Problem Analysis
 
-Based on reviewing the code and session replay, the issue is a **race condition in the loading state initialization**:
+The database correctly shows `"ecommerce":"high"` was saved, but the Template Coverage Map still displays "Medium Value" for E-commerce.
 
-### Current Flow (Broken)
+### Root Cause
 
-```text
-1. CategoryCard renders
-2. useCategoryImage hook initializes with: isLoading=FALSE, image=NULL
-3. Component renders with NO loading indicator, NO image
-4. useEffect fires (async)
-5. setIsLoading(true) happens
-6. Loading indicator appears
-7. Image fetches from cache
-8. Image displays
-```
-
-The problem is step 2-3: there's a brief moment where `isLoading` is false but there's no image yet, causing a flash of empty content.
-
-### Current Rendering Logic (lines 35-57 of LetterCategories.tsx)
+The global React Query caching configuration added in the performance optimization has a **5-minute staleTime**:
 
 ```tsx
-{/* Only shows image if imageUrl exists */}
-{imageUrl && (
-  <img src={imageUrl} ... />
-)}
-
-{/* Only shows loading if isLoading AND no imageUrl */}
-{isLoading && !imageUrl && (
-  <div className="animate-pulse" />
-)}
-
-{/* Fallback only if no image AND not loading */}
-{!imageUrl && !isLoading && (
-  <div className="fallback gradient" />
-)}
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 ```
 
-On first render: `isLoading=false`, `imageUrl=null` → shows fallback gradient briefly, then switches to loading, then to image. This creates a visual "flash".
-
----
+This means:
+1. When you save tier settings, `setQueryData` updates the cache
+2. But when navigating to Template Coverage Map (different tab in SEO Dashboard), the component may remount with cached data
+3. The 5-minute staleTime prevents automatic refetching, so stale data persists
 
 ## Solution
 
-**Initialize `isLoading` to `true`** in the `useCategoryImage` hook when valid parameters are provided. This ensures the loading state shows immediately while waiting for the cache check.
+Override the global staleTime for the `category-tier-settings` query specifically, since this is an admin setting that should always reflect the latest saved value.
 
-### File Changes
+### Changes Required
 
 | File | Change |
 |------|--------|
-| `src/hooks/useCategoryImage.ts` | Initialize `isLoading` to `true` when categoryId and searchQuery exist |
-
----
+| `src/hooks/useCategoryTierSettings.ts` | Add `staleTime: 0` and `refetchOnMount: true` to force fresh data on component mount |
 
 ## Technical Implementation
 
-### Before (Current)
+**In `useCategoryTierSettings.ts`, update the useQuery options:**
 
 ```tsx
-const [isLoading, setIsLoading] = useState(false);
-
-useEffect(() => {
-  if (!categoryId || !searchQuery) {
-    return;
-  }
-  // ...
-  const fetchImage = async () => {
-    setIsLoading(true);  // Too late! Component already rendered
-    // ...
-  };
-  fetchImage();
-}, [categoryId, searchQuery, contextKey, categoryName]);
-```
-
-### After (Fixed)
-
-```tsx
-// Initialize loading state based on whether we have valid params
-const [isLoading, setIsLoading] = useState(() => {
-  // If we have valid params and no cached image, start in loading state
-  if (categoryId && searchQuery) {
-    const cacheKey = `${categoryId}-${contextKey}`;
-    return !imageCache.has(cacheKey);
-  }
-  return false;
+const { data: tierSettings, isLoading } = useQuery({
+  queryKey: ['category-tier-settings'],
+  queryFn: async (): Promise<CategoryTierDefaults> => {
+    // ... existing fetch logic
+  },
+  // Override global staleTime - admin settings should always be fresh
+  staleTime: 0,
+  refetchOnMount: true,
 });
-
-useEffect(() => {
-  if (!categoryId || !searchQuery) {
-    setIsLoading(false);
-    return;
-  }
-  
-  const cacheKey = `${categoryId}-${contextKey}`;
-  
-  // Check in-memory cache first - if found, no loading needed
-  if (imageCache.has(cacheKey)) {
-    setImage(imageCache.get(cacheKey)!);
-    setIsLoading(false);
-    return;
-  }
-  
-  // Only set loading if not already loading
-  setIsLoading(true);
-  
-  const fetchImage = async () => {
-    // ... rest of fetch logic
-  };
-  fetchImage();
-}, [categoryId, searchQuery, contextKey, categoryName]);
 ```
 
----
-
-## Additional Fix: TrustBadgesStrip Ref Warning
-
-The console shows a warning about refs being passed to `TrustBadgesStrip`. While investigating, I found the Footer uses this component. Although no explicit ref is passed, some parent components may be attempting to forward refs.
-
-### Solution: Wrap with forwardRef
+Additionally, update the mutation to use `invalidateQueries` alongside `setQueryData` for more robust cache synchronization:
 
 ```tsx
-import { forwardRef } from 'react';
-
-const TrustBadgesStrip = forwardRef<HTMLDivElement, TrustBadgesStripProps>(
-  ({ variant = 'default', className, badges }, ref) => {
-    // ... existing implementation
-    return (
-      <div ref={ref} className={...}>
-        {/* existing content */}
-      </div>
-    );
-  }
-);
-
-TrustBadgesStrip.displayName = 'TrustBadgesStrip';
+onSuccess: (newSettings) => {
+  // Update cache immediately for optimistic UI
+  queryClient.setQueryData(['category-tier-settings'], newSettings);
+  // Also invalidate to ensure other components get fresh data
+  queryClient.invalidateQueries({ queryKey: ['category-tier-settings'] });
+  toast.success('Category tier settings saved');
+},
 ```
 
----
+## Why This Works
+
+1. **`staleTime: 0`** - Data is considered immediately stale, so any refetch will fetch fresh data
+2. **`refetchOnMount: true`** - Ensures the query refetches when Template Coverage Map mounts, even if cached data exists
+3. **`invalidateQueries`** - Forces all components using this query to refetch, ensuring consistency across the admin dashboard
 
 ## Expected Behavior After Fix
 
-```text
-1. CategoryCard renders
-2. useCategoryImage initializes with: isLoading=TRUE (no cache hit)
-3. Component shows loading indicator immediately
-4. useEffect fires
-5. Image fetches from database cache
-6. Image displays smoothly
-```
+1. Change E-commerce tier to "High Value" in Category SEO Settings
+2. Click "Save Changes"
+3. Navigate to Template Coverage tab
+4. Template Coverage Map shows "High Value" badge for E-commerce immediately
 
-For returning users (in-memory cache populated):
+## File Summary
 
-```text
-1. CategoryCard renders
-2. useCategoryImage initializes with: isLoading=FALSE (cache hit detected)
-3. useEffect fires, finds cache, sets image immediately
-4. Image displays instantly
-```
-
----
-
-## Summary
-
-| Issue | Fix |
-|-------|-----|
-| Flash of empty content | Initialize `isLoading` based on cache state |
-| Console ref warning | Add `forwardRef` to TrustBadgesStrip |
+| File | Action |
+|------|--------|
+| `src/hooks/useCategoryTierSettings.ts` | Add query options to override global cache settings |
