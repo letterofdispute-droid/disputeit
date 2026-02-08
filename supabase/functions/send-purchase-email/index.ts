@@ -117,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "Letter of Dispute <noreply@letterofdispute.com>",
+      from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
       to: [email],
       subject: `Your Dispute Letter: ${templateName}`,
       html: emailHtml,
