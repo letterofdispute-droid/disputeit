@@ -54,15 +54,28 @@ serve(async (req) => {
       throw new Error("Purchase not found");
     }
 
-    // If already completed with documents, return the existing data
+    // If already completed with documents, return the existing data with fresh signed URL
     if (purchase.status === "completed" && purchase.pdf_url) {
+      // Generate a fresh signed URL from the storage path
+      let pdfUrl = purchase.pdf_url;
+      if (!pdfUrl.startsWith('http')) {
+        const { data: signedData, error: signedError } = await supabaseClient.storage
+          .from("letters")
+          .createSignedUrl(pdfUrl, 60 * 60); // 1 hour
+        if (signedData?.signedUrl) {
+          pdfUrl = signedData.signedUrl;
+        } else {
+          console.warn("Failed to generate signed URL:", signedError);
+        }
+      }
+      
       return new Response(JSON.stringify({
         success: true,
         purchase: {
           id: purchase.id,
           templateName: purchase.template_name,
           purchaseType: purchase.purchase_type,
-          pdfUrl: purchase.pdf_url,
+          pdfUrl: pdfUrl,
           docxUrl: purchase.docx_url,
           letterContent: purchase.letter_content,
         },
