@@ -5,8 +5,11 @@ import { BANNED_TITLE_STARTERS, validateTitle } from "../_shared/contentValidato
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// Batch size for chunked processing - process this many templates per function call
+const BATCH_SIZE = 3;
 
 interface BulkPlanRequest {
   categoryId: string;
@@ -17,6 +20,11 @@ interface BulkPlanRequest {
     name: string;
     subcategorySlug?: string;
   }>;
+}
+
+interface ContinuationRequest {
+  jobId: string;
+  authToken: string;
 }
 
 // Article type definitions with diversity patterns
@@ -456,6 +464,208 @@ Return JSON:
   return { success: true, articlesCreated: validatedArticles.length };
 }
 
+/**
+ * Self-invoke to continue processing the next batch
+ * Fire-and-forget: don't await the response
+ */
+async function invokeSelf(jobId: string, authToken: string): Promise<void> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const functionUrl = `${supabaseUrl}/functions/v1/bulk-plan-category`;
+  
+  try {
+    // Fire-and-forget: we intentionally don't await the response
+    fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': authToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId, authToken } as ContinuationRequest),
+    }).catch(err => {
+      console.error(`[BULK-PLAN] Failed to self-invoke for job ${jobId}:`, err);
+    });
+    
+    console.log(`[BULK-PLAN] Self-invoked for job ${jobId}`);
+  } catch (error) {
+    console.error(`[BULK-PLAN] Error initiating self-invoke:`, error);
+  }
+}
+
+/**
+ * Process the next batch of templates for a job
+ */
+async function processNextBatch(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  jobId: string,
+  authToken: string
+): Promise<Response> {
+  console.log(`[BULK-PLAN] Continuation: processing next batch for job ${jobId}`);
+  
+  // 1. Fetch job from database
+  const { data: job, error: jobError } = await supabaseAdmin
+    .from('bulk_planning_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+  
+  if (jobError || !job) {
+    console.error(`[BULK-PLAN] Job ${jobId} not found:`, jobError);
+    return new Response(JSON.stringify({ status: 'error', error: 'Job not found' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  
+  // Check if job is still processing
+  if (job.status !== 'processing') {
+    console.log(`[BULK-PLAN] Job ${jobId} is ${job.status}, skipping`);
+    return new Response(JSON.stringify({ status: job.status }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  
+  // 2. Find next unprocessed templates
+  const processed = new Set([...(job.processed_slugs || []), ...(job.failed_slugs || [])]);
+  const remaining = (job.template_slugs || []).filter((s: string) => !processed.has(s));
+  
+  if (remaining.length === 0) {
+    // All done - mark complete
+    console.log(`[BULK-PLAN] Job ${jobId} has no remaining templates, marking complete`);
+    await supabaseAdmin
+      .from('bulk_planning_jobs')
+      .update({
+        status: job.failed_templates === job.total_templates ? 'failed' : 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+    
+    return new Response(JSON.stringify({ status: 'completed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  
+  // 3. Get API key and prepare for processing
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) {
+    throw new Error('LOVABLE_API_KEY is not configured');
+  }
+  
+  // Fetch existing blog post titles for deduplication
+  const { data: existingPosts } = await supabaseAdmin
+    .from('blog_posts')
+    .select('title')
+    .limit(500);
+
+  const existingTitles = existingPosts?.map(p => p.title) || [];
+  const seenFirstWords = new Set<string>();
+
+  // Pre-populate seen first words
+  for (const existing of existingTitles) {
+    const words = existing.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+    if (words.length >= 2) {
+      seenFirstWords.add(words.slice(0, 2).join(' '));
+    }
+  }
+  
+  // Also include already-processed slugs' titles
+  const { data: queuedItems } = await supabaseAdmin
+    .from('content_queue')
+    .select('suggested_title')
+    .limit(500);
+  
+  if (queuedItems) {
+    for (const item of queuedItems) {
+      if (item.suggested_title) {
+        existingTitles.push(item.suggested_title);
+        const words = item.suggested_title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
+        if (words.length >= 2) {
+          seenFirstWords.add(words.slice(0, 2).join(' '));
+        }
+      }
+    }
+  }
+  
+  // 4. Process batch
+  const batch = remaining.slice(0, BATCH_SIZE);
+  let completedCount = job.completed_templates || 0;
+  let failedCount = job.failed_templates || 0;
+  const processedSlugs: string[] = [...(job.processed_slugs || [])];
+  const failedSlugs: string[] = [...(job.failed_slugs || [])];
+  const errorMessages: Record<string, string> = { ...(job.error_messages || {}) };
+  
+  // We need template details - reconstruct from slugs
+  // For continuation, we only have slugs, so we'll use the slug as the name
+  for (const slug of batch) {
+    const templateName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const template = { slug, name: templateName, subcategorySlug: undefined };
+    
+    try {
+      console.log(`[BULK-PLAN] Processing ${slug} (${processedSlugs.length + failedSlugs.length + 1}/${job.total_templates})`);
+      
+      const result = await generatePlanForTemplate(
+        supabaseAdmin,
+        apiKey,
+        template,
+        job.category_id,
+        job.value_tier as 'high' | 'medium' | 'longtail',
+        existingTitles,
+        seenFirstWords
+      );
+
+      if (result.success) {
+        completedCount++;
+        processedSlugs.push(slug);
+        console.log(`[BULK-PLAN] ✓ ${slug} - ${result.articlesCreated} articles queued`);
+      }
+    } catch (error) {
+      failedCount++;
+      failedSlugs.push(slug);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      errorMessages[slug] = errorMsg;
+      console.error(`[BULK-PLAN] ✗ ${slug} - ${errorMsg}`);
+    }
+  }
+  
+  // 5. Update job progress
+  await supabaseAdmin
+    .from('bulk_planning_jobs')
+    .update({
+      completed_templates: completedCount,
+      failed_templates: failedCount,
+      processed_slugs: processedSlugs,
+      failed_slugs: failedSlugs,
+      error_messages: errorMessages,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', jobId);
+  
+  // 6. Check if more remaining after this batch
+  const newRemaining = remaining.length - batch.length;
+  
+  if (newRemaining > 0) {
+    // Self-invoke for next batch
+    console.log(`[BULK-PLAN] ${newRemaining} templates remaining, self-invoking...`);
+    await invokeSelf(jobId, authToken);
+  } else {
+    // This was the last batch - mark complete
+    console.log(`[BULK-PLAN] Job ${jobId} completed: ${completedCount} success, ${failedCount} failed`);
+    await supabaseAdmin
+      .from('bulk_planning_jobs')
+      .update({
+        status: failedCount === job.total_templates ? 'failed' : 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+  }
+  
+  return new Response(JSON.stringify({ 
+    status: 'processing', 
+    processed: batch.length,
+    remaining: newRemaining,
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -474,12 +684,21 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    // Service role client for database operations
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const body = await req.json();
+    
+    // Check if this is a continuation call
+    if (body.jobId && body.authToken) {
+      console.log(`[BULK-PLAN] Received continuation request for job ${body.jobId}`);
+      return await processNextBatch(supabaseAdmin, body.jobId, body.authToken);
+    }
+    
+    // Otherwise, it's an initial request - validate user and create job
     const supabaseUser = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } }
     });
-    
-    // Service role client for background updates
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify admin access
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
@@ -498,7 +717,7 @@ serve(async (req) => {
       });
     }
 
-    const { categoryId, categoryName, valueTier, templates } = await req.json() as BulkPlanRequest;
+    const { categoryId, categoryName, valueTier, templates } = body as BulkPlanRequest;
 
     if (!categoryId || !valueTier || !templates?.length) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
@@ -532,8 +751,12 @@ serve(async (req) => {
 
     console.log(`[BULK-PLAN] Job ${job.id} created for ${templates.length} templates in ${categoryName}`);
 
-    // Return immediately with job ID - processing continues in background
-    const responsePromise = new Response(JSON.stringify({
+    // Self-invoke to start processing first batch
+    // This ensures processing happens in a new function invocation
+    await invokeSelf(job.id, authHeader);
+
+    // Return immediately with job ID
+    return new Response(JSON.stringify({
       success: true,
       jobId: job.id,
       status: 'processing',
@@ -541,108 +764,6 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-    // Start background processing using waitUntil pattern
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
-    // Background processing (runs after response is sent)
-    (async () => {
-      try {
-        // Fetch existing blog post titles for deduplication
-        const { data: existingPosts } = await supabaseAdmin
-          .from('blog_posts')
-          .select('title')
-          .limit(500);
-
-        const existingTitles = existingPosts?.map(p => p.title) || [];
-        const seenFirstWords = new Set<string>();
-
-        // Pre-populate seen first words
-        for (const existing of existingTitles) {
-          const words = existing.toLowerCase().split(/\s+/).filter((w: string) => w.length > 0);
-          if (words.length >= 2) {
-            seenFirstWords.add(words.slice(0, 2).join(' '));
-          }
-        }
-
-        let completedCount = 0;
-        let failedCount = 0;
-        const processedSlugs: string[] = [];
-        const failedSlugs: string[] = [];
-        const errorMessages: Record<string, string> = {};
-
-        for (const template of templates) {
-          try {
-            console.log(`[BULK-PLAN] Processing ${template.slug} (${completedCount + 1}/${templates.length})`);
-            
-            const result = await generatePlanForTemplate(
-              supabaseAdmin,
-              apiKey,
-              template,
-              categoryId,
-              valueTier,
-              existingTitles,
-              seenFirstWords
-            );
-
-            if (result.success) {
-              completedCount++;
-              processedSlugs.push(template.slug);
-              console.log(`[BULK-PLAN] ✓ ${template.slug} - ${result.articlesCreated} articles queued`);
-            }
-          } catch (error) {
-            failedCount++;
-            failedSlugs.push(template.slug);
-            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            errorMessages[template.slug] = errorMsg;
-            console.error(`[BULK-PLAN] ✗ ${template.slug} - ${errorMsg}`);
-          }
-
-          // Update job progress after each template
-          await supabaseAdmin
-            .from('bulk_planning_jobs')
-            .update({
-              completed_templates: completedCount,
-              failed_templates: failedCount,
-              processed_slugs: processedSlugs,
-              failed_slugs: failedSlugs,
-              error_messages: errorMessages,
-            })
-            .eq('id', job.id);
-        }
-
-        // Mark job complete
-        await supabaseAdmin
-          .from('bulk_planning_jobs')
-          .update({
-            status: failedCount === templates.length ? 'failed' : 'completed',
-            completed_at: new Date().toISOString(),
-            completed_templates: completedCount,
-            failed_templates: failedCount,
-            processed_slugs: processedSlugs,
-            failed_slugs: failedSlugs,
-            error_messages: errorMessages,
-          })
-          .eq('id', job.id);
-
-        console.log(`[BULK-PLAN] Job ${job.id} completed: ${completedCount} success, ${failedCount} failed`);
-      } catch (error) {
-        console.error(`[BULK-PLAN] Job ${job.id} fatal error:`, error);
-        await supabaseAdmin
-          .from('bulk_planning_jobs')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            error_messages: { '_fatal': error instanceof Error ? error.message : 'Unknown error' },
-          })
-          .eq('id', job.id);
-      }
-    })();
-
-    return responsePromise;
   } catch (error) {
     console.error('Error in bulk-plan-category:', error);
     return new Response(JSON.stringify({ 

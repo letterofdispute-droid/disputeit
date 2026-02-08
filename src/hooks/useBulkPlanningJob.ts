@@ -162,6 +162,37 @@ export function useBulkPlanningJob(categoryId?: string) {
     },
   });
 
+  // Cancel a stuck job
+  const cancelJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const { error } = await supabase
+        .from('bulk_planning_jobs')
+        .update({ 
+          status: 'failed', 
+          completed_at: new Date().toISOString(),
+          error_messages: { _cancelled: 'Job cancelled by user' },
+        })
+        .eq('id', jobId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Job cancelled',
+        description: 'The stuck job has been marked as failed. You can retry it.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-job'] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-jobs-active'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to cancel job',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Get progress percentage
   const getProgress = (job: BulkPlanningJob | null): number => {
     if (!job || job.total_templates === 0) return 0;
@@ -181,6 +212,8 @@ export function useBulkPlanningJob(categoryId?: string) {
     isStarting: startBulkPlanMutation.isPending,
     retryFailed: retryFailedMutation.mutate,
     isRetrying: retryFailedMutation.isPending,
+    cancelJob: cancelJobMutation.mutate,
+    isCancelling: cancelJobMutation.isPending,
     getProgress,
     isComplete,
     isProcessing,
