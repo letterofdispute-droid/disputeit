@@ -77,17 +77,26 @@ const ArticlePage = () => {
     }
   }, [slug, category]);
 
+  // Check if preview mode (allow admins to view drafts)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPreviewMode = urlParams.get('preview') === 'true';
+
   // Fetch from database first, fall back to static data
   const {
     data: dbPost,
     isLoading: dbLoading
   } = useQuery({
-    queryKey: ['blog-post', slug],
+    queryKey: ['blog-post', slug, isPreviewMode],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle();
+      let query = supabase.from('blog_posts').select('*').eq('slug', slug);
+      
+      // In preview mode, fetch any status (RLS will check admin access)
+      // Otherwise only fetch published posts
+      if (!isPreviewMode) {
+        query = query.eq('status', 'published');
+      }
+      
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data as BlogPost | null;
     }
