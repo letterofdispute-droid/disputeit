@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useSemanticLinkScan, EmbeddingStats, ScanResult } from '@/hooks/useSemanticLinkScan';
+import { useSemanticLinkScan, EmbeddingStats, ScanResult, EmbeddingJob } from '@/hooks/useSemanticLinkScan';
 
 interface SemanticScanPanelProps {
   categoryFilter?: string;
@@ -24,15 +24,19 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     semanticScan,
     isSemanticScanning,
     lastScanResults,
-    generateEmbeddings,
-    isGeneratingEmbeddings,
+    startBulkEmbedding,
+    isStartingBulk,
+    activeJob,
+    getJobProgress,
+    cancelJob,
+    isCancelling,
     fetchEmbeddingStats,
   } = useSemanticLinkScan();
 
-  // Fetch embedding stats on mount
+  // Fetch embedding stats on mount and when job changes
   useEffect(() => {
     fetchEmbeddingStats().then(setEmbeddingStats);
-  }, [fetchEmbeddingStats]);
+  }, [fetchEmbeddingStats, activeJob?.status]);
 
   const handleSemanticScan = () => {
     semanticScan({
@@ -42,11 +46,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     });
   };
 
-  const handleGenerateEmbeddings = () => {
-    generateEmbeddings({
-      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
-      batchSize: 5,
-      contentType: 'blog_post',
+  const handleStartBulkEmbedding = () => {
+    startBulkEmbedding({
+      category_filter: categoryFilter !== 'all' ? categoryFilter : undefined,
     });
   };
 
@@ -58,6 +60,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const embeddingProgress = embeddingStats 
     ? Math.round((embeddingStats.completed / Math.max(embeddingStats.total, 1)) * 100)
     : 0;
+
+  const isJobProcessing = activeJob?.status === 'processing';
+  const jobProgress = getJobProgress(activeJob);
 
   return (
     <Card className="border-primary/20">
@@ -108,30 +113,78 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
           </div>
         </div>
 
+        {/* Active Job Progress */}
+        {isJobProcessing && activeJob && (
+          <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm font-medium">Generating embeddings...</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => cancelJob(activeJob.id)}
+                disabled={isCancelling}
+              >
+                {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+              </Button>
+            </div>
+            <Progress value={jobProgress} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{activeJob.processed_items} / {activeJob.total_items} processed</span>
+              <span>{jobProgress}%</span>
+            </div>
+            {activeJob.failed_items > 0 && (
+              <span className="text-xs text-destructive">
+                {activeJob.failed_items} failed
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Completed Job Summary */}
+        {activeJob?.status === 'completed' && (
+          <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-primary">✓</span>
+              <span>
+                Last job completed: {activeJob.processed_items} processed
+                {activeJob.failed_items > 0 && `, ${activeJob.failed_items} failed`}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
           <Button
-            onClick={handleGenerateEmbeddings}
-            disabled={isGeneratingEmbeddings}
+            onClick={handleStartBulkEmbedding}
+            disabled={isStartingBulk || isJobProcessing}
             variant="outline"
             size="sm"
           >
-            {isGeneratingEmbeddings ? (
+            {isStartingBulk ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
+                Starting...
+              </>
+            ) : isJobProcessing ? (
+              <>
+                <Pause className="h-4 w-4 mr-2" />
+                Processing...
               </>
             ) : (
               <>
-                <Database className="h-4 w-4 mr-2" />
-                Generate Embeddings
+                <Play className="h-4 w-4 mr-2" />
+                Bulk Generate Embeddings
               </>
             )}
           </Button>
 
           <Button
             onClick={handleSemanticScan}
-            disabled={isSemanticScanning || (embeddingStats?.completed ?? 0) < 2}
+            disabled={isSemanticScanning || (embeddingStats?.completed ?? 0) < 2 || isJobProcessing}
             size="sm"
           >
             {isSemanticScanning ? (
@@ -148,9 +201,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
           </Button>
         </div>
 
-        {(embeddingStats?.completed ?? 0) < 2 && (
+        {(embeddingStats?.completed ?? 0) < 2 && !isJobProcessing && (
           <p className="text-xs text-muted-foreground">
-            Need at least 2 embedded articles to perform semantic scanning
+            Need at least 2 embedded articles to perform semantic scanning. Click "Bulk Generate Embeddings" to start.
           </p>
         )}
 
@@ -183,7 +236,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Batch Size</Label>
+                <Label className="text-sm">Scan Batch Size</Label>
                 <span className="text-sm font-medium">{batchSize} articles</span>
               </div>
               <Slider
@@ -225,7 +278,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
           </Collapsible>
         )}
 
-        {/* Scanning Progress */}
+        {/* Semantic Scanning Progress */}
         {isSemanticScanning && (
           <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
             <div className="flex items-center gap-2 mb-2">
