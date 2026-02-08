@@ -1,8 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, User, LogOut, Settings } from 'lucide-react';
+import { Menu, User, LogOut, Settings, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
+import UserAccountMenu from './UserAccountMenu';
 import { templateCategories } from '@/data/templateCategories';
 import { useAuth } from '@/hooks/useAuth';
 import { trackNavClick, trackCTAClick } from '@/hooks/useGTM';
@@ -22,7 +24,7 @@ import {
 
 const Header = () => {
   const [open, setOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -51,29 +53,7 @@ const Header = () => {
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
-              <>
-                {isAdmin && (
-                  <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('admin')}>
-                    <Link to="/admin">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Admin
-                    </Link>
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('dashboard')}>
-                  <Link to="/dashboard">
-                    <User className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => {
-                  trackNavClick('sign_out');
-                  handleSignOut();
-                }}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </>
+              <UserAccountMenu />
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild onClick={() => trackNavClick('login')}>
@@ -205,24 +185,49 @@ const Header = () => {
                 <div className="border-t border-border pt-4 mt-2 flex flex-col gap-3">
                   {user ? (
                     <>
+                      {/* User info header in mobile menu */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-border">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={profile?.avatar_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                            {profile?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">
+                              {profile?.first_name || user.email?.split('@')[0]}
+                            </p>
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      
+                      <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+                        <Link to="/dashboard" onClick={() => setOpen(false)}>
+                          <LayoutDashboard className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+                        <Link to="/settings" onClick={() => setOpen(false)}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Link>
+                      </Button>
                       {isAdmin && (
-                        <Button variant="default" size="sm" className="w-full" asChild>
+                        <Button variant="default" size="sm" className="w-full justify-start" asChild>
                           <Link to="/admin" onClick={() => setOpen(false)}>
-                            <Settings className="h-4 w-4 mr-2" />
+                            <Shield className="h-4 w-4 mr-2" />
                             Admin Panel
                           </Link>
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" className="w-full" asChild>
-                        <Link to="/dashboard" onClick={() => setOpen(false)}>
-                          <User className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </Link>
-                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="w-full" 
+                        className="w-full justify-start text-destructive hover:text-destructive" 
                         onClick={() => {
                           handleSignOut();
                           setOpen(false);

@@ -2,11 +2,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Profile {
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
+  profile: Profile | null;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -19,15 +26,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
-  const checkAdminStatus = async (userId: string) => {
+  const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, first_name, last_name, avatar_url')
       .eq('user_id', userId)
       .single();
     
-    setIsAdmin(data?.is_admin ?? false);
+    if (data) {
+      setIsAdmin(data.is_admin ?? false);
+      setProfile({
+        first_name: data.first_name,
+        last_name: data.last_name,
+        avatar_url: data.avatar_url,
+      });
+    }
   };
 
   useEffect(() => {
@@ -36,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkAdminStatus(session.user.id);
+        fetchProfile(session.user.id);
       }
       setIsLoading(false);
     });
@@ -47,9 +62,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          checkAdminStatus(session.user.id);
+          fetchProfile(session.user.id);
         } else {
           setIsAdmin(false);
+          setProfile(null);
         }
         setIsLoading(false);
       }
@@ -86,6 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
+    setProfile(null);
   };
 
   return (
@@ -94,6 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       session, 
       isLoading, 
       isAdmin,
+      profile,
       signUp, 
       signIn, 
       signOut
