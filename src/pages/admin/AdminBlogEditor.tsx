@@ -212,7 +212,7 @@ const AdminBlogEditor = () => {
             <Button variant="outline" size="sm" onClick={() => handleSave('draft')} disabled={isSaving}>
               Save Draft
             </Button>
-            <Button variant="outline" size="sm" onClick={() => window.open(`/articles/${category}/${slug}`, '_blank')}>
+            <Button variant="outline" size="sm" onClick={() => window.open(`/articles/${category}/${slug}?preview=true`, '_blank')} disabled={!category || !slug}>
               <Eye className="h-4 w-4 mr-2" />
               Preview
             </Button>
