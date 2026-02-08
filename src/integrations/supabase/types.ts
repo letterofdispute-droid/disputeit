@@ -540,6 +540,57 @@ export type Database = {
           },
         ]
       }
+      embedding_jobs: {
+        Row: {
+          category_filter: string | null
+          completed_at: string | null
+          content_type: string
+          created_at: string
+          error_messages: Json | null
+          failed_ids: string[]
+          failed_items: number
+          id: string
+          processed_ids: string[]
+          processed_items: number
+          skipped_items: number
+          status: string
+          total_items: number
+          updated_at: string
+        }
+        Insert: {
+          category_filter?: string | null
+          completed_at?: string | null
+          content_type?: string
+          created_at?: string
+          error_messages?: Json | null
+          failed_ids?: string[]
+          failed_items?: number
+          id?: string
+          processed_ids?: string[]
+          processed_items?: number
+          skipped_items?: number
+          status?: string
+          total_items?: number
+          updated_at?: string
+        }
+        Update: {
+          category_filter?: string | null
+          completed_at?: string | null
+          content_type?: string
+          created_at?: string
+          error_messages?: Json | null
+          failed_ids?: string[]
+          failed_items?: number
+          id?: string
+          processed_ids?: string[]
+          processed_items?: number
+          skipped_items?: number
+          status?: string
+          total_items?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       evidence_photos: {
         Row: {
           created_at: string
