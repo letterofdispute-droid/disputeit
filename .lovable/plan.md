@@ -1,120 +1,144 @@
 
-# Plan: Fix Google OAuth Login on Custom Domain (letterofdispute.com)
+# Fix Plan: Blog Management Issues
 
-## Problem
-When logging in with Google on your custom domain (letterofdispute.com), after selecting a Google account, you're redirected to the homepage instead of being logged in. This happens because:
+## Issues Identified
 
-1. The Lovable auth-bridge is designed for `*.lovable.app` domains
-2. On custom domains, the auth-bridge incorrectly handles the OAuth callback
-3. The session tokens aren't properly set after the redirect
-
-## Solution
-Detect when the app is running on your custom domain and bypass the auth-bridge by using the Supabase client directly with `skipBrowserRedirect: true`. This gives us the OAuth URL directly so we can handle the redirect manually.
+1. **"Publish Selected" AbortError** - Publishing 100+ posts at once times out
+2. **Mobile Layout Overflow** - Bulk action buttons overflow on small screens  
+3. **SEO Dashboard "Published: 0"** - content_queue status not synced with blog_posts
 
 ---
 
-## Changes Required
+## Solution Overview
 
-### 1. Update `src/pages/LoginPage.tsx`
+```text
++------------------+     +------------------+     +------------------+
+| Issue 1          |     | Issue 2          |     | Issue 3          |
+| Batch Publishing |     | Mobile Layout    |     | Status Sync      |
++------------------+     +------------------+     +------------------+
+         |                        |                        |
+         v                        v                        v
++------------------+     +------------------+     +------------------+
+| Split into       |     | Responsive flex  |     | Add query to     |
+| batches of 50    |     | with wrap + stack|     | update queue     |
++------------------+     +------------------+     +------------------+
+```
 
-Replace the `handleGoogleSignIn` function with custom domain detection logic:
+---
+
+## Implementation Details
+
+### 1. Fix Bulk Publish Timeout (AdminBlog.tsx)
+
+**Problem**: Updating 100+ rows with `.in('id', [...100 ids])` causes AbortError when the request takes too long.
+
+**Solution**: Batch updates into chunks of 50 items, processing sequentially.
 
 ```typescript
-const handleGoogleSignIn = async () => {
-  setIsGoogleLoading(true);
-  trackGoogleAuthClick('login');
+const handleBulkPublish = async () => {
+  if (selectedIds.size === 0) return;
   
-  // Detect if we're on a custom domain
-  const isCustomDomain = 
-    !window.location.hostname.includes('lovable.app') &&
-    !window.location.hostname.includes('lovableproject.com');
+  setIsBulkPublishing(true);
+  const idsArray = Array.from(selectedIds);
+  const BATCH_SIZE = 50;
+  let successCount = 0;
+  let errorOccurred = false;
   
-  if (isCustomDomain) {
-    // Bypass auth-bridge by using Supabase directly
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-        skipBrowserRedirect: true,
-      },
-    });
+  // Process in batches
+  for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
+    const batch = idsArray.slice(i, i + BATCH_SIZE);
+    const { error } = await supabase
+      .from('blog_posts')
+      .update({ 
+        status: 'published', 
+        published_at: new Date().toISOString() 
+      })
+      .in('id', batch);
     
     if (error) {
-      toast({
-        title: 'Error signing in with Google',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsGoogleLoading(false);
-      return;
+      errorOccurred = true;
+      break;
     }
-    
-    // Validate and redirect to OAuth URL
-    if (data?.url) {
-      window.location.href = data.url;
-    }
-  } else {
-    // For Lovable domains, use the managed auth
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    
-    if (error) {
-      toast({
-        title: 'Error signing in with Google',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsGoogleLoading(false);
-    }
+    successCount += batch.length;
   }
+  
+  // Show result and refresh
+  if (errorOccurred) {
+    toast({ title: 'Partial publish', description: `Published ${successCount} of ${selectedIds.size}` });
+  } else {
+    toast({ title: 'Published', description: `${successCount} posts published` });
+  }
+  
+  setSelectedIds(new Set());
+  fetchPosts();
+  fetchDraftCount();
+  setIsBulkPublishing(false);
 };
 ```
 
-### 2. Update `src/pages/SignupPage.tsx`
+### 2. Fix Mobile Button Overflow (AdminBlog.tsx)
 
-Apply the same fix to the signup page's `handleGoogleSignIn` function.
+**Problem**: Bulk actions bar uses `flex justify-between` without wrapping, causing overflow.
 
-### 3. Add Supabase Import
+**Solution**: Add responsive stacking with `flex-col sm:flex-row` and `flex-wrap`.
 
-Add the Supabase client import to both files:
-```typescript
-import { supabase } from '@/integrations/supabase/client';
+```tsx
+{/* Bulk Actions Bar - Fixed Layout */}
+<Card className="mb-4 border-primary/50 bg-primary/5">
+  <CardContent className="py-3 px-4">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <CheckSquare className="h-4 w-4 text-primary" />
+        <span className="font-medium">{selectedIds.size} selected</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={...}>Clear</Button>
+        <Button variant="destructive" size="sm" onClick={...}>Delete</Button>
+        <Button size="sm" onClick={handleBulkPublish}>Publish Selected</Button>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 ```
 
----
+### 3. Fix Content Queue Status Sync
 
-## How This Works
+**Problem**: When blog posts are published via AdminBlog, the corresponding `content_queue` items stay in "generated" status instead of updating to "published".
 
-```text
-+------------------+     +-----------------+     +------------------+
-|  User clicks     |     | Custom domain?  |     | Use Supabase     |
-|  "Continue with  | --> | letterofdispute | --> | directly with    |
-|  Google"         |     | .com detected   |     | skipBrowserRedirect
-+------------------+     +-----------------+     +------------------+
-                                |                        |
-                                | No (lovable.app)       |
-                                v                        v
-                         +-----------------+     +------------------+
-                         | Use Lovable     |     | Manual redirect  |
-                         | auth-bridge     |     | to Google OAuth  |
-                         | (existing flow) |     | then /dashboard  |
-                         +-----------------+     +------------------+
+**Solution**: After publishing blog posts, also update the related content_queue items.
+
+```typescript
+// In handleBulkPublish, after updating blog_posts:
+const { data: publishedPosts } = await supabase
+  .from('blog_posts')
+  .select('id')
+  .in('id', batch);
+
+if (publishedPosts?.length) {
+  // Update content_queue where blog_post_id matches
+  await supabase
+    .from('content_queue')
+    .update({ 
+      status: 'published', 
+      published_at: new Date().toISOString() 
+    })
+    .in('blog_post_id', publishedPosts.map(p => p.id));
+}
 ```
 
 ---
 
 ## Files to Modify
 
-1. **src/pages/LoginPage.tsx** - Add custom domain detection and Supabase OAuth fallback
-2. **src/pages/SignupPage.tsx** - Same changes for the signup flow
+| File | Changes |
+|------|---------|
+| `src/pages/admin/AdminBlog.tsx` | Batch publishing, mobile layout fix, queue sync |
 
 ---
 
-## Backend Configuration Required
+## Technical Notes
 
-Ensure your custom domain is configured in your backend Authentication Settings:
-- **Site URL**: `https://letterofdispute.com`
-- **Redirect URLs**: Add `https://letterofdispute.com/**`
-
-This can be verified in the Lovable Cloud dashboard under Users > Authentication Settings.
+- **Batch Size**: 50 items per batch prevents timeout while maintaining efficiency
+- **Error Handling**: Partial publish is reported if any batch fails
+- **Cache Invalidation**: React Query caches are invalidated after mutations
+- **Mobile Breakpoint**: Uses `sm:` (640px) for responsive switch
