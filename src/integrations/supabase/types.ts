@@ -671,6 +671,45 @@ export type Database = {
           },
         ]
       }
+      generation_jobs: {
+        Row: {
+          bail_reason: string | null
+          completed_at: string | null
+          created_at: string
+          failed_items: number
+          id: string
+          queue_item_ids: string[]
+          status: string
+          succeeded_items: number
+          total_items: number
+          updated_at: string
+        }
+        Insert: {
+          bail_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failed_items?: number
+          id?: string
+          queue_item_ids?: string[]
+          status?: string
+          succeeded_items?: number
+          total_items?: number
+          updated_at?: string
+        }
+        Update: {
+          bail_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failed_items?: number
+          id?: string
+          queue_item_ids?: string[]
+          status?: string
+          succeeded_items?: number
+          total_items?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       letter_purchases: {
         Row: {
           amount_cents: number
