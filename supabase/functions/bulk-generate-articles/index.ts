@@ -838,7 +838,7 @@ serve(async (req) => {
         error_message: 'Previous generation timed out' 
       })
       .eq('status', 'generating')
-      .lt('created_at', tenMinutesAgo)
+      .lt('started_at', tenMinutesAgo)
       .select('id');
     
     if (!staleError && staleItems && staleItems.length > 0) {
@@ -946,7 +946,7 @@ serve(async (req) => {
         // Mark as generating
         await supabaseAdmin
           .from('content_queue')
-          .update({ status: 'generating' })
+          .update({ status: 'generating', started_at: new Date().toISOString() })
           .eq('id', item.id);
 
         const plan = item.content_plans;
