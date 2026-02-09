@@ -8,62 +8,43 @@ export interface QueueStats {
   published: number;
   failed: number;
   total: number;
-  activeJob: {
-    id: string;
-    succeeded: number;
-    failed: number;
-    total: number;
-  } | null;
-}
-
-async function countByStatus(status: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('content_queue')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', status);
-  if (error) throw error;
-  return count || 0;
 }
 
 export function useQueueStats() {
   return useQuery({
     queryKey: ['queue-stats'],
     queryFn: async () => {
-      const [queued, generating, generated, failed, publishedResult, activeJobResult] = await Promise.all([
-        countByStatus('queued'),
-        countByStatus('generating'),
-        countByStatus('generated'),
-        countByStatus('failed'),
+      // Fetch queue statuses and actual published blog post count in parallel
+      const [{ data, error }, { count: publishedCount, error: publishedError }] = await Promise.all([
+        supabase.from('content_queue').select('status'),
         supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
-        supabase.from('generation_jobs').select('id, succeeded_items, failed_items, total_items').eq('status', 'processing').order('created_at', { ascending: false }).limit(1),
       ]);
-
-      if (publishedResult.error) throw publishedResult.error;
-
-      let activeJob: QueueStats['activeJob'] = null;
-      if (activeJobResult.data && activeJobResult.data.length > 0) {
-        const job = activeJobResult.data[0];
-        activeJob = {
-          id: job.id,
-          succeeded: job.succeeded_items,
-          failed: job.failed_items,
-          total: job.total_items,
-        };
-      }
+      
+      if (error) throw error;
+      if (publishedError) throw publishedError;
 
       const stats: QueueStats = {
-        queued,
-        generating,
-        generated,
-        published: publishedResult.count || 0,
-        failed,
-        total: queued + generating + generated + failed,
-        activeJob,
+        queued: 0,
+        generating: 0,
+        generated: 0,
+        published: publishedCount || 0,
+        failed: 0,
+        total: 0,
       };
 
+      for (const item of data || []) {
+        stats.total++;
+        switch (item.status) {
+          case 'queued': stats.queued++; break;
+          case 'generating': stats.generating++; break;
+          case 'generated': stats.generated++; break;
+          case 'failed': stats.failed++; break;
+        }
+      }
+      
       return stats;
     },
-    staleTime: 10000,
-    refetchInterval: 5000,
+    staleTime: 10000, // Cache for 10 seconds
+    refetchInterval: 5000, // Poll every 5 seconds
   });
 }

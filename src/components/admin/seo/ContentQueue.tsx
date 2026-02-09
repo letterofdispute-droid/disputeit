@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useContentQueue } from '@/hooks/useContentQueue';
+import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
 import { useQueueStats } from '@/hooks/useQueueStats';
 import QueueStats from './queue/QueueStats';
 import QueueFilters from './queue/QueueFilters';
@@ -30,8 +30,6 @@ export default function ContentQueue() {
     deleteItems,
     getFailedIds,
     generationProgress,
-    cancelJob,
-    isCancelling,
   } = useContentQueue();
 
   // Use separate hook for accurate global stats (not limited by pagination)
@@ -129,15 +127,13 @@ export default function ContentQueue() {
       <QueueStats stats={stats} />
 
       {/* Progress indicator during generation */}
-      {generationProgress && (
+      {(isBulkGenerating || isRetrying) && (
         <GenerationProgress
-          current={generationProgress.current}
-          total={generationProgress.total}
-          currentTitle={generationProgress.currentTitle}
-          currentBatch={generationProgress.currentBatch}
-          totalBatches={generationProgress.totalBatches}
-          onCancel={cancelJob}
-          isCancelling={isCancelling}
+          current={generationProgress?.current || 0}
+          total={generationProgress?.total || selectedIds.size || stats.failed}
+          currentTitle={generationProgress?.currentTitle}
+          currentBatch={generationProgress?.currentBatch}
+          totalBatches={generationProgress?.totalBatches}
         />
       )}
 
