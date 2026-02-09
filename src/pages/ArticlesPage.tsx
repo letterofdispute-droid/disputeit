@@ -172,7 +172,7 @@ const ArticlesPage = () => {
             <Card className="group overflow-hidden border-2 hover:border-primary/40 hover:shadow-elevated transition-all duration-300">
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Image */}
-                <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[380px] overflow-hidden bg-muted">
+                <div className="relative aspect-video md:aspect-auto md:min-h-[220px] md:max-h-[280px] overflow-hidden bg-muted">
                   {latestPost.featured_image_url ? (
                     <img
                       src={latestPost.featured_image_url}
