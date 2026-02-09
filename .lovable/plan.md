@@ -1,35 +1,54 @@
 
+# Update Pricing Pages with Accurate Features and Stronger Value Proposition
 
-# Fix: Hero Card Image Fit + Middle Image Caching Bug
+## What's changing
 
-## Issue 1: Hero Card on /articles - Image not filling container
+Three components need updates to reflect the actual product capabilities and provide stronger reasons to buy:
 
-The hero image container uses `h-[200px] md:h-auto`. On desktop, `h-auto` makes the image container match the content column height, but the image itself doesn't always fill it because the content column can be taller than the image's natural height.
+### 1. Pricing Cards - Add missing features (3 files)
 
-**Fix:** Constrain the overall card height on desktop so the image always fills. Set `md:h-[280px]` on the entire grid (not the image container), and let the image container fill with `h-full`. This keeps the card compact and the image always fills its space.
+The current feature lists are too sparse and don't mention key capabilities. Update the feature bullets in all three locations:
 
-- File: `src/pages/ArticlesPage.tsx`
-- Change the grid div to have a fixed desktop height: `md:max-h-[300px]`
-- Set the image container to `h-[200px] md:h-full` so it stretches to fill the card
+**PDF Only ($9.99) features:**
+- Professional letter with legal-safe phrasing
+- PDF download, ready to send
+- Attach up to 10 evidence photos embedded in PDF
+- Cites relevant US federal law
+- 500+ dispute-specific templates
 
-## Issue 2: Middle images missing on first blog post load
+**PDF + Edit Access ($14.99) features:**
+- Everything in PDF Only
+- 30 days of in-app editing
+- Export updated PDF anytime
+- AI-powered form assistance
+- Make unlimited changes
 
-The blog post query uses the global React Query `staleTime` of 5 minutes. When navigating between articles via SPA links, React Query may serve stale or transitional data, causing the `useMemo` that processes middle image placeholders to run before the full post data (with `middle_image_1_url`) is available. On refresh, a fresh fetch occurs and images appear correctly.
+Files to update:
+- `src/pages/PricingPage.tsx` (dedicated pricing page - lines 35-40 and 50-55)
+- `src/components/home/Pricing.tsx` (homepage pricing section - lines 13-16 and 25-28)
+- `src/components/letter/PricingModal.tsx` (checkout modal - lines 42-45 and 51-54)
 
-**Fix:** Override the query's caching behavior for the `blog-post` query to always fetch fresh data, ensuring middle image URLs are available on first render.
+### 2. WhyNotChatGPT section - Stronger differentiation
 
-- File: `src/pages/ArticlePage.tsx`
-- Add `staleTime: 0` and `refetchOnMount: true` to the `blog-post` query options
-- This ensures every article page navigation triggers a fresh database fetch, guaranteeing middle image data is present on first render
+Update `src/components/home/WhyNotChatGPT.tsx` to emphasize that our models are purpose-built for dispute scenarios, not generic AI. Add a 4th proof point about evidence support, and strengthen the existing copy:
 
-### Technical Details
+- **Certainty**: 500+ templates built for specific dispute types. No prompt engineering needed.
+- **Correctness**: Purpose-trained models produce legal-safe language with proper citations. Generic AI may weaken your case.
+- **Evidence Support**: Attach up to 10 photos directly embedded in your PDF. ChatGPT can't do that.
+- **Time Saved**: 5 minutes from start to professional PDF. No back-and-forth with a chatbot.
 
-**ArticlesPage.tsx** - Hero card layout fix:
-- Change the grid container to include `md:max-h-[300px] md:overflow-hidden`
-- Set the image div to `h-[200px] md:h-full`
-- This ensures the image always fills its half of the card
+Update the subtitle to emphasize purpose-built vs generic: "Our models are trained specifically for consumer disputes. Generic AI produces inconsistent, potentially harmful results."
 
-**ArticlePage.tsx** - Caching fix:
-- Add `staleTime: 0` and `refetchOnMount: true` to the blog-post query
-- This overrides the global 5-minute staleTime for individual article pages, similar to the pattern already used in admin queries
+### 3. PricingPage comparison section - Update ChatGPT comparison
 
+In `src/pages/PricingPage.tsx`, update the "Why not just use ChatGPT?" comparison card (lines 83-91) to include stronger problems:
+- Add: "Can't attach evidence photos to your letter"
+- Add: "Not trained on dispute-specific legal language"
+- Update solution text to mention purpose-built models and evidence embedding
+
+## Technical Details
+
+- **Files modified**: `src/pages/PricingPage.tsx`, `src/components/home/Pricing.tsx`, `src/components/home/WhyNotChatGPT.tsx`, `src/components/letter/PricingModal.tsx`
+- All changes are data/copy updates to existing arrays and components
+- No new dependencies or structural changes needed
+- The WhyNotChatGPT grid changes from 3 columns to 4 columns on desktop (`md:grid-cols-4`)
