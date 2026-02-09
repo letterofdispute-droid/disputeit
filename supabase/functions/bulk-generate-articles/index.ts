@@ -1302,18 +1302,7 @@ Respond with ONLY this JSON:
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
         existingDbTitles.push(blogPost.title);
 
-        // Update job progress
-        await supabaseAdmin
-          .from('generation_jobs')
-          .update({
-            succeeded_items: supabaseAdmin.rpc ? undefined : undefined, // handled below
-          })
-          .eq('id', jobId);
-        
-        // Use raw increment via RPC-like pattern
-        await supabaseAdmin.rpc('increment_job_succeeded' as any, { job_id: jobId }).catch(() => {
-          // Fallback: read-modify-write
-        });
+        // Job progress is tracked in the post-batch block below
 
         await new Promise(resolve => setTimeout(resolve, 5000));
 
