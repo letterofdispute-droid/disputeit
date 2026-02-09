@@ -315,11 +315,28 @@ export function useContentQueue(planId?: string, categoryId?: string) {
   // Cancel active job
   const cancelJobMutation = useMutation({
     mutationFn: async () => {
-      if (!activeJobId) throw new Error('No active job to cancel');
+      let jobIdToCancel = activeJobId;
+      
+      // If no local activeJobId, query DB for any processing job
+      if (!jobIdToCancel) {
+        const { data } = await supabase
+          .from('generation_jobs')
+          .select('id')
+          .eq('status', 'processing')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (data && data.length > 0) {
+          jobIdToCancel = data[0].id;
+        }
+      }
+      
+      if (!jobIdToCancel) throw new Error('No active job to cancel');
+      
       const { error } = await supabase
         .from('generation_jobs')
         .update({ status: 'cancelled' })
-        .eq('id', activeJobId);
+        .eq('id', jobIdToCancel);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -346,7 +363,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     error,
     refetch,
     bulkGenerate: bulkGenerateMutation.mutate,
-    isBulkGenerating: bulkGenerateMutation.isPending || (!!activeJobId && activeJob?.status === 'processing'),
+    isBulkGenerating: bulkGenerateMutation.isPending || !!activeJobId,
     retryFailed: retryFailedMutation.mutate,
     isRetrying: retryFailedMutation.isPending,
     updateStatus: updateStatusMutation.mutate,

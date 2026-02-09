@@ -10,41 +10,41 @@ export interface QueueStats {
   total: number;
 }
 
+async function countByStatus(status: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('content_queue')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', status);
+  if (error) throw error;
+  return count || 0;
+}
+
 export function useQueueStats() {
   return useQuery({
     queryKey: ['queue-stats'],
     queryFn: async () => {
-      // Fetch queue statuses and actual published blog post count in parallel
-      const [{ data, error }, { count: publishedCount, error: publishedError }] = await Promise.all([
-        supabase.from('content_queue').select('status'),
+      const [queued, generating, generated, failed, { count: publishedCount, error: publishedError }] = await Promise.all([
+        countByStatus('queued'),
+        countByStatus('generating'),
+        countByStatus('generated'),
+        countByStatus('failed'),
         supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
       ]);
-      
-      if (error) throw error;
+
       if (publishedError) throw publishedError;
 
       const stats: QueueStats = {
-        queued: 0,
-        generating: 0,
-        generated: 0,
+        queued,
+        generating,
+        generated,
         published: publishedCount || 0,
-        failed: 0,
-        total: 0,
+        failed,
+        total: queued + generating + generated + failed,
       };
 
-      for (const item of data || []) {
-        stats.total++;
-        switch (item.status) {
-          case 'queued': stats.queued++; break;
-          case 'generating': stats.generating++; break;
-          case 'generated': stats.generated++; break;
-          case 'failed': stats.failed++; break;
-        }
-      }
-      
       return stats;
     },
-    staleTime: 10000, // Cache for 10 seconds
-    refetchInterval: 5000, // Poll every 5 seconds
+    staleTime: 10000,
+    refetchInterval: 5000,
   });
 }
