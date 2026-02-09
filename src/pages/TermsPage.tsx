@@ -177,10 +177,10 @@ const TermsPage = () => {
             <section>
               <h2 className="text-2xl font-semibold text-foreground mb-4">9. Refund Policy</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                We offer a 30-day money-back guarantee on all letter purchases. If you are not satisfied with your purchase, you may request a refund within 30 days of purchase by contacting us at support@letterofdispute.com.
+                Refunds for letter purchases are handled on a case-by-case basis. If you experience a technical issue with your purchase, please contact us at support@letterofdispute.com within 14 days of purchase.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Please note that refunds are provided at our discretion and may be denied in cases of abuse or if we determine the Service was used as intended. Once a refund is processed, your access to the purchased letter may be revoked.
+                Refunds are provided at our discretion and may be denied in cases of abuse or if we determine the Service was used as intended. Once a refund is processed, your access to the purchased letter may be revoked.
               </p>
             </section>
 

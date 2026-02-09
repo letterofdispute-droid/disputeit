@@ -64,8 +64,8 @@ const options = [
 const trustIndicators = [
   {
     icon: Shield,
-    title: '30-Day Guarantee',
-    description: 'Not satisfied? Full refund, no questions asked.',
+    title: '500+ Templates',
+    description: 'Dispute-specific templates across 13 categories.',
   },
   {
     icon: Lock,
@@ -127,7 +127,7 @@ const faqs = [
   },
   {
     question: 'Can I get a refund if I\'m not satisfied?',
-    answer: 'Yes! We offer a 30-day money-back guarantee. If you\'re not satisfied with your letter for any reason, contact us for a full refund—no questions asked.',
+    answer: 'If you experience a technical issue with your letter, please contact us at support@letterofdispute.com and we\'ll work to resolve it promptly.',
   },
   {
     question: 'Can I use the same letter for multiple disputes?',
@@ -220,7 +220,7 @@ const PricingPage = () => {
             <div className="flex flex-wrap justify-center gap-4 text-sm text-primary-foreground/70">
               <span className="flex items-center gap-1.5">
                 <Shield className="h-4 w-4" />
-                30-Day Money-Back Guarantee
+                500+ Dispute Templates
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock className="h-4 w-4" />
