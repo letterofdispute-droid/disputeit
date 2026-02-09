@@ -1127,7 +1127,13 @@ Respond with ONLY this JSON:
         });
 
         if (!aiResponse.ok) {
-          throw new Error(`AI Gateway error: ${aiResponse.status}`);
+          if (aiResponse.status === 402) {
+            throw new Error('CREDIT_EXHAUSTED: AI credit balance exhausted. Add credits in workspace settings then retry.');
+          }
+          if (aiResponse.status === 429) {
+            throw new Error('RATE_LIMITED: Rate limit exceeded. Wait a few minutes then retry with a smaller batch size.');
+          }
+          throw new Error(`AI_ERROR: AI service error (${aiResponse.status}). Please retry later.`);
         }
 
         const aiData = await aiResponse.json();
@@ -1391,6 +1397,24 @@ Respond with ONLY this JSON:
           success: false, 
           error: errorMsg 
         });
+
+        // Early bail-out on credit exhaustion — no point continuing without credits
+        if (errorMsg.startsWith('CREDIT_EXHAUSTED:')) {
+          console.log('[BAIL_OUT] Credit balance exhausted, skipping remaining items in batch');
+          // Mark remaining items as failed too
+          for (let j = items.indexOf(item) + 1; j < items.length; j++) {
+            const remaining = items[j];
+            await supabaseAdmin
+              .from('content_queue')
+              .update({
+                status: 'failed',
+                error_message: 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted before this item could be processed.',
+              })
+              .eq('id', remaining.id);
+            results.push({ queueId: remaining.id, success: false, error: 'CREDIT_EXHAUSTED: Skipped' });
+          }
+          break;
+        }
       }
     }
 

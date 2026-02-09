@@ -103,6 +103,18 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     },
   });
 
+  // Helper to get a short failure reason from queue items for toast messages
+  const getFailureHint = useCallback(() => {
+    if (!queueItems) return '';
+    const failed = queueItems.filter(i => i.status === 'failed');
+    if (failed.length === 0) return '';
+    const hasCredit = failed.some(i => i.error_message?.startsWith('CREDIT_EXHAUSTED:'));
+    const hasRate = failed.some(i => i.error_message?.startsWith('RATE_LIMITED:'));
+    if (hasCredit) return ' — AI credits exhausted';
+    if (hasRate) return ' — rate limited';
+    return '';
+  }, [queueItems]);
+
   // Dynamic polling for generating items
   const hasGeneratingItems = queueItems?.some(item => item.status === 'generating');
 
@@ -238,10 +250,13 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       setGenerationProgress(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
       const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
+      const failureHint = data.failed > 0 ? getFailureHint() : '';
       toast({
         title: 'Batch generation complete',
-        description: `Generated ${data.succeeded} articles, ${data.failed} failed${batchInfo}`,
+        description: `Generated ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
+        variant: data.failed > 0 ? 'destructive' : 'default',
       });
     },
     onError: (error) => {
@@ -342,10 +357,13 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       setGenerationProgress(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
       const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
+      const failureHint = data.failed > 0 ? getFailureHint() : '';
       toast({
         title: 'Retry complete',
-        description: `Retried ${data.succeeded} articles, ${data.failed} failed${batchInfo}`,
+        description: `Retried ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
+        variant: data.failed > 0 ? 'destructive' : 'default',
       });
     },
     onError: (error) => {
