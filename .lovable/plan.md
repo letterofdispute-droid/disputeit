@@ -1,255 +1,246 @@
 
-# Fix: Stuck Bulk Planning Jobs (Edge Function Timeout Issue)
+# Automatic Embedding & Long-Term Semantic Linking Strategy
 
-## Root Cause Analysis
+## Executive Summary
 
-The E-commerce bulk planning job is stuck at 7/40 templates because of a fundamental architectural flaw:
+This plan implements automatic embedding generation upon content publication and establishes a **continuous link discovery system** that connects new content with both existing and future articles, ensuring your SEO internal linking strategy remains effective indefinitely.
 
-### The Problem
+---
+
+## Part 1: Automatic Embedding on Publish
+
+### Current Content Publishing Pathways
+
+The system has three main content publishing flows that need embedding hooks:
+
+1. **Manual Admin Editor** (`AdminBlogEditor.tsx`)
+   - Direct save/publish from the editor UI
+   
+2. **Bulk Publish** (`AdminBlog.tsx`)
+   - Publishing multiple drafts at once from the blog list
+   
+3. **AI Article Generation** (`bulk-generate-articles`)
+   - Articles created as drafts, then published later
+
+### Implementation Approach
+
+**Option A: Database Trigger (Recommended)**
+- Create a Postgres trigger that fires when `blog_posts.status` changes to `'published'`
+- Trigger calls a lightweight database function that queues the post for embedding
+- Edge function processes the queue asynchronously
+
+**Option B: Edge Function Webhook**
+- Modify publish paths to call embedding function directly
+- Less reliable (network failures) but simpler to implement
+
+I recommend **Option A** for reliability.
+
+---
+
+## Part 2: Long-Term Linking Strategy Architecture
 
 ```text
-Edge Function Timeline:
-+----------------+------------------+--------------------+
-|   Request In   |  Return Response | Background IIFE   |
-|                |                  | (async ()=>{...})  |
-+-------+--------+--------+---------+---------+---------+
-        |                 |                   |
-        v                 v                   X
-    Job Created     Response Sent      PROCESS KILLED!
-                                       (no keepalive)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    CONTINUOUS LINKING LIFECYCLE                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   NEW ARTICLE PUBLISHED                                                 │
+│          │                                                              │
+│          ▼                                                              │
+│   ┌──────────────────┐                                                  │
+│   │ Generate         │ ◄── OpenAI text-embedding-3-small               │
+│   │ Embedding        │     (automatic on publish)                       │
+│   └────────┬─────────┘                                                  │
+│            │                                                            │
+│            ▼                                                            │
+│   ┌──────────────────┐     ┌──────────────────────────┐                │
+│   │ Scan for Links   │────►│ Find Similar EXISTING    │                │
+│   │ (Outbound)       │     │ Articles to Link TO      │                │
+│   └────────┬─────────┘     └──────────────────────────┘                │
+│            │                                                            │
+│            ▼                                                            │
+│   ┌──────────────────┐     ┌──────────────────────────┐                │
+│   │ Reverse Scan     │────►│ Find EXISTING Articles   │                │
+│   │ (Inbound)        │     │ That Should Link TO ME   │                │
+│   └────────┬─────────┘     └──────────────────────────┘                │
+│            │                                                            │
+│            ▼                                                            │
+│   ┌──────────────────────────────────────────────────┐                 │
+│   │        LINK SUGGESTIONS TABLE                    │                 │
+│   │   (pending → approved → applied → verified)      │                 │
+│   └──────────────────────────────────────────────────┘                 │
+│                                                                         │
+│   WEEKLY MAINTENANCE                                                    │
+│   ├── Re-scan articles with stale embeddings                           │
+│   ├── Discover NEW cross-links between old articles                    │
+│   └── Detect orphan pages needing inbound links                        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-The `bulk-plan-category` Edge Function:
-1. Creates a job record in the database (lines 511-527)
-2. Returns an HTTP response immediately (lines 536-543)
-3. Attempts to run background processing via an async IIFE (lines 552-643)
+### Key Insight: Bidirectional Discovery
 
-**But Edge Functions terminate once the response is sent.** Deno/Edge Functions don't support `waitUntil()` like Cloudflare Workers do. The async IIFE gets killed after processing a few templates (7 in this case), leaving the job stuck in "processing" forever.
+When a **new article is published today**, the system will:
 
-### Why It Worked for Smaller Categories
+1. **Find existing articles it should link TO** (outbound)
+2. **Find existing articles that should link TO IT** (inbound - the missing piece)
 
-Smaller categories (10-15 templates) might complete before the Edge Function timeout, but larger categories like E-commerce (40 templates) will always fail.
+This ensures that an article published a year ago can receive a link suggestion to a new article published today.
 
 ---
 
-## Solution: Chunked Processing with Self-Invocation
+## Part 3: Technical Implementation
 
-Instead of processing all templates in one function call, we need to:
+### Phase 1: Embedding Queue Table
+```sql
+-- Queue for pending embedding generation
+CREATE TABLE embedding_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_type TEXT NOT NULL,           -- 'blog_post', 'template'
+  content_id UUID NOT NULL,             -- blog_posts.id
+  trigger_source TEXT NOT NULL,         -- 'publish', 'update', 'manual'
+  priority INTEGER DEFAULT 50,          -- Higher = process first
+  created_at TIMESTAMPTZ DEFAULT now(),
+  processed_at TIMESTAMPTZ
+);
 
-1. **Process in small batches (3-5 templates per call)**
-2. **Self-invoke to continue processing the remaining templates**
-3. **Use the database as state management between calls**
-
-### New Architecture
-
-```text
-Call 1:                Call 2:                Call 3:
-+---------+           +---------+           +---------+
-| Process |   --->    | Process |   --->    | Process |
-| 1-5     |  invoke   | 6-10    |  invoke   | 11-15   | ...
-+---------+           +---------+           +---------+
-     |                     |                     |
-     v                     v                     v
-  DB Update             DB Update             DB Update
+-- Index for efficient polling
+CREATE INDEX idx_embedding_queue_pending ON embedding_queue(created_at) 
+WHERE processed_at IS NULL;
 ```
 
-Each call:
-1. Reads current job state from database
-2. Processes next batch of unprocessed templates
-3. Updates job progress in database
-4. Invokes itself to continue if more templates remain
+### Phase 2: Database Trigger on Publish
+```sql
+CREATE OR REPLACE FUNCTION queue_embedding_on_publish()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Fire when status changes TO 'published'
+  IF NEW.status = 'published' AND 
+     (OLD.status IS NULL OR OLD.status != 'published') THEN
+    INSERT INTO embedding_queue (content_type, content_id, trigger_source, priority)
+    VALUES ('blog_post', NEW.id, 'publish', 100)
+    ON CONFLICT DO NOTHING;
+  END IF;
+  
+  -- Fire when published content is updated (content_hash changes)
+  IF NEW.status = 'published' AND OLD.status = 'published' AND 
+     NEW.content_hash IS DISTINCT FROM OLD.content_hash THEN
+    INSERT INTO embedding_queue (content_type, content_id, trigger_source, priority)
+    VALUES ('blog_post', NEW.id, 'update', 50)
+    ON CONFLICT DO NOTHING;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
----
+CREATE TRIGGER trigger_embedding_on_publish
+AFTER INSERT OR UPDATE ON blog_posts
+FOR EACH ROW EXECUTE FUNCTION queue_embedding_on_publish();
+```
 
-## Implementation Details
+### Phase 3: Enhanced Edge Function with Bidirectional Scanning
 
-### 1. Modify `supabase/functions/bulk-plan-category/index.ts`
-
-**Key Changes:**
+Update `scan-for-semantic-links` to also perform **reverse scanning**:
 
 ```typescript
-// New constants
-const BATCH_SIZE = 3; // Process 3 templates per function call
-const SUPABASE_FUNCTIONS_URL = Deno.env.get('SUPABASE_URL')! + '/functions/v1';
+// After generating embedding for NEW article
+// Step 1: Find articles the new article should link TO (existing flow)
+const outboundMatches = await findSimilarArticles(newEmbedding);
 
-// Two modes:
-// Mode 1: Initial call - create job, start processing
-// Mode 2: Continuation call - resume processing with jobId
+// Step 2: NEW - Find articles that should link TO the new article
+const inboundCandidates = await supabase
+  .from('article_embeddings')
+  .select('id, content_id, embedding, category_id')
+  .eq('embedding_status', 'completed')
+  .neq('content_id', newArticle.id);
 
-interface ContinuationRequest {
-  jobId: string;
-  authToken: string; // Pass auth token for self-invocation
-}
-
-serve(async (req) => {
-  const body = await req.json();
-  
-  // Check if this is a continuation call
-  if (body.jobId) {
-    return await processNextBatch(body.jobId, body.authToken);
+for (const candidate of inboundCandidates) {
+  const similarity = cosineSimilarity(candidate.embedding, newEmbedding);
+  if (similarity > threshold) {
+    // Create suggestion: candidate → new article
+    await createLinkSuggestion({
+      source_post_id: candidate.content_id,
+      target_slug: newArticle.slug,
+      // ...
+    });
   }
-  
-  // Otherwise, it's an initial request - create job and start
-  // ... existing job creation logic ...
-  
-  // Instead of background IIFE, invoke self for first batch
-  await invokeSelf(job.id, authHeader);
-  
-  return new Response(JSON.stringify({ success: true, jobId: job.id }));
-});
-
-async function invokeSelf(jobId: string, authToken: string) {
-  await fetch(`${SUPABASE_FUNCTIONS_URL}/bulk-plan-category`, {
-    method: 'POST',
-    headers: {
-      'Authorization': authToken,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ jobId, authToken }),
-  });
-  // Fire-and-forget: don't await response
-}
-
-async function processNextBatch(jobId: string, authToken: string) {
-  // 1. Fetch job from database
-  const job = await getJob(jobId);
-  if (!job || job.status !== 'processing') {
-    return Response.json({ status: 'completed' });
-  }
-  
-  // 2. Find next unprocessed templates
-  const processed = new Set([...job.processed_slugs, ...job.failed_slugs]);
-  const remaining = job.template_slugs.filter(s => !processed.has(s));
-  
-  if (remaining.length === 0) {
-    // All done - mark complete
-    await markJobComplete(jobId);
-    return Response.json({ status: 'completed' });
-  }
-  
-  // 3. Process batch
-  const batch = remaining.slice(0, BATCH_SIZE);
-  for (const slug of batch) {
-    try {
-      await generatePlanForTemplate(slug, ...);
-      // Update DB incrementally
-    } catch (error) {
-      // Track failure
-    }
-  }
-  
-  // 4. Self-invoke for next batch if more remaining
-  if (remaining.length > BATCH_SIZE) {
-    await invokeSelf(jobId, authToken);
-  } else {
-    // This was the last batch
-    await markJobComplete(jobId);
-  }
-  
-  return Response.json({ status: 'processing', processed: batch.length });
 }
 ```
 
-### 2. Add Stale Job Detection + Recovery UI
+### Phase 4: Scheduled Maintenance Cron Job
 
-Add a "Cancel" or "Mark Failed" button for stuck jobs:
-
-**In `BulkPlanningProgress.tsx`:**
-
-```typescript
-// Detect if job is stuck (no progress for 5+ minutes)
-const lastUpdate = new Date(job.updated_at);
-const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / 60000;
-const isStuck = job.status === 'processing' && minutesSinceUpdate > 5;
-
-// Show cancel button for stuck jobs
-{isStuck && (
-  <Button variant="destructive" size="sm" onClick={onCancelJob}>
-    Cancel Stuck Job
-  </Button>
-)}
-```
-
-**In `useBulkPlanningJob.ts`:**
-
-```typescript
-const cancelJobMutation = useMutation({
-  mutationFn: async (jobId: string) => {
-    const { error } = await supabase
-      .from('bulk_planning_jobs')
-      .update({ 
-        status: 'failed', 
-        completed_at: new Date().toISOString(),
-        error_messages: { _cancelled: 'Job cancelled by user' }
-      })
-      .eq('id', jobId);
-    if (error) throw error;
-  },
-  onSuccess: () => {
-    toast({ title: 'Job cancelled' });
-    invalidateJobs();
-  },
-});
-```
-
-### 3. Immediate Fix: Manually Mark Current Job as Failed
-
-For the currently stuck job, we need to mark it as failed so you can retry:
+Create a cron job that runs weekly to:
+1. Process the embedding queue
+2. Re-scan articles with expired `next_scan_due_at`
+3. Identify orphan articles needing inbound links
 
 ```sql
--- Mark the stuck E-commerce job as failed
-UPDATE bulk_planning_jobs 
-SET 
-  status = 'failed',
-  completed_at = NOW(),
-  error_messages = error_messages || '{"_timeout": "Job timed out due to Edge Function limits"}'::jsonb
-WHERE id = 'e53f46dc-c75c-40f6-bb2a-cc496e96fef7';
+-- Scheduled weekly via pg_cron
+SELECT cron.schedule(
+  'weekly-semantic-maintenance',
+  '0 3 * * 0',  -- Sunday at 3 AM
+  $$
+  SELECT net.http_post(
+    url:='https://[project].supabase.co/functions/v1/semantic-maintenance',
+    headers:='{"Authorization": "Bearer [ANON_KEY]"}'::jsonb
+  );
+  $$
+);
 ```
 
 ---
 
-## Files to Modify
+## Part 4: Admin Dashboard Enhancements
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/bulk-plan-category/index.ts` | **Rewrite** | Implement chunked self-invocation pattern |
-| `src/components/admin/seo/BulkPlanningProgress.tsx` | **Modify** | Add stuck detection + cancel button |
-| `src/hooks/useBulkPlanningJob.ts` | **Modify** | Add cancelJob mutation |
+### New Features to Add
 
----
+1. **Orphan Article Alert**
+   - Show articles with 0 inbound links
+   - Priority indicator for high-value orphans
 
-## Database Migration
+2. **Link Network Visualization**
+   - Graph view showing connections between articles
+   - Identify isolated content clusters
 
-Mark the currently stuck job as failed:
+3. **Auto-Apply High-Confidence Links**
+   - Toggle to automatically apply suggestions with >90% relevance score
+   - Reduces manual approval overhead for obvious matches
 
-```sql
-UPDATE bulk_planning_jobs 
-SET status = 'failed', 
-    completed_at = NOW(),
-    error_messages = error_messages || '{"_timeout": "Edge Function timeout"}'::jsonb
-WHERE status = 'processing' 
-  AND updated_at < NOW() - INTERVAL '10 minutes';
-```
+4. **Content Age Indicator**
+   - Flag articles older than 6 months that haven't received new links
+   - Prevents content stagnation
 
 ---
 
-## Expected Results
+## Part 5: Files to Create/Modify
 
-After implementation:
-
-1. **Immediate**: The stuck E-commerce job will be marked as failed and can be retried
-2. **Going forward**: Jobs will process in batches of 3 templates, each within Edge Function time limits
-3. **UI improvement**: Stuck jobs will show a "Cancel" button after 5 minutes of no progress
-4. **Reliability**: Categories with 40+ templates will complete successfully through self-invocation chain
+| File | Action | Purpose |
+|------|--------|---------|
+| `supabase/migrations/..._embedding_queue.sql` | Create | Queue table + publish trigger |
+| `supabase/functions/process-embedding-queue/index.ts` | Create | Processes queue + bidirectional scan |
+| `supabase/functions/semantic-maintenance/index.ts` | Create | Weekly maintenance job |
+| `supabase/functions/scan-for-semantic-links/index.ts` | Modify | Add reverse scan logic |
+| `src/hooks/useSemanticLinkScan.ts` | Modify | Add orphan detection + stats |
+| `src/components/admin/seo/links/SemanticScanPanel.tsx` | Modify | Add orphan alerts + auto-apply toggle |
 
 ---
 
-## Technical Tradeoffs
+## Part 6: Long-Term Strategy Benefits
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Self-invocation (chosen)** | Works within Edge Function limits, no external dependencies | Slightly more complex, adds network latency between batches |
-| **External scheduler (pg_cron)** | More robust | Requires additional setup, less real-time feedback |
-| **Supabase Queue (pgmq)** | Industry standard pattern | Adds dependency, more complex setup |
+1. **Zero Manual Intervention**: New articles automatically enter the linking network
+2. **Temporal Bridging**: Old articles get links to new relevant content
+3. **Orphan Prevention**: Alerts for isolated content before it hurts SEO
+4. **Link Equity Distribution**: Pillar pages naturally accumulate authority
+5. **Content Clustering**: Related articles strengthen topical authority
 
-The self-invocation pattern is the most pragmatic fix given the current architecture.
+---
+
+## Implementation Order
+
+1. **Create embedding queue table and trigger** - Foundation for automation
+2. **Create queue processor function** - Handles async embedding
+3. **Add bidirectional scan logic** - The key to connecting past and future content
+4. **Create maintenance cron job** - Ongoing health of the link network
+5. **Enhance admin UI** - Visibility into the automated system
+6. **Test end-to-end** - Verify new published articles trigger full pipeline
