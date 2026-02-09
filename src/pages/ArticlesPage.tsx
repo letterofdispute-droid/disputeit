@@ -3,11 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
-import { blogPosts as staticBlogPosts, blogCategories, getFeaturedPosts as getStaticFeaturedPosts } from '@/data/blogPosts';
+import { blogPosts as staticBlogPosts, blogCategories } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ArrowRight, BookOpen, Eye } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, BookOpen, Eye, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
@@ -29,11 +29,16 @@ interface BlogPost {
   views: number;
 }
 
+const getReadTime = (post: BlogPost) => {
+  if (post.read_time) return post.read_time;
+  const words = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+  return `${Math.ceil(words / 200)} min read`;
+};
+
 const ArticlesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
-  // Fetch blog posts from database
   const { data: dbPosts, isLoading } = useQuery({
     queryKey: ['blog-posts'],
     queryFn: async () => {
@@ -42,13 +47,11 @@ const ArticlesPage = () => {
         .select('*')
         .eq('status', 'published')
         .order('published_at', { ascending: false });
-      
       if (error) throw error;
       return data as BlogPost[];
     },
   });
 
-  // Fetch categories from database
   const { data: dbCategories } = useQuery({
     queryKey: ['blog-categories'],
     queryFn: async () => {
@@ -56,15 +59,13 @@ const ArticlesPage = () => {
         .from('blog_categories')
         .select('*')
         .order('name');
-      
       if (error) throw error;
       return data;
     },
   });
 
-  // Use database posts if available, otherwise fall back to static
-  const posts = dbPosts && dbPosts.length > 0 
-    ? dbPosts 
+  const posts = dbPosts && dbPosts.length > 0
+    ? dbPosts
     : staticBlogPosts.map(p => ({
         slug: p.slug,
         title: p.title,
@@ -81,55 +82,48 @@ const ArticlesPage = () => {
       }));
 
   const categories = dbCategories && dbCategories.length > 0 ? dbCategories : blogCategories;
-  
-  // Helper to get category display name from slug
+
   const getCategoryName = (post: BlogPost) => {
     const cat = categories.find(c => c.slug === post.category_slug);
     return cat?.name || post.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
-  const featuredPosts = posts.filter(post => post.featured);
-  const allRegularPosts = posts.filter(post => !post.featured);
-  
-  // Pagination
-  const totalPages = Math.ceil(allRegularPosts.length / POSTS_PER_PAGE);
-  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-  const regularPosts = allRegularPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+  // Latest post is the hero (page 1 only), rest go into the grid
+  const latestPost = posts[0] ?? null;
+  const gridPosts = currentPage === 1 ? posts.slice(1) : posts;
+  const totalGridPosts = posts.length > 1 ? posts.length - 1 : 0;
+  const totalPages = Math.ceil(totalGridPosts / POSTS_PER_PAGE);
+  const startIndex = currentPage === 1 ? 0 : (currentPage - 1) * POSTS_PER_PAGE - (POSTS_PER_PAGE); // offset for hero on page 1
+  // Simpler: for page 1 we show posts[1..12], page 2 posts[13..24], etc.
+  const pageStartIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const paginatedPosts = gridPosts.slice(pageStartIndex, pageStartIndex + POSTS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setSearchParams({ page: page.toString() });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Calculate reading time if not provided
-  const getReadTime = (post: BlogPost) => {
-    if (post.read_time) return post.read_time;
-    const words = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
-    const minutes = Math.ceil(words / 200);
-    return `${minutes} min read`;
-  };
-
   return (
     <Layout>
-      <SEOHead 
+      <SEOHead
         title="Blog | DisputeLetters - Consumer Rights & Dispute Resolution"
         description="Expert guides on consumer rights, landlord-tenant disputes, travel compensation, and more. Learn how to protect your rights and resolve disputes effectively."
         canonicalPath="/articles"
       />
 
       {/* Hero Section */}
-      <section className="bg-primary py-16 md:py-20">
+      <section className="bg-primary py-12 md:py-16">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-5">
               <BookOpen className="h-4 w-4" />
               <span>Knowledge Center</span>
             </div>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold text-primary-foreground mb-6">
+            <h1 className="font-serif text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
               Consumer Rights & Dispute Resolution Blog
             </h1>
             <p className="text-lg text-primary-foreground/80">
-              Expert guides, legal insights, and practical tips to help you navigate disputes 
+              Expert guides, legal insights, and practical tips to help you navigate disputes
               and protect your consumer rights.
             </p>
           </div>
@@ -137,19 +131,15 @@ const ArticlesPage = () => {
       </section>
 
       {/* Categories */}
-      <section className="py-8 border-b border-border bg-card">
+      <section className="py-6 border-b border-border bg-card">
         <div className="container-wide">
           <div className="flex flex-wrap items-center gap-3 justify-center">
             <Link to="/articles">
-              <Badge variant="default" className="cursor-pointer">
-                All Articles
-              </Badge>
+              <Badge variant="default" className="cursor-pointer">All Articles</Badge>
             </Link>
             {categories.map((category) => (
               <Link key={category.slug} to={`/articles/${category.slug}`}>
-                <Badge variant="outline" className="cursor-pointer hover:bg-muted">
-                  {category.name}
-                </Badge>
+                <Badge variant="outline" className="cursor-pointer hover:bg-muted">{category.name}</Badge>
               </Link>
             ))}
           </div>
@@ -158,156 +148,152 @@ const ArticlesPage = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <section className="py-12 md:py-16 bg-background">
+        <section className="py-12 bg-background">
           <div className="container-wide">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2].map((i) => (
-                <Card key={i}>
-                  <Skeleton className="aspect-video w-full" />
-                  <CardHeader>
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Card className="overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                <Skeleton className="aspect-[4/3] md:aspect-auto md:min-h-[320px]" />
+                <div className="p-8 space-y-4">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            </Card>
           </div>
         </section>
       )}
 
-      {/* Featured Posts */}
-      {!isLoading && featuredPosts.length > 0 && (
-        <section className="py-12 md:py-16 bg-background">
+      {/* Latest Article Hero Card (page 1 only) */}
+      {!isLoading && latestPost && currentPage === 1 && (
+        <section className="py-10 md:py-14 bg-background">
           <div className="container-wide">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
-              Featured Articles
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {featuredPosts.map((post) => (
-                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
-                  {post.featured_image_url && (
-                    <div className="aspect-video overflow-hidden">
-                      <img 
-                        src={post.featured_image_url} 
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
+            <Card className="group overflow-hidden border-2 hover:border-primary/40 hover:shadow-elevated transition-all duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                {/* Image */}
+                <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[380px] overflow-hidden bg-muted">
+                  {latestPost.featured_image_url ? (
+                    <img
+                      src={latestPost.featured_image_url}
+                      alt={latestPost.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <BookOpen className="h-16 w-16 opacity-30" />
                     </div>
                   )}
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary">{getCategoryName(post)}</Badge>
-                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                        Featured
-                      </Badge>
-                    </div>
-                    <CardTitle className="font-serif text-xl group-hover:text-primary transition-colors">
-                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>
-                        {post.title}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {post.excerpt}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {getReadTime(post)}
-                        </span>
-                        {post.views > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-4 w-4" />
-                            {post.views.toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                      <Link 
-                        to={`/articles/${post.category_slug}/${post.slug}`}
-                        className="text-primary font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all"
-                      >
-                        Read more <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex flex-col justify-center p-6 md:p-10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="secondary">{getCategoryName(latestPost)}</Badge>
+                    <Badge className="bg-accent/15 text-accent border-accent/25 hover:bg-accent/20">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Most Recent
+                    </Badge>
+                    {latestPost.featured && (
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Featured</Badge>
+                    )}
+                  </div>
+
+                  <CardTitle className="font-serif text-2xl md:text-3xl mb-3 group-hover:text-primary transition-colors leading-tight">
+                    <Link to={`/articles/${latestPost.category_slug}/${latestPost.slug}`}>
+                      {latestPost.title}
+                    </Link>
+                  </CardTitle>
+
+                  {latestPost.excerpt && (
+                    <p className="text-muted-foreground mb-5 line-clamp-3 text-base leading-relaxed">
+                      {latestPost.excerpt}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
+                    <span className="font-medium text-foreground">{latestPost.author}</span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {latestPost.published_at && new Date(latestPost.published_at).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                      })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {getReadTime(latestPost)}
+                    </span>
+                    {latestPost.views > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-3.5 w-3.5" />
+                        {latestPost.views.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <Button asChild className="w-fit">
+                    <Link to={`/articles/${latestPost.category_slug}/${latestPost.slug}`}>
+                      Read Article <ArrowRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </Card>
           </div>
         </section>
       )}
 
-      {/* All Posts */}
+      {/* Articles Grid */}
       {!isLoading && (
-        <section className="py-12 md:py-16 bg-muted/30">
+        <section className="py-10 md:py-14 bg-muted/30">
           <div className="container-wide">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
-              Latest Articles
+              {currentPage === 1 ? 'More Articles' : 'Latest Articles'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regularPosts.map((post) => (
-                <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+              {paginatedPosts.map((post) => (
+                <Card key={post.slug} className="group flex flex-col hover:shadow-elevated hover:border-primary/30 transition-all duration-300 overflow-hidden">
                   {post.featured_image_url && (
                     <div className="aspect-video overflow-hidden">
-                      <img 
-                        src={post.featured_image_url} 
+                      <img
+                        src={post.featured_image_url}
                         alt={post.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     </div>
                   )}
-                  <CardHeader>
-                    <Badge variant="secondary" className="w-fit mb-2">
-                      {getCategoryName(post)}
-                    </Badge>
-                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
-                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>
-                        {post.title}
-                      </Link>
+                  <CardHeader className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="secondary" className="w-fit">{getCategoryName(post)}</Badge>
+                      {post.featured && (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">Featured</Badge>
+                      )}
+                    </div>
+                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>{post.title}</Link>
                     </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {post.excerpt}
-                    </CardDescription>
+                    <CardDescription className="line-clamp-2">{post.excerpt}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{post.author}</span>
+                      <span className="text-border">·</span>
                       <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
+                        <Calendar className="h-3.5 w-3.5" />
+                        {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
+                        <Clock className="h-3.5 w-3.5" />
                         {getReadTime(post)}
                       </span>
-                      {post.views > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          {post.views.toLocaleString()}
-                        </span>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {regularPosts.length === 0 && featuredPosts.length === 0 && (
+            {paginatedPosts.length === 0 && !latestPost && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No articles published yet. Check back soon!</p>
               </div>
@@ -319,48 +305,25 @@ const ArticlesPage = () => {
                 <PaginationContent>
                   {currentPage > 1 && (
                     <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        className="cursor-pointer"
-                      />
+                      <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} className="cursor-pointer" />
                     </PaginationItem>
                   )}
-                  
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    // Show first, last, current, and adjacent pages
-                    const showPage = page === 1 || page === totalPages || 
-                      Math.abs(page - currentPage) <= 1;
-                    
+                    const showPage = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
                     if (!showPage) {
-                      // Show ellipsis only once between gaps
-                      if (page === 2 && currentPage > 3) {
-                        return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
-                      }
-                      if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                        return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
-                      }
+                      if (page === 2 && currentPage > 3) return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
+                      if (page === totalPages - 1 && currentPage < totalPages - 2) return <PaginationItem key={page}><span className="px-2">...</span></PaginationItem>;
                       return null;
                     }
-                    
                     return (
                       <PaginationItem key={page}>
-                        <PaginationLink
-                          onClick={() => handlePageChange(page)}
-                          isActive={page === currentPage}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
+                        <PaginationLink onClick={() => handlePageChange(page)} isActive={page === currentPage} className="cursor-pointer">{page}</PaginationLink>
                       </PaginationItem>
                     );
                   })}
-                  
                   {currentPage < totalPages && (
                     <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        className="cursor-pointer"
-                      />
+                      <PaginationNext onClick={() => handlePageChange(currentPage + 1)} className="cursor-pointer" />
                     </PaginationItem>
                   )}
                 </PaginationContent>
@@ -380,9 +343,7 @@ const ArticlesPage = () => {
             Use our pre-validated templates to create professional complaint letters in minutes.
           </p>
           <Button variant="hero" size="lg" asChild>
-            <Link to="/#letters">
-              Create Your Letter <ArrowRight className="h-5 w-5" />
-            </Link>
+            <Link to="/#letters">Create Your Letter <ArrowRight className="h-5 w-5" /></Link>
           </Button>
         </div>
       </section>
