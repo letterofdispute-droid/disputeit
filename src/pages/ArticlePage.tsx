@@ -99,7 +99,9 @@ const ArticlePage = () => {
       const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data as BlogPost | null;
-    }
+    },
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Fetch related posts from database

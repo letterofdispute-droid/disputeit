@@ -170,9 +170,9 @@ const ArticlesPage = () => {
         <section className="py-10 md:py-14 bg-background">
           <div className="container-wide">
             <Card className="group overflow-hidden border-2 hover:border-primary/40 hover:shadow-elevated transition-all duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 md:max-h-[300px] md:overflow-hidden">
                 {/* Image */}
-                <div className="relative overflow-hidden bg-muted h-[200px] md:h-auto">
+                <div className="relative overflow-hidden bg-muted h-[200px] md:h-full">
                   {latestPost.featured_image_url ? (
                     <img
                       src={latestPost.featured_image_url}
