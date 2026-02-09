@@ -14,11 +14,8 @@ export default function GenerationProgress({
   current, 
   total, 
   currentTitle,
-  currentBatch,
-  totalBatches 
 }: GenerationProgressProps) {
   const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
-  const showBatchInfo = totalBatches && totalBatches > 1;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -29,11 +26,6 @@ export default function GenerationProgress({
             <span className="font-medium">
               Generating articles... ({current} of {total})
             </span>
-            {showBatchInfo && (
-              <span className="text-sm text-muted-foreground">
-                Batch {currentBatch} of {totalBatches}
-              </span>
-            )}
           </div>
         </div>
         <Progress value={percentage} className="h-2" />
@@ -43,9 +35,7 @@ export default function GenerationProgress({
           </p>
         )}
         <p className="text-xs text-muted-foreground mt-1">
-          {showBatchInfo 
-            ? `Processing in ${totalBatches} batches (max 3 per batch) to ensure reliability.`
-            : 'This may take several minutes. You can leave this page and come back.'}
+          Processing runs on the server — you can close this tab and come back later.
         </p>
       </CardContent>
     </Card>

@@ -31,6 +31,9 @@ interface BulkGenerateRequest {
   batchSize?: number;
   tone?: string;
   wordCount?: number;
+  // Self-chaining fields
+  jobId?: string;
+  remainingIds?: string[];
 }
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
@@ -865,14 +868,17 @@ serve(async (req) => {
       });
     }
 
+    const body = await req.json() as BulkGenerateRequest;
     const { 
       planId, 
       categoryId, 
       queueItemIds,
-      batchSize = 3, // Reduced from 5 to prevent timeouts
+      batchSize = 3,
       tone = 'expert_professional',
       wordCount: requestedWordCount = 1500,
-    } = await req.json() as BulkGenerateRequest;
+      jobId: existingJobId,
+      remainingIds,
+    } = body;
     
     // ENFORCE MINIMUM 1200 WORDS - this is a hard requirement
     const wordCount = Math.max(requestedWordCount, 1200);
@@ -881,8 +887,94 @@ serve(async (req) => {
     const maxBatchSize = 3;
     const effectiveBatchSize = Math.min(batchSize, maxBatchSize);
 
-    // Build query for queue items
-    let query = supabaseAdmin
+    // ============================================
+    // SELF-CHAINING LOGIC
+    // ============================================
+    
+    let jobId = existingJobId;
+    let itemsToProcess: string[];
+    let allItemIds: string[];
+
+    if (jobId && remainingIds) {
+      // --- CONTINUATION CALL ---
+      console.log(`[JOB:${jobId}] Continuation call with ${remainingIds.length} remaining items`);
+      
+      // Check if job was cancelled
+      const { data: job } = await supabaseAdmin
+        .from('generation_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .single();
+      
+      if (job?.status === 'cancelled') {
+        console.log(`[JOB:${jobId}] Job was cancelled, stopping`);
+        return new Response(JSON.stringify({ success: true, message: 'Job cancelled' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      allItemIds = remainingIds;
+      itemsToProcess = remainingIds.slice(0, effectiveBatchSize);
+    } else {
+      // --- INITIAL CALL ---
+      // Determine which items to process
+      let allIds: string[] = [];
+      
+      if (queueItemIds && queueItemIds.length > 0) {
+        allIds = queueItemIds;
+      } else if (planId || categoryId) {
+        // Fetch all queued items matching the filter
+        let fetchQuery = supabaseAdmin
+          .from('content_queue')
+          .select('id, content_plans!inner(category_id)')
+          .eq('status', 'queued')
+          .order('priority', { ascending: false });
+        
+        if (planId) fetchQuery = fetchQuery.eq('plan_id', planId);
+        if (categoryId) fetchQuery = fetchQuery.eq('content_plans.category_id', categoryId);
+        
+        const { data: fetchedItems } = await fetchQuery;
+        allIds = fetchedItems?.map((i: any) => i.id) || [];
+      }
+
+      if (allIds.length === 0) {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'No queued items to process',
+          processed: 0,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Create the job row
+      const { data: newJob, error: jobError } = await supabaseAdmin
+        .from('generation_jobs')
+        .insert({
+          status: 'processing',
+          total_items: allIds.length,
+          queue_item_ids: allIds,
+        })
+        .select('id')
+        .single();
+
+      if (jobError || !newJob) {
+        throw new Error(`Failed to create generation job: ${jobError?.message}`);
+      }
+
+      jobId = newJob.id;
+      allItemIds = allIds;
+      itemsToProcess = allIds.slice(0, effectiveBatchSize);
+      
+      console.log(`[JOB:${jobId}] Created new job with ${allIds.length} items, processing first ${itemsToProcess.length}`);
+    }
+
+    // ============================================
+    // PROCESS CURRENT BATCH
+    // ============================================
+
+    // Fetch the actual queue items for this batch
+    const { data: queueItems, error: queueError } = await supabaseAdmin
       .from('content_queue')
       .select(`
         *,
@@ -893,36 +985,45 @@ serve(async (req) => {
           subcategory_slug
         )
       `)
+      .in('id', itemsToProcess)
       .eq('status', 'queued')
-      .order('priority', { ascending: false })
-      .limit(effectiveBatchSize);
-
-    if (queueItemIds && queueItemIds.length > 0) {
-      query = query.in('id', queueItemIds);
-    } else if (planId) {
-      query = query.eq('plan_id', planId);
-    } else if (categoryId) {
-      query = query.eq('content_plans.category_id', categoryId);
-    }
-
-    const { data: queueItems, error: queueError } = await query;
+      .order('priority', { ascending: false });
 
     if (queueError) {
       throw new Error(`Failed to fetch queue items: ${queueError.message}`);
     }
 
     if (!queueItems || queueItems.length === 0) {
+      // No more queued items in this batch (maybe already processed or deleted)
+      console.log(`[JOB:${jobId}] No queued items found in current batch, checking for more`);
+      
+      // Check remaining
+      const processedInThisBatch = itemsToProcess.length;
+      const nextRemainingIds = allItemIds.slice(processedInThisBatch);
+      
+      if (nextRemainingIds.length > 0) {
+        // Self-chain to try next batch
+        selfChain(supabaseUrl, serviceRoleKey, authHeader, {
+          jobId: jobId!,
+          remainingIds: nextRemainingIds,
+          tone,
+          wordCount,
+        });
+      } else {
+        // All done
+        await finalizeJob(supabaseAdmin, jobId!);
+      }
+      
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No queued items to process',
-        processed: 0,
-        results: [],
+        jobId,
+        message: 'Batch empty, continuing',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Processing ${queueItems.length} queue items`);
+    console.log(`[JOB:${jobId}] Processing ${queueItems.length} queue items`);
 
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
@@ -936,10 +1037,10 @@ serve(async (req) => {
       .limit(500);
 
     const existingDbTitles = existingPosts?.map(p => p.title) || [];
-    console.log(`Loaded ${existingDbTitles.length} existing titles for validation`);
 
     const results: Array<{ queueId: string; success: boolean; blogPostId?: string; error?: string }> = [];
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.expert_professional;
+    let batchBailReason: string | null = null;
 
     for (const item of queueItems) {
       try {
@@ -950,14 +1051,9 @@ serve(async (req) => {
           .eq('id', item.id);
 
         const plan = item.content_plans;
-        
-        // Find relevant category info
         const categoryInfo = CATEGORIES.find(c => c.id === plan.category_id);
-        
-        // Map to blog category
         const blogCategory = mapToBlogCategory(plan.category_id);
         
-        // Randomly decide on 1 or 2 middle images
         const useTwoMiddleImages = Math.random() < 0.5;
         const middleImageInstructions = useTwoMiddleImages
           ? `7. Include TWO image placeholders:
@@ -966,7 +1062,6 @@ serve(async (req) => {
           : `7. Include ONE image placeholder:
    - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
         
-        // Build keyword instruction with explicit requirement
         const keywordList = item.suggested_keywords?.join(', ') || 'consumer rights, dispute letter';
         const keywordInstruction = item.suggested_keywords && item.suggested_keywords.length > 0
           ? `MANDATORY KEYWORDS - Each of these MUST appear 2-3 times in the article:
@@ -1027,7 +1122,8 @@ Respond with ONLY this JSON:
 
         console.log(`Generating article: ${item.suggested_title}`);
 
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        // AI call with 1x retry on 5xx
+        let aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -1044,6 +1140,28 @@ Respond with ONLY this JSON:
           }),
         });
 
+        // Retry once on 5xx errors
+        if (aiResponse.status >= 500) {
+          console.log(`[JOB:${jobId}] AI returned ${aiResponse.status}, retrying in 5s...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.7,
+              max_tokens: 8000,
+            }),
+          });
+        }
+
         if (!aiResponse.ok) {
           if (aiResponse.status === 402) {
             throw new Error('CREDIT_EXHAUSTED: AI credit balance exhausted. Add credits in workspace settings then retry.');
@@ -1057,20 +1175,15 @@ Respond with ONLY this JSON:
         const aiData = await aiResponse.json();
         let content = aiData.choices[0]?.message?.content;
         
-        // Use robust JSON parsing
         const parsedContent = parseAIResponse(content);
 
         // === TITLE VALIDATION GATE ===
-        // Ensure the AI hasn't drifted back to banned patterns
         const titleValidation = validateTitle(parsedContent.title, existingDbTitles);
         if (!titleValidation.isValid) {
           console.error('Title validation failed:', parsedContent.title, '-', titleValidation.reason);
-          // Use the suggested title from queue instead
-          console.log('Falling back to suggested title:', item.suggested_title);
           parsedContent.title = item.suggested_title;
         }
 
-        // Validate content for AI-typical phrases
         const validationResult = validateContent(parsedContent.content);
         console.log(`Content validation for "${item.suggested_title}":`, getViolationSummary(validationResult));
 
@@ -1081,14 +1194,6 @@ Respond with ONLY this JSON:
         );
         
         console.log(`Keyword coverage: ${keywordValidation.coverage.toFixed(0)}%`);
-        if (keywordValidation.found.length > 0) {
-          console.log(`Keywords found: ${keywordValidation.found.join(', ')}`);
-        }
-        if (keywordValidation.missing.length > 0) {
-          console.log(`Keywords missing: ${keywordValidation.missing.join(', ')}`);
-        }
-        
-        // If keywords are missing, trigger remediation
         if (keywordValidation.missing.length > 0) {
           console.log(`Triggering keyword remediation for ${keywordValidation.missing.length} missing keywords...`);
           parsedContent.content = await remediateKeywords(
@@ -1098,13 +1203,11 @@ Respond with ONLY this JSON:
             parsedContent.title
           );
           
-          // Re-validate after remediation
           const recheckValidation = validateKeywordUsage(parsedContent.content, item.suggested_keywords || []);
-          console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%, Still missing: ${recheckValidation.missing.join(', ') || 'none'}`);
+          console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%`);
         }
 
-        // Generate base slug from title (collision handling happens at INSERT time)
-        logStep(item.suggested_title, 'SLUG', 'Generating base slug');
+        // Generate slug
         const slug = parsedContent.title
           .toLowerCase()
           .replace(/[^a-z0-9\s-]/g, '')
@@ -1112,173 +1215,81 @@ Respond with ONLY this JSON:
           .replace(/-+/g, '-')
           .substring(0, 80);
 
-        // Calculate read time
         const textContent = parsedContent.content.replace(/<[^>]*>/g, ' ').trim();
         const words = textContent.split(/\s+/).filter(Boolean).length;
         const readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
-        logStep(item.suggested_title, 'METRICS', `Word count: ${words}, Read time: ${readTime}`);
 
-        // === AI-GENERATED IMAGES WITH STYLE DIVERSITY ===
-        logStep(item.suggested_title, 'IMAGE_START', 'Starting image generation');
+        // === AI-GENERATED IMAGES ===
         const imageStyles = getImageStyles();
         
-        // 1. Featured image - AI generation with fallback
-        const featuredContext = await extractVisualKeywords(
-          apiKey,
-          parsedContent.title,
-          plan.category_id
-        );
-        let featuredResult = await generateAIImage(
-          supabaseAdmin,
-          apiKey,
-          parsedContent.title,
-          featuredContext,
-          `articles/${slug}-featured`,
-          imageStyles.featured
-        );
+        const featuredContext = await extractVisualKeywords(apiKey, parsedContent.title, plan.category_id);
+        let featuredResult = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, featuredContext, `articles/${slug}-featured`, imageStyles.featured);
         
-        // Pixabay fallback if AI generation fails
         if (!featuredResult.url) {
-          logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Featured image AI failed, using Pixabay');
-          featuredResult = await fetchPixabayFallback(
-            supabaseAdmin,
-            apiKey,
-            featuredContext,
-            `articles/${slug}-featured`,
-            parsedContent.title
-          );
+          featuredResult = await fetchPixabayFallback(supabaseAdmin, apiKey, featuredContext, `articles/${slug}-featured`, parsedContent.title);
         }
-        logStep(item.suggested_title, 'IMAGE_FEATURED', featuredResult.url ? 'Featured image ready' : 'No featured image');
 
-        // 2. Check for middle image placeholders and fetch if needed
         const hasMiddleImage1 = parsedContent.content.includes('{{MIDDLE_IMAGE_1}}');
         const hasMiddleImage2 = parsedContent.content.includes('{{MIDDLE_IMAGE_2}}');
-
         let middleImage1Result: { url: string | null; altText: string | null } = { url: null, altText: null };
         let middleImage2Result: { url: string | null; altText: string | null } = { url: null, altText: null };
-
-        // Check if this article type benefits from infographics
         const useInfographic = INFOGRAPHIC_ARTICLE_TYPES.includes(item.article_type as any);
         
         if (hasMiddleImage1) {
-          logStep(item.suggested_title, 'IMAGE_MIDDLE1', useInfographic ? 'Generating infographic' : 'Generating middle image 1');
-          // Wait before generating next image to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try infographic first for appropriate article types
           if (useInfographic) {
-            const infographicResult = await generateInfographic(
-              supabaseAdmin,
-              apiKey,
-              parsedContent.title,
-              item.article_type,
-              parsedContent.content,
-              `articles/${slug}-middle1`
-            );
-            
+            const infographicResult = await generateInfographic(supabaseAdmin, apiKey, parsedContent.title, item.article_type, parsedContent.content, `articles/${slug}-middle1`);
             if (infographicResult.url) {
-              logStep(item.suggested_title, 'INFOGRAPHIC_SUCCESS', 'Infographic generated successfully');
               middleImage1Result = { url: infographicResult.url, altText: infographicResult.altText };
             }
           }
-          
-          // Fallback to AI photo if infographic failed or not applicable
           if (!middleImage1Result.url) {
-            const middleContext1 = await extractVisualKeywords(
-              apiKey,
-              `${item.suggested_keywords?.[0] || plan.template_name} consumer help`,
-              plan.category_id
-            );
-            middleImage1Result = await generateAIImage(
-              supabaseAdmin,
-              apiKey,
-              parsedContent.title,
-              middleContext1,
-              `articles/${slug}-middle1`,
-              imageStyles.middle1
-            );
-            
-            // Pixabay fallback
+            const middleContext1 = await extractVisualKeywords(apiKey, `${item.suggested_keywords?.[0] || plan.template_name} consumer help`, plan.category_id);
+            middleImage1Result = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, middleContext1, `articles/${slug}-middle1`, imageStyles.middle1);
             if (!middleImage1Result.url) {
-              logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 1 AI failed, using Pixabay');
-              middleImage1Result = await fetchPixabayFallback(
-                supabaseAdmin,
-                apiKey,
-                middleContext1,
-                `articles/${slug}-middle1`,
-                parsedContent.title
-              );
+              middleImage1Result = await fetchPixabayFallback(supabaseAdmin, apiKey, middleContext1, `articles/${slug}-middle1`, parsedContent.title);
             }
           }
         }
 
         if (hasMiddleImage2) {
-          logStep(item.suggested_title, 'IMAGE_MIDDLE2', 'Generating middle image 2');
-          // Wait before generating next image to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          const middleContext2 = await extractVisualKeywords(
-            apiKey,
-            `${item.suggested_keywords?.[1] || 'dispute resolution'} advice`,
-            plan.category_id
-          );
-          middleImage2Result = await generateAIImage(
-            supabaseAdmin,
-            apiKey,
-            parsedContent.title,
-            middleContext2,
-            `articles/${slug}-middle2`,
-            imageStyles.middle2
-          );
-          
-          // Pixabay fallback
+          const middleContext2 = await extractVisualKeywords(apiKey, `${item.suggested_keywords?.[1] || 'dispute resolution'} advice`, plan.category_id);
+          middleImage2Result = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, middleContext2, `articles/${slug}-middle2`, imageStyles.middle2);
           if (!middleImage2Result.url) {
-            logStep(item.suggested_title, 'IMAGE_FALLBACK', 'Middle image 2 AI failed, using Pixabay');
-            middleImage2Result = await fetchPixabayFallback(
-              supabaseAdmin,
-              apiKey,
-              middleContext2,
-              `articles/${slug}-middle2`,
-              parsedContent.title
-            );
+            middleImage2Result = await fetchPixabayFallback(supabaseAdmin, apiKey, middleContext2, `articles/${slug}-middle2`, parsedContent.title);
           }
         }
 
-        // Create blog post with images and correct blog category (with slug collision retry)
-        logStep(item.suggested_title, 'DB_INSERT', 'Inserting blog post with retry', { slug, category: blogCategory.slug });
-        const { data: blogPost, error: postError } = await insertBlogPostWithRetry(
-          supabaseAdmin,
-          {
-            title: parsedContent.title,
-            slug: slug,
-            content: parsedContent.content,
-            excerpt: parsedContent.excerpt,
-            meta_title: parsedContent.seo_title,
-            meta_description: parsedContent.seo_description,
-            category: blogCategory.name,
-            category_slug: blogCategory.slug,
-            tags: parsedContent.suggested_tags?.slice(0, 3) || [],
-            read_time: readTime,
-            status: 'draft',
-            featured_image_url: featuredResult.url,
-            featured_image_alt: featuredResult.altText,
-            middle_image_1_url: middleImage1Result.url,
-            middle_image_1_alt: middleImage1Result.altText,
-            middle_image_2_url: middleImage2Result.url,
-            middle_image_2_alt: middleImage2Result.altText,
-            related_templates: [plan.template_slug],
-            content_plan_id: item.plan_id,
-            article_type: item.article_type,
-          }
-        );
+        // Insert blog post
+        const { data: blogPost, error: postError } = await insertBlogPostWithRetry(supabaseAdmin, {
+          title: parsedContent.title,
+          slug,
+          content: parsedContent.content,
+          excerpt: parsedContent.excerpt,
+          meta_title: parsedContent.seo_title,
+          meta_description: parsedContent.seo_description,
+          category: blogCategory.name,
+          category_slug: blogCategory.slug,
+          tags: parsedContent.suggested_tags?.slice(0, 3) || [],
+          read_time: readTime,
+          status: 'draft',
+          featured_image_url: featuredResult.url,
+          featured_image_alt: featuredResult.altText,
+          middle_image_1_url: middleImage1Result.url,
+          middle_image_1_alt: middleImage1Result.altText,
+          middle_image_2_url: middleImage2Result.url,
+          middle_image_2_alt: middleImage2Result.altText,
+          related_templates: [plan.template_slug],
+          content_plan_id: item.plan_id,
+          article_type: item.article_type,
+        });
 
         if (postError) {
-          logStep(item.suggested_title, 'DB_ERROR', postError.message, { code: postError.code, slug });
           throw new Error(`Failed to create blog post: ${postError.message}`);
         }
 
         // Update queue item
-        logStep(item.suggested_title, 'QUEUE_UPDATE', 'Marking queue item as generated');
         await supabaseAdmin
           .from('content_queue')
           .update({ 
@@ -1289,77 +1300,146 @@ Respond with ONLY this JSON:
           .eq('id', item.id);
 
         results.push({ queueId: item.id, success: true, blogPostId: blogPost.id });
-        logStep(item.suggested_title, 'SUCCESS', 'Article created successfully', { blogPostId: blogPost.id, slug });
-
-        // Add newly created title to existing titles list to prevent duplicates in same batch
         existingDbTitles.push(blogPost.title);
 
-        // Longer delay between articles for sequential processing
+        // Update job progress
+        await supabaseAdmin
+          .from('generation_jobs')
+          .update({
+            succeeded_items: supabaseAdmin.rpc ? undefined : undefined, // handled below
+          })
+          .eq('id', jobId);
+        
+        // Use raw increment via RPC-like pattern
+        await supabaseAdmin.rpc('increment_job_succeeded' as any, { job_id: jobId }).catch(() => {
+          // Fallback: read-modify-write
+        });
+
         await new Promise(resolve => setTimeout(resolve, 5000));
 
       } catch (error) {
-        // Handle Google image API errors with proper prefixes
         const errorMsg = isGoogleImageError(error) 
           ? error.message 
           : (error instanceof Error ? error.message : 'Unknown error');
-        logStep(item.suggested_title, 'ERROR', errorMsg);
-        console.error(`[ARTICLE:${item.suggested_title.substring(0, 40)}] Full error:`, error);
+        console.error(`[JOB:${jobId}] Article failed: ${item.suggested_title} - ${errorMsg}`);
         
         await supabaseAdmin
           .from('content_queue')
-          .update({ 
-            status: 'failed',
-            error_message: errorMsg,
-          })
+          .update({ status: 'failed', error_message: errorMsg })
           .eq('id', item.id);
 
-        results.push({ 
-          queueId: item.id, 
-          success: false, 
-          error: errorMsg 
-        });
+        results.push({ queueId: item.id, success: false, error: errorMsg });
 
-        // Early bail-out on credit exhaustion or rate limiting — no point continuing
-        let bailReason: string | null = null;
+        // Early bail-out on credit exhaustion or rate limiting
         if (errorMsg.startsWith('CREDIT_EXHAUSTED:') || errorMsg.startsWith('RATE_LIMITED:')) {
-          bailReason = errorMsg.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED' : 'RATE_LIMITED';
-          const reason = bailReason;
-          console.log(`[BAIL_OUT] ${reason} detected, skipping remaining items in batch`);
-          // Mark remaining items as failed too
+          batchBailReason = errorMsg.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED' : 'RATE_LIMITED';
+          console.log(`[JOB:${jobId}] [BAIL_OUT] ${batchBailReason}`);
+          
+          // Mark remaining items in current batch as failed
           for (let j = queueItems.indexOf(item) + 1; j < queueItems.length; j++) {
             const remaining = queueItems[j];
             await supabaseAdmin
               .from('content_queue')
               .update({
                 status: 'failed',
-                error_message: `${reason}: Skipped — ${reason === 'CREDIT_EXHAUSTED' ? 'AI credits exhausted' : 'Rate limit hit'} before this item could be processed.`,
+                error_message: `${batchBailReason}: Skipped — ${batchBailReason === 'CREDIT_EXHAUSTED' ? 'AI credits exhausted' : 'Rate limit hit'}.`,
               })
               .eq('id', remaining.id);
-            results.push({ queueId: remaining.id, success: false, error: `${reason}: Skipped` });
+            results.push({ queueId: remaining.id, success: false, error: `${batchBailReason}: Skipped` });
           }
           break;
         }
       }
     }
 
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
+    // ============================================
+    // UPDATE JOB PROGRESS & SELF-CHAIN
+    // ============================================
+    
+    const batchSucceeded = results.filter(r => r.success).length;
+    const batchFailed = results.filter(r => !r.success).length;
 
-    // Determine if the batch bailed out due to credit/rate issues
-    const lastFailure = results.filter(r => !r.success).pop();
-    const detectedBailReason = lastFailure?.error?.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED'
-      : lastFailure?.error?.startsWith('RATE_LIMITED:') ? 'RATE_LIMITED'
-      : lastFailure?.error === 'CREDIT_EXHAUSTED: Skipped' ? 'CREDIT_EXHAUSTED'
-      : lastFailure?.error === 'RATE_LIMITED: Skipped' ? 'RATE_LIMITED'
-      : null;
+    // Read current job state and update
+    const { data: currentJob } = await supabaseAdmin
+      .from('generation_jobs')
+      .select('succeeded_items, failed_items')
+      .eq('id', jobId)
+      .single();
+
+    const newSucceeded = (currentJob?.succeeded_items || 0) + batchSucceeded;
+    const newFailed = (currentJob?.failed_items || 0) + batchFailed;
+
+    // Calculate remaining items
+    const processedInThisBatch = itemsToProcess.length;
+    const nextRemainingIds = allItemIds.slice(processedInThisBatch);
+    
+    // Mark remaining items as failed if we need to bail
+    if (batchBailReason && nextRemainingIds.length > 0) {
+      const skipMsg = batchBailReason === 'CREDIT_EXHAUSTED' 
+        ? 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted.' 
+        : 'RATE_LIMITED: Skipped — rate limit hit.';
+      
+      // Mark all remaining queue items as failed
+      await supabaseAdmin
+        .from('content_queue')
+        .update({ status: 'failed', error_message: skipMsg })
+        .in('id', nextRemainingIds);
+
+      const totalFailed = newFailed + nextRemainingIds.length;
+      
+      await supabaseAdmin
+        .from('generation_jobs')
+        .update({
+          succeeded_items: newSucceeded,
+          failed_items: totalFailed,
+          status: 'completed',
+          bail_reason: batchBailReason,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+      
+      console.log(`[JOB:${jobId}] Bailed out: ${batchBailReason}. ${newSucceeded} succeeded, ${totalFailed} failed.`);
+    } else if (nextRemainingIds.length > 0) {
+      // More items to process — update progress and self-chain
+      await supabaseAdmin
+        .from('generation_jobs')
+        .update({
+          succeeded_items: newSucceeded,
+          failed_items: newFailed,
+        })
+        .eq('id', jobId);
+      
+      console.log(`[JOB:${jobId}] Batch done: +${batchSucceeded} succeeded, +${batchFailed} failed. ${nextRemainingIds.length} remaining. Self-chaining...`);
+      
+      // Fire-and-forget self-invocation
+      selfChain(supabaseUrl, serviceRoleKey, authHeader, {
+        jobId: jobId!,
+        remainingIds: nextRemainingIds,
+        tone,
+        wordCount,
+      });
+    } else {
+      // All items processed — finalize job
+      await supabaseAdmin
+        .from('generation_jobs')
+        .update({
+          succeeded_items: newSucceeded,
+          failed_items: newFailed,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+      
+      console.log(`[JOB:${jobId}] Complete! ${newSucceeded} succeeded, ${newFailed} failed.`);
+    }
 
     return new Response(JSON.stringify({
       success: true,
+      jobId,
       processed: results.length,
-      succeeded: successCount,
-      failed: failureCount,
-      ...(detectedBailReason && { bailReason: detectedBailReason }),
-      results,
+      succeeded: batchSucceeded,
+      failed: batchFailed,
+      ...(batchBailReason && { bailReason: batchBailReason }),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -1376,3 +1456,47 @@ Respond with ONLY this JSON:
   }
 });
 
+// ============================================
+// SELF-CHAIN HELPER
+// ============================================
+
+function selfChain(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  authHeader: string,
+  body: { jobId: string; remainingIds: string[]; tone: string; wordCount: number }
+) {
+  const functionUrl = `${supabaseUrl}/functions/v1/bulk-generate-articles`;
+  
+  // Fire-and-forget — do NOT await
+  fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/json',
+      'apikey': serviceRoleKey,
+    },
+    body: JSON.stringify(body),
+  }).catch(err => {
+    console.error(`[SELF_CHAIN] Failed to invoke next batch:`, err);
+  });
+}
+
+// Finalize a job when no more items remain
+async function finalizeJob(supabaseAdmin: SupabaseClient, jobId: string) {
+  const { data: job } = await supabaseAdmin
+    .from('generation_jobs')
+    .select('succeeded_items, failed_items')
+    .eq('id', jobId)
+    .single();
+
+  await supabaseAdmin
+    .from('generation_jobs')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', jobId);
+  
+  console.log(`[JOB:${jobId}] Finalized: ${job?.succeeded_items || 0} succeeded, ${job?.failed_items || 0} failed.`);
+}
