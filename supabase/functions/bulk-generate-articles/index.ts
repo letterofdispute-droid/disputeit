@@ -825,12 +825,65 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
     // Use service role for database and storage operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Parse body early so we can check if this is a continuation call
+    const body = await req.json() as BulkGenerateRequest;
+    const isContinuation = !!(body.jobId && body.remainingIds);
+
+    if (isContinuation) {
+      // --- CONTINUATION CALL ---
+      // Skip user auth — this was already verified on the initial call.
+      // Instead, verify the job exists and is still processing (prevents unauthorized access).
+      const { data: job, error: jobCheckError } = await supabaseAdmin
+        .from('generation_jobs')
+        .select('status')
+        .eq('id', body.jobId!)
+        .single();
+      
+      if (jobCheckError || !job) {
+        console.error(`[JOB:${body.jobId}] Continuation auth failed — job not found`);
+        return new Response(JSON.stringify({ error: 'Invalid job' }), { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      if (job.status !== 'processing') {
+        console.log(`[JOB:${body.jobId}] Job status is '${job.status}', stopping chain`);
+        return new Response(JSON.stringify({ success: true, message: `Job ${job.status}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      console.log(`[JOB:${body.jobId}] Continuation auth OK (job is processing)`);
+    } else {
+      // --- INITIAL CALL ---
+      // Full user auth check required
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const token = authHeader.replace('Bearer ', '');
+      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        console.error('Auth claims error:', claimsError);
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      const userId = claimsData.claims.sub;
+      const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: userId });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: 'Admin access required' }), { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+    }
 
     // Pre-clean stale generating items (stuck for more than 10 minutes)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -848,27 +901,6 @@ serve(async (req) => {
       console.log(`Cleaned up ${staleItems.length} stale generating items`);
     }
 
-    // Verify admin access using getClaims (works with signing-keys)
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      console.error('Auth claims error:', claimsError);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    }
-    
-    const userId = claimsData.claims.sub;
-    const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: userId });
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), { 
-        status: 403, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    }
-
-    const body = await req.json() as BulkGenerateRequest;
     const { 
       planId, 
       categoryId, 
@@ -897,21 +929,8 @@ serve(async (req) => {
 
     if (jobId && remainingIds) {
       // --- CONTINUATION CALL ---
+      // Auth & cancellation already checked above
       console.log(`[JOB:${jobId}] Continuation call with ${remainingIds.length} remaining items`);
-      
-      // Check if job was cancelled
-      const { data: job } = await supabaseAdmin
-        .from('generation_jobs')
-        .select('status')
-        .eq('id', jobId)
-        .single();
-      
-      if (job?.status === 'cancelled') {
-        console.log(`[JOB:${jobId}] Job was cancelled, stopping`);
-        return new Response(JSON.stringify({ success: true, message: 'Job cancelled' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
       
       allItemIds = remainingIds;
       itemsToProcess = remainingIds.slice(0, effectiveBatchSize);
@@ -1003,7 +1022,7 @@ serve(async (req) => {
       
       if (nextRemainingIds.length > 0) {
         // Self-chain to try next batch
-        selfChain(supabaseUrl, serviceRoleKey, authHeader, {
+        selfChain(supabaseUrl, serviceRoleKey, {
           jobId: jobId!,
           remainingIds: nextRemainingIds,
           tone,
@@ -1401,7 +1420,7 @@ Respond with ONLY this JSON:
       console.log(`[JOB:${jobId}] Batch done: +${batchSucceeded} succeeded, +${batchFailed} failed. ${nextRemainingIds.length} remaining. Self-chaining...`);
       
       // Fire-and-forget self-invocation
-      selfChain(supabaseUrl, serviceRoleKey, authHeader, {
+      selfChain(supabaseUrl, serviceRoleKey, {
         jobId: jobId!,
         remainingIds: nextRemainingIds,
         tone,
@@ -1452,7 +1471,6 @@ Respond with ONLY this JSON:
 function selfChain(
   supabaseUrl: string,
   serviceRoleKey: string,
-  authHeader: string,
   body: { jobId: string; remainingIds: string[]; tone: string; wordCount: number }
 ) {
   const functionUrl = `${supabaseUrl}/functions/v1/bulk-generate-articles`;
@@ -1461,7 +1479,7 @@ function selfChain(
   fetch(functionUrl, {
     method: 'POST',
     headers: {
-      'Authorization': authHeader,
+      'Authorization': `Bearer ${serviceRoleKey}`,
       'Content-Type': 'application/json',
       'apikey': serviceRoleKey,
     },
