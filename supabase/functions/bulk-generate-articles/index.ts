@@ -1320,8 +1320,10 @@ Respond with ONLY this JSON:
         });
 
         // Early bail-out on credit exhaustion or rate limiting — no point continuing
+        let bailReason: string | null = null;
         if (errorMsg.startsWith('CREDIT_EXHAUSTED:') || errorMsg.startsWith('RATE_LIMITED:')) {
-          const reason = errorMsg.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED' : 'RATE_LIMITED';
+          bailReason = errorMsg.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED' : 'RATE_LIMITED';
+          const reason = bailReason;
           console.log(`[BAIL_OUT] ${reason} detected, skipping remaining items in batch`);
           // Mark remaining items as failed too
           for (let j = queueItems.indexOf(item) + 1; j < queueItems.length; j++) {
@@ -1343,11 +1345,20 @@ Respond with ONLY this JSON:
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
 
+    // Determine if the batch bailed out due to credit/rate issues
+    const lastFailure = results.filter(r => !r.success).pop();
+    const detectedBailReason = lastFailure?.error?.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED'
+      : lastFailure?.error?.startsWith('RATE_LIMITED:') ? 'RATE_LIMITED'
+      : lastFailure?.error === 'CREDIT_EXHAUSTED: Skipped' ? 'CREDIT_EXHAUSTED'
+      : lastFailure?.error === 'RATE_LIMITED: Skipped' ? 'RATE_LIMITED'
+      : null;
+
     return new Response(JSON.stringify({
       success: true,
       processed: results.length,
       succeeded: successCount,
       failed: failureCount,
+      ...(detectedBailReason && { bailReason: detectedBailReason }),
       results,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
