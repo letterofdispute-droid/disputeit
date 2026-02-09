@@ -1,38 +1,41 @@
 
+# Fix: Self-Chain Stalls After Token Expiry
 
-# Add Cancel/Stop Button to Generation Progress
+## Problem
+The generation is stuck at "6 of 160" because the self-chaining mechanism breaks when your login token expires.
 
-## What Already Works
-The backend already checks for a `cancelled` status at the start of each self-chain iteration (line 909). Setting the job status to `cancelled` in the database will stop processing after the current batch of 3 finishes.
+Here's what happens:
+1. You start a 160-article batch -- your login token is sent with the request
+2. Each batch of 3 articles takes about 30-60 seconds
+3. The function finishes a batch, then calls itself to process the next batch, passing along your original login token
+4. After about an hour, your login token expires
+5. The next self-chain call fails authentication (401 Unauthorized) and silently dies
+6. The job stays stuck as "processing" forever with no more batches firing
 
-## Changes
+## Fix
 
-### 1. `src/hooks/useContentQueue.ts`
-Add a `cancelJob` mutation that updates the active `generation_jobs` row to `status: 'cancelled'` and clears the local `activeJobId`.
+### 1. `supabase/functions/bulk-generate-articles/index.ts`
 
-### 2. `src/components/admin/seo/queue/GenerationProgress.tsx`
-- Add a "Stop" button (red, with Square/StopCircle icon) next to the progress text
-- Accept `onCancel` and `isCancelling` props
-- Show confirmation before cancelling (since the current batch will still complete)
+**Skip auth check on continuation calls**: When the function is called as a continuation (has `jobId` + `remainingIds`), it was already authorized on the initial call. No need to re-verify the user token each time.
 
-### 3. `src/components/admin/seo/ContentQueue.tsx`
-- Pass the new `cancelJob` and `isCancelling` from `useContentQueue` down to `GenerationProgress`
+**Use service role for self-chain auth**: Instead of passing the user's expiring token, use the service role key (which never expires) as the Authorization header for self-chain calls.
 
-## How It Works
+Changes:
+- Move the auth check (lines 851-869) so it only runs on the **initial call** (when there is no `existingJobId`)
+- For continuation calls, verify the job exists and is still "processing" in the database (prevents unauthorized access)
+- Update `selfChain()` to use `Bearer {serviceRoleKey}` instead of the user's token
 
+### No other files change
+The frontend already has the Stop button wired up. This is purely a backend reliability fix.
+
+## How It Works After the Fix
+
+```text
+Initial call: User token verified -> job created -> process batch 1 -> self-chain with service role key
+Continuation:  Service role key used -> verify job exists & is 'processing' -> process batch 2 -> self-chain
+...continues until all 160 items are done (no token expiry possible)
 ```
-User clicks Stop -> update generation_jobs.status = 'cancelled'
-                  -> current batch (up to 3 articles) finishes
-                  -> next self-chain checks status, sees 'cancelled', stops
-                  -> remaining queued items stay as 'queued' (not marked failed)
-```
 
-The current batch will complete (up to ~30 seconds), but no new batches will start. Remaining items stay in "queued" status so they can be generated later.
+## After Deploying
 
-## Technical Details
-
-| File | Change |
-|------|--------|
-| `src/hooks/useContentQueue.ts` | Add `cancelJob` mutation + `isCancelling` state |
-| `src/components/admin/seo/queue/GenerationProgress.tsx` | Add Stop button with `onCancel` prop |
-| `src/components/admin/seo/ContentQueue.tsx` | Wire `cancelJob` to GenerationProgress |
+The current stuck job (id: `a915857f`) will need to be manually reset so you can retry the remaining 154 items. The fix prevents this from happening again on future runs.
