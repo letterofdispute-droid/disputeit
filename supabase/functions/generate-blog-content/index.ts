@@ -74,6 +74,7 @@ ${middleImageInstructions}
 CONTENT REQUIREMENTS:
 - CRITICAL: Write MINIMUM ${targetWordCount} words. Articles under ${targetWordCount} words will be rejected.
 - This is a LONG-FORM article - include 5-7 substantial sections with detailed explanations
+- Where content involves steps, tips, options, or enumerable items, present them as <ul> or <ol> lists instead of dense paragraphs. Lists improve readability and break up text.
 - ${toneInstruction}
 - Naturally incorporate the primary keywords 2-3+ times each throughout the article
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords

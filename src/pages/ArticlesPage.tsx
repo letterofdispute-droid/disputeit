@@ -5,7 +5,6 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { blogPosts as staticBlogPosts, blogCategories } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, BookOpen, Eye, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,67 @@ const getReadTime = (post: BlogPost) => {
   const words = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
   return `${Math.ceil(words / 200)} min read`;
 };
+
+const formatDate = (dateStr: string | null, style: 'short' | 'long' = 'short') => {
+  if (!dateStr) return '';
+  const opts: Intl.DateTimeFormatOptions = style === 'long'
+    ? { month: 'short', day: 'numeric', year: 'numeric' }
+    : { month: 'short', day: 'numeric' };
+  return new Date(dateStr).toLocaleDateString('en-US', opts);
+};
+
+/* ─── Article Card (shared for grid) ─── */
+const ArticleCard = ({ post, getCategoryName, size = 'default' }: { post: BlogPost; getCategoryName: (p: BlogPost) => string; size?: 'large' | 'default' }) => (
+  <Link
+    to={`/articles/${post.category_slug}/${post.slug}`}
+    className="group flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden hover:shadow-elevated hover:border-primary/30 transition-all duration-300"
+  >
+    {/* Image */}
+    <div className="relative aspect-video overflow-hidden bg-muted">
+      {post.featured_image_url ? (
+        <img
+          src={post.featured_image_url}
+          alt={post.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+          <BookOpen className="h-10 w-10 opacity-20" />
+        </div>
+      )}
+      {/* Gradient overlay for badge */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+      <Badge variant="secondary" className="absolute top-3 left-3 text-xs backdrop-blur-sm bg-secondary/80">
+        {getCategoryName(post)}
+      </Badge>
+    </div>
+
+    {/* Content */}
+    <div className="flex flex-col flex-1 p-5">
+      <h3 className={`font-serif font-semibold leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-2 ${size === 'large' ? 'text-xl' : 'text-base'}`}>
+        {post.title}
+      </h3>
+      {post.excerpt && (
+        <p className="text-muted-foreground text-sm line-clamp-2 mb-4 flex-1">
+          {post.excerpt}
+        </p>
+      )}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-auto pt-3 border-t border-border/50">
+        <span className="font-medium text-foreground/80">LoD Contributor</span>
+        <span className="text-border">·</span>
+        <span className="flex items-center gap-1">
+          <Calendar className="h-3 w-3" />
+          {formatDate(post.published_at)}
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {getReadTime(post)}
+        </span>
+      </div>
+    </div>
+  </Link>
+);
 
 const ArticlesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -93,10 +153,12 @@ const ArticlesPage = () => {
   const gridPosts = currentPage === 1 ? posts.slice(1) : posts;
   const totalGridPosts = posts.length > 1 ? posts.length - 1 : 0;
   const totalPages = Math.ceil(totalGridPosts / POSTS_PER_PAGE);
-  const startIndex = currentPage === 1 ? 0 : (currentPage - 1) * POSTS_PER_PAGE - (POSTS_PER_PAGE); // offset for hero on page 1
-  // Simpler: for page 1 we show posts[1..12], page 2 posts[13..24], etc.
   const pageStartIndex = (currentPage - 1) * POSTS_PER_PAGE;
   const paginatedPosts = gridPosts.slice(pageStartIndex, pageStartIndex + POSTS_PER_PAGE);
+
+  // Split paginated posts: first 2 are "large", rest are compact grid
+  const largePosts = paginatedPosts.slice(0, 2);
+  const compactPosts = paginatedPosts.slice(2);
 
   const handlePageChange = (page: number) => {
     setSearchParams({ page: page.toString() });
@@ -130,16 +192,18 @@ const ArticlesPage = () => {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-6 border-b border-border bg-card">
+      {/* Sticky Category Filter Bar */}
+      <section className="sticky top-0 z-30 py-4 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container-wide">
-          <div className="flex flex-wrap items-center gap-3 justify-center">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             <Link to="/articles">
-              <Badge variant="default" className="cursor-pointer">All Articles</Badge>
+              <Badge variant="default" className="cursor-pointer whitespace-nowrap">All Articles</Badge>
             </Link>
             {categories.map((category) => (
               <Link key={category.slug} to={`/articles/${category.slug}`}>
-                <Badge variant="outline" className="cursor-pointer hover:bg-muted">{category.name}</Badge>
+                <Badge variant="outline" className="cursor-pointer whitespace-nowrap hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
+                  {category.name}
+                </Badge>
               </Link>
             ))}
           </div>
@@ -150,152 +214,107 @@ const ArticlesPage = () => {
       {isLoading && (
         <section className="py-12 bg-background">
           <div className="container-wide">
-            <Card className="overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                <Skeleton className="aspect-[4/3] md:aspect-auto md:min-h-[320px]" />
-                <div className="p-8 space-y-4">
-                  <Skeleton className="h-6 w-24" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              </div>
-            </Card>
+            <Skeleton className="w-full h-[400px] rounded-lg mb-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Skeleton className="h-[300px] rounded-lg" />
+              <Skeleton className="h-[300px] rounded-lg" />
+            </div>
           </div>
         </section>
       )}
 
-      {/* Latest Article Hero Card (page 1 only) */}
+      {/* Featured Article Hero (page 1 only) */}
       {!isLoading && latestPost && currentPage === 1 && (
         <section className="py-10 md:py-14 bg-background">
           <div className="container-wide">
-            <Card className="group overflow-hidden border-2 hover:border-primary/40 hover:shadow-elevated transition-all duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-2 md:max-h-[300px] md:overflow-hidden">
-                {/* Image */}
-                <div className="relative overflow-hidden bg-muted h-[200px] md:h-full">
-                  {latestPost.featured_image_url ? (
-                    <img
-                      src={latestPost.featured_image_url}
-                      alt={latestPost.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <BookOpen className="h-16 w-16 opacity-30" />
-                    </div>
-                  )}
+            <Link
+              to={`/articles/${latestPost.category_slug}/${latestPost.slug}`}
+              className="group relative block rounded-lg overflow-hidden h-[320px] md:h-[400px]"
+            >
+              {/* Background image */}
+              {latestPost.featured_image_url ? (
+                <img
+                  src={latestPost.featured_image_url}
+                  alt={latestPost.title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                  <BookOpen className="h-20 w-20 text-muted-foreground/20" />
                 </div>
+              )}
 
-                {/* Content */}
-                <div className="flex flex-col justify-center p-6 md:p-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge variant="secondary">{getCategoryName(latestPost)}</Badge>
-                    <Badge className="bg-accent/15 text-accent border-accent/25 hover:bg-accent/20">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Most Recent
-                    </Badge>
-                    {latestPost.featured && (
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Featured</Badge>
-                    )}
-                  </div>
+              {/* Dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
 
-                  <CardTitle className="font-serif text-2xl md:text-3xl mb-3 group-hover:text-primary transition-colors leading-tight">
-                    <Link to={`/articles/${latestPost.category_slug}/${latestPost.slug}`}>
-                      {latestPost.title}
-                    </Link>
-                  </CardTitle>
+              {/* Badges top-left */}
+              <div className="absolute top-4 left-4 flex items-center gap-2">
+                <Badge variant="secondary" className="backdrop-blur-sm bg-secondary/80">
+                  {getCategoryName(latestPost)}
+                </Badge>
+                <Badge className="bg-accent/90 text-accent-foreground backdrop-blur-sm">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Most Recent
+                </Badge>
+              </div>
 
-                  {latestPost.excerpt && (
-                    <p className="text-muted-foreground mb-5 line-clamp-3 text-base leading-relaxed">
-                      {latestPost.excerpt}
-                    </p>
+              {/* Content at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+                <h2 className="font-serif text-2xl md:text-4xl font-bold text-white mb-3 leading-tight max-w-3xl group-hover:text-primary-foreground/90 transition-colors">
+                  {latestPost.title}
+                </h2>
+                {latestPost.excerpt && (
+                  <p className="text-white/70 text-base md:text-lg line-clamp-2 max-w-2xl mb-4">
+                    {latestPost.excerpt}
+                  </p>
+                )}
+                <div className="flex items-center gap-4 text-sm text-white/60">
+                  <span className="font-medium text-white/80">LoD Contributor</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {formatDate(latestPost.published_at, 'long')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {getReadTime(latestPost)}
+                  </span>
+                  {latestPost.views > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Eye className="h-3.5 w-3.5" />
+                      {latestPost.views.toLocaleString()}
+                    </span>
                   )}
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                    <span className="font-medium text-foreground">{latestPost.author}</span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {latestPost.published_at && new Date(latestPost.published_at).toLocaleDateString('en-US', {
-                        month: 'short', day: 'numeric', year: 'numeric'
-                      })}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {getReadTime(latestPost)}
-                    </span>
-                    {latestPost.views > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3.5 w-3.5" />
-                        {latestPost.views.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <Button asChild className="w-fit">
-                    <Link to={`/articles/${latestPost.category_slug}/${latestPost.slug}`}>
-                      Read Article <ArrowRight className="h-4 w-4 ml-1" />
-                    </Link>
-                  </Button>
                 </div>
               </div>
-            </Card>
+            </Link>
           </div>
         </section>
       )}
 
       {/* Articles Grid */}
-      {!isLoading && (
+      {!isLoading && paginatedPosts.length > 0 && (
         <section className="py-10 md:py-14 bg-muted/30">
           <div className="container-wide">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-8">
-              {currentPage === 1 ? 'More Articles' : 'Latest Articles'}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedPosts.map((post) => (
-                <Card key={post.slug} className="group flex flex-col hover:shadow-elevated hover:border-primary/30 transition-all duration-300 overflow-hidden">
-                  {post.featured_image_url && (
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={post.featured_image_url}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-                  <CardHeader className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="w-fit">{getCategoryName(post)}</Badge>
-                      {post.featured && (
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">Featured</Badge>
-                      )}
-                    </div>
-                    <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                      <Link to={`/articles/${post.category_slug}/${post.slug}`}>{post.title}</Link>
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">{post.excerpt}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground/80">{post.author}</span>
-                      <span className="text-border">·</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {post.published_at && new Date(post.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {getReadTime(post)}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* Subtle divider instead of heading */}
+            {currentPage === 1 && (
+              <div className="border-t border-border mb-10" />
+            )}
 
-            {paginatedPosts.length === 0 && !latestPost && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No articles published yet. Check back soon!</p>
+            {/* First row: 2 large cards */}
+            {largePosts.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {largePosts.map((post) => (
+                  <ArticleCard key={post.slug} post={post} getCategoryName={getCategoryName} size="large" />
+                ))}
+              </div>
+            )}
+
+            {/* Remaining rows: 3-column compact grid */}
+            {compactPosts.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {compactPosts.map((post) => (
+                  <ArticleCard key={post.slug} post={post} getCategoryName={getCategoryName} />
+                ))}
               </div>
             )}
 
@@ -329,6 +348,14 @@ const ArticlesPage = () => {
                 </PaginationContent>
               </Pagination>
             )}
+          </div>
+        </section>
+      )}
+
+      {!isLoading && paginatedPosts.length === 0 && !latestPost && (
+        <section className="py-16 bg-background">
+          <div className="container-wide text-center">
+            <p className="text-muted-foreground">No articles published yet. Check back soon!</p>
           </div>
         </section>
       )}
