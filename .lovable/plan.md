@@ -1,42 +1,58 @@
 
 
-# Fix: Accurate Stats, Working Cancel, and Correct Progress
+# Fix: Reliable Progress Tracking and Accurate Stats
 
-## Issues Found
+## Problems Identified
 
-### Issue 1: Stats hit the 1000-row limit
-`useQueueStats` fetches all rows from `content_queue` with `.select('status')` but **no `.limit()` override**. Supabase defaults to 1000 rows max. The table currently has **980 rows** -- it will silently truncate data as soon as more items are added, making all counts wrong.
+### 1. "Generating: 0" is almost always zero
+The `useQueueStats` hook counts items where `status = 'generating'` in the `content_queue` table. However, items only spend a few seconds in `generating` status while being actively processed. Between batches (which take ~2 minutes), zero items are in that status. This makes the stat permanently misleading.
 
-**Fix**: Use Supabase's `count: 'exact', head: true` with status filters to get accurate counts directly from the database without fetching rows.
+**Fix**: Replace the "Generating" stat with an "In Progress" indicator derived from the `generation_jobs` table. If any job has `status = 'processing'`, show its progress (e.g., "In Progress: 6/148") instead of the meaningless queue-level count.
 
-### Issue 2: Cancel fails with "No active job to cancel"
-The cancel button checks `activeJobId` state, which is `null` because the on-mount check (line 148-163) races with rendering. There IS a processing job (`f86dcc1d`) in the database right now. The check runs once on mount but if it completes before the component fully renders, the state is set but then the `isBulkGenerating` computed value (`!!activeJobId && activeJob?.status === 'processing'`) may not yet have the activeJob data loaded -- meaning the progress bar shows but `cancelJob` fires before the activeJob query resolves.
+### 2. Progress doesn't survive leaving the screen
+The `activeJob` polling query (line 85-98 in `useContentQueue.ts`) uses the regular Supabase client, which requires a valid user session. When the user leaves the screen:
+- The browser may suspend the tab (especially on mobile)
+- The auth token may expire after ~1 hour
+- When they return, the on-mount check finds the processing job ID, but the subsequent poll query to `generation_jobs` fails silently (RLS denies access with expired token)
+- `activeJob` stays null, so `generationProgress` is null, and the progress bar either disappears or shows stale data
 
-The deeper problem: `isBulkGenerating` on line 349 is `bulkGenerateMutation.isPending || (!!activeJobId && activeJob?.status === 'processing')`. After page reload, `bulkGenerateMutation.isPending` is false, and `activeJob` data hasn't loaded yet, so `isBulkGenerating` briefly flickers. But the progress bar shows because `selectedIds.size` is 0 but the fallback `total` picks up `stats.failed` (3), showing "0 of 3".
+**Fix**: Add error handling to the `activeJob` query and auto-refresh the session before polling. Also add a `visibilitychange` listener to immediately refetch when the tab becomes active again.
 
-**Fix**: Make cancel work even without local `activeJobId` state -- query for any active processing job directly from the database when cancelling.
+### 3. Stats and progress not refreshing together
+The queue stats (`useQueueStats`) poll every 5 seconds independently. The `activeJob` polls every 4 seconds. The queue items poll every 5 seconds. These are not coordinated, leading to inconsistent numbers across different parts of the dashboard.
 
-### Issue 3: Progress shows "0 of 3" instead of real job progress
-When `generationProgress` is null (because `activeJob` hasn't loaded yet), the fallback on line 135 uses `selectedIds.size || stats.failed` which equals 3 (the failed count).
-
-**Fix**: Once `activeJobId` is set from the mount check, wait for the `activeJob` query to load before showing progress. Use the job's real `total_items`.
+**Fix**: Invalidate `queue-stats` whenever the `activeJob` data changes (new succeeded/failed counts), ensuring the stats bar updates in sync with progress.
 
 ## Changes
 
-### 1. `src/hooks/useQueueStats.ts` -- Use count queries instead of fetching all rows
-Replace the current approach (fetch all rows, count client-side) with parallel count queries per status. This scales to any number of rows.
+### File 1: `src/hooks/useContentQueue.ts`
 
-### 2. `src/hooks/useContentQueue.ts` -- Fix cancel to always find active job
-- Update `cancelJobMutation` to query for the active processing job from the database if `activeJobId` is null, then cancel it
-- Ensure `isBulkGenerating` properly reflects when there's an active job even after page reload
+- Add `visibilitychange` listener that immediately refetches `activeJob` and `queueItems` when tab becomes visible again
+- Add error handling to the `activeJob` query — if it fails (auth expired), attempt session refresh
+- Invalidate `queue-stats` inside the `activeJob` polling effect when succeeded/failed counts change
+- Handle `cancelled` status in the completion effect (currently only handles `completed`)
 
-### 3. `src/components/admin/seo/ContentQueue.tsx` -- Fix progress total fallback
-- Don't show progress bar until `generationProgress` has real data from the job
-- Remove the misleading `selectedIds.size || stats.failed` fallback
+### File 2: `src/hooks/useQueueStats.ts`
+
+- Add a `processing_jobs` count: query `generation_jobs` for any job with `status = 'processing'`, returning `succeeded_items` and `total_items`
+- Export this alongside existing stats so the UI can show real progress
+
+### File 3: `src/components/admin/seo/queue/QueueStats.tsx`
+
+- Replace the "Generating: 0" stat with dynamic content:
+  - If a processing job exists: show "In Progress: X/Y" (from the job's succeeded + failed / total)
+  - If no processing job: hide the field or show "Generating: 0" as before
+
+### File 4: `src/components/admin/seo/ContentQueue.tsx`
+
+- Ensure the progress bar shows immediately on mount when a processing job exists (don't wait for `generationProgress` to be non-null; show a loading state instead)
+
+## Technical Details
 
 | File | Change |
 |------|--------|
-| `src/hooks/useQueueStats.ts` | Replace row-fetching with parallel count queries |
-| `src/hooks/useContentQueue.ts` | Fix cancel to query DB for active job; fix isBulkGenerating |
-| `src/components/admin/seo/ContentQueue.tsx` | Only show progress when job data is loaded |
+| `src/hooks/useContentQueue.ts` | Add visibility listener, error handling for activeJob poll, handle cancelled status |
+| `src/hooks/useQueueStats.ts` | Add processing job progress to stats |
+| `src/components/admin/seo/queue/QueueStats.tsx` | Show "In Progress: X/Y" instead of "Generating: 0" |
+| `src/components/admin/seo/ContentQueue.tsx` | Show loading progress state on mount when job exists |
 
