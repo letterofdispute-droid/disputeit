@@ -30,6 +30,8 @@ export default function ContentQueue() {
     deleteItems,
     getFailedIds,
     generationProgress,
+    cancelJob,
+    isCancelling,
   } = useContentQueue();
 
   // Use separate hook for accurate global stats (not limited by pagination)
@@ -134,6 +136,8 @@ export default function ContentQueue() {
           currentTitle={generationProgress?.currentTitle}
           currentBatch={generationProgress?.currentBatch}
           totalBatches={generationProgress?.totalBatches}
+          onCancel={cancelJob}
+          isCancelling={isCancelling}
         />
       )}
 

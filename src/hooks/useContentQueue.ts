@@ -312,6 +312,34 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       }
     : null;
 
+  // Cancel active job
+  const cancelJobMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeJobId) throw new Error('No active job to cancel');
+      const { error } = await supabase
+        .from('generation_jobs')
+        .update({ status: 'cancelled' })
+        .eq('id', activeJobId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setActiveJobId(null);
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      toast({
+        title: 'Generation stopping',
+        description: 'The current batch will finish, then no more will start. Remaining items stay queued.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to cancel',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     queueItems,
     isLoading,
@@ -331,5 +359,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     isResettingStale: resetStaleMutation.isPending,
     hasGeneratingItems,
     activeJobId,
+    cancelJob: cancelJobMutation.mutate,
+    isCancelling: cancelJobMutation.isPending,
   };
 }
