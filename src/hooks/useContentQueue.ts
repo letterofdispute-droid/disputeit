@@ -183,6 +183,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       let totalSucceeded = 0;
       let totalFailed = 0;
       let processedItems = 0;
+      let bailReason: string | null = null;
 
       // Set initial progress
       setGenerationProgress({ 
@@ -223,6 +224,28 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         } else {
           totalSucceeded += data.succeeded || 0;
           totalFailed += data.failed || 0;
+          
+          // Check for bail-out signal from edge function
+          if (data.bailReason === 'CREDIT_EXHAUSTED' || data.bailReason === 'RATE_LIMITED') {
+            bailReason = data.bailReason;
+            processedItems += chunk.length;
+            
+            // Mark all remaining chunks as failed in DB
+            const remainingIds = chunks.slice(i + 1).flat();
+            if (remainingIds.length > 0) {
+              const skipMsg = bailReason === 'CREDIT_EXHAUSTED' 
+                ? 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted.' 
+                : 'RATE_LIMITED: Skipped — rate limit hit.';
+              await supabase
+                .from('content_queue')
+                .update({ status: 'failed', error_message: skipMsg })
+                .in('id', remainingIds);
+              totalFailed += remainingIds.length;
+            }
+            
+            console.log(`[BAIL_OUT] ${bailReason} — stopped after batch ${i + 1}/${totalBatches}, skipped ${remainingIds?.length || 0} remaining items`);
+            break;
+          }
         }
 
         processedItems += chunk.length;
@@ -243,7 +266,8 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         success: true,
         succeeded: totalSucceeded,
         failed: totalFailed,
-        totalBatches
+        totalBatches,
+        bailReason,
       };
     },
     onSuccess: (data) => {
@@ -251,13 +275,26 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
-      const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
-      const failureHint = data.failed > 0 ? getFailureHint() : '';
-      toast({
-        title: 'Batch generation complete',
-        description: `Generated ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
-        variant: data.failed > 0 ? 'destructive' : 'default',
-      });
+      
+      if (data.bailReason) {
+        const remaining = data.failed;
+        const reason = data.bailReason === 'CREDIT_EXHAUSTED' 
+          ? 'AI credits exhausted' 
+          : 'Rate limit hit';
+        toast({
+          title: 'Generation paused',
+          description: `${reason} after ${data.succeeded} articles. ${remaining} remaining items skipped. Top up your API credits, then retry failed items.`,
+          variant: 'destructive',
+        });
+      } else {
+        const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
+        const failureHint = data.failed > 0 ? getFailureHint() : '';
+        toast({
+          title: 'Batch generation complete',
+          description: `Generated ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
+          variant: data.failed > 0 ? 'destructive' : 'default',
+        });
+      }
     },
     onError: (error) => {
       setGenerationProgress(null);
@@ -293,6 +330,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       let totalSucceeded = 0;
       let totalFailed = 0;
       let processedItems = 0;
+      let bailReason: string | null = null;
 
       // Set initial progress
       setGenerationProgress({ 
@@ -305,7 +343,6 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         
-        // Update progress for current batch
         setGenerationProgress({
           current: processedItems,
           total: ids.length,
@@ -329,11 +366,31 @@ export function useContentQueue(planId?: string, categoryId?: string) {
           console.log(`[Retry] Batch ${i + 1} completed: ${data.succeeded} succeeded, ${data.failed} failed`);
           totalSucceeded += data.succeeded || 0;
           totalFailed += data.failed || 0;
+          
+          // Check for bail-out signal
+          if (data.bailReason === 'CREDIT_EXHAUSTED' || data.bailReason === 'RATE_LIMITED') {
+            bailReason = data.bailReason;
+            processedItems += chunk.length;
+            
+            const remainingIds = chunks.slice(i + 1).flat();
+            if (remainingIds.length > 0) {
+              const skipMsg = bailReason === 'CREDIT_EXHAUSTED' 
+                ? 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted.' 
+                : 'RATE_LIMITED: Skipped — rate limit hit.';
+              await supabase
+                .from('content_queue')
+                .update({ status: 'failed', error_message: skipMsg })
+                .in('id', remainingIds);
+              totalFailed += remainingIds.length;
+            }
+            
+            console.log(`[Retry] [BAIL_OUT] ${bailReason} — stopped after batch ${i + 1}/${totalBatches}`);
+            break;
+          }
         }
 
         processedItems += chunk.length;
         
-        // Update progress after batch completes
         setGenerationProgress({
           current: processedItems,
           total: ids.length,
@@ -341,7 +398,6 @@ export function useContentQueue(planId?: string, categoryId?: string) {
           totalBatches
         });
 
-        // Refetch queue to update UI between batches
         await queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       }
       
@@ -350,7 +406,8 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         success: true,
         succeeded: totalSucceeded, 
         failed: totalFailed,
-        totalBatches
+        totalBatches,
+        bailReason,
       };
     },
     onSuccess: (data) => {
@@ -358,13 +415,25 @@ export function useContentQueue(planId?: string, categoryId?: string) {
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
-      const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
-      const failureHint = data.failed > 0 ? getFailureHint() : '';
-      toast({
-        title: 'Retry complete',
-        description: `Retried ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
-        variant: data.failed > 0 ? 'destructive' : 'default',
-      });
+      
+      if (data.bailReason) {
+        const reason = data.bailReason === 'CREDIT_EXHAUSTED' 
+          ? 'AI credits exhausted' 
+          : 'Rate limit hit';
+        toast({
+          title: 'Retry paused',
+          description: `${reason} after ${data.succeeded} articles. Remaining items skipped. Top up your API credits, then retry again.`,
+          variant: 'destructive',
+        });
+      } else {
+        const batchInfo = data.totalBatches > 1 ? ` (${data.totalBatches} batches)` : '';
+        const failureHint = data.failed > 0 ? getFailureHint() : '';
+        toast({
+          title: 'Retry complete',
+          description: `Retried ${data.succeeded} articles, ${data.failed} failed${batchInfo}${failureHint}`,
+          variant: data.failed > 0 ? 'destructive' : 'default',
+        });
+      }
     },
     onError: (error) => {
       setGenerationProgress(null);
