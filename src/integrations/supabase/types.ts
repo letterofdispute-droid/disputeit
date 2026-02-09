@@ -591,6 +591,39 @@ export type Database = {
         }
         Relationships: []
       }
+      embedding_queue: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          priority: number | null
+          processed_at: string | null
+          trigger_source: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          priority?: number | null
+          processed_at?: string | null
+          trigger_source: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          priority?: number | null
+          processed_at?: string | null
+          trigger_source?: string
+        }
+        Relationships: []
+      }
       evidence_photos: {
         Row: {
           created_at: string

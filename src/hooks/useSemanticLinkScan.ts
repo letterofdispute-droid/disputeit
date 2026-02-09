@@ -39,6 +39,20 @@ export interface EmbeddingJob {
   completed_at: string | null;
 }
 
+export interface OrphanArticle {
+  id: string;
+  slug: string;
+  title: string;
+  category_slug: string;
+  published_at: string;
+  inbound_count: number;
+}
+
+export interface QueueStats {
+  pending: number;
+  processed: number;
+}
+
 export function useSemanticLinkScan() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,6 +76,36 @@ export function useSemanticLinkScan() {
       const job = query.state.data as EmbeddingJob | null;
       return job?.status === 'processing' ? 2000 : false;
     },
+  });
+
+  // Fetch orphan articles
+  const { data: orphanArticles, refetch: refetchOrphans } = useQuery({
+    queryKey: ['orphan-articles'],
+    queryFn: async (): Promise<OrphanArticle[]> => {
+      const { data, error } = await supabase.rpc('get_orphan_articles');
+      if (error) throw error;
+      return (data || []) as OrphanArticle[];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch embedding queue stats
+  const { data: queueStats, refetch: refetchQueueStats } = useQuery({
+    queryKey: ['embedding-queue-stats'],
+    queryFn: async (): Promise<QueueStats> => {
+      const { count: pending } = await supabase
+        .from('embedding_queue')
+        .select('*', { count: 'exact', head: true })
+        .is('processed_at', null);
+
+      const { count: processed } = await supabase
+        .from('embedding_queue')
+        .select('*', { count: 'exact', head: true })
+        .not('processed_at', 'is', null);
+
+      return { pending: pending || 0, processed: processed || 0 };
+    },
+    staleTime: 30 * 1000, // 30 seconds
   });
 
   // Semantic scan mutation
@@ -280,6 +324,69 @@ export function useSemanticLinkScan() {
     },
   });
 
+  // Process embedding queue manually
+  const processQueueMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('process-embedding-queue', {
+        body: { limit: 10 },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Queue processing failed');
+      return data as { success: boolean; processed: number; linksCreated: number };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['embedding-queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({
+        title: 'Queue processed',
+        description: `Processed ${data.processed} items, created ${data.linksCreated} link suggestions`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Queue processing failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Run maintenance tasks
+  const runMaintenanceMutation = useMutation({
+    mutationFn: async (tasks?: ('process_queue' | 'rescan_stale' | 'detect_orphans')[]) => {
+      const { data, error } = await supabase.functions.invoke('semantic-maintenance', {
+        body: { tasks },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Maintenance failed');
+      return data as { 
+        success: boolean; 
+        queueProcessed: number; 
+        staleRescanned: number; 
+        orphansDetected: number;
+      };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['embedding-queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
+      queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
+      toast({
+        title: 'Maintenance complete',
+        description: `Queue: ${data.queueProcessed}, Rescanned: ${data.staleRescanned}, Orphans: ${data.orphansDetected}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Maintenance failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     // Semantic scan
     semanticScan: scanMutation.mutate,
@@ -311,5 +418,19 @@ export function useSemanticLinkScan() {
     
     // Stats
     fetchEmbeddingStats,
+    
+    // Orphan detection
+    orphanArticles: orphanArticles || [],
+    refetchOrphans,
+    
+    // Queue management
+    queueStats: queueStats || { pending: 0, processed: 0 },
+    refetchQueueStats,
+    processQueue: processQueueMutation.mutate,
+    isProcessingQueue: processQueueMutation.isPending,
+    
+    // Maintenance
+    runMaintenance: runMaintenanceMutation.mutate,
+    isRunningMaintenance: runMaintenanceMutation.isPending,
   };
 }

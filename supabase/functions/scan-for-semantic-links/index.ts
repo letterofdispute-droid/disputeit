@@ -13,6 +13,7 @@ interface ScanRequest {
   batchSize?: number;
   similarityThreshold?: number;
   maxLinksPerArticle?: number;
+  includeBidirectional?: boolean;
 }
 
 interface SemanticMatch {
@@ -91,7 +92,8 @@ serve(async (req) => {
       categorySlug, 
       batchSize = 10,
       similarityThreshold = 0.75,
-      maxLinksPerArticle = 5
+      maxLinksPerArticle = 5,
+      includeBidirectional = true,
     } = await req.json() as ScanRequest;
 
     console.log('[SEMANTIC-SCAN] Starting scan', { postId, categorySlug, batchSize, similarityThreshold });
@@ -247,7 +249,77 @@ serve(async (req) => {
             console.error(`[SEMANTIC-SCAN] Failed to insert suggestions for ${source.title}:`, insertError);
           } else {
             totalSuggestions += newSuggestions.length;
-            console.log(`[SEMANTIC-SCAN] Created ${newSuggestions.length} suggestions for ${source.title}`);
+            console.log(`[SEMANTIC-SCAN] Created ${newSuggestions.length} outbound suggestions for ${source.title}`);
+          }
+        }
+
+        // BIDIRECTIONAL: Find existing articles that should link TO this source article
+        let inboundSuggestions = 0;
+        if (includeBidirectional && source.content_id) {
+          const sourceEmbedding = typeof source.embedding === 'string' 
+            ? JSON.parse(source.embedding) 
+            : source.embedding;
+
+          // Get all other embeddings to check for inbound links
+          const { data: otherEmbeddings } = await supabaseAdmin
+            .from('article_embeddings')
+            .select('id, content_id, slug, title, embedding, category_id, primary_keyword, article_role')
+            .eq('embedding_status', 'completed')
+            .not('embedding', 'is', null)
+            .neq('id', source.id);
+
+          if (otherEmbeddings) {
+            for (const candidate of otherEmbeddings) {
+              if (!candidate.content_id || !candidate.embedding) continue;
+
+              // Check if reverse suggestion already exists
+              const { data: existingReverse } = await supabaseAdmin
+                .from('link_suggestions')
+                .select('id')
+                .eq('source_post_id', candidate.content_id)
+                .eq('target_slug', source.slug)
+                .maybeSingle();
+
+              if (existingReverse) continue;
+
+              try {
+                const candidateEmbedding = typeof candidate.embedding === 'string'
+                  ? JSON.parse(candidate.embedding)
+                  : candidate.embedding;
+
+                // Calculate similarity
+                const similarity = cosineSimilarity(candidateEmbedding, sourceEmbedding);
+
+                if (similarity > similarityThreshold) {
+                  const { error: reverseInsertError } = await supabaseAdmin
+                    .from('link_suggestions')
+                    .insert({
+                      source_post_id: candidate.content_id,
+                      target_type: source.content_type || 'article',
+                      target_slug: source.slug,
+                      target_title: source.title,
+                      target_embedding_id: source.id,
+                      anchor_text: source.primary_keyword || source.title.slice(0, 50),
+                      anchor_source: 'semantic-reverse',
+                      semantic_score: similarity,
+                      relevance_score: Math.round(similarity * 100),
+                      hierarchy_valid: true,
+                      status: 'pending',
+                    });
+
+                  if (!reverseInsertError) {
+                    inboundSuggestions++;
+                    totalSuggestions++;
+                  }
+                }
+              } catch (e) {
+                // Skip invalid embeddings
+              }
+            }
+          }
+
+          if (inboundSuggestions > 0) {
+            console.log(`[SEMANTIC-SCAN] Created ${inboundSuggestions} inbound suggestions for ${source.title}`);
           }
         }
 
@@ -260,7 +332,7 @@ serve(async (req) => {
         results.push({ 
           articleId: source.id, 
           title: source.title, 
-          suggestionsFound: newSuggestions.length 
+          suggestionsFound: newSuggestions.length + inboundSuggestions,
         });
 
       } catch (error) {
@@ -345,6 +417,26 @@ function calculateKeywordOverlap(keywordsA: string[], keywordsB: string[]): numb
   
   const union = setA.size + setB.size - intersection;
   return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Cosine similarity between two vectors
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  return magnitude === 0 ? 0 : dotProduct / magnitude;
 }
 
 /**
