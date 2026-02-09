@@ -129,13 +129,13 @@ export default function ContentQueue() {
       <QueueStats stats={stats} />
 
       {/* Progress indicator during generation */}
-      {(isBulkGenerating || isRetrying) && (
+      {(isBulkGenerating || isRetrying) && generationProgress && (
         <GenerationProgress
-          current={generationProgress?.current || 0}
-          total={generationProgress?.total || selectedIds.size || stats.failed}
-          currentTitle={generationProgress?.currentTitle}
-          currentBatch={generationProgress?.currentBatch}
-          totalBatches={generationProgress?.totalBatches}
+          current={generationProgress.current}
+          total={generationProgress.total}
+          currentTitle={generationProgress.currentTitle}
+          currentBatch={generationProgress.currentBatch}
+          totalBatches={generationProgress.totalBatches}
           onCancel={cancelJob}
           isCancelling={isCancelling}
         />
