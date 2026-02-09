@@ -87,6 +87,7 @@ const AdminBlog = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
+  const [publishedCount, setPublishedCount] = useState(0);
   const { toast } = useToast();
 
   // Debounce search input
@@ -110,6 +111,7 @@ const AdminBlog = () => {
   // Fetch draft count separately (for header display)
   useEffect(() => {
     fetchDraftCount();
+    fetchPublishedCount();
   }, []);
 
   const fetchDraftCount = async () => {
@@ -118,6 +120,14 @@ const AdminBlog = () => {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'draft');
     setDraftCount(count || 0);
+  };
+
+  const fetchPublishedCount = async () => {
+    const { count } = await supabase
+      .from('blog_posts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'published');
+    setPublishedCount(count || 0);
   };
 
   const fetchPosts = useCallback(async () => {
@@ -302,6 +312,9 @@ const AdminBlog = () => {
           <h1 className="font-serif text-3xl font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground">
             {totalCount.toLocaleString()} total posts
+            {publishedCount > 0 && (
+              <span className="ml-2 text-success">• {publishedCount.toLocaleString()} published</span>
+            )}
             {draftCount > 0 && (
               <span className="ml-2 text-amber-600">• {draftCount} drafts</span>
             )}
