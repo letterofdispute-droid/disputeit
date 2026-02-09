@@ -1,87 +1,62 @@
 
-# Switch Blog Image Generation to Direct Google Gemini API
 
-## Step 1: Add your Google API key
+# Two Improvements: AI List Usage + Articles Page Redesign
 
-You'll need to get a free API key from Google AI Studio:
-1. Go to https://aistudio.google.com/apikey
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the key
+## 1. AI Content: Encourage Bullet/Numbered Lists
 
-We'll store it as a backend secret called `GOOGLE_GEMINI_API_KEY`.
+The AI currently generates articles as walls of `<p>` tags. The fix is simple -- update the content generation prompts in both edge functions to explicitly instruct the AI to use `<ul>`/`<ol>` lists where appropriate.
 
-## Step 2: Update 3 edge functions
+### Changes:
 
-All three functions that currently call the Lovable gateway for image generation will be switched to call Google's API directly. The endpoint changes from `https://ai.gateway.lovable.dev/v1/chat/completions` to `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent`.
+**`supabase/functions/generate-blog-content/index.ts`** (standalone generator)
+- Add a new instruction to the CONTENT REQUIREMENTS section: "Where content involves steps, tips, options, or enumerable items, present them as `<ul>` or `<ol>` lists instead of dense paragraphs. Lists improve readability and break up text."
 
-### Files to modify:
+**`supabase/functions/bulk-generate-articles/index.ts`** (~line 994-1000, content requirements)
+- Same instruction added to the bulk generation system prompt.
 
-**`supabase/functions/generate-blog-image/index.ts`** (standalone image generation)
-- Switch from `LOVABLE_API_KEY` to `GOOGLE_GEMINI_API_KEY`
-- Call Google's native API format instead of OpenAI-compatible format
-- Add structured error handling: return categorized errors (`CREDIT_EXHAUSTED:`, `RATE_LIMITED:`, `AI_ERROR:`) matching the existing pattern from the article generation system
-- Return proper HTTP status codes (402, 429, 500) so callers can bail out
+This is a soft instruction ("where appropriate") so the AI will use lists when they naturally fit (actionable steps, rights, checklists) but still write flowing prose for narrative sections.
 
-**`supabase/functions/bulk-generate-articles/index.ts`** (~lines 482-500, ~lines 728-739)
-- Update the `generateAIImage()` function to use Google's API directly
-- Update the `generateInfographic()` function to use Google's API directly
-- On error, propagate categorized error prefixes so the queue system marks items correctly and stops the batch
+---
 
-**`supabase/functions/generate-infographic/index.ts`** (~line 384-388)
-- Same API switch as above
+## 2. Articles Page Redesign
 
-### Google API request format:
+The current `/articles` page has a standard hero card + 3-column grid layout. Here's an alternate design inspired by modern editorial sites:
 
-```text
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=API_KEY
+### New Layout: "Editorial Magazine" Style
 
-Body:
-{
-  "contents": [{ "parts": [{ "text": "prompt" }] }],
-  "generationConfig": {
-    "responseModalities": ["TEXT", "IMAGE"]
-  }
-}
-```
+**Hero Section** (keep existing dark header)
+- No changes to the Knowledge Center header
 
-### Google API response format:
+**Featured Article** (redesigned)
+- Full-width card with the image as a subtle background gradient overlay instead of a side-by-side split
+- Title overlaid on a dark gradient at the bottom of the image (magazine cover style)
+- Category badge + "Most Recent" badge floating top-left
+- Read time and date at the bottom
+- Height constrained to ~400px with the image covering the full card
 
-```text
-{
-  "candidates": [{
-    "content": {
-      "parts": [
-        { "inlineData": { "mimeType": "image/png", "data": "base64..." } },
-        { "text": "description" }
-      ]
-    }
-  }]
-}
-```
+**Article Grid** (redesigned from 3-column cards to mixed layout)
+- First row: 2 large cards (50/50 split) with images on top, content below
+- Remaining rows: 3-column grid with compact cards
+- Each card has: image with aspect-ratio-video, category badge overlaid on the image (top-left), title (2-line clamp), excerpt (2-line clamp), author/date footer
+- Hover effect: slight lift + primary border accent (keep existing)
+- Remove the separate "More Articles" heading; use a subtle divider line instead
 
-## Step 3: Robust error handling for stability
+**Category Filter Bar** (enhanced)
+- Sticky on scroll (sticky top with bg blur)
+- Horizontal scrollable on mobile
+- Active category gets a filled primary background instead of outline
 
-Each function will implement:
+**Visual Polish**
+- Cards get a subtle gradient overlay on images (transparent to dark at bottom) for overlaid text
+- Consistent rounded corners and shadow-sm baseline
+- Pagination stays the same
 
-1. **Pre-flight check**: Verify `GOOGLE_GEMINI_API_KEY` exists before doing any work
-2. **HTTP status mapping**:
-   - 429 from Google -> return `RATE_LIMITED:` error, HTTP 429
-   - 403 (quota exceeded) -> return `CREDIT_EXHAUSTED:` error, HTTP 402
-   - 5xx from Google -> return `AI_ERROR:` error, HTTP 500
-3. **Batch bail-out**: In `bulk-generate-articles`, when an image generation call returns a rate-limit or quota error, the function stops processing further items in the batch immediately (matching the existing `CREDIT_EXHAUSTED` bail-out pattern)
-4. **No silent failures**: Every error is logged and surfaced to the caller with a clear message
+### Files Modified:
+- `src/pages/ArticlesPage.tsx` -- complete redesign of the page layout
 
-## What stays the same
-
-- The image prompts (realistic photography requirements) stay identical
-- The base64-to-storage upload logic stays identical
-- The response format returned to the frontend stays identical
-- All other AI calls (article text generation, SEO, etc.) continue using the Lovable gateway
-- The `FailureSummary` component already handles these error categories in the UI
-
-## Cost impact
-
-- Google's free tier: ~1500 requests/day at no cost
-- Same `gemini-2.0-flash-exp` model (image generation variant)
-- Your workspace credits will no longer be consumed for image generation
+### Technical Details:
+- No new dependencies needed
+- Uses existing Tailwind classes and UI components
+- Image loading stays lazy
+- Pagination logic unchanged
+- Category filter and data fetching unchanged
