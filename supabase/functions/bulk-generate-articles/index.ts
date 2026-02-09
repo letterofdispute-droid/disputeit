@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
 import { validateContent, getViolationSummary, validateTitle, BANNED_TITLE_STARTERS } from "../_shared/contentValidator.ts";
+import { generateImageWithGoogle, imageResultToBuffer, isGoogleImageError, shouldBailOut } from "../_shared/googleImageGen.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -482,70 +483,20 @@ Think: What would a professional stock photographer capture for this topic?`;
   try {
     console.log(`Generating AI image for: ${title} (style: ${styleVariant})`);
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
-        messages: [{ role: 'user', content: imagePrompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI image generation failed:', response.status, errorText);
+    const geminiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!geminiKey) {
+      console.error('GOOGLE_GEMINI_API_KEY not configured');
       return { url: null, altText: null };
     }
 
-    const data = await response.json();
-    
-    // Extract image from response - handle both formats
-    const message = data.choices[0]?.message;
-    let base64Data: string | null = null;
-    
-    // Format 1: images array (newer format)
-    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
-      const imagePart = message.images.find((part: any) => part.type === 'image_url');
-      if (imagePart?.image_url?.url) {
-        base64Data = imagePart.image_url.url;
-      }
-    }
-    
-    // Format 2: content array (older format)
-    if (!base64Data && message?.content && Array.isArray(message.content)) {
-      const imagePart = message.content.find((part: any) => part.type === 'image_url');
-      if (imagePart?.image_url?.url) {
-        base64Data = imagePart.image_url.url;
-      }
-    }
-
-    if (!base64Data) {
-      console.error('No image in AI response');
-      return { url: null, altText: null };
-    }
-    
-    // Extract the actual base64 data
-    const base64Match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
-    let imageBuffer: Uint8Array;
-    let imageExtension = 'png';
-    
-    if (base64Match) {
-      imageExtension = base64Match[1];
-      const base64String = base64Match[2];
-      imageBuffer = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
-    } else {
-      // Assume raw base64
-      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-    }
+    const result = await generateImageWithGoogle(imagePrompt, geminiKey);
+    const { buffer, extension } = imageResultToBuffer(result);
 
     // Upload to Supabase storage
     const { error: uploadError } = await supabase.storage
       .from('blog-images')
-      .upload(`${storagePath}.${imageExtension}`, imageBuffer, {
-        contentType: `image/${imageExtension}`,
+      .upload(`${storagePath}.${extension}`, buffer, {
+        contentType: result.mimeType,
         upsert: true,
       });
 
@@ -554,17 +505,21 @@ Think: What would a professional stock photographer capture for this topic?`;
       return { url: null, altText: null };
     }
 
-    // Get public URL
     const { data: urlData } = supabase.storage
       .from('blog-images')
-      .getPublicUrl(`${storagePath}.${imageExtension}`);
+      .getPublicUrl(`${storagePath}.${extension}`);
 
-    // Generate SEO alt text
+    // Generate SEO alt text (still uses Lovable gateway - text only, cheap)
     const altText = await generateSEOAltText(apiKey, title, context);
 
     console.log(`AI image uploaded: ${urlData.publicUrl}`);
     return { url: urlData.publicUrl, altText };
   } catch (error) {
+    // Re-throw Google API errors so batch processing can bail out
+    if (isGoogleImageError(error)) {
+      console.error(`AI image error (${error.category}): ${error.message}`);
+      throw error;
+    }
     console.error('Error generating AI image:', error);
     return { url: null, altText: null };
   }
@@ -725,65 +680,22 @@ async function generateInfographic(
   try {
     console.log(`[INFOGRAPHIC] Attempting infographic for "${title}" (type: ${articleType})`);
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
-        messages: [{ role: 'user', content: buildInfographicPrompt(title, articleType, content) }],
-        modalities: ['image', 'text'],
-      }),
-    });
-
-    if (!response.ok) {
-      console.log('[INFOGRAPHIC] Generation failed, will fallback to photo');
+    const geminiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!geminiKey) {
+      console.log('[INFOGRAPHIC] GOOGLE_GEMINI_API_KEY not configured, will fallback to photo');
       return { url: null, altText: null, isInfographic: false };
     }
 
-    const data = await response.json();
-    const message = data.choices[0]?.message;
-    let base64Data: string | null = null;
-    
-    // Extract image from response
-    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
-      const imagePart = message.images.find((part: any) => part.type === 'image_url');
-      if (imagePart?.image_url?.url) {
-        base64Data = imagePart.image_url.url;
-      }
-    }
-    
-    if (!base64Data && message?.content && Array.isArray(message.content)) {
-      const imagePart = message.content.find((part: any) => part.type === 'image_url');
-      if (imagePart?.image_url?.url) {
-        base64Data = imagePart.image_url.url;
-      }
-    }
-
-    if (!base64Data) {
-      console.log('[INFOGRAPHIC] No image in response');
-      return { url: null, altText: null, isInfographic: false };
-    }
-
-    // Upload to storage
-    const base64Match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
-    let imageBuffer: Uint8Array;
-    let imageExtension = 'png';
-    
-    if (base64Match) {
-      imageExtension = base64Match[1];
-      const base64String = base64Match[2];
-      imageBuffer = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
-    } else {
-      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-    }
+    const result = await generateImageWithGoogle(
+      buildInfographicPrompt(title, articleType, content),
+      geminiKey
+    );
+    const { buffer, extension } = imageResultToBuffer(result);
 
     const { error: uploadError } = await supabase.storage
       .from('blog-images')
-      .upload(`${storagePath}-infographic.${imageExtension}`, imageBuffer, {
-        contentType: `image/${imageExtension}`,
+      .upload(`${storagePath}-infographic.${extension}`, buffer, {
+        contentType: result.mimeType,
         upsert: true,
       });
 
@@ -794,13 +706,18 @@ async function generateInfographic(
 
     const { data: urlData } = supabase.storage
       .from('blog-images')
-      .getPublicUrl(`${storagePath}-infographic.${imageExtension}`);
+      .getPublicUrl(`${storagePath}-infographic.${extension}`);
 
     const altText = `Infographic: ${title.substring(0, 80)} - visual guide with key points`;
     console.log(`[INFOGRAPHIC] Success: ${urlData.publicUrl}`);
     
     return { url: urlData.publicUrl, altText: altText.substring(0, 125), isInfographic: true };
   } catch (error) {
+    // Re-throw Google API errors so batch processing can bail out
+    if (isGoogleImageError(error)) {
+      console.error(`[INFOGRAPHIC] Error (${error.category}): ${error.message}`);
+      throw error;
+    }
     console.error('[INFOGRAPHIC] Error:', error);
     return { url: null, altText: null, isInfographic: false };
   }
@@ -1380,7 +1297,10 @@ Respond with ONLY this JSON:
         await new Promise(resolve => setTimeout(resolve, 5000));
 
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        // Handle Google image API errors with proper prefixes
+        const errorMsg = isGoogleImageError(error) 
+          ? error.message 
+          : (error instanceof Error ? error.message : 'Unknown error');
         logStep(item.suggested_title, 'ERROR', errorMsg);
         console.error(`[ARTICLE:${item.suggested_title.substring(0, 40)}] Full error:`, error);
         
@@ -1398,20 +1318,21 @@ Respond with ONLY this JSON:
           error: errorMsg 
         });
 
-        // Early bail-out on credit exhaustion — no point continuing without credits
-        if (errorMsg.startsWith('CREDIT_EXHAUSTED:')) {
-          console.log('[BAIL_OUT] Credit balance exhausted, skipping remaining items in batch');
+        // Early bail-out on credit exhaustion or rate limiting — no point continuing
+        if (errorMsg.startsWith('CREDIT_EXHAUSTED:') || errorMsg.startsWith('RATE_LIMITED:')) {
+          const reason = errorMsg.startsWith('CREDIT_EXHAUSTED:') ? 'CREDIT_EXHAUSTED' : 'RATE_LIMITED';
+          console.log(`[BAIL_OUT] ${reason} detected, skipping remaining items in batch`);
           // Mark remaining items as failed too
-          for (let j = items.indexOf(item) + 1; j < items.length; j++) {
-            const remaining = items[j];
+          for (let j = queueItems.indexOf(item) + 1; j < queueItems.length; j++) {
+            const remaining = queueItems[j];
             await supabaseAdmin
               .from('content_queue')
               .update({
                 status: 'failed',
-                error_message: 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted before this item could be processed.',
+                error_message: `${reason}: Skipped — ${reason === 'CREDIT_EXHAUSTED' ? 'AI credits exhausted' : 'Rate limit hit'} before this item could be processed.`,
               })
               .eq('id', remaining.id);
-            results.push({ queueId: remaining.id, success: false, error: 'CREDIT_EXHAUSTED: Skipped' });
+            results.push({ queueId: remaining.id, success: false, error: `${reason}: Skipped` });
           }
           break;
         }
