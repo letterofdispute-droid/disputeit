@@ -97,7 +97,7 @@ const faqCategories = [
       },
       {
         question: 'Can I get a refund if I\'m not satisfied?',
-        answer: 'Yes! We offer a 30-day money-back guarantee. If you\'re not satisfied with your letter for any reason, contact us for a full refund—no questions asked.',
+        answer: 'If you experience a technical issue with your letter, please contact us at support@letterofdispute.com and we\'ll work to resolve it promptly.',
       },
       {
         question: 'Is my payment information secure?',
