@@ -14,18 +14,20 @@ export function useQueueStats() {
   return useQuery({
     queryKey: ['queue-stats'],
     queryFn: async () => {
-      // Fetch only status column for all items (no limit)
-      const { data, error } = await supabase
-        .from('content_queue')
-        .select('status');
+      // Fetch queue statuses and actual published blog post count in parallel
+      const [{ data, error }, { count: publishedCount, error: publishedError }] = await Promise.all([
+        supabase.from('content_queue').select('status'),
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
+      ]);
       
       if (error) throw error;
+      if (publishedError) throw publishedError;
 
       const stats: QueueStats = {
         queued: 0,
         generating: 0,
         generated: 0,
-        published: 0,
+        published: publishedCount || 0,
         failed: 0,
         total: 0,
       };
@@ -36,7 +38,6 @@ export function useQueueStats() {
           case 'queued': stats.queued++; break;
           case 'generating': stats.generating++; break;
           case 'generated': stats.generated++; break;
-          case 'published': stats.published++; break;
           case 'failed': stats.failed++; break;
         }
       }
