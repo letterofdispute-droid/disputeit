@@ -8,6 +8,7 @@ import QueueActions from './queue/QueueActions';
 import QueueTable from './queue/QueueTable';
 import GenerationProgress from './queue/GenerationProgress';
 import QueuePagination from './queue/QueuePagination';
+import FailureSummary from './queue/FailureSummary';
 
 const ITEMS_PER_PAGE = 50;
 
@@ -134,6 +135,11 @@ export default function ContentQueue() {
           currentBatch={generationProgress?.currentBatch}
           totalBatches={generationProgress?.totalBatches}
         />
+      )}
+
+      {/* Failure Summary Banner */}
+      {stats.failed > 0 && (
+        <FailureSummary failedItems={queueItems?.filter(i => i.status === 'failed') || []} />
       )}
 
       {/* Filters and Actions */}
