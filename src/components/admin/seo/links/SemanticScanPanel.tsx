@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, Pause, RotateCcw, AlertTriangle, Trash2, Zap } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, Pause, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Clock, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +21,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [batchSize, setBatchSize] = useState(10);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [showOrphans, setShowOrphans] = useState(false);
 
   const {
     semanticScan,
@@ -37,6 +38,14 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     isRetrying,
     resetEmbeddings,
     isResetting,
+    orphanArticles,
+    refetchOrphans,
+    queueStats,
+    refetchQueueStats,
+    processQueue,
+    isProcessingQueue,
+    runMaintenance,
+    isRunningMaintenance,
   } = useSemanticLinkScan();
 
   // Fetch embedding stats on mount and when job changes
@@ -74,6 +83,16 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const handleRefreshStats = async () => {
     const stats = await fetchEmbeddingStats();
     setEmbeddingStats(stats);
+    refetchQueueStats();
+    refetchOrphans();
+  };
+
+  const handleProcessQueue = () => {
+    processQueue();
+  };
+
+  const handleRunMaintenance = () => {
+    runMaintenance(['process_queue', 'rescan_stale', 'detect_orphans']);
   };
 
   const embeddingProgress = embeddingStats 
@@ -82,6 +101,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
   const isJobProcessing = activeJob?.status === 'processing';
   const jobProgress = getJobProgress(activeJob);
+  const hasOrphans = orphanArticles.length > 0;
+  const hasPendingQueue = queueStats.pending > 0;
 
   return (
     <Card className="border-primary/20">
@@ -91,16 +112,94 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
             <Brain className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">Semantic Link Scanner</CardTitle>
           </div>
-          <Badge variant="secondary" className="text-xs">
-            <Sparkles className="h-3 w-3 mr-1" />
-            AI-Powered
-          </Badge>
+          <div className="flex items-center gap-2">
+            {hasPendingQueue && (
+              <Badge variant="secondary" className="text-xs">
+                <Clock className="h-3 w-3 mr-1" />
+                {queueStats.pending} queued
+              </Badge>
+            )}
+            <Badge variant="secondary" className="text-xs">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI-Powered
+            </Badge>
+          </div>
         </div>
         <CardDescription>
-          Uses vector embeddings to find semantically related content for internal linking
+          Uses vector embeddings with bidirectional discovery for intelligent internal linking
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Orphan Alert */}
+        {hasOrphans && (
+          <Collapsible open={showOrphans} onOpenChange={setShowOrphans}>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Link2Off className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-700">
+                      {orphanArticles.length} orphan article{orphanArticles.length !== 1 ? 's' : ''} detected
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">No inbound links</span>
+                    {showOrphans ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-3 max-h-32 overflow-y-auto space-y-1">
+                  {orphanArticles.slice(0, 10).map((article) => (
+                    <div key={article.id} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-background/50">
+                      <span className="truncate flex-1 mr-2">{article.title}</span>
+                      <Badge variant="outline" className="text-xs shrink-0">{article.category_slug}</Badge>
+                    </div>
+                  ))}
+                  {orphanArticles.length > 10 && (
+                    <p className="text-xs text-muted-foreground text-center pt-1">
+                      +{orphanArticles.length - 10} more orphans
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Run a semantic scan to generate inbound link suggestions for these articles.
+                </p>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+        )}
+
+        {/* Embedding Queue Alert */}
+        {hasPendingQueue && (
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">
+                  {queueStats.pending} article{queueStats.pending !== 1 ? 's' : ''} waiting for embedding
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleProcessQueue}
+                disabled={isProcessingQueue}
+              >
+                {isProcessingQueue ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Play className="h-3 w-3 mr-1" />
+                )}
+                Process Now
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              New published articles are automatically queued for embedding and bidirectional linking.
+            </p>
+          </div>
+        )}
+
         {/* Embedding Stats */}
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -301,8 +400,27 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               </>
             ) : (
               <>
-                <Brain className="h-4 w-4 mr-2" />
-                Semantic Scan
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                Bidirectional Scan
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={handleRunMaintenance}
+            disabled={isRunningMaintenance || isJobProcessing}
+            variant="outline"
+            size="sm"
+          >
+            {isRunningMaintenance ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Wrench className="h-4 w-4 mr-2" />
+                Maintenance
               </>
             )}
           </Button>
@@ -310,7 +428,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
         {(embeddingStats?.completed ?? 0) < 2 && !isJobProcessing && (
           <p className="text-xs text-muted-foreground">
-            Need at least 2 embedded articles to perform semantic scanning. Click "Bulk Generate Embeddings" to start.
+            Need at least 2 embedded articles to perform semantic scanning. Click "Generate Embeddings" to start.
           </p>
         )}
 
@@ -390,11 +508,11 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
           <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
             <div className="flex items-center gap-2 mb-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-sm font-medium">Finding semantic connections...</span>
+              <span className="text-sm font-medium">Finding bidirectional connections...</span>
             </div>
             <Progress value={undefined} className="h-1.5" />
             <p className="text-xs text-muted-foreground mt-2">
-              Comparing article embeddings using vector similarity
+              Comparing embeddings for both outbound and inbound link opportunities
             </p>
           </div>
         )}
