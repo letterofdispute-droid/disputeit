@@ -491,7 +491,6 @@ export type Database = {
           plan_id: string | null
           priority: number | null
           published_at: string | null
-          started_at: string | null
           status: string
           suggested_keywords: string[] | null
           suggested_title: string
@@ -506,7 +505,6 @@ export type Database = {
           plan_id?: string | null
           priority?: number | null
           published_at?: string | null
-          started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
           suggested_title: string
@@ -521,7 +519,6 @@ export type Database = {
           plan_id?: string | null
           priority?: number | null
           published_at?: string | null
-          started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
           suggested_title?: string

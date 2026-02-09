@@ -1,26 +1,37 @@
 
-# Fix: Add `started_at` Timestamp for Accurate Timeout Detection
+# Fix: Queue Published Count + Blog Posts Published Count
 
 ## Problem
-Stale-item detection uses `created_at`, which can be hours/days before processing starts. This causes false-positive timeouts on old queued items that just began generating.
+The SEO Queue tab shows "Published: 318" which only reflects items tracked in the `content_queue` table. The actual `blog_posts` table has 753 published posts. These numbers diverge because many posts were published directly or before the queue system existed.
 
-## Changes
+## Solution
 
-### 1. Database Migration
-- Add `started_at TIMESTAMPTZ DEFAULT NULL` column to `content_queue`
-- Update the `recover_stale_generating_items()` function to use `started_at` instead of `created_at`
+### 1. Queue Stats: Show actual published blog post count
+**File: `src/hooks/useQueueStats.ts`**
+- Add a second query to count published posts from the `blog_posts` table (`status = 'published'`, count only, head request)
+- Replace the `published` stat with this real count from `blog_posts`
+- Keep the queue-specific statuses (queued, generating, generated, failed) from `content_queue` as they are -- those are accurate for queue operations
 
-### 2. Edge Function (`supabase/functions/bulk-generate-articles/index.ts`)
-- Line ~841: Change stale pre-clean query from `.lt('created_at', tenMinutesAgo)` to `.lt('started_at', tenMinutesAgo)`
-- Line ~947-950: When marking item as `generating`, also set `started_at: new Date().toISOString()`
+### 2. Blog Posts page: Add published count to header
+**File: `src/pages/admin/AdminBlog.tsx`**
+- Fetch published count alongside the existing draft count (similar pattern -- `select('*', { count: 'exact', head: true }).eq('status', 'published')`)
+- Update the subtitle from `"755 total posts . 2 drafts"` to `"755 total posts . 753 published . 2 drafts"`
 
-### 3. Frontend (`src/hooks/useContentQueue.ts`)
-- Add `started_at: string | null` to the `ContentQueueItem` interface
-- In `getStaleGeneratingItems()`, change the threshold check from `new Date(item.created_at)` to `new Date(item.started_at || item.created_at)` (fallback to `created_at` for items without `started_at`)
+## Technical Details
 
-## Files Modified
-| File | Change |
-|------|--------|
-| Database migration | Add `started_at` column, update recovery function |
-| `supabase/functions/bulk-generate-articles/index.ts` | Set `started_at` on generating, use it for stale detection |
-| `src/hooks/useContentQueue.ts` | Add to interface, use for stale detection |
+**useQueueStats.ts** changes:
+```typescript
+// Add parallel query for actual published blog posts
+const [queueData, publishedCount] = await Promise.all([
+  supabase.from('content_queue').select('status'),
+  supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published')
+]);
+// Use publishedCount.count for stats.published instead of counting queue items
+```
+
+**AdminBlog.tsx** changes:
+- Add `publishedCount` state alongside existing `draftCount`
+- Fetch in `fetchPublishedCount` (same pattern as `fetchDraftCount`)
+- Display: `{totalCount} total posts . {publishedCount} published . {draftCount} drafts`
+
+Both changes are minimal -- no new components, no layout changes.

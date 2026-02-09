@@ -14,7 +14,6 @@ export interface ContentQueueItem {
   blog_post_id: string | null;
   generated_at: string | null;
   published_at: string | null;
-  started_at: string | null;
   error_message: string | null;
   created_at: string;
   content_plans?: {
@@ -137,7 +136,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     
     return queueItems.filter(item => 
       item.status === 'generating' && 
-      new Date(item.started_at || item.created_at) < thresholdTime
+      new Date(item.created_at) < thresholdTime
     );
   }, [queueItems]);
 
