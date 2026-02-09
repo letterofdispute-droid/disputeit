@@ -1,73 +1,35 @@
 
 
-# Articles Page Redesign - Hero Latest Article Layout
+# Fix: Hero Card Image Fit + Middle Image Caching Bug
 
-## Overview
+## Issue 1: Hero Card on /articles - Image not filling container
 
-Redesign the `/articles` page to feature the most recent article as a prominent full-width hero card at the top, followed by a clean grid of remaining articles below. This creates a magazine-style layout that immediately draws attention to the newest content.
+The hero image container uses `h-[200px] md:h-auto`. On desktop, `h-auto` makes the image container match the content column height, but the image itself doesn't always fill it because the content column can be taller than the image's natural height.
 
-## Design Concept
+**Fix:** Constrain the overall card height on desktop so the image always fills. Set `md:h-[280px]` on the entire grid (not the image container), and let the image container fill with `h-full`. This keeps the card compact and the image always fills its space.
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  Hero Section (Knowledge Center heading)            │
-└─────────────────────────────────────────────────────┘
-│  Category Filter Badges                             │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  ┌─────────────────────┬───────────────────────┐    │
-│  │                     │  Category Badge        │    │
-│  │   Featured Image    │  LATEST ARTICLE TITLE  │    │
-│  │   (large)           │  Excerpt text...       │    │
-│  │                     │  Author · Date · Read  │    │
-│  │                     │  [Read Article →]      │    │
-│  └─────────────────────┴───────────────────────┘    │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
-│  │ Article  │  │ Article  │  │ Article  │          │
-│  │ Card 2   │  │ Card 3   │  │ Card 4   │          │
-│  └──────────┘  └──────────┘  └──────────┘          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
-│  │ Card 5   │  │ Card 6   │  │ Card 7   │          │
-│  └──────────┘  └──────────┘  └──────────┘          │
-│                                                     │
-│  Pagination                                         │
-└─────────────────────────────────────────────────────┘
-```
+- File: `src/pages/ArticlesPage.tsx`
+- Change the grid div to have a fixed desktop height: `md:max-h-[300px]`
+- Set the image container to `h-[200px] md:h-full` so it stretches to fill the card
 
-## Key Changes
+## Issue 2: Middle images missing on first blog post load
 
-### 1. Latest Article Hero Card
-- The most recent article (first in the list) gets a full-width, two-column card layout
-- Left side: large featured image with hover zoom effect
-- Right side: category badge, title (larger font), full excerpt, author info, date, read time, and a prominent "Read Article" button
-- On mobile: stacks vertically (image on top, content below)
+The blog post query uses the global React Query `staleTime` of 5 minutes. When navigating between articles via SPA links, React Query may serve stale or transitional data, causing the `useMemo` that processes middle image placeholders to run before the full post data (with `middle_image_1_url`) is available. On refresh, a fresh fetch occurs and images appear correctly.
 
-### 2. Remove Separate "Featured Articles" Section
-- Currently there are two separate sections: "Featured Articles" and "Latest Articles"
-- Merge into one flow: the latest article is the hero, everything else follows in the grid
-- Featured badge still shown on articles marked as featured, but no separate section
+**Fix:** Override the query's caching behavior for the `blog-post` query to always fetch fresh data, ensuring middle image URLs are available on first render.
 
-### 3. Improved Article Cards in Grid
-- Add subtle hover elevation and border-primary accent on hover
-- Ensure consistent card heights with line-clamped titles (2 lines) and excerpts (2 lines)
-- Author name shown on each card
+- File: `src/pages/ArticlePage.tsx`
+- Add `staleTime: 0` and `refetchOnMount: true` to the `blog-post` query options
+- This ensures every article page navigation triggers a fresh database fetch, guaranteeing middle image data is present on first render
 
-### 4. Visual Polish
-- Add a subtle gradient overlay on the hero card image for better text contrast if text overlaps
-- Slightly reduce hero section padding to bring content higher
-- Add "Most Recent" label/badge on the hero card
+### Technical Details
 
-## Technical Details
+**ArticlesPage.tsx** - Hero card layout fix:
+- Change the grid container to include `md:max-h-[300px] md:overflow-hidden`
+- Set the image div to `h-[200px] md:h-full`
+- This ensures the image always fills its half of the card
 
-### File: `src/pages/ArticlesPage.tsx`
-- Extract the first post from `posts` array as `latestPost`
-- Remaining posts go into paginated grid (skip first post on page 1)
-- Replace the separate featured/regular sections with:
-  1. A hero card component for `latestPost` (only on page 1)
-  2. A unified grid for the rest
-- The hero card uses a `grid grid-cols-1 md:grid-cols-2` layout with the image on the left and content on the right
-
-### No new files needed
-All changes are contained within `ArticlesPage.tsx`.
+**ArticlePage.tsx** - Caching fix:
+- Add `staleTime: 0` and `refetchOnMount: true` to the blog-post query
+- This overrides the global 5-minute staleTime for individual article pages, similar to the pattern already used in admin queries
 
