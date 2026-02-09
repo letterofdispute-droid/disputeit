@@ -82,7 +82,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
   });
 
   // Poll for active job progress
-  const { data: activeJob } = useQuery({
+  const { data: activeJob, refetch: refetchActiveJob } = useQuery({
     queryKey: ['generation-job', activeJobId],
     queryFn: async () => {
       if (!activeJobId) return null;
@@ -91,24 +91,42 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         .select('*')
         .eq('id', activeJobId)
         .single();
-      if (error) throw error;
+      if (error) {
+        // If auth expired, try refreshing session
+        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+          await supabase.auth.refreshSession();
+        }
+        throw error;
+      }
       return data;
     },
     enabled: !!activeJobId,
     refetchInterval: activeJobId ? 4000 : false,
   });
 
-  // When active job completes, show toast and clean up
+  // Invalidate queue-stats whenever activeJob progress changes
+  useEffect(() => {
+    if (activeJob && activeJob.status === 'processing') {
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+    }
+  }, [activeJob?.succeeded_items, activeJob?.failed_items]);
+
+  // When active job completes or is cancelled, show toast and clean up
   useEffect(() => {
     if (!activeJob || !activeJobId) return;
     
-    if (activeJob.status === 'completed') {
+    if (activeJob.status === 'completed' || activeJob.status === 'cancelled') {
       setActiveJobId(null);
       queryClient.invalidateQueries({ queryKey: ['content-queue'] });
       queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
       
-      if (activeJob.bail_reason) {
+      if (activeJob.status === 'cancelled') {
+        toast({
+          title: 'Generation cancelled',
+          description: `Completed ${activeJob.succeeded_items} articles before stopping. ${activeJob.failed_items} failed.`,
+        });
+      } else if (activeJob.bail_reason) {
         const reason = activeJob.bail_reason === 'CREDIT_EXHAUSTED' 
           ? 'AI credits exhausted' 
           : 'Rate limit hit';
@@ -144,6 +162,19 @@ export function useContentQueue(planId?: string, categoryId?: string) {
     const interval = setInterval(() => { refetch(); }, 5000);
     return () => clearInterval(interval);
   }, [hasGeneratingItems, activeJobId, refetch]);
+
+  // Visibility listener: refetch everything when tab becomes active
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refetch();
+        if (activeJobId) refetchActiveJob();
+        queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [activeJobId, refetch, refetchActiveJob, queryClient]);
 
   // Check for active jobs on mount (handles page reload)
   useEffect(() => {

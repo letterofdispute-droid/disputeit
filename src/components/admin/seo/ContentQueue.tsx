@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
+import { useContentQueue } from '@/hooks/useContentQueue';
 import { useQueueStats } from '@/hooks/useQueueStats';
 import QueueStats from './queue/QueueStats';
 import QueueFilters from './queue/QueueFilters';
@@ -129,7 +129,7 @@ export default function ContentQueue() {
       <QueueStats stats={stats} />
 
       {/* Progress indicator during generation */}
-      {(isBulkGenerating || isRetrying) && generationProgress && (
+      {generationProgress && (
         <GenerationProgress
           current={generationProgress.current}
           total={generationProgress.total}
