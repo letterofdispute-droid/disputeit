@@ -1,20 +1,25 @@
-import { Target, ShieldCheck, Clock } from 'lucide-react';
+import { Target, ShieldCheck, Clock, Camera } from 'lucide-react';
 
 const proofPoints = [
   {
     icon: Target,
     title: 'Certainty',
-    description: 'Pre-validated letter templates for your exact dispute type. No guesswork, no trial and error.',
+    description: '500+ templates built for specific dispute types. No prompt engineering needed.',
   },
   {
     icon: ShieldCheck,
     title: 'Correctness',
-    description: 'Legal-safe language that won\'t weaken your claim. Every word is purposeful.',
+    description: 'Purpose-trained models produce legal-safe language with proper citations. Generic AI may weaken your case.',
+  },
+  {
+    icon: Camera,
+    title: 'Evidence Support',
+    description: 'Attach up to 10 photos directly embedded in your PDF. ChatGPT can\'t do that.',
   },
   {
     icon: Clock,
     title: 'Time Saved',
-    description: '5 minutes instead of hours. Skip the prompt engineering and get straight to results.',
+    description: '5 minutes from start to professional PDF. No back-and-forth with a chatbot.',
   },
 ];
 
@@ -28,13 +33,13 @@ const WhyNotChatGPT = () => {
             Why Not Just Use ChatGPT?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Generic AI tools produce inconsistent results. Purpose-built letter templates deliver 
-            predictable, professional letters every time.
+            Our models are trained specifically for consumer disputes. Generic AI produces 
+            inconsistent, potentially harmful results.
           </p>
         </div>
 
         {/* 3-Column Proof Points */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12">
           {proofPoints.map((point, index) => (
             <div 
               key={index} 
