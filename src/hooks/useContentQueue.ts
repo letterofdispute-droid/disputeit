@@ -52,7 +52,7 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
-export function useContentQueue(planId?: string, categoryId?: string) {
+export function useContentQueue(planId?: string, categoryId?: string, statusFilter?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
@@ -62,7 +62,7 @@ export function useContentQueue(planId?: string, categoryId?: string) {
 
   // Fetch queue items with optional filtering
   const { data: queueItems, isLoading, error, refetch } = useQuery({
-    queryKey: ['content-queue', planId, categoryId],
+    queryKey: ['content-queue', planId, categoryId, statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('content_queue')
@@ -77,9 +77,11 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         query = query.eq('plan_id', planId);
         // No limit for specific plan - need all items for accurate progress stats
       } else {
-        // For global queue view, fetch all items (no limit) to ensure
-        // filtered views (e.g. failed items) are always complete
-        query = query.limit(2000);
+        // Apply status filter server-side to avoid hitting the 1000-row PostgREST limit
+        if (statusFilter && statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
+        query = query.limit(1000);
       }
 
       const { data, error } = await query;
