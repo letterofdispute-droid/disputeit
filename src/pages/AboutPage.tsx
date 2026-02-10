@@ -229,12 +229,17 @@ const AboutPage = () => {
           <div className="max-w-3xl mx-auto">
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-semibold text-foreground mb-3">Important Notice</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-3">
                 Letter of Dispute is an independent, privately-owned service. We are not a law firm, 
                 do not provide legal advice, and have no affiliation with any government agency 
                 (including the FTC, CFPB, or any state attorney general). All letter templates are 
                 AI-generated with editorial oversight and are provided "as is" for informational 
                 purposes only. For legal matters, please consult a licensed attorney in your jurisdiction.
+              </p>
+              <p className="text-sm text-muted-foreground italic">
+                Author names appearing on our articles are editorial pen names (pseudonyms) used for creative purposes. 
+                They do not represent real individuals, and no contributor is a legal professional. All author biographies 
+                are fictional narratives inspired by common consumer experiences.
               </p>
             </div>
           </div>

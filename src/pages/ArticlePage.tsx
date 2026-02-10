@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import lodIconImg from '@/assets/ld-logo-icon.svg';
 import { useState, useMemo, useEffect } from 'react';
+import { getAuthorByName, type Author } from '@/data/authors';
 import { toast } from 'sonner';
 import RelatedTemplatesCTA from '@/components/article/RelatedTemplatesCTA';
 import { trackArticleView } from '@/hooks/useGTM';
@@ -297,9 +298,12 @@ const ArticlePage = () => {
     });
   }, [post?.content, post?.middle_image_1_url, post?.middle_image_2_url, post?.middle_image_1_alt, post?.middle_image_2_alt, post?.title]);
 
-  // Branded author display - always use LoD Contributor
-  const displayAuthor = "LoD Contributor";
-  const authorInitials = "LoD";
+  // Author display - look up from authors data, fall back to generic
+  const authorData: Author | undefined = post ? getAuthorByName(post.author) : undefined;
+  const displayAuthor = authorData?.name || post?.author || "LoD Editorial Team";
+  const authorInitials = authorData ? authorData.name.split(' ').map(n => n[0]).join('') : "LoD";
+  const authorAvatar = authorData?.avatar || lodIconImg;
+  const authorBio = authorData?.shortBio || "Our editorial team at Letter Of Dispute helps consumers navigate disputes with clear, actionable guidance.";
 
   // Generate Article JSON-LD schema with correct branding
   const articleSchema = post ? {
@@ -309,7 +313,7 @@ const ArticlePage = () => {
     "description": post.meta_description || post.excerpt,
     "author": {
       "@type": "Person",
-      "name": "LoD Contributor"
+      "name": displayAuthor
     },
     "publisher": {
       "@type": "Organization",
@@ -399,7 +403,11 @@ const ArticlePage = () => {
               
               <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm text-white/60">
                 <span className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
+                  {authorData ? (
+                    <img src={authorAvatar} alt={displayAuthor} className="h-6 w-6 rounded-full object-cover" />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
                   {displayAuthor}
                 </span>
                 <span className="hidden sm:inline text-white/40">|</span>
@@ -464,7 +472,7 @@ const ArticlePage = () => {
               <div className="mt-12 p-8 bg-muted/50 rounded-2xl border border-border">
                 <div className="flex items-start gap-5">
                   <Avatar className="h-16 w-16 border-2 border-primary/20">
-                    <AvatarImage src={lodIconImg} alt="LoD Logo" />
+                    <AvatarImage src={authorAvatar} alt={displayAuthor} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                       {authorInitials}
                     </AvatarFallback>
@@ -473,9 +481,10 @@ const ArticlePage = () => {
                     <p className="text-sm text-muted-foreground mb-1">Written by</p>
                     <h3 className="font-serif text-xl font-bold text-foreground mb-2">{displayAuthor}</h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      Our team of consumer rights specialists at Letter Of Dispute (LoD) help UK consumers 
-                      navigate disputes with clear, actionable guidance backed by knowledge of the 
-                      Consumer Rights Act 2015 and related regulations.
+                      {authorData?.bio || authorBio}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-3 italic">
+                      All author names on this site are editorial pen names. Content is for informational purposes only and does not constitute legal advice.
                     </p>
                   </div>
                 </div>
@@ -603,7 +612,7 @@ const ArticlePage = () => {
                       {relatedPost.excerpt}
                     </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>LoD Contributor</span>
+                      <span>{relatedPost.author || 'LoD Editorial Team'}</span>
                       <span>•</span>
                       <span>{relatedPost.read_time || '5 min read'}</span>
                     </div>

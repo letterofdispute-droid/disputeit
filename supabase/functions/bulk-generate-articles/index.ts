@@ -58,6 +58,34 @@ const CATEGORY_MAP: Record<string, { slug: string; name: string }> = {
   'healthcare': { slug: 'consumer-rights', name: 'Consumer Rights' },
 };
 
+// Author personas for random assignment
+const AUTHOR_PERSONAS: Array<{ name: string; specialties: string[] }> = [
+  { name: 'Rachel Simmons', specialties: ['vehicle', 'damaged-goods'] },
+  { name: 'Dana Whitfield', specialties: ['refunds', 'ecommerce', 'damaged-goods'] },
+  { name: 'Keisha Morgan', specialties: ['insurance', 'healthcare', 'financial'] },
+  { name: 'Tanya Reeves', specialties: ['damaged-goods', 'housing', 'insurance'] },
+  { name: 'Jill Kowalski', specialties: ['housing', 'hoa'] },
+  { name: 'Monica Alvarez', specialties: ['refunds', 'ecommerce', 'utilities'] },
+  { name: 'Brianna Cole', specialties: ['financial', 'ecommerce'] },
+  { name: 'Stephanie Novak', specialties: ['travel'] },
+  { name: 'Marcus Jennings', specialties: ['contractors'] },
+  { name: 'Tyler Brooks', specialties: ['employment'] },
+  { name: 'Derek Lawson', specialties: ['financial'] },
+  { name: 'Brian Castellano', specialties: ['contractors', 'housing'] },
+  { name: 'Jason Okafor', specialties: ['ecommerce', 'refunds'] },
+  { name: 'Kevin Marsh', specialties: ['insurance', 'housing'] },
+  { name: 'Ryan Gallagher', specialties: ['hoa', 'housing'] },
+  { name: 'Andre Washington', specialties: ['utilities', 'financial'] },
+];
+
+function getAuthorForCategory(categoryId: string): string {
+  const matching = AUTHOR_PERSONAS.filter(a => a.specialties.includes(categoryId));
+  if (matching.length > 0) {
+    return matching[Math.floor(Math.random() * matching.length)].name;
+  }
+  return AUTHOR_PERSONAS[Math.floor(Math.random() * AUTHOR_PERSONAS.length)].name;
+}
+
 function mapToBlogCategory(templateCategory: string): { slug: string; name: string } {
   return CATEGORY_MAP[templateCategory] || { slug: 'consumer-rights', name: 'Consumer Rights' };
 }
@@ -1269,6 +1297,7 @@ Respond with ONLY this JSON:
             related_templates: [plan.template_slug],
             content_plan_id: item.plan_id,
             article_type: item.article_type,
+            author: getAuthorForCategory(plan.category_id),
           }
         );
 
