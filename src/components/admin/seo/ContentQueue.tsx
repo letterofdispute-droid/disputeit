@@ -30,16 +30,15 @@ export default function ContentQueue() {
     deleteItems,
     getFailedIds,
     generationProgress,
-  } = useContentQueue();
+  } = useContentQueue(undefined, undefined, statusFilter);
 
   // Use separate hook for accurate global stats (not limited by pagination)
   const { data: globalStats, isLoading: statsLoading } = useQueueStats();
   
   const stats = globalStats || { queued: 0, generating: 0, generated: 0, published: 0, failed: 0, total: 0 };
 
-  // Filter items
+  // Filter items (status is now filtered server-side, only category filter needed client-side)
   const filteredItems = queueItems?.filter(item => {
-    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
     if (categoryFilter !== 'all' && item.content_plans?.category_id !== categoryFilter) return false;
     return true;
   }) || [];
