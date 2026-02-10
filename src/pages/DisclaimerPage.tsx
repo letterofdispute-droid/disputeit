@@ -307,10 +307,33 @@ const DisclaimerPage = () => {
               </p>
             </section>
 
-            {/* Section 12: Contact Information */}
+            {/* Section 12: Use of Pseudonyms */}
+            <section className="mb-8">
+              <h2 id="pseudonyms" className="text-2xl font-semibold text-foreground mb-4">
+                12. Use of Pseudonyms and Fictional Personas
+              </h2>
+              <Card className="border-border bg-muted/50">
+                <CardContent className="pt-6">
+                  <p className="text-foreground font-semibold mb-4">
+                    ALL AUTHOR NAMES ON THIS WEBSITE ARE FICTIONAL PEN NAMES (PSEUDONYMS).
+                  </p>
+                  <p className="text-muted-foreground mb-4">
+                    Author bylines and biographies displayed on our articles and blog posts are creative editorial personas used for variety and relatability. By using our Service, you acknowledge that:
+                  </p>
+                  <ul className="list-disc pl-6 text-muted-foreground space-y-2">
+                    <li><strong>Fictional Characters:</strong> All author names, photographs, and biographical details are entirely fictional and do not represent real individuals.</li>
+                    <li><strong>No Professional Credentials:</strong> No author persona holds any professional license, legal qualification, or expert certification. Any biographical references to personal experiences with disputes are fictional narratives inspired by common consumer situations.</li>
+                    <li><strong>Editorial Purpose:</strong> Pen names are used solely to create engaging, relatable editorial content. They do not imply endorsement, expertise, or professional qualifications.</li>
+                    <li><strong>Not Legal Guidance:</strong> Content published under any pen name is general information only. It is not professional advice and should not be treated as such.</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Section 13: Contact Information */}
             <section className="mb-8">
               <h2 id="contact" className="text-2xl font-semibold text-foreground mb-4">
-                12. Contact Information
+                13. Contact Information
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
                 If you have any questions about this Legal Disclaimer or our services, please contact us:

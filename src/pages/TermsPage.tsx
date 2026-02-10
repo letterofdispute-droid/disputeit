@@ -84,9 +84,26 @@ const TermsPage = () => {
               </div>
             </section>
 
+            {/* Editorial Personas and Pen Names */}
+            <section className="bg-muted/50 rounded-lg p-6 border border-border">
+              <h2 className="text-2xl font-semibold text-foreground mb-4">5. Editorial Personas and Pen Names</h2>
+              <div className="text-muted-foreground space-y-4">
+                <p>
+                  All author names, biographies, and personas displayed on articles, blog posts, and other editorial content on our Service are <strong className="text-foreground">fictional pen names (pseudonyms)</strong> created for editorial purposes.
+                </p>
+                <p>By using our Service, you acknowledge and agree that:</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Fictional Identities:</strong> Author bylines do not represent real individuals. They are creative personas used to provide editorial variety and relatable context to our content.</li>
+                  <li><strong>No Professional Credentials:</strong> No author persona is a licensed attorney, legal professional, financial advisor, or qualified expert in any field. Any biographical details suggesting personal experience with disputes are fictional narratives inspired by common consumer situations.</li>
+                  <li><strong>Informational Content Only:</strong> All content published under any pen name is for general informational and educational purposes only. It does not constitute professional advice of any kind.</li>
+                  <li><strong>Not Real People:</strong> Any resemblance between our author personas and real individuals is entirely coincidental. The names, backgrounds, and experiences described in author biographies are works of fiction.</li>
+                </ul>
+              </div>
+            </section>
+
             {/* No Government Affiliation */}
             <section className="bg-destructive/10 rounded-lg p-6 border border-destructive/30">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">5. No Government Affiliation</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">6. No Government Affiliation</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="font-semibold text-foreground">
                   LETTER OF DISPUTE IS AN INDEPENDENT PRIVATE SERVICE.
@@ -112,7 +129,7 @@ const TermsPage = () => {
 
             {/* Important Disclaimer */}
             <section className="bg-muted/50 rounded-lg p-6 border border-border">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">6. Important Legal Disclaimer — "As Is" Use</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">7. Important Legal Disclaimer — "As Is" Use</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="font-semibold text-foreground">
                   LETTER OF DISPUTE IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.
@@ -143,7 +160,7 @@ const TermsPage = () => {
 
             {/* User Accounts */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">7. User Accounts</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">8. User Accounts</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 To access certain features of our Service, you may need to create an account. When creating an account, you agree to:
               </p>
@@ -161,7 +178,7 @@ const TermsPage = () => {
 
             {/* Purchases and Payments */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">8. Purchases and Payments</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">9. Purchases and Payments</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Our Service offers letter generation on a per-letter basis. By making a purchase, you agree to the following:
               </p>
@@ -175,7 +192,7 @@ const TermsPage = () => {
 
             {/* Refund Policy */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">9. Refund Policy</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">10. Refund Policy</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Refunds for letter purchases are handled on a case-by-case basis. If you experience a technical issue with your purchase, please contact us at support@letterofdispute.com within 14 days of purchase.
               </p>
@@ -186,7 +203,7 @@ const TermsPage = () => {
 
             {/* Intellectual Property */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">10. Intellectual Property</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">11. Intellectual Property</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 All content on our website, including text, graphics, logos, templates, and software, is the property of Letter of Dispute or our licensors and is protected by copyright and other intellectual property laws.
               </p>
@@ -202,7 +219,7 @@ const TermsPage = () => {
 
             {/* Prohibited Uses */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">11. Prohibited Uses</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Prohibited Uses</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 You agree not to use our Service to:
               </p>
@@ -220,7 +237,7 @@ const TermsPage = () => {
 
             {/* Limitation of Liability */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Limitation of Liability</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">13. Limitation of Liability</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 TO THE MAXIMUM EXTENT PERMITTED BY LAW, LETTER OF DISPUTE AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR:
               </p>
@@ -238,7 +255,7 @@ const TermsPage = () => {
 
             {/* Disclaimer of Warranties */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">13. Disclaimer of Warranties</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">14. Disclaimer of Warranties</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="leading-relaxed">
                   THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
@@ -254,7 +271,7 @@ const TermsPage = () => {
 
             {/* Indemnification */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">14. Indemnification</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">15. Indemnification</h2>
               <p className="text-muted-foreground leading-relaxed">
                 You agree to indemnify, defend, and hold harmless Letter of Dispute and its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of another.
               </p>
@@ -262,7 +279,7 @@ const TermsPage = () => {
 
             {/* Governing Law */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">15. Governing Law and Dispute Resolution</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">16. Governing Law and Dispute Resolution</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without regard to its conflict of law provisions.
               </p>
@@ -273,7 +290,7 @@ const TermsPage = () => {
 
             {/* Severability */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">16. Severability</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">17. Severability</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that these Terms shall otherwise remain in full force and effect.
               </p>
@@ -281,7 +298,7 @@ const TermsPage = () => {
 
             {/* Entire Agreement */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">17. Entire Agreement</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">18. Entire Agreement</h2>
               <p className="text-muted-foreground leading-relaxed">
                 These Terms, together with our Privacy Policy and any other legal notices published on our website, constitute the entire agreement between you and Letter of Dispute regarding your use of the Service and supersede any prior agreements.
               </p>
@@ -289,7 +306,7 @@ const TermsPage = () => {
 
             {/* Contact */}
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">18. Contact Information</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">19. Contact Information</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>

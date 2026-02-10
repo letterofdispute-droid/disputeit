@@ -96,6 +96,9 @@ const PrivacyPage = () => {
                 <p className="text-sm text-foreground">
                   <strong>Important:</strong> We are designed to minimize personal data collection. We never request sensitive information like full Social Security numbers, complete credit card details, or medical records. Our letter templates only collect information necessary to create effective dispute letters.
                 </p>
+                <p className="text-sm text-foreground mt-2">
+                  <strong>Note on Author Names:</strong> Author names displayed on our articles and blog posts are editorial pseudonyms (pen names). They are fictional personas and do not correspond to real individuals whose personal data we process.
+                </p>
               </div>
             </section>
 

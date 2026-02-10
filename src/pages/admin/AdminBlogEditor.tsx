@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Eye, Loader2, Sparkles } from 'lucide-react';
+import { authors, getAuthorForCategory } from '@/data/authors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +32,7 @@ const AdminBlogEditor = () => {
 
   // Post data
   const [title, setTitle] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState('');
   const [slug, setSlug] = useState('');
   const [content, setContent] = useState('');
   const [excerpt, setExcerpt] = useState('');
@@ -126,6 +128,7 @@ const AdminBlogEditor = () => {
         setExcerpt(data.excerpt || '');
         setCategory(data.category_slug || '');
         setTags(data.tags || []);
+        setSelectedAuthor(data.author || '');
         setStatus(data.status);
         setIsFeatured(data.featured || false);
         setScheduledAt(data.scheduled_at ? new Date(data.scheduled_at) : null);
@@ -153,6 +156,8 @@ const AdminBlogEditor = () => {
     setIsSaving(true);
     try {
       const categoryName = availableCategories.find(c => c.slug === category)?.name || category;
+      // Auto-pick author if none selected
+      const authorName = selectedAuthor || getAuthorForCategory(category).name;
       const postData = {
         title,
         slug,
@@ -170,7 +175,7 @@ const AdminBlogEditor = () => {
         middle_image_1_url: middleImage1Url || null,
         middle_image_2_url: middleImage2Url || null,
         author_id: user?.id,
-        author: user?.email?.split('@')[0] || 'Admin',
+        author: authorName,
       };
 
       if (isEditing) {
@@ -287,6 +292,21 @@ const AdminBlogEditor = () => {
             </div>
           )}
           <CategorySelect value={category} onChange={setCategory} title={title} content={content} />
+          
+          {/* Author Select */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Author</Label>
+            <select
+              value={selectedAuthor}
+              onChange={(e) => setSelectedAuthor(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Auto-assign by category</option>
+              {authors.map(a => (
+                <option key={a.id} value={a.name}>{a.name}</option>
+              ))}
+            </select>
+          </div>
           <TagInput tags={tags} onChange={setTags} title={title} content={content} />
           <FeaturedImageUploader
             imageUrl={featuredImageUrl}

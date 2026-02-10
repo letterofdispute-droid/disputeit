@@ -7,6 +7,7 @@ import { blogPosts as staticBlogPosts, blogCategories } from '@/data/blogPosts';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, BookOpen, Eye, Sparkles } from 'lucide-react';
+import { getAuthorByName } from '@/data/authors';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
@@ -80,7 +81,15 @@ const ArticleCard = ({ post, getCategoryName, size = 'default' }: { post: BlogPo
         </p>
       )}
       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-auto pt-3 border-t border-border/50">
-        <span className="font-medium text-foreground/80">LoD Contributor</span>
+        {(() => {
+          const author = getAuthorByName(post.author);
+          return (
+            <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+              {author && <img src={author.avatar} alt={author.name} className="h-4 w-4 rounded-full object-cover" />}
+              {author?.name || post.author || 'LoD Editorial Team'}
+            </span>
+          );
+        })()}
         <span className="text-border">·</span>
         <span className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
@@ -269,7 +278,15 @@ const ArticlesPage = () => {
                   </p>
                 )}
                 <div className="flex items-center gap-4 text-sm text-white/60">
-                  <span className="font-medium text-white/80">LoD Contributor</span>
+                  {(() => {
+                    const author = getAuthorByName(latestPost.author);
+                    return (
+                      <span className="flex items-center gap-1.5 font-medium text-white/80">
+                        {author && <img src={author.avatar} alt={author.name} className="h-5 w-5 rounded-full object-cover" />}
+                        {author?.name || latestPost.author || 'LoD Editorial Team'}
+                      </span>
+                    );
+                  })()}
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
                     {formatDate(latestPost.published_at, 'long')}
