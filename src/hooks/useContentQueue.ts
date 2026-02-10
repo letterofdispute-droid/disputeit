@@ -77,8 +77,9 @@ export function useContentQueue(planId?: string, categoryId?: string) {
         query = query.eq('plan_id', planId);
         // No limit for specific plan - need all items for accurate progress stats
       } else {
-        // For global queue view, use higher limit with pagination support
-        query = query.limit(1000);
+        // For global queue view, fetch all items (no limit) to ensure
+        // filtered views (e.g. failed items) are always complete
+        query = query.limit(2000);
       }
 
       const { data, error } = await query;
