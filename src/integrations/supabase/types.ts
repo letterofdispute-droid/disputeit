@@ -491,6 +491,7 @@ export type Database = {
           plan_id: string | null
           priority: number | null
           published_at: string | null
+          started_at: string | null
           status: string
           suggested_keywords: string[] | null
           suggested_title: string
@@ -505,6 +506,7 @@ export type Database = {
           plan_id?: string | null
           priority?: number | null
           published_at?: string | null
+          started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
           suggested_title: string
@@ -519,6 +521,7 @@ export type Database = {
           plan_id?: string | null
           priority?: number | null
           published_at?: string | null
+          started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
           suggested_title?: string
@@ -667,6 +670,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      generation_jobs: {
+        Row: {
+          bail_reason: string | null
+          completed_at: string | null
+          created_at: string
+          failed_items: number
+          id: string
+          queue_item_ids: string[]
+          status: string
+          succeeded_items: number
+          total_items: number
+          updated_at: string
+        }
+        Insert: {
+          bail_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failed_items?: number
+          id?: string
+          queue_item_ids?: string[]
+          status?: string
+          succeeded_items?: number
+          total_items?: number
+          updated_at?: string
+        }
+        Update: {
+          bail_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failed_items?: number
+          id?: string
+          queue_item_ids?: string[]
+          status?: string
+          succeeded_items?: number
+          total_items?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       letter_purchases: {
         Row: {
