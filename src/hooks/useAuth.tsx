@@ -97,6 +97,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Use setTimeout to avoid Supabase deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
+
+          // Sync Google avatar if user just linked Google and has no avatar
+          if (event === 'USER_UPDATED') {
+            const googleIdentity = session.user.identities?.find(i => i.provider === 'google');
+            const googleAvatar = googleIdentity?.identity_data?.avatar_url || googleIdentity?.identity_data?.picture;
+            if (googleAvatar) {
+              setTimeout(async () => {
+                const { data: prof } = await supabase
+                  .from('profiles')
+                  .select('avatar_url')
+                  .eq('user_id', session.user.id)
+                  .single();
+                if (prof && !prof.avatar_url) {
+                  await supabase
+                    .from('profiles')
+                    .update({ avatar_url: googleAvatar })
+                    .eq('user_id', session.user.id);
+                  if (isMounted) {
+                    setProfile(prev => prev ? { ...prev, avatar_url: googleAvatar } : prev);
+                  }
+                }
+              }, 0);
+            }
+          }
         } else {
           setIsAdmin(false);
           setProfile(null);
