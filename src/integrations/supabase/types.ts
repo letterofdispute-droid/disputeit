@@ -710,6 +710,60 @@ export type Database = {
         }
         Relationships: []
       }
+      image_optimization_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_offset: number | null
+          deleted: number | null
+          errors: Json | null
+          freed_bytes: number | null
+          id: string
+          oversized_files: number | null
+          oversized_size_bytes: number | null
+          processed: number | null
+          saved_bytes: number | null
+          status: string
+          total_files: number | null
+          total_size_bytes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_offset?: number | null
+          deleted?: number | null
+          errors?: Json | null
+          freed_bytes?: number | null
+          id?: string
+          oversized_files?: number | null
+          oversized_size_bytes?: number | null
+          processed?: number | null
+          saved_bytes?: number | null
+          status?: string
+          total_files?: number | null
+          total_size_bytes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_offset?: number | null
+          deleted?: number | null
+          errors?: Json | null
+          freed_bytes?: number | null
+          id?: string
+          oversized_files?: number | null
+          oversized_size_bytes?: number | null
+          processed?: number | null
+          saved_bytes?: number | null
+          status?: string
+          total_files?: number | null
+          total_size_bytes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       letter_purchases: {
         Row: {
           amount_cents: number
