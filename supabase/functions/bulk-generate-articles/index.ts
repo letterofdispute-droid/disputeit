@@ -1035,6 +1035,45 @@ SEO REQUIREMENTS:
 - seo_description: 150-160 characters
 - excerpt: 150-200 characters`;
 
+        // For pillar articles, fetch sibling cluster articles to reference
+        let pillarClusterContext = '';
+        if (item.article_type === 'pillar' && item.plan_id) {
+          const { data: siblingArticles } = await supabaseAdmin
+            .from('content_queue')
+            .select('suggested_title, suggested_keywords, article_type, blog_post_id')
+            .eq('plan_id', item.plan_id)
+            .neq('article_type', 'pillar');
+          
+          if (siblingArticles && siblingArticles.length > 0) {
+            // Also fetch published slugs for linking
+            const publishedIds = siblingArticles
+              .filter(s => s.blog_post_id)
+              .map(s => s.blog_post_id!);
+            
+            let publishedPosts: Array<{ id: string; slug: string; title: string }> = [];
+            if (publishedIds.length > 0) {
+              const { data: posts } = await supabaseAdmin
+                .from('blog_posts')
+                .select('id, slug, title')
+                .in('id', publishedIds);
+              publishedPosts = posts || [];
+            }
+
+            pillarClusterContext = `\n\nPILLAR ARTICLE REQUIREMENTS:
+This is a PILLAR article — a comprehensive hub page that covers the full topic and links to each cluster article below.
+- Write 2,000-3,000 words covering all aspects of "${plan.template_name}"
+- Include 6-8 major sections, each naturally referencing one or more cluster articles
+- For each cluster article listed below, include a natural inline mention with the title
+- The pillar should serve as the definitive resource that ties all these subtopics together
+
+CLUSTER ARTICLES TO REFERENCE (include natural mentions of each):
+${siblingArticles.map((s, i) => {
+  const published = publishedPosts.find(p => p.id === s.blog_post_id);
+  return `${i + 1}. "${s.suggested_title}" (${s.article_type})${published ? ` [slug: ${published.slug}]` : ''}`;
+}).join('\n')}`;
+          }
+        }
+
         const userPrompt = `Generate a ${item.article_type} article:
 
 Title: "${item.suggested_title}"
@@ -1042,6 +1081,7 @@ Template Context: ${plan.template_name}
 Category: ${plan.category_id}
 ${plan.subcategory_slug ? `Subcategory: ${plan.subcategory_slug}` : ''}
 Keywords: ${keywordList}
+${pillarClusterContext}
 
 Respond with ONLY this JSON:
 {

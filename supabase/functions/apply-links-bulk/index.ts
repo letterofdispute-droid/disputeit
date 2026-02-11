@@ -114,10 +114,9 @@ serve(async (req) => {
     // Process each post
     for (const [postId, postSuggestions] of suggestionsByPost) {
       try {
-        // Get current post content
         const { data: post, error: postError } = await supabaseAdmin
           .from('blog_posts')
-          .select('content')
+          .select('content, article_type, content_plan_id')
           .eq('id', postId)
           .single();
 
@@ -134,11 +133,9 @@ serve(async (req) => {
 
         for (const suggestion of sortedSuggestions) {
           try {
-            // Build the target URL based on type
             let targetUrl: string;
             switch (suggestion.target_type) {
               case 'template':
-                // Templates use hierarchical URLs
                 targetUrl = `/templates/${suggestion.target_slug}`;
                 break;
               case 'article':
@@ -151,8 +148,6 @@ serve(async (req) => {
                 targetUrl = `/${suggestion.target_slug}`;
             }
 
-            // Find and replace the anchor text with a link
-            // Use case-insensitive search but preserve original case
             const anchorRegex = new RegExp(
               `(?<!<a[^>]*>)\\b(${escapeRegExp(suggestion.anchor_text)})\\b(?![^<]*<\\/a>)`,
               'i'
@@ -164,7 +159,6 @@ serve(async (req) => {
                 `<a href="${targetUrl}" title="${suggestion.target_title}">$1</a>`
               );
 
-              // Mark suggestion as applied
               await supabaseAdmin
                 .from('link_suggestions')
                 .update({ 
@@ -176,7 +170,6 @@ serve(async (req) => {
               appliedCount++;
               results.push({ suggestionId: suggestion.id, success: true });
             } else {
-              // Anchor text not found - might already be linked or text changed
               results.push({ 
                 suggestionId: suggestion.id, 
                 success: false, 
@@ -193,6 +186,29 @@ serve(async (req) => {
               error: error instanceof Error ? error.message : 'Unknown error' 
             });
             failedCount++;
+          }
+        }
+
+        // === PILLAR-AWARE LINKING ===
+        // If this is a pillar article, add link to the template page
+        if (post.article_type === 'pillar' && post.content_plan_id) {
+          const { data: plan } = await supabaseAdmin
+            .from('content_plans')
+            .select('template_slug, template_name')
+            .eq('id', post.content_plan_id)
+            .single();
+
+          if (plan) {
+            const templateUrl = `/templates/${plan.template_slug}`;
+            const templateLinkHtml = `<p class="cta-link"><strong>Ready to take action?</strong> Use our <a href="${templateUrl}" title="${plan.template_name}">${plan.template_name}</a> template to create your dispute letter now.</p>`;
+            
+            // Add template CTA before the last closing tag if not already present
+            if (!updatedContent.includes(templateUrl)) {
+              updatedContent = updatedContent.replace(
+                /(<\/[^>]+>)\s*$/,
+                `${templateLinkHtml}$1`
+              );
+            }
           }
         }
 

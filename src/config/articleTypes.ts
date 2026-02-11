@@ -12,6 +12,20 @@ export interface ArticleType {
 
 export const ARTICLE_TYPES: ArticleType[] = [
   {
+    id: 'pillar',
+    name: 'Pillar Article',
+    purpose: 'Hub page linking all cluster articles for a template',
+    displayHint: 'Comprehensive overview that ties together all related articles',
+    titleVariations: [
+      'The Complete Guide to {topic}',
+      '{topic}: Everything You Need to Know',
+      'Your {topic} Resource Hub',
+      'The Definitive {topic} Handbook',
+    ],
+    keywordSuffixes: ['complete guide', 'everything', 'comprehensive', 'ultimate resource'],
+    priority: 200,
+  },
+  {
     id: 'how-to',
     name: 'How-To Guide',
     purpose: 'Step-by-step instructions',
@@ -148,7 +162,7 @@ export const VALUE_TIERS = {
     name: 'High Value',
     articleCount: 10,
     description: 'High-traffic categories (Travel, Insurance, Financial)',
-    articleTypes: ARTICLE_TYPES.map(t => t.id), // All types
+    articleTypes: ARTICLE_TYPES.filter(t => t.id !== 'pillar').map(t => t.id), // All cluster types (pillar added separately)
   },
   medium: {
     id: 'medium',
