@@ -1,50 +1,171 @@
 
 
-# Fix Category Tier Settings Not Reflecting on Coverage Page
+# Comprehensive Admin & Platform Improvements
 
-## Problem
+This plan covers 6 areas you requested. Given the scope, I recommend implementing them in phases.
 
-Two bugs stem from the same root cause: a **category ID mismatch** between the template data and the tier settings system.
+---
 
-### Root Cause
+## Phase 1: Quick Fixes (Immediate)
 
-Templates store their category as a **display name** (e.g., `"Refunds & Purchases"`, `"Damaged Goods"`), but the tier settings and `templateCategories` registry use **slug IDs** (e.g., `"refunds"`, `"damaged-goods"`).
+### 1A. Orders: Handle Credit Redemptions Correctly
 
-In `TemplateCoverageMap.tsx`, the category grouping code does:
+**Problem**: Credit redemptions create `amount_cents = 0` purchases that inflate "Completed Orders" count and deflate "Average Order Value."
+
+**Fix** (2 files):
+- **`AdminOrders.tsx`**: Split stats into "Paid Orders" vs "Credit Redemptions". Revenue only counts `amount_cents > 0`. Add a "Credit" badge in the orders table for `amount_cents = 0` rows.
+- **`AdminAnalytics.tsx`**: Same logic -- revenue metrics exclude $0 orders; add a separate "Credit Redemptions" counter.
+
+### 1B. Prices from Settings Reflected Sitewide
+
+**Problem**: Prices are hardcoded as `$9.99` / `$14.99` / `$5.99` in 5+ UI components and the checkout edge function uses Stripe Price IDs.
+
+**Solution**: Create a `useSiteSettings` hook that fetches `pdf_only_price` and `pdf_editable_price` from `site_settings` and caches them. Update these components to use the hook:
+- `src/components/home/Pricing.tsx` -- homepage pricing cards
+- `src/components/letter/PricingModal.tsx` -- checkout modal
+- `src/components/letter/UnlockEditingModal.tsx` -- re-edit pricing
+- `src/pages/PricingPage.tsx` -- dedicated pricing page
+- `src/pages/HowItWorksPage.tsx` -- FAQ answers mentioning prices
+
+The checkout edge function (`create-letter-checkout`) will also need to read the price from `site_settings` to pass the correct `amount_cents` to Stripe. Note: The Stripe Price IDs are currently hardcoded -- changing prices in settings will update the UI display, but the actual Stripe charge amount is controlled by the Stripe Price object. For full dynamic pricing, we'd need to create Stripe checkout sessions with `line_items` using `price_data` instead of fixed Price IDs.
+
+---
+
+## Phase 2: SEO Editing (Medium)
+
+### 2A. Editable SEO on Template Pages
+
+**Problem**: Template SEO (title, description) is defined in code files and can only be changed by editing source code.
+
+**Solution**: Create a `template_seo_overrides` table that stores admin-edited SEO metadata per template slug. The template page will check for an override before falling back to the code-defined values.
+
+- New table: `template_seo_overrides` (slug, meta_title, meta_description, updated_at)
+- Update `AdminTemplates.tsx`: Add an "Edit SEO" button per row that opens an inline editor
+- Update `LetterPage.tsx`: Fetch override from DB, merge with code defaults
+
+### 2B. Blog SEO Editing
+
+**Problem**: Blog posts already have `meta_title` and `meta_description` columns and the editor has an SEO panel. This should already work.
+
+**Verification**: The `AdminBlogEditor.tsx` already has the `SEOPanel` component. If the issue is that you can't edit SEO on *published* posts easily, I'll add a quick-edit SEO modal accessible from the blog list view (similar to what we'll do for templates).
+
+---
+
+## Phase 3: CMS Pages Migration (Larger Effort)
+
+### 3. Migrate Static Pages to CMS
+
+**Problem**: About, FAQ, Contact, How It Works, Disclaimer, Privacy, Terms are hardcoded React components. The admin Pages section queries the `pages` database table which is empty.
+
+**Solution**: Seed the `pages` table with existing page content, then update the page routes to render from DB content with a fallback to the static component.
+
+Steps:
+1. Create a migration that inserts the existing static pages into the `pages` table with their current content (title, slug, excerpt, meta fields)
+2. Create a generic `DynamicPage` component that fetches page content from DB and renders HTML
+3. Update routes to try DB-based rendering first, fall back to static components
+4. Admin Pages will then show all pages and allow editing
+
+This is the most complex item -- the static pages have custom layouts (FAQ has accordions, Pricing has cards). The CMS version would need to support rich HTML content or we keep the static components but allow SEO metadata editing from admin. I recommend starting with **SEO metadata editing only** (title, description) from the Pages admin, keeping the page layouts in code.
+
+---
+
+## Phase 4: Full Funnel Analytics (Larger Effort)
+
+### 4. Upgrade Analytics to Full Funnel Tracking
+
+**Current limitation**: Analytics only records events from authenticated users (RLS policy: `auth.uid() = user_id`).
+
+**Solution**:
+
+1. **Allow anonymous event insertion**: Add an RLS policy that allows inserts with `user_id = NULL` for specific event types, or use an edge function to insert events server-side (bypassing RLS)
+2. **Expand event types**: Add these to the tracking system:
+   - `form_started` -- user begins filling a template form
+   - `form_completed` -- user finishes form and sees letter preview
+   - `checkout_initiated` -- user opens pricing modal
+   - `checkout_completed` -- purchase confirmed
+   - `credit_redeemed` -- free credit used
+3. **Add session tracking**: Generate a session ID (stored in sessionStorage) to link anonymous events to eventual signups
+4. **Build funnel visualization**: New admin dashboard tab showing:
+
 ```text
-const categoryId = template.category;  // "Refunds & Purchases" (display name!)
+Visit -> Template View -> Form Fill -> Checkout Open -> Purchase
+  100%      45%             22%          8%              3.5%
 ```
 
-This means `getTierForCategory("Refunds & Purchases")` finds no match in the tier settings (which stores `"refunds"`) and falls back to `"medium"` every time -- regardless of what you set in Settings.
+5. **Add these dashboard sections**:
+   - Funnel chart (bar/sankey diagram)
+   - Top landing pages
+   - Template conversion rates (which templates sell best)
+   - User journey paths
+   - Time-to-purchase distribution
+   - Geographic breakdown (from browser locale)
 
-Similarly, `templateCategories.find(c => c.id === categoryId)` fails because `templateCategories` uses IDs like `"refunds"`, not `"Refunds & Purchases"`. This causes some categories to display incorrectly or be mismatched.
+---
 
-### Bug 1: Tier changes do not reflect
+## Phase 5: Backups
 
-When you change "Contractors" to "High" in Settings, it saves `{ contractors: "high" }`. But the coverage page looks up the tier using `getTierForCategory("Contractors")` (the display name), which has no match, so it always returns `"medium"`.
+### 5. Automated Backup Notifications
 
-### Bug 2: Missing or mismatched categories
+The CSV export system already exists. To add a safety net:
+- Add a "Last Backup" timestamp in `site_settings`
+- Show a warning banner in admin dashboard if no export has been done in 7+ days
+- The actual database is managed by Lovable Cloud which handles infrastructure-level backups automatically
 
-Because the `templateCategories.find()` lookup fails, some categories may show raw display names instead of proper entries, and category-specific features (like tier badges) break.
+---
 
-## Solution
+## Technical Details
 
-Update `TemplateCoverageMap.tsx` to convert the template display-name category into the proper slug ID using the existing `getCategoryIdFromName()` utility from `allTemplates.ts`.
+### New Database Table
 
-### Changes
+```sql
+CREATE TABLE public.template_seo_overrides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  meta_title TEXT,
+  meta_description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
+ALTER TABLE public.template_seo_overrides ENABLE ROW LEVEL SECURITY;
 
-1. Import `getCategoryIdFromName` from `@/data/allTemplates`
-2. In the `categoryGroups` memo, convert `template.category` (display name) to the proper slug ID:
+CREATE POLICY "Admins can manage template SEO"
+  ON public.template_seo_overrides FOR ALL
+  USING (public.is_admin(auth.uid()));
 
-```text
-Before:  const categoryId = template.category;
-After:   const categoryId = getCategoryIdFromName(template.category);
+CREATE POLICY "Anyone can read template SEO"
+  ON public.template_seo_overrides FOR SELECT
+  USING (true);
 ```
 
-This single change fixes both bugs because:
-- `getTierForCategory("contractors")` now correctly matches the saved tier setting
-- `templateCategories.find(c => c.id === "contractors")` now correctly finds the category entry for name, icon, etc.
+### New Hook: `useSiteSettings`
 
-No other files need changes. The Settings tab (`CategoryTierSettings.tsx`) already iterates `templateCategories` directly using correct IDs, so it works fine -- the bug is only in how the Coverage tab maps template data to category IDs.
+```text
+Fetches all site_settings rows, caches with React Query.
+Returns: { pdfOnlyPrice, pdfEditablePrice, siteName, ... }
+Used by: Pricing.tsx, PricingModal.tsx, HowItWorksPage.tsx, etc.
+```
+
+### Analytics RLS Change
+
+```sql
+-- Allow anonymous event insertion via edge function
+-- Or: relax INSERT policy to not require user_id
+CREATE POLICY "Anyone can insert analytics events"
+  ON public.analytics_events FOR INSERT
+  WITH CHECK (true);
+```
+
+(With server-side validation in the tracking code to prevent abuse)
+
+---
+
+## Implementation Order
+
+1. Orders fix + dynamic pricing hook (Phase 1) -- immediate value
+2. Template SEO overrides (Phase 2A) -- high SEO impact
+3. Blog quick-edit SEO (Phase 2B) -- convenience
+4. Pages CMS migration (Phase 3) -- after confirming approach
+5. Analytics upgrade (Phase 4) -- largest effort
+6. Backup reminders (Phase 5) -- quick add-on
+
