@@ -1,5 +1,15 @@
 import { Helmet } from 'react-helmet-async';
 
+interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
 interface SEOHeadProps {
   title: string;
   description: string;
@@ -12,6 +22,9 @@ interface SEOHeadProps {
   templateCategory?: string;
   price?: number;
   currency?: string;
+  // For guide pages
+  faqItems?: FAQItem[];
+  breadcrumbs?: BreadcrumbItem[];
 }
 
 const SEOHead = ({ 
@@ -25,6 +38,8 @@ const SEOHead = ({
   templateCategory,
   price = 9.99,
   currency = 'EUR',
+  faqItems,
+  breadcrumbs,
 }: SEOHeadProps) => {
   const siteUrl = 'https://disputeletters.com';
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
