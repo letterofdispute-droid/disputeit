@@ -168,10 +168,21 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     },
   });
 
-  // Get failed item IDs
+  // Get failed item IDs from loaded items (for display)
   const getFailedIds = useCallback(() => {
     return queueItems?.filter(i => i.status === 'failed').map(i => i.id) || [];
   }, [queueItems]);
+
+  // Fetch all failed IDs directly from DB (for retry/clear actions)
+  const fetchAllFailedIds = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('content_queue')
+      .select('id')
+      .eq('status', 'failed')
+      .limit(2000);
+    if (error) throw error;
+    return data?.map(i => i.id) || [];
+  }, []);
 
   return {
     queueItems,
@@ -185,5 +196,6 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     updateStatus: updateStatusMutation.mutate,
     deleteItems: deleteItemsMutation.mutate,
     getFailedIds,
+    fetchAllFailedIds,
   };
 }

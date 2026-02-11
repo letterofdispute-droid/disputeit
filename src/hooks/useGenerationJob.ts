@@ -63,7 +63,7 @@ export function useGenerationJob() {
     mutationFn: async (jobId: string) => {
       const { error } = await supabase
         .from('generation_jobs')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .update({ status: 'cancelled', updated_at: new Date().toISOString(), completed_at: new Date().toISOString() })
         .eq('id', jobId);
       
       if (error) throw error;
