@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.scan-for-semantic-links]
 verify_jwt = false
+
+[functions.optimize-storage-images]
+verify_jwt = false

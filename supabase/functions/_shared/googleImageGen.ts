@@ -76,11 +76,33 @@ function categorizeGoogleError(status: number, errorText: string): GoogleImageEr
 
 /**
  * Convert Google image result to a Uint8Array buffer for storage upload.
+ * Automatically compresses to JPEG and resizes to max 1200px width.
  */
-export function imageResultToBuffer(result: GoogleImageResult): { buffer: Uint8Array; extension: string } {
-  const buffer = Uint8Array.from(atob(result.base64Data), c => c.charCodeAt(0));
-  const extension = result.mimeType.split('/')[1] || 'png';
-  return { buffer, extension };
+export async function imageResultToBuffer(result: GoogleImageResult): Promise<{ buffer: Uint8Array; extension: string }> {
+  const { Image } = await import('https://deno.land/x/imagescript@1.3.0/mod.ts');
+  const rawBuffer = Uint8Array.from(atob(result.base64Data), c => c.charCodeAt(0));
+  const originalSize = rawBuffer.byteLength;
+
+  try {
+    let img = await Image.decode(rawBuffer);
+    
+    // Resize if wider than 1200px
+    if (img.width > 1200) {
+      const ratio = 1200 / img.width;
+      img = img.resize(1200, Math.round(img.height * ratio));
+    }
+
+    // Encode as JPEG at 80% quality
+    const compressed = await img.encodeJPEG(80);
+    const newSize = compressed.byteLength;
+    console.log(`[IMAGE_COMPRESS] ${(originalSize / 1024).toFixed(0)}KB -> ${(newSize / 1024).toFixed(0)}KB (${Math.round((1 - newSize / originalSize) * 100)}% saved)`);
+    
+    return { buffer: new Uint8Array(compressed), extension: 'jpg' };
+  } catch (err) {
+    console.warn('[IMAGE_COMPRESS] Compression failed, using raw buffer:', err);
+    const extension = result.mimeType.split('/')[1] || 'png';
+    return { buffer: rawBuffer, extension };
+  }
 }
 
 /**
