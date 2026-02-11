@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   FileText, Users, TrendingUp, Eye, 
-  ArrowUpRight, ArrowDownRight, Loader2
+  ArrowUpRight, ArrowDownRight, Loader2, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface Stats {
   totalLetters: number;
@@ -27,6 +29,7 @@ interface PopularTemplate {
 }
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     totalLetters: 0,
     totalUsers: 0,
@@ -38,10 +41,32 @@ const AdminDashboard = () => {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [popularTemplates, setPopularTemplates] = useState<PopularTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastBackupDaysAgo, setLastBackupDaysAgo] = useState<number | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBackupStatus();
   }, []);
+
+  const fetchBackupStatus = async () => {
+    try {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'last_backup_at')
+        .maybeSingle();
+      
+      if (data?.value) {
+        const lastBackup = new Date(data.value);
+        const diffDays = Math.floor((Date.now() - lastBackup.getTime()) / (1000 * 60 * 60 * 24));
+        setLastBackupDaysAgo(diffDays);
+      } else {
+        setLastBackupDaysAgo(999); // Never backed up
+      }
+    } catch {
+      // Silently fail
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -210,6 +235,19 @@ const AdminDashboard = () => {
         <h1 className="font-serif text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
       </div>
+
+      {/* Backup Reminder Banner */}
+      {lastBackupDaysAgo !== null && lastBackupDaysAgo >= 7 && (
+        <Alert variant="destructive" className="mb-6 cursor-pointer" onClick={() => navigate('/admin/settings')}>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Backup Reminder</AlertTitle>
+          <AlertDescription>
+            {lastBackupDaysAgo >= 999
+              ? "You've never exported a backup. Click here to go to Settings and export your data."
+              : `It's been ${lastBackupDaysAgo} days since your last backup. Click here to export your data.`}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
