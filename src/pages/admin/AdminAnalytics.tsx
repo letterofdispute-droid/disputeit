@@ -979,9 +979,99 @@ const FunnelTab = ({
       .slice(0, 8);
   }, [events, purchases]);
 
+  // Conversion-specific attribution: first-touch & last-touch for sessions that led to a purchase
+  const conversionAttribution = useMemo(() => {
+    // Find session IDs that have a checkout_completed event
+    const convertedSessionIds = new Set<string>();
+    events.forEach(e => {
+      if (e.event_type === 'checkout_completed' && e.session_id) {
+        convertedSessionIds.add(e.session_id);
+      }
+    });
+
+    // Build per-conversion detail rows
+    const conversionDetails: Array<{
+      sessionId: string;
+      template: string;
+      amount: number;
+      date: string;
+      firstTouch: { channel: string; source: string | null; medium: string | null; campaign: string | null };
+      lastTouch: { channel: string; source: string | null; medium: string | null; campaign: string | null };
+    }> = [];
+
+    // For each converted session, find attribution from the earliest event in that session
+    const sessionFirstEvent: Record<string, AnalyticsEvent> = {};
+    const sessionLastEvent: Record<string, AnalyticsEvent> = {};
+    const sessionCheckout: Record<string, AnalyticsEvent> = {};
+
+    events.forEach(e => {
+      if (!e.session_id || !convertedSessionIds.has(e.session_id)) return;
+      const sid = e.session_id;
+      if (!sessionFirstEvent[sid] || new Date(e.created_at) < new Date(sessionFirstEvent[sid].created_at)) {
+        sessionFirstEvent[sid] = e;
+      }
+      if (!sessionLastEvent[sid] || new Date(e.created_at) > new Date(sessionLastEvent[sid].created_at)) {
+        sessionLastEvent[sid] = e;
+      }
+      if (e.event_type === 'checkout_completed') {
+        sessionCheckout[sid] = e;
+      }
+    });
+
+    convertedSessionIds.forEach(sid => {
+      const firstEvt = sessionFirstEvent[sid];
+      const checkoutEvt = sessionCheckout[sid];
+      if (!firstEvt || !checkoutEvt) return;
+
+      const firstData = firstEvt.event_data as any;
+      const checkoutData = checkoutEvt.event_data as any;
+
+      const ft = firstData?.first_touch || { channel: 'Direct', source: null, medium: null, campaign: null };
+      const lt = firstData?.last_touch || checkoutData?.last_touch || { channel: 'Direct', source: null, medium: null, campaign: null };
+
+      conversionDetails.push({
+        sessionId: sid.slice(0, 8),
+        template: (checkoutData?.templateSlug || '').replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        amount: (checkoutData?.amount || 0),
+        date: checkoutEvt.created_at,
+        firstTouch: ft,
+        lastTouch: lt,
+      });
+    });
+
+    conversionDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Summary: aggregate first-touch and last-touch channels for conversions only
+    const ftChannels: Record<string, { count: number; revenue: number }> = {};
+    const ltChannels: Record<string, { count: number; revenue: number }> = {};
+
+    conversionDetails.forEach(c => {
+      const ftCh = c.firstTouch.channel || 'Direct';
+      const ltCh = c.lastTouch.channel || 'Direct';
+      if (!ftChannels[ftCh]) ftChannels[ftCh] = { count: 0, revenue: 0 };
+      ftChannels[ftCh].count++;
+      ftChannels[ftCh].revenue += c.amount;
+      if (!ltChannels[ltCh]) ltChannels[ltCh] = { count: 0, revenue: 0 };
+      ltChannels[ltCh].count++;
+      ltChannels[ltCh].revenue += c.amount;
+    });
+
+    const allChannels = new Set([...Object.keys(ftChannels), ...Object.keys(ltChannels)]);
+    const summaryTable = Array.from(allChannels).map(ch => ({
+      channel: ch,
+      ftConversions: ftChannels[ch]?.count || 0,
+      ftRevenue: ftChannels[ch]?.revenue || 0,
+      ltConversions: ltChannels[ch]?.count || 0,
+      ltRevenue: ltChannels[ch]?.revenue || 0,
+    })).sort((a, b) => b.ftRevenue - a.ftRevenue);
+
+    return { details: conversionDetails.slice(0, 20), summary: summaryTable };
+  }, [events]);
+
   const maxPageCount = topPages[0]?.count || 1;
   const hasEvents = events.length > 0;
   const hasAttribution = attributionData.firstTouch.length > 0 || attributionData.lastTouch.length > 0;
+  const hasConversionAttribution = conversionAttribution.details.length > 0;
 
   const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -1279,6 +1369,104 @@ const FunnelTab = ({
                 <Globe className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No attribution data yet</p>
                 <p className="text-xs text-muted-foreground mt-1">Attribution tracking is now active — data will appear with new visits</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Conversion Attribution — per-purchase first & last touch */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <GitCompareArrows className="h-5 w-5" />
+            Conversion Attribution
+          </CardTitle>
+          <CardDescription>First-touch & last-touch channels for sessions that resulted in a purchase</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {hasConversionAttribution ? (
+            <div className="space-y-6">
+              {/* Summary Table */}
+              <div>
+                <h3 className="text-sm font-medium text-foreground mb-3">Channel Summary</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead className="text-right">First Touch Conversions</TableHead>
+                      <TableHead className="text-right">FT Revenue</TableHead>
+                      <TableHead className="text-right">Last Touch Conversions</TableHead>
+                      <TableHead className="text-right">LT Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conversionAttribution.summary.map((row) => (
+                      <TableRow key={row.channel}>
+                        <TableCell className="font-medium">{row.channel}</TableCell>
+                        <TableCell className="text-right">{row.ftConversions}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(row.ftRevenue / 100)}</TableCell>
+                        <TableCell className="text-right">{row.ltConversions}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(row.ltRevenue / 100)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Per-Conversion Detail */}
+              <div>
+                <h3 className="text-sm font-medium text-foreground mb-3">Recent Conversions</h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Template</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>First Touch</TableHead>
+                        <TableHead>Last Touch</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {conversionAttribution.details.map((c, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {format(parseISO(c.date), 'MMM d, h:mm a')}
+                          </TableCell>
+                          <TableCell className="font-medium text-sm max-w-[200px] truncate">{c.template || '—'}</TableCell>
+                          <TableCell className="text-sm">{formatCurrency(c.amount / 100)}</TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">{c.firstTouch.channel}</div>
+                            {c.firstTouch.source && (
+                              <div className="text-xs text-muted-foreground">
+                                {c.firstTouch.source}
+                                {c.firstTouch.campaign && <> · {c.firstTouch.campaign}</>}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">{c.lastTouch.channel}</div>
+                            {c.lastTouch.source && (
+                              <div className="text-xs text-muted-foreground">
+                                {c.lastTouch.source}
+                                {c.lastTouch.campaign && <> · {c.lastTouch.campaign}</>}
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center">
+              <div className="text-center">
+                <GitCompareArrows className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No conversion attribution data yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Attribution will appear when purchases are tracked via analytics events</p>
               </div>
             </div>
           )}
