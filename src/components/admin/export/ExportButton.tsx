@@ -124,6 +124,12 @@ const ExportButton = ({
           title: 'Export complete',
           description: `${EXPORT_OPTIONS[type].label} data has been downloaded.`,
         });
+
+        // Record backup timestamp
+        await supabase
+          .from('site_settings')
+          .upsert({ key: 'last_backup_at', value: new Date().toISOString() }, { onConflict: 'key' })
+          .then(() => {});
       } else if (data?.error) {
         throw new Error(data.error);
       }
