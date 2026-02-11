@@ -830,7 +830,7 @@ SEO REQUIREMENTS:
         }
 
         pillarClusterContext = `\n\nPILLAR ARTICLE REQUIREMENTS:
-This is a PILLAR article — a comprehensive hub page that covers the full topic and links to each cluster article below.
+This is a PILLAR article - a comprehensive hub page that covers the full topic and links to each cluster article below.
 - Write 2,000-3,000 words covering all aspects of "${plan.template_name}"
 - Include 6-8 major sections, each naturally referencing one or more cluster articles
 - For each cluster article listed below, include a natural inline mention with the title
@@ -1232,7 +1232,7 @@ serve(async (req) => {
           });
         }
 
-        // All done — complete the job
+        // All done - complete the job
         // Re-count actual statuses for accuracy
         const { data: finalItems } = await supabaseAdmin
           .from('content_queue')
@@ -1292,8 +1292,8 @@ serve(async (req) => {
         
         if (remainingItems && remainingItems.length > 0) {
           const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
-            ? 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted.'
-            : 'RATE_LIMITED: Skipped — rate limit hit.';
+             ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
+             : 'RATE_LIMITED: Skipped - rate limit hit.';
           await supabaseAdmin
             .from('content_queue')
             .update({ status: 'failed', error_message: skipMsg })
@@ -1403,7 +1403,7 @@ serve(async (req) => {
       query = query.eq('content_plans.category_id', categoryId);
     }
 
-    // Fetch ALL matching items (up to 2000) — not just a batch of 3
+    // Fetch ALL matching items (up to 2000) - not just a batch of 3
     query = query.limit(2000);
 
     const { data: allQueueItems, error: queueError } = await query;
@@ -1479,8 +1479,8 @@ serve(async (req) => {
       
       if (remainingIds.length > 0) {
         const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
-          ? 'CREDIT_EXHAUSTED: Skipped — AI credits exhausted.'
-          : 'RATE_LIMITED: Skipped — rate limit hit.';
+           ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
+           : 'RATE_LIMITED: Skipped - rate limit hit.';
         await supabaseAdmin
           .from('content_queue')
           .update({ status: 'failed', error_message: skipMsg })
@@ -1495,7 +1495,7 @@ serve(async (req) => {
       if (allIds.length > 1) {
         selfChain(newJob.id);
       } else {
-        // Small job — complete immediately
+        // Small job - complete immediately
         await completeJob(supabaseAdmin, newJob.id, succeeded, failed);
       }
     }

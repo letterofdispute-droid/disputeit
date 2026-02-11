@@ -271,7 +271,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p>Compares article embeddings to find semantically related content, then generates linking suggestions with anchor text. Uses bidirectional scanning — finds both outbound and inbound links.</p>
+                  <p>Compares article embeddings to find semantically related content, then generates linking suggestions with anchor text. Uses bidirectional scanning - finds both outbound and inbound links.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -279,7 +279,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
             <div className={`ml-8 space-y-2 ${!hasEnoughEmbeddings ? 'opacity-50 pointer-events-none' : ''}`}>
               {!hasEnoughEmbeddings && (
                 <p className="text-xs text-muted-foreground">
-                  Complete Step 1 first — need at least 2 embedded articles.
+                  Complete Step 1 first - need at least 2 embedded articles.
                 </p>
               )}
 

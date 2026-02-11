@@ -32,7 +32,7 @@ const steps = [
     number: '01',
     title: 'Choose Your Letter Type',
     icon: Search,
-    description: 'Browse our library of 400+ professionally crafted dispute letter templates. Each template is designed for a specific situation—from refund requests to landlord disputes.',
+    description: 'Browse our library of 400+ professionally crafted dispute letter templates. Each template is designed for a specific situation - from refund requests to landlord disputes.',
     tips: [
       'Use our category filters to narrow down options',
       'Each template includes a description of when to use it',
@@ -43,7 +43,7 @@ const steps = [
     number: '02',
     title: 'Fill in Your Details',
     icon: FileEdit,
-    description: 'Answer simple questions about your situation. Our smart forms guide you through exactly what information you need—no legal knowledge required.',
+    description: 'Answer simple questions about your situation. Our smart forms guide you through exactly what information you need - no legal knowledge required.',
     tips: [
       'Have your receipts, contracts, or order numbers ready',
       'Include specific dates and amounts when asked',

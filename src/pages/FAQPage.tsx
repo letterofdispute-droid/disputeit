@@ -32,7 +32,7 @@ const faqCategories = [
       },
       {
         question: 'What if my situation isn\'t covered by a template?',
-        answer: 'With 500+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Editable option lets you customize any template.',
+        answer: 'With 500+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation - it will recommend the closest match. If nothing fits, our PDF + Editable option lets you customize any template.',
       },
     ],
   },
@@ -70,7 +70,7 @@ const faqCategories = [
       },
       {
         question: 'What happens after I send a dispute letter?',
-        answer: 'Most recipients respond within 7-30 days. A well-structured letter often resolves issues faster than informal complaints because it shows you understand the process. If the issue isn\'t resolved, your letter serves as evidence that you attempted to resolve it—which is often required before taking further action.',
+        answer: 'Most recipients respond within 7-30 days. A well-structured letter often resolves issues faster than informal complaints because it shows you understand the process. If the issue isn\'t resolved, your letter serves as evidence that you attempted to resolve it - which is often required before taking further action.',
       },
       {
         question: 'What if the company ignores my letter?',
@@ -109,7 +109,7 @@ const faqCategories = [
       },
       {
         question: 'How quickly can I get my letter?',
-        answer: 'Instantly! As soon as your payment is processed, you can download your letter immediately. There\'s no waiting—start your letter, fill in the details, pay, and download.',
+        answer: 'Instantly! As soon as your payment is processed, you can download your letter immediately. There\'s no waiting - start your letter, fill in the details, pay, and download.',
       },
     ],
   },
@@ -120,7 +120,7 @@ const faqCategories = [
     faqs: [
       {
         question: 'Are these letters legally binding?',
-        answer: 'Our letters are formal demand letters, not legal contracts. They document your complaint professionally and establish a paper trail. While they carry weight, they don\'t compel a response—but they significantly increase your chances of resolution.',
+        answer: 'Our letters are formal demand letters, not legal contracts. They document your complaint professionally and establish a paper trail. While they carry weight, they don\'t compel a response - but they significantly increase your chances of resolution.',
       },
       {
         question: 'Is this legal advice?',
@@ -163,7 +163,7 @@ const faqCategories = [
       },
       {
         question: 'What if I just ignore the issue?',
-        answer: 'Ignoring issues means losing money you\'re owed, allowing bad actors to face no consequences, and potentially letting the problem escalate or repeat. Statutes of limitations may also expire. A formal letter often gets results where casual complaints fail—most issues are resolved at this stage.',
+        answer: 'Ignoring issues means losing money you\'re owed, allowing bad actors to face no consequences, and potentially letting the problem escalate or repeat. Statutes of limitations may also expire. A formal letter often gets results where casual complaints fail - most issues are resolved at this stage.',
       },
     ],
   },

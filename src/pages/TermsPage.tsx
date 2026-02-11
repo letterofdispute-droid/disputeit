@@ -129,7 +129,7 @@ const TermsPage = () => {
 
             {/* Important Disclaimer */}
             <section className="bg-muted/50 rounded-lg p-6 border border-border">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">7. Important Legal Disclaimer — "As Is" Use</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">7. Important Legal Disclaimer - "As Is" Use</h2>
               <div className="text-muted-foreground space-y-4">
                 <p className="font-semibold text-foreground">
                   LETTER OF DISPUTE IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.

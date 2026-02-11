@@ -76,7 +76,7 @@ const UTMLinkBuilder = () => {
     if (!isValid) return;
     const link: SavedLink = {
       id: crypto.randomUUID(),
-      name: `${campaign} — ${source}/${medium}`,
+      name: `${campaign} - ${source}/${medium}`,
       url: generatedUrl,
       createdAt: new Date().toISOString(),
     };

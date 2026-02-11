@@ -87,7 +87,7 @@ const AboutPage = () => {
             </h1>
             <p className="text-lg text-primary-foreground/80">
               Letter of Dispute started when a group of friends kept running into the same 
-              frustrating problem — and decided to do something about it.
+              frustrating problem - and decided to do something about it.
             </p>
           </div>
         </div>
@@ -101,7 +101,7 @@ const AboutPage = () => {
               <h2 className="font-serif text-3xl font-bold text-foreground mb-6">Our Story</h2>
               <div className="prose prose-lg max-w-none">
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  It started simply enough: a few friends kept running into the same frustrating problem — 
+                  It started simply enough: a few friends kept running into the same frustrating problem - 
                   dealing with companies that wouldn't make things right. Whether it was a landlord ignoring 
                   repair requests, a refund that never came, or an insurance claim that got denied without 
                   explanation, the experience was always the same.
@@ -114,7 +114,7 @@ const AboutPage = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   Today, we use AI technology combined with editorial oversight to help you create 
                   well-structured letters for almost any consumer dispute. We're not lawyers, and we 
-                  don't pretend to be — we're just people who believe that everyone deserves to be 
+                  don't pretend to be - we're just people who believe that everyone deserves to be 
                   heard when something goes wrong.
                 </p>
               </div>
@@ -144,7 +144,7 @@ const AboutPage = () => {
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="font-serif text-3xl font-bold text-foreground mb-4">What We Do</h2>
             <p className="text-muted-foreground">
-              We provide AI-powered letter templates with editorial oversight — not legal advice.
+              We provide AI-powered letter templates with editorial oversight - not legal advice.
             </p>
           </div>
           

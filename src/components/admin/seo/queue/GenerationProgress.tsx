@@ -31,10 +31,10 @@ export default function GenerationProgress({ job, onStop, isStopping }: Generati
   const statusText = isRunning
     ? `Generating articles... (${processed} of ${job.total_items})`
     : isCompleted
-    ? `Generation complete — ${job.succeeded_items} succeeded, ${job.failed_items} failed`
+    ? `Generation complete - ${job.succeeded_items} succeeded, ${job.failed_items} failed`
     : isCancelled
-    ? `Generation stopped — ${job.succeeded_items} succeeded, ${job.failed_items} failed`
-    : `Generation stopped — ${job.bail_reason === 'CREDIT_EXHAUSTED' ? 'AI credits exhausted' : job.bail_reason === 'RATE_LIMITED' ? 'Rate limit hit' : 'Error occurred'}`;
+    ? `Generation stopped - ${job.succeeded_items} succeeded, ${job.failed_items} failed`
+    : `Generation stopped - ${job.bail_reason === 'CREDIT_EXHAUSTED' ? 'AI credits exhausted' : job.bail_reason === 'RATE_LIMITED' ? 'Rate limit hit' : 'Error occurred'}`;
 
   const borderColor = isRunning ? 'border-primary/20' : isCompleted ? 'border-green-500/20' : 'border-destructive/20';
   const bgColor = isRunning ? 'bg-primary/5' : isCompleted ? 'bg-green-50 dark:bg-green-950/20' : 'bg-destructive/5';
@@ -69,7 +69,7 @@ export default function GenerationProgress({ job, onStop, isStopping }: Generati
         <Progress value={percentage} className="h-2" />
         {isRunning && (
           <p className="text-xs text-muted-foreground mt-2">
-            Processing server-side — you can close this page and come back later.
+            Processing server-side - you can close this page and come back later.
           </p>
         )}
         {job.bail_reason && (

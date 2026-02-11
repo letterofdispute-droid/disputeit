@@ -275,7 +275,7 @@ async function generatePlanForTemplate(
   const bannedStartersList = BANNED_TITLE_STARTERS.slice(0, 15).map(s => `- "${s}"`).join('\n');
   const existingTitlesSample = existingTitles.slice(0, 25).map(t => `- ${t}`).join('\n');
 
-  const systemPrompt = `You are a US-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN—never templated or formulaic.
+  const systemPrompt = `You are a US-based SEO content strategist and journalist. Your job is to generate article titles that feel HANDCRAFTED and HUMAN - never templated or formulaic.
 
 ABSOLUTE BANS - NEVER START TITLES WITH:
 ${bannedStartersList}
