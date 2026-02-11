@@ -8,7 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe } from 'lucide-react';
 import ExportButton from '@/components/admin/export/ExportButton';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
@@ -51,7 +52,7 @@ interface CategoryData {
   percent: number;
 }
 
-const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#22c55e', '#f59e0b', '#ef4444'];
+const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 const AdminAnalytics = () => {
   const [period, setPeriod] = useState('30');
@@ -71,7 +72,6 @@ const AdminAnalytics = () => {
     const startDate = startOfDay(subDays(new Date(), daysAgo)).toISOString();
 
     try {
-      // Fetch analytics events
       const { data: eventsData, error: eventsError } = await supabase
         .from('analytics_events')
         .select('*')
@@ -81,36 +81,27 @@ const AdminAnalytics = () => {
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
 
-      // Fetch purchases for revenue analytics
       const { data: purchasesData, error: purchasesError } = await supabase
         .from('letter_purchases')
         .select('id, amount_cents, purchase_type, template_slug, status, created_at')
         .gte('created_at', startDate)
         .order('created_at', { ascending: false });
 
-      if (!purchasesError) {
-        setPurchases(purchasesData || []);
-      }
+      if (!purchasesError) setPurchases(purchasesData || []);
 
-      // Fetch user count
       const { count: profileCount, error: profileError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', startDate);
 
-      if (!profileError) {
-        setUserCount(profileCount || 0);
-      }
+      if (!profileError) setUserCount(profileCount || 0);
 
-      // Fetch letter count
       const { count: lettersCount, error: lettersError } = await supabase
         .from('user_letters')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', startDate);
 
-      if (!lettersError) {
-        setLetterCount(lettersCount || 0);
-      }
+      if (!lettersError) setLetterCount(lettersCount || 0);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -118,7 +109,7 @@ const AdminAnalytics = () => {
     }
   };
 
-  // Calculate metrics from events
+  // Use analytics_events consistently; only fall back to DB counts when events are empty
   const metrics = useMemo(() => {
     const pageViews = events.filter(e => e.event_type === 'page_view').length;
     const templateViews = events.filter(e => e.event_type === 'template_view').length;
@@ -128,12 +119,14 @@ const AdminAnalytics = () => {
     return {
       pageViews,
       templateViews,
-      lettersGenerated: letterCount || lettersGenerated,
-      signups: userCount || signups,
+      lettersGenerated: lettersGenerated || letterCount,
+      signups: signups || userCount,
+      // Track source for display
+      signupsSource: signups > 0 ? 'events' : 'profiles',
+      lettersSource: lettersGenerated > 0 ? 'events' : 'db',
     };
   }, [events, letterCount, userCount]);
 
-  // Calculate revenue metrics
   const revenueMetrics = useMemo(() => {
     const completedPurchases = purchases.filter(p => p.status === 'completed');
     const paidPurchases = completedPurchases.filter(p => p.amount_cents > 0);
@@ -161,7 +154,6 @@ const AdminAnalytics = () => {
     };
   }, [purchases, metrics.templateViews]);
 
-  // Revenue over time chart data
   const revenueChartData = useMemo(() => {
     const daysAgo = parseInt(period);
     const days = eachDayOfInterval({
@@ -169,7 +161,6 @@ const AdminAnalytics = () => {
       end: new Date(),
     });
 
-    // Sample points for chart readability
     const sampleInterval = Math.ceil(days.length / 14);
     const sampledDays = days.filter((_, index) => index % sampleInterval === 0 || index === days.length - 1);
 
@@ -178,49 +169,32 @@ const AdminAnalytics = () => {
       const dayPurchases = purchases.filter(p => 
         format(parseISO(p.created_at), 'yyyy-MM-dd') === dayStr && p.status === 'completed'
       );
-
       const revenue = dayPurchases.reduce((sum, p) => sum + p.amount_cents, 0) / 100;
-
-      return {
-        date: dayStr,
-        label: format(day, 'MMM d'),
-        revenue,
-        orders: dayPurchases.length,
-      };
+      return { date: dayStr, label: format(day, 'MMM d'), revenue, orders: dayPurchases.length };
     });
   }, [purchases, period]);
 
-  // Purchase type breakdown
   const purchaseTypeData = useMemo(() => {
     const completedPurchases = purchases.filter(p => p.status === 'completed' && p.amount_cents > 0);
     const creditRedemptions = purchases.filter(p => p.status === 'completed' && p.amount_cents === 0);
     const pdfOnly = completedPurchases.filter(p => p.purchase_type === 'pdf_only' || p.purchase_type === 'pdf-only');
     const pdfEdit = completedPurchases.filter(p => p.purchase_type === 'pdf_edit' || p.purchase_type === 'pdf-editable');
 
-    const pdfOnlyRevenue = pdfOnly.reduce((sum, p) => sum + p.amount_cents, 0);
-    const pdfEditRevenue = pdfEdit.reduce((sum, p) => sum + p.amount_cents, 0);
-
     return [
-      { name: 'PDF Only', value: pdfOnlyRevenue / 100, count: pdfOnly.length },
-      { name: 'PDF + Edit', value: pdfEditRevenue / 100, count: pdfEdit.length },
+      { name: 'PDF Only', value: pdfOnly.reduce((s, p) => s + p.amount_cents, 0) / 100, count: pdfOnly.length },
+      { name: 'PDF + Edit', value: pdfEdit.reduce((s, p) => s + p.amount_cents, 0) / 100, count: pdfEdit.length },
       { name: 'Credit Redemptions', value: 0, count: creditRedemptions.length },
     ];
   }, [purchases]);
 
-  // Top templates by revenue
   const topTemplates = useMemo(() => {
     const completedPurchases = purchases.filter(p => p.status === 'completed');
     const templateMap: Record<string, { revenue: number; count: number }> = {};
-
     completedPurchases.forEach(p => {
-      const slug = p.template_slug;
-      if (!templateMap[slug]) {
-        templateMap[slug] = { revenue: 0, count: 0 };
-      }
-      templateMap[slug].revenue += p.amount_cents;
-      templateMap[slug].count += 1;
+      if (!templateMap[p.template_slug]) templateMap[p.template_slug] = { revenue: 0, count: 0 };
+      templateMap[p.template_slug].revenue += p.amount_cents;
+      templateMap[p.template_slug].count += 1;
     });
-
     return Object.entries(templateMap)
       .map(([slug, data]) => ({
         name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -231,72 +205,47 @@ const AdminAnalytics = () => {
       .slice(0, 5);
   }, [purchases]);
 
-  // Calculate activity chart data
+  // Activity chart data using Recharts BarChart
   const chartData = useMemo(() => {
     const daysAgo = parseInt(period);
     const days = eachDayOfInterval({
       start: subDays(new Date(), daysAgo - 1),
       end: new Date(),
     });
-
-    const sampleInterval = Math.ceil(days.length / 7);
+    const sampleInterval = Math.ceil(days.length / 10);
     const sampledDays = days.filter((_, index) => index % sampleInterval === 0 || index === days.length - 1);
 
     return sampledDays.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd');
-      const dayEvents = events.filter(e => 
-        format(parseISO(e.created_at), 'yyyy-MM-dd') === dayStr
-      );
-
+      const dayEvents = events.filter(e => format(parseISO(e.created_at), 'yyyy-MM-dd') === dayStr);
       return {
         date: dayStr,
         label: format(day, 'MMM d'),
-        pageViews: dayEvents.filter(e => e.event_type === 'page_view').length,
-        lettersGenerated: dayEvents.filter(e => e.event_type === 'letter_generated').length,
-        templateViews: dayEvents.filter(e => e.event_type === 'template_view').length,
-        signups: dayEvents.filter(e => e.event_type === 'user_signup').length,
+        'Page Views': dayEvents.filter(e => e.event_type === 'page_view').length,
+        'Template Views': dayEvents.filter(e => e.event_type === 'template_view').length,
       };
     });
   }, [events, period]);
 
-  // Calculate category distribution
   const categoryData = useMemo((): CategoryData[] => {
-    const categoryEvents = events.filter(e => 
-      e.event_type === 'template_view' || e.event_type === 'letter_generated'
-    );
-
+    const categoryEvents = events.filter(e => e.event_type === 'template_view' || e.event_type === 'letter_generated');
     const categoryMap: Record<string, number> = {};
     categoryEvents.forEach(e => {
       const category = (e.event_data as any)?.category || 'Other';
       categoryMap[category] = (categoryMap[category] || 0) + 1;
     });
-
     const total = Object.values(categoryMap).reduce((sum, val) => sum + val, 0) || 1;
-    
     const categories = Object.entries(categoryMap)
-      .map(([name, value]) => ({
-        name,
-        value,
-        percent: Math.round((value / total) * 100),
-      }))
+      .map(([name, value]) => ({ name, value, percent: Math.round((value / total) * 100) }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
-
-    if (categories.length === 0) {
-      return [{ name: 'No data yet', value: 0, percent: 0 }];
-    }
-
-    return categories;
+    return categories.length > 0 ? categories : [{ name: 'No data yet', value: 0, percent: 0 }];
   }, [events]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
-  const maxChartValue = Math.max(...chartData.map(d => Math.max(d.pageViews, d.templateViews))) || 1;
+  const hasActivityData = events.length > 0;
 
   if (isLoading) {
     return (
@@ -343,57 +292,41 @@ const AdminAnalytics = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Revenue
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
                 <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {formatCurrency(revenueMetrics.totalRevenue / 100)}
-                </div>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(revenueMetrics.totalRevenue / 100)}</div>
                 <p className="text-xs text-muted-foreground">Last {period} days</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Orders
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Orders</CardTitle>
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {revenueMetrics.orderCount}
-                </div>
+                <div className="text-2xl font-bold text-foreground">{revenueMetrics.orderCount}</div>
                 <p className="text-xs text-muted-foreground">Completed purchases</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Avg. Order Value
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Order Value</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {formatCurrency(revenueMetrics.averageOrderValue / 100)}
-                </div>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(revenueMetrics.averageOrderValue / 100)}</div>
                 <p className="text-xs text-muted-foreground">Per transaction</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Conversion Rate
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
                 <Percent className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {revenueMetrics.conversionRate.toFixed(2)}%
-                </div>
+                <div className="text-2xl font-bold text-foreground">{revenueMetrics.conversionRate.toFixed(2)}%</div>
                 <p className="text-xs text-muted-foreground">Views → Purchases</p>
               </CardContent>
             </Card>
@@ -410,31 +343,13 @@ const AdminAnalytics = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={revenueChartData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="label" 
-                      className="text-xs"
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    />
-                    <YAxis 
-                      className="text-xs"
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                      tickFormatter={(value) => `$${value}`}
-                    />
+                    <XAxis dataKey="label" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip 
                       formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                    />
+                    <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -443,7 +358,6 @@ const AdminAnalytics = () => {
 
           {/* Purchase Type & Top Templates */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Purchase Type Breakdown */}
             <Card>
               <CardHeader>
                 <CardTitle className="font-serif text-xl">Purchase Type Breakdown</CardTitle>
@@ -453,30 +367,14 @@ const AdminAnalytics = () => {
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={purchaseTypeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, value }) => `${formatCurrency(value)}`}
-                      >
-                        {purchaseTypeData.map((entry, index) => (
+                      <Pie data={purchaseTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label={({ value }) => `${formatCurrency(value)}`}>
+                        {purchaseTypeData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip 
-                        formatter={(value: number, name: string, props: any) => [
-                          `${formatCurrency(value)} (${props.payload.count} orders)`,
-                          props.payload.name
-                        ]}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
+                      <Tooltip
+                        formatter={(value: number, _: string, props: any) => [`${formatCurrency(value)} (${props.payload.count} orders)`, props.payload.name]}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                       />
                       <Legend />
                     </PieChart>
@@ -485,7 +383,6 @@ const AdminAnalytics = () => {
               </CardContent>
             </Card>
 
-            {/* Top Templates */}
             <Card>
               <CardHeader>
                 <CardTitle className="font-serif text-xl">Top Templates by Revenue</CardTitle>
@@ -497,49 +394,33 @@ const AdminAnalytics = () => {
                     {topTemplates.map((template, index) => (
                       <div key={index}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-foreground truncate max-w-[60%]">
-                            {template.name}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {formatCurrency(template.revenue)} ({template.count})
-                          </span>
+                          <span className="text-sm font-medium text-foreground truncate max-w-[60%]">{template.name}</span>
+                          <span className="text-sm text-muted-foreground">{formatCurrency(template.revenue)} ({template.count})</span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ 
-                              width: `${(template.revenue / (topTemplates[0]?.revenue || 1)) * 100}%` 
-                            }}
-                          />
+                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(template.revenue / (topTemplates[0]?.revenue || 1)) * 100}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No sales data yet
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-8">No sales data yet</p>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Refunds Summary */}
           {revenueMetrics.refundedAmount > 0 && (
             <Card className="border-orange-500/20 bg-orange-500/5">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Refunded Amount</p>
-                    <p className="text-2xl font-bold text-orange-600">
-                      {formatCurrency(revenueMetrics.refundedAmount / 100)}
-                    </p>
+                    <p className="text-2xl font-bold text-orange-600">{formatCurrency(revenueMetrics.refundedAmount / 100)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-muted-foreground">Net Revenue</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {formatCurrency(revenueMetrics.netRevenue / 100)}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{formatCurrency(revenueMetrics.netRevenue / 100)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -558,33 +439,31 @@ const AdminAnalytics = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Letters Generated
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Letters Generated</CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{metrics.lettersGenerated.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Last {period} days</p>
+                <p className="text-xs text-muted-foreground">
+                  Last {period} days{metrics.lettersSource === 'db' ? ' (from records)' : ''}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  New Users
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">New Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{metrics.signups.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Last {period} days</p>
+                <p className="text-xs text-muted-foreground">
+                  Last {period} days{metrics.signupsSource === 'profiles' ? ' (from profiles)' : ''}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Template Views
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Template Views</CardTitle>
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -594,9 +473,7 @@ const AdminAnalytics = () => {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Page Views
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Page Views</CardTitle>
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -608,40 +485,36 @@ const AdminAnalytics = () => {
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Activity Chart */}
+            {/* Activity Chart - now using Recharts BarChart */}
             <Card>
               <CardHeader>
                 <CardTitle className="font-serif text-xl">Activity Overview</CardTitle>
                 <CardDescription>Page views and template views over time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] flex items-end justify-between gap-2 pt-4">
-                  {chartData.map((data, index) => (
-                    <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="w-full flex flex-col gap-1">
-                        <div 
-                          className="w-full bg-primary rounded-t transition-all"
-                          style={{ height: `${Math.max((data.pageViews / maxChartValue) * 200, 4)}px` }}
-                        />
-                        <div 
-                          className="w-full bg-accent rounded-b transition-all"
-                          style={{ height: `${Math.max((data.templateViews / maxChartValue) * 100, 2)}px` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{data.label}</span>
+                {hasActivityData ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="label" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                        <Bar dataKey="Page Views" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Template Views" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                        <Legend />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <Eye className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No activity data yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Events will appear as users interact with the site</p>
                     </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-primary rounded" />
-                    <span className="text-sm text-muted-foreground">Page Views</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-accent rounded" />
-                    <span className="text-sm text-muted-foreground">Template Views</span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -656,18 +529,11 @@ const AdminAnalytics = () => {
                   {categoryData.map((category, index) => (
                     <div key={index}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-foreground">
-                          {category.name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {category.value} ({category.percent}%)
-                        </span>
+                        <span className="text-sm font-medium text-foreground">{category.name}</span>
+                        <span className="text-sm text-muted-foreground">{category.value} ({category.percent}%)</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${category.percent}%` }}
-                        />
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${category.percent}%` }} />
                       </div>
                     </div>
                   ))}
@@ -676,39 +542,42 @@ const AdminAnalytics = () => {
             </Card>
           </div>
 
-          {/* Funnel */}
+          {/* Activity Funnel - fixed to not mix data sources */}
           <Card>
             <CardHeader>
               <CardTitle className="font-serif text-xl">Activity Funnel</CardTitle>
               <CardDescription>User journey from page view to letter generation</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end justify-between gap-4 h-[200px]">
-                <FunnelStep 
-                  value={metrics.pageViews} 
-                  label="Page Views" 
-                  maxValue={metrics.pageViews || 1}
-                  color="bg-primary"
-                />
-                <FunnelStep 
-                  value={metrics.templateViews} 
-                  label="Template Views" 
-                  maxValue={metrics.pageViews || 1}
-                  color="bg-primary"
-                />
-                <FunnelStep 
-                  value={metrics.signups} 
-                  label="Sign Ups" 
-                  maxValue={metrics.pageViews || 1}
-                  color="bg-primary"
-                />
-                <FunnelStep 
-                  value={metrics.lettersGenerated} 
-                  label="Letters Generated" 
-                  maxValue={metrics.pageViews || 1}
-                  color="bg-accent"
-                />
-              </div>
+              {hasActivityData ? (
+                <div className="space-y-3">
+                  {[
+                    { label: 'Page Views', value: metrics.pageViews, color: 'bg-muted-foreground/30' },
+                    { label: 'Template Views', value: metrics.templateViews, color: 'bg-primary/60' },
+                    { label: 'Letters Generated', value: metrics.lettersGenerated, color: 'bg-primary' },
+                  ].map((step, i, arr) => {
+                    const maxVal = arr[0].value || 1;
+                    const percent = (step.value / maxVal) * 100;
+                    return (
+                      <div key={step.label}>
+                        <div className="flex items-center gap-4">
+                          <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">{step.label}</div>
+                          <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
+                            <div className={`h-full ${step.color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(percent, 2)}%` }} />
+                          </div>
+                          <div className="w-16 text-right shrink-0">
+                            <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-[150px] flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">No funnel data yet — activity will appear as events are tracked</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -717,27 +586,23 @@ const AdminAnalytics = () => {
   );
 };
 
-// Full Funnel Tab Component
+// ─── Funnel Tab ─────────────────────────────────────────────────────────────────
 const FunnelTab = ({ 
-  events, 
-  purchases, 
-  period,
-  formatCurrency 
+  events, purchases, period, formatCurrency 
 }: { 
   events: AnalyticsEvent[];
   purchases: Purchase[];
   period: string;
   formatCurrency: (v: number) => string;
 }) => {
+  // Conversion funnel
   const funnelData = useMemo(() => {
     const pageViews = events.filter(e => e.event_type === 'page_view').length;
     const templateViews = events.filter(e => e.event_type === 'template_view').length;
     const formStarts = events.filter(e => e.event_type === 'form_started').length;
     const formCompletes = events.filter(e => e.event_type === 'form_completed').length;
     const checkoutStarts = events.filter(e => e.event_type === 'checkout_initiated').length;
-    const completedPurchases = purchases.filter(p => p.status === 'completed');
-    const paidPurchases = completedPurchases.filter(p => p.amount_cents > 0);
-    const creditRedemptions = completedPurchases.filter(p => p.amount_cents === 0);
+    const paidPurchases = purchases.filter(p => p.status === 'completed' && p.amount_cents > 0);
 
     const steps = [
       { label: 'Page Views', value: pageViews, color: 'bg-muted-foreground/30' },
@@ -758,63 +623,165 @@ const FunnelTab = ({
     }));
   }, [events, purchases]);
 
+  // Session Explorer: group events by session_id
+  const sessionPaths = useMemo(() => {
+    const sessionMap: Record<string, AnalyticsEvent[]> = {};
+    events.forEach(e => {
+      const sid = e.session_id;
+      if (!sid) return;
+      if (!sessionMap[sid]) sessionMap[sid] = [];
+      sessionMap[sid].push(e);
+    });
+
+    return Object.entries(sessionMap)
+      .map(([sessionId, sessionEvents]) => {
+        const sorted = [...sessionEvents].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        const entryPage = sorted[0]?.page_path || '/';
+        const exitPage = sorted[sorted.length - 1]?.page_path || '/';
+        const hasPurchase = sorted.some(e => e.event_type === 'checkout_completed');
+        const duration = sorted.length > 1 
+          ? Math.round((new Date(sorted[sorted.length - 1].created_at).getTime() - new Date(sorted[0].created_at).getTime()) / 1000)
+          : 0;
+        
+        return {
+          sessionId: sessionId.slice(0, 8),
+          entryPage,
+          exitPage,
+          eventCount: sorted.length,
+          hasPurchase,
+          duration,
+          timestamp: sorted[0].created_at,
+          events: sorted,
+        };
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 20);
+  }, [events]);
+
+  // Top user paths (sequences of page views per session)
+  const topPaths = useMemo(() => {
+    const sessionMap: Record<string, string[]> = {};
+    events
+      .filter(e => e.event_type === 'page_view')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .forEach(e => {
+        if (!e.session_id) return;
+        if (!sessionMap[e.session_id]) sessionMap[e.session_id] = [];
+        const path = e.page_path || '/';
+        // Avoid consecutive duplicates
+        const arr = sessionMap[e.session_id];
+        if (arr[arr.length - 1] !== path) arr.push(path);
+      });
+
+    // Truncate paths to max 5 steps for readability
+    const pathCountMap: Record<string, number> = {};
+    Object.values(sessionMap).forEach(pages => {
+      const truncated = pages.slice(0, 5);
+      const key = truncated.join(' → ');
+      pathCountMap[key] = (pathCountMap[key] || 0) + 1;
+    });
+
+    return Object.entries(pathCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([path, count]) => ({ path, count }));
+  }, [events]);
+
+  // Attribution data
+  const attributionData = useMemo(() => {
+    const firstTouchMap: Record<string, number> = {};
+    const lastTouchMap: Record<string, number> = {};
+    const sessionsWithAttribution = new Set<string>();
+
+    events.forEach(e => {
+      const data = e.event_data as any;
+      if (!data) return;
+
+      const ft = data.first_touch?.channel;
+      const lt = data.last_touch?.channel;
+      const sid = e.session_id;
+
+      // Count unique sessions per channel
+      if (ft && sid && !sessionsWithAttribution.has(`ft-${sid}`)) {
+        firstTouchMap[ft] = (firstTouchMap[ft] || 0) + 1;
+        sessionsWithAttribution.add(`ft-${sid}`);
+      }
+      if (lt && sid && !sessionsWithAttribution.has(`lt-${sid}`)) {
+        lastTouchMap[lt] = (lastTouchMap[lt] || 0) + 1;
+        sessionsWithAttribution.add(`lt-${sid}`);
+      }
+    });
+
+    const toChartData = (map: Record<string, number>) =>
+      Object.entries(map)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+    return {
+      firstTouch: toChartData(firstTouchMap),
+      lastTouch: toChartData(lastTouchMap),
+    };
+  }, [events]);
+
+  // Attribution table (combined view)
+  const attributionTable = useMemo(() => {
+    const channels = new Set<string>();
+    attributionData.firstTouch.forEach(d => channels.add(d.name));
+    attributionData.lastTouch.forEach(d => channels.add(d.name));
+
+    const ftMap = Object.fromEntries(attributionData.firstTouch.map(d => [d.name, d.value]));
+    const ltMap = Object.fromEntries(attributionData.lastTouch.map(d => [d.name, d.value]));
+
+    return Array.from(channels).map(channel => ({
+      channel,
+      firstTouch: ftMap[channel] || 0,
+      lastTouch: ltMap[channel] || 0,
+    })).sort((a, b) => b.firstTouch - a.firstTouch);
+  }, [attributionData]);
+
   // Top landing pages
   const topPages = useMemo(() => {
     const pageMap: Record<string, number> = {};
-    events
-      .filter(e => e.event_type === 'page_view')
-      .forEach(e => {
-        const path = e.page_path || '/';
-        pageMap[path] = (pageMap[path] || 0) + 1;
-      });
-    return Object.entries(pageMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([path, count]) => ({ path, count }));
+    events.filter(e => e.event_type === 'page_view').forEach(e => {
+      const path = e.page_path || '/';
+      pageMap[path] = (pageMap[path] || 0) + 1;
+    });
+    return Object.entries(pageMap).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([path, count]) => ({ path, count }));
   }, [events]);
 
   // Template conversion rates
   const templateConversions = useMemo(() => {
     const viewMap: Record<string, number> = {};
     const purchaseMap: Record<string, number> = {};
-
     events.filter(e => e.event_type === 'template_view').forEach(e => {
       const slug = (e.event_data as any)?.templateSlug || 'unknown';
       viewMap[slug] = (viewMap[slug] || 0) + 1;
     });
-
     purchases.filter(p => p.status === 'completed').forEach(p => {
       purchaseMap[p.template_slug] = (purchaseMap[p.template_slug] || 0) + 1;
     });
-
     return Object.entries(viewMap)
       .map(([slug, views]) => ({
         name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        views,
-        purchases: purchaseMap[slug] || 0,
+        views, purchases: purchaseMap[slug] || 0,
         rate: views > 0 ? ((purchaseMap[slug] || 0) / views * 100) : 0,
       }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 8);
   }, [events, purchases]);
 
-  // Geographic breakdown from locale
-  const geoData = useMemo(() => {
-    const localeMap: Record<string, number> = {};
-    events.forEach(e => {
-      const locale = (e.event_data as any)?.locale;
-      if (locale) {
-        const lang = locale.split('-')[0].toUpperCase();
-        localeMap[lang] = (localeMap[lang] || 0) + 1;
-      }
-    });
-    return Object.entries(localeMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([lang, count]) => ({ lang, count }));
-  }, [events]);
-
   const maxPageCount = topPages[0]?.count || 1;
+  const hasEvents = events.length > 0;
+  const hasAttribution = attributionData.firstTouch.length > 0 || attributionData.lastTouch.length > 0;
+
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
 
   return (
     <>
@@ -825,42 +792,195 @@ const FunnelTab = ({
             <Filter className="h-5 w-5" />
             Conversion Funnel
           </CardTitle>
-          <CardDescription>
-            Full user journey — last {period} days. Drop-off % shown between stages.
-          </CardDescription>
+          <CardDescription>Full user journey — last {period} days. Drop-off % shown between stages.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {funnelData.map((step, i) => (
-              <div key={step.label}>
-                {step.dropoff !== null && (
-                  <div className="text-xs text-destructive/70 text-center mb-1">
-                    ↓ {step.dropoff}% drop-off
-                  </div>
-                )}
-                <div className="flex items-center gap-4">
-                  <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">
-                    {step.label}
-                  </div>
-                  <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
-                    <div 
-                      className={`h-full ${step.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${Math.max(step.percent, 2)}%` }}
-                    />
-                  </div>
-                  <div className="w-20 text-right shrink-0">
-                    <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground ml-1">({step.percent.toFixed(1)}%)</span>
+          {hasEvents ? (
+            <div className="space-y-3">
+              {funnelData.map((step, i) => (
+                <div key={step.label}>
+                  {step.dropoff !== null && (
+                    <div className="text-xs text-destructive/70 text-center mb-1">↓ {step.dropoff}% drop-off</div>
+                  )}
+                  <div className="flex items-center gap-4">
+                    <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">{step.label}</div>
+                    <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
+                      <div className={`h-full ${step.color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(step.percent, 2)}%` }} />
+                    </div>
+                    <div className="w-20 text-right shrink-0">
+                      <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground ml-1">({step.percent.toFixed(1)}%)</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-[150px] flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">No funnel data yet — events will populate as users interact</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Session Explorer + Top Paths */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Landing Pages */}
+        {/* Session Explorer */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <Route className="h-5 w-5" />
+              Session Explorer
+            </CardTitle>
+            <CardDescription>Recent user sessions — entry → exit path</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {sessionPaths.length > 0 ? (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {sessionPaths.map((session, i) => (
+                  <div key={i} className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-mono text-muted-foreground">#{session.sessionId}</span>
+                      <div className="flex items-center gap-2">
+                        {session.hasPurchase && (
+                          <span className="text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full font-medium">💰 Converted</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{session.eventCount} events · {formatDuration(session.duration)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="font-medium text-foreground truncate max-w-[40%]">{session.entryPage}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="font-medium text-foreground truncate max-w-[40%]">{session.exitPage}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {format(parseISO(session.timestamp), 'MMM d, h:mm a')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">No session data yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top User Paths */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Top User Paths
+            </CardTitle>
+            <CardDescription>Most common navigation sequences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topPaths.length > 0 ? (
+              <div className="space-y-3">
+                {topPaths.map((p, i) => (
+                  <div key={i} className="flex items-start justify-between gap-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground break-words">{p.path}</div>
+                    </div>
+                    <span className="text-sm font-bold text-primary shrink-0">{p.count}×</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">No path data yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Attribution Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Traffic Attribution
+          </CardTitle>
+          <CardDescription>First-touch (how they discovered you) vs last-touch (what drove action)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {hasAttribution ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* First Touch Pie */}
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-3 text-center">First Touch</h3>
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={attributionData.firstTouch} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                          {attributionData.firstTouch.map((_, index) => (
+                            <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Last Touch Pie */}
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-3 text-center">Last Touch</h3>
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={attributionData.lastTouch} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                          {attributionData.lastTouch.map((_, index) => (
+                            <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attribution Table */}
+              {attributionTable.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead className="text-right">First Touch Sessions</TableHead>
+                      <TableHead className="text-right">Last Touch Sessions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attributionTable.map((row) => (
+                      <TableRow key={row.channel}>
+                        <TableCell className="font-medium">{row.channel}</TableCell>
+                        <TableCell className="text-right">{row.firstTouch}</TableCell>
+                        <TableCell className="text-right">{row.lastTouch}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center">
+              <div className="text-center">
+                <Globe className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No attribution data yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Attribution tracking is now active — data will appear with new visits</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Existing sections: Top Pages + Template Conversions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="font-serif text-xl">Top Landing Pages</CardTitle>
@@ -872,16 +992,11 @@ const FunnelTab = ({
                 {topPages.map((page, i) => (
                   <div key={i}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-foreground truncate max-w-[70%]">
-                        {page.path}
-                      </span>
+                      <span className="text-sm font-medium text-foreground truncate max-w-[70%]">{page.path}</span>
                       <span className="text-sm text-muted-foreground">{page.count}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${(page.count / maxPageCount) * 100}%` }}
-                      />
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${(page.count / maxPageCount) * 100}%` }} />
                     </div>
                   </div>
                 ))}
@@ -892,7 +1007,6 @@ const FunnelTab = ({
           </CardContent>
         </Card>
 
-        {/* Template Conversion Rates */}
         <Card>
           <CardHeader>
             <CardTitle className="font-serif text-xl">Template Conversion Rates</CardTitle>
@@ -904,18 +1018,13 @@ const FunnelTab = ({
                 {templateConversions.map((t, i) => (
                   <div key={i}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-foreground truncate max-w-[55%]">
-                        {t.name}
-                      </span>
+                      <span className="text-sm font-medium text-foreground truncate max-w-[55%]">{t.name}</span>
                       <span className="text-xs text-muted-foreground">
                         {t.purchases}/{t.views} = <span className="font-bold text-foreground">{t.rate.toFixed(1)}%</span>
                       </span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-accent rounded-full"
-                        style={{ width: `${Math.max(t.rate, 1)}%` }}
-                      />
+                      <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(t.rate, 1)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -928,54 +1037,37 @@ const FunnelTab = ({
       </div>
 
       {/* Geographic Breakdown */}
-      {geoData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">Geographic Breakdown</CardTitle>
-            <CardDescription>Visitor language distribution (from browser locale)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              {geoData.map((g, i) => (
-                <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted">
-                  <span className="text-sm font-bold text-foreground">{g.lang}</span>
-                  <span className="text-xs text-muted-foreground">{g.count.toLocaleString()} events</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </>
-  );
-};
+      {(() => {
+        const localeMap: Record<string, number> = {};
+        events.forEach(e => {
+          const locale = (e.event_data as any)?.locale;
+          if (locale) {
+            const lang = locale.split('-')[0].toUpperCase();
+            localeMap[lang] = (localeMap[lang] || 0) + 1;
+          }
+        });
+        const geoData = Object.entries(localeMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([lang, count]) => ({ lang, count }));
 
-const FunnelStep = ({ 
-  value, 
-  label, 
-  maxValue,
-  color 
-}: { 
-  value: number; 
-  label: string; 
-  maxValue: number;
-  color: string;
-}) => {
-  const height = Math.max((value / maxValue) * 180, 10);
-  
-  return (
-    <div className="flex-1 flex flex-col items-center">
-      <div className="w-full bg-muted rounded-t relative" style={{ height: '180px' }}>
-        <div 
-          className={`absolute inset-x-0 bottom-0 ${color} rounded-t transition-all`} 
-          style={{ height: `${height}px` }} 
-        />
-      </div>
-      <div className="mt-2 text-center">
-        <p className="text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
-      </div>
-    </div>
+        return geoData.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-serif text-xl">Geographic Breakdown</CardTitle>
+              <CardDescription>Visitor language distribution (from browser locale)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {geoData.map((g, i) => (
+                  <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted">
+                    <span className="text-sm font-bold text-foreground">{g.lang}</span>
+                    <span className="text-xs text-muted-foreground">{g.count.toLocaleString()} events</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null;
+      })()}
+    </>
   );
 };
 
