@@ -1258,6 +1258,7 @@ export type Database = {
         }[]
       }
       recover_stale_generating_items: { Args: never; Returns: undefined }
+      recover_stale_image_optimization_jobs: { Args: never; Returns: undefined }
       recover_stale_planning_jobs: { Args: never; Returns: undefined }
       revoke_role: {
         Args: {
