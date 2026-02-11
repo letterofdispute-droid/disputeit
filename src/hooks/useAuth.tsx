@@ -18,6 +18,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  linkGoogle: () => Promise<{ error: Error | null }>;
+  unlinkIdentity: (identityId: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -142,6 +144,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const linkGoogle = async () => {
+    const { data, error } = await supabase.auth.linkIdentity({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/settings`,
+      },
+    });
+    if (error) return { error };
+    // If successful, user will be redirected for OAuth
+    if (data?.url) {
+      window.location.href = data.url;
+    }
+    return { error: null };
+  };
+
+  const unlinkIdentity = async (identityId: string) => {
+    const { error } = await supabase.auth.unlinkIdentity({
+      id: identityId,
+    } as any);
+    if (!error) {
+      // Refresh user data
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) setUser(data.user);
+    }
+    return { error: error || null };
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -151,7 +180,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       profile,
       signUp, 
       signIn, 
-      signOut
+      signOut,
+      linkGoogle,
+      unlinkIdentity,
     }}>
       {children}
     </AuthContext.Provider>
