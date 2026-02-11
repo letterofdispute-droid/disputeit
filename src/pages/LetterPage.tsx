@@ -11,7 +11,8 @@ import RelatedArticles from '@/components/letter/RelatedArticles';
 import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
 import { Separator } from '@/components/ui/separator';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MethodologyBadge } from '@/components/letter/MethodologyBadge';
 import {
   Breadcrumb,
@@ -234,26 +235,25 @@ const LetterPage = () => {
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
               {template.seoTitle}
             </h1>
-            <p className="text-lg text-primary-foreground/80">
+            <p className="text-lg text-primary-foreground/80 mb-6">
               {template.seoDescription}
             </p>
+            <Button
+              variant="accent"
+              size="lg"
+              onClick={() => document.getElementById('create-letter')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Create Your Letter
+              <ArrowDown className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* SEO Content Section - Crawlable, above the fold */}
-      <section className="py-12 md:py-16 bg-background">
-        <div className="container-narrow">
-          <SEOContent template={template} />
-        </div>
-      </section>
-
-      <Separator />
-
-      {/* Letter Generator Section */}
-      <section className="py-12 md:py-16 bg-secondary/20">
+      {/* Letter Generator Section - Primary conversion point */}
+      <section id="create-letter" className="py-12 md:py-16 bg-secondary/20">
         <div className="container-wide">
-          <div className="text-center max-w-2xl mx-auto mb-6">
+          <div className="text-center max-w-3xl mx-auto mb-6">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-3">
               Create Your {template.title}
             </h2>
@@ -263,7 +263,7 @@ const LetterPage = () => {
           </div>
           
           {/* Template Validation Callout */}
-          <div className="max-w-2xl mx-auto mb-10">
+          <div className="max-w-5xl mx-auto mb-10">
             <MethodologyBadge 
               category={template.category}
               subcategory={subcategoryInfo?.name}
@@ -272,6 +272,15 @@ const LetterPage = () => {
           </div>
           
           <LetterGenerator template={template} />
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* SEO Content Section - Crawlable, informational */}
+      <section className="py-12 md:py-16 bg-background">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SEOContent template={template} />
         </div>
       </section>
 

@@ -111,7 +111,7 @@ const LetterGenerator = ({
 
   // Check if any field has AI enhancement
   const hasAiEnhancedFields = template.fields.some(f => f.aiEnhanced);
-  return <div className="max-w-4xl mx-auto">
+  return <div className="max-w-5xl mx-auto">
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
