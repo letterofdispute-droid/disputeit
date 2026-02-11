@@ -144,7 +144,7 @@ const faqs = [
   },
   {
     question: 'How quickly can I get my letter?',
-    answer: 'Instantly! As soon as your payment is processed, you can download your letter immediately. There\'s no waiting—start your letter, fill in the details, pay, and download.',
+    answer: 'Instantly! As soon as your payment is processed, you can download your letter immediately. There\'s no waiting - start your letter, fill in the details, pay, and download.',
   },
   {
     question: 'What if my dispute doesn\'t fit any template?',

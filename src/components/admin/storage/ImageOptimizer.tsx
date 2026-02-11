@@ -176,7 +176,7 @@ const ImageOptimizer = () => {
           Image Storage Optimizer
         </CardTitle>
         <CardDescription>
-          Scan, compress, and clean up oversized images. Runs in background — you can close this tab.
+          Scan, compress, and clean up oversized images. Runs in background - you can close this tab.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -227,7 +227,7 @@ const ImageOptimizer = () => {
                 <p className="text-sm font-medium">Optimization Complete</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Processed {job.processed} images, saved {formatBytes(job.saved_bytes)}.
-                  Original files are still intact — use Cleanup to delete them.
+                  Original files are still intact - use Cleanup to delete them.
                 </p>
               </div>
             </div>

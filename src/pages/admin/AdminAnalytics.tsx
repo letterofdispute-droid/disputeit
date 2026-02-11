@@ -761,7 +761,7 @@ const AdminAnalytics = () => {
                 </div>
               ) : (
                 <div className="h-[150px] flex items-center justify-center">
-                  <p className="text-sm text-muted-foreground">No funnel data yet — activity will appear as events are tracked</p>
+                  <p className="text-sm text-muted-foreground">No funnel data yet - activity will appear as events are tracked</p>
                 </div>
               )}
             </CardContent>
@@ -1090,7 +1090,7 @@ const FunnelTab = ({
             Conversion Funnel
           </CardTitle>
           <CardDescription>
-            Full user journey — last {period} days. Drop-off % shown between stages.
+            Full user journey - last {period} days. Drop-off % shown between stages.
             {hasComparison && ' Compared with previous period.'}
           </CardDescription>
         </CardHeader>
@@ -1120,17 +1120,17 @@ const FunnelTab = ({
                       <TableRow key={step.label}>
                         <TableCell className="font-medium">{step.label}</TableCell>
                         <TableCell className="text-right font-bold">{step.value.toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{prev?.value?.toLocaleString() ?? '—'}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{prev?.value?.toLocaleString() ?? '-'}</TableCell>
                         <TableCell className="text-right">
                           <span className={`inline-flex items-center gap-0.5 text-sm font-medium ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                             {diff > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : diff < 0 ? <ArrowDownRight className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
-                            {diffPercent !== null ? `${Math.abs(diffPercent).toFixed(1)}%` : '—'}
+                            {diffPercent !== null ? `${Math.abs(diffPercent).toFixed(1)}%` : '-'}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
                           {step.dropoffRate !== null ? (
                             <span className="text-xs text-destructive/70">{step.dropoffRate}%</span>
-                          ) : '—'}
+                           ) : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           {prev?.dropoffRate !== null && prev?.dropoffRate !== undefined ? (
@@ -1142,7 +1142,7 @@ const FunnelTab = ({
                                 </span>
                               )}
                             </span>
-                          ) : '—'}
+                          ) : '-'}
                         </TableCell>
                       </TableRow>
                     );
@@ -1176,7 +1176,7 @@ const FunnelTab = ({
             )
           ) : (
             <div className="h-[150px] flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">No funnel data yet — events will populate as users interact</p>
+              <p className="text-sm text-muted-foreground">No funnel data yet - events will populate as users interact</p>
             </div>
           )}
         </CardContent>
@@ -1190,7 +1190,7 @@ const FunnelTab = ({
               <TrendingUp className="h-5 w-5" />
               Drop-off Bottlenecks
             </CardTitle>
-            <CardDescription>Stages with the highest user abandonment — focus optimization here</CardDescription>
+            <CardDescription>Stages with the highest user abandonment - focus optimization here</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1228,7 +1228,7 @@ const FunnelTab = ({
               <Route className="h-5 w-5" />
               Session Explorer
             </CardTitle>
-            <CardDescription>Recent user sessions — entry → exit path</CardDescription>
+            <CardDescription>Recent user sessions - entry → exit path</CardDescription>
           </CardHeader>
           <CardContent>
             {sessionPaths.length > 0 ? (
@@ -1368,14 +1368,14 @@ const FunnelTab = ({
               <div className="text-center">
                 <Globe className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No attribution data yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Attribution tracking is now active — data will appear with new visits</p>
+                <p className="text-xs text-muted-foreground mt-1">Attribution tracking is now active - data will appear with new visits</p>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Conversion Attribution — per-purchase first & last touch */}
+      {/* Conversion Attribution - per-purchase first & last touch */}
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-xl flex items-center gap-2">
@@ -1434,7 +1434,7 @@ const FunnelTab = ({
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                             {format(parseISO(c.date), 'MMM d, h:mm a')}
                           </TableCell>
-                          <TableCell className="font-medium text-sm max-w-[200px] truncate">{c.template || '—'}</TableCell>
+                          <TableCell className="font-medium text-sm max-w-[200px] truncate">{c.template || '-'}</TableCell>
                           <TableCell className="text-sm">{formatCurrency(c.amount / 100)}</TableCell>
                           <TableCell>
                             <div className="text-sm font-medium">{c.firstTouch.channel}</div>

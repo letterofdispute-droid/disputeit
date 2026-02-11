@@ -206,10 +206,10 @@ const AdminTemplates = () => {
                             <span className="font-medium">{template.title}</span>
                           </div>
                           <p className="text-xs text-muted-foreground/70 truncate max-w-lg">
-                            <span className="font-medium">SEO Title:</span> {template.seoTitle || '—'}
+                             <span className="font-medium">SEO Title:</span> {template.seoTitle || '-'}
                           </p>
                           <p className="text-xs text-muted-foreground/60 truncate max-w-lg">
-                            {template.seoDescription || '—'}
+                             {template.seoDescription || '-'}
                           </p>
                           <p className="text-xs text-muted-foreground/50">
                             /{template.slug}
@@ -220,7 +220,7 @@ const AdminTemplates = () => {
                         <Badge variant="outline">{template.category}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {subcategoryInfo?.name || template.subcategory || '—'}
+                        {subcategoryInfo?.name || template.subcategory || '-'}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -280,7 +280,7 @@ const AdminTemplates = () => {
       <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit SEO — {editingTemplate?.title}</DialogTitle>
+            <DialogTitle>Edit SEO - {editingTemplate?.title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

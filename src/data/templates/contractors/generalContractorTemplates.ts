@@ -257,7 +257,7 @@ export const generalContractorTemplates: LetterTemplate[] = [
     category: 'Contractors',
     title: 'Unlicensed/Unregistered Contractor Complaint',
     shortDescription: 'Complain when you discover a contractor was not properly licensed or registered.',
-    longDescription: 'Use this template when you find that a contractor who did work for you was not properly licensed, registered, or insured as required—or misrepresented their credentials.',
+    longDescription: 'Use this template when you find that a contractor who did work for you was not properly licensed, registered, or insured as required - or misrepresented their credentials.',
     seoTitle: 'Unlicensed Contractor Complaint Letter Template | Free Download',
     seoDescription: 'Complain about contractors who misrepresented licensing or registration with our professional letter template.',
     tones: ['neutral', 'firm', 'final'],

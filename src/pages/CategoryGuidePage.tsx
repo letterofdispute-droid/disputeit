@@ -109,7 +109,7 @@ const CategoryGuidePage = () => {
       <section className="py-12">
         <div className="container-wide">
           <div className="max-w-6xl mx-auto flex gap-8">
-            {/* Sticky TOC sidebar — desktop only */}
+            {/* Sticky TOC sidebar - desktop only */}
             <aside className="hidden lg:block w-56 flex-shrink-0">
               <nav className="sticky top-24">
                 <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">

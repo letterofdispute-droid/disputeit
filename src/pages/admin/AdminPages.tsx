@@ -311,7 +311,7 @@ const AdminPages = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {getParentTitle(page.parent_id) || '—'}
+                      {getParentTitle(page.parent_id) || '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(page.updated_at).toLocaleDateString()}
