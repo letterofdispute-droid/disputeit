@@ -1,69 +1,44 @@
 
 
-# Fix Queue Stats Number Mismatch
+# Fix "Articles Generated" Showing 1000 and Stale Job Banner
 
-## Problem
+## Problem 1: Articles Generated capped at 1000
 
-When you plan a category (e.g., Healthcare with 50 templates), the planner shows "344 articles will be created." But when you go to the queue, you see fewer items (e.g., 333). This is because:
+The `CoverageStats` component counts articles by filtering the `queueItems` array, which is fetched with `.limit(1000)`. The actual count is **2,028** (631 generated + 1,397 published), but the UI shows 1000.
 
-1. The plan records `target_article_count = 7` per template (the goal)
-2. The AI sometimes generates fewer than 6 unique article ideas (duplicates get filtered)
-3. So only 5-6 queue items get inserted instead of 7
-4. The Coverage Map and planning UI show the *target* number, but the queue shows the *actual* number
+### Fix
 
-Across all categories, there are **71 missing items** (2,158 target vs 2,087 actual).
+Refactor `CoverageStats` to use the existing `useQueueStats` hook for article counts instead of counting from the truncated `queueItems` array. This hook already uses `{ count: 'exact', head: true }` queries that bypass the row limit.
 
-## Solution
+**File: `src/components/admin/seo/CoverageStats.tsx`**
+- Import and use `useQueueStats` for the article counts (generated, queued, published)
+- Remove the dependency on `useContentQueue` entirely (it was only used for counting)
+- Calculate "Articles Generated" as `generated + published` from the stats hook
+- This gives accurate numbers regardless of volume
 
-Two changes to eliminate confusion:
+## Problem 2: Stale "Generation stopped" banner
 
-### 1. Update `target_article_count` After Queue Insert
+The dashboard shows "Generation stopped -- 3 succeeded, 0 failed" from a **cancelled** job, even though the most recent job completed successfully with 5/5. The `useGenerationJob` hook's `lastCompletedJob` query picks up any terminal job, and the cancelled job appears because of ordering.
 
-After the queue items are inserted in `generate-content-plan/index.ts`, update the plan's `target_article_count` to reflect the **actual** number of items created, not the theoretical goal.
+### Fix
 
-**File:** `supabase/functions/generate-content-plan/index.ts`
-- After the queue insert succeeds (line ~596), add an update:
-  ```
-  UPDATE content_plans SET target_article_count = actual_count WHERE id = plan.id
-  ```
-- This ensures the plan's count always matches reality
-
-### 2. Fix Existing Data
-
-Run a one-time migration to correct the `target_article_count` for all existing plans to match their actual queue item count.
-
-**Migration SQL:**
-```sql
-UPDATE content_plans cp
-SET target_article_count = sub.actual_count
-FROM (
-  SELECT plan_id, count(*) as actual_count
-  FROM content_queue
-  GROUP BY plan_id
-) sub
-WHERE cp.id = sub.plan_id
-AND cp.target_article_count != sub.actual_count;
-```
-
-## Progress Bar (Already Working)
-
-The progress bar is already implemented and persists across sessions:
-- `useGenerationJob` hook polls the `generation_jobs` table every 3 seconds while a job is running
-- `GenerationProgress` component shows a progress bar with succeeded/failed counts
-- When you leave and return, it picks up the active job and displays current progress
-- After completion, it shows a summary banner of the last finished job
-
-No changes needed for the progress indicator.
+**File: `src/hooks/useGenerationJob.ts`**
+- Update the `lastCompletedJob` query to prefer `completed` status over `cancelled`/`failed`
+- Or add a time limit so stale completed/cancelled jobs older than a reasonable window (e.g., 1 hour) are not shown
+- Ensure the banner shows the most relevant recent job, not a stale cancelled one
 
 ## Technical Details
 
-### File Changes
+### CoverageStats Changes
+- Remove `useContentQueue` import
+- Add `useQueueStats` import (already exists at `@/hooks/useQueueStats`)
+- Replace `queueItems`-based counting with stats from the hook:
+  - `articlesGenerated = stats.generated + stats.published`
+  - `articlesQueued = stats.queued`
+  - `articlesPublished = stats.published`
+- Keep `useContentPlans` for template/tier calculations (those are fine under 1000)
 
-1. **`supabase/functions/generate-content-plan/index.ts`** (lines ~596-598)
-   - After `queuedItems` insert succeeds, add: update the plan's `target_article_count` to `allQueueItems.length` (which equals `queuedItems.length`)
-   - This is a one-line addition
-
-2. **Database migration** (one-time fix)
-   - Correct existing plans where target != actual queue count
-   - Affects approximately 71 items across ~16 templates
+### GenerationJob Changes
+- Review `lastCompletedJob` query ordering to prioritize `completed` over `cancelled`
+- Add recency filter to avoid showing old job banners indefinitely
 
