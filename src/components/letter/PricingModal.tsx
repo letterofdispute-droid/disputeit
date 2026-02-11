@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { trackPricingModalOpen, trackCheckoutInitiated } from '@/hooks/useGTM';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { useAuth } from '@/hooks/useAuth';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
@@ -33,6 +34,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
   const { user } = useAuth();
   const { activeCredits, oldestActiveCredit, isLoading: creditsLoading } = useUserCredits();
   const { pdfOnlyPrice, pdfEditablePrice, editUnlockPrice, formatPrice } = useSiteSettings();
+  const { trackCheckoutInitiated: trackDbCheckoutInitiated, trackCreditRedeemed } = useAnalytics();
 
   const pricingOptions = [
     {
@@ -88,6 +90,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
         description: 'Your letter has been generated successfully.',
       });
 
+      trackCreditRedeemed(templateSlug);
       onClose();
       navigate(`/purchase-success?purchase_id=${data.purchaseId}`);
     } catch (error) {
@@ -105,6 +108,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
   const handlePurchase = async (optionId: string) => {
     const selectedOption = pricingOptions.find(o => o.id === optionId);
     trackCheckoutInitiated(templateSlug, optionId, selectedOption?.price || 0);
+    trackDbCheckoutInitiated(templateSlug, optionId, selectedOption?.price || 0);
     setIsLoading(optionId);
     
     try {
