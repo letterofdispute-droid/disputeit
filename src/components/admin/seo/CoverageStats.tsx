@@ -2,14 +2,14 @@ import { useMemo } from 'react';
 import { FileText, Link2, CheckCircle2, LayoutGrid, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useContentPlans } from '@/hooks/useContentPlans';
-import { useContentQueue } from '@/hooks/useContentQueue';
+import { useQueueStats } from '@/hooks/useQueueStats';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
 import { allTemplates } from '@/data/allTemplates';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 
 export default function CoverageStats() {
   const { plans } = useContentPlans();
-  const { queueItems } = useContentQueue();
+  const { data: queueStats } = useQueueStats();
   const { suggestions } = useLinkSuggestions();
 
   const stats = useMemo(() => {
@@ -17,17 +17,9 @@ export default function CoverageStats() {
     const templatesWithPlans = plans?.length || 0;
     const templatesWithoutPlans = totalTemplates - templatesWithPlans;
 
-    const articlesGenerated = queueItems?.filter(q => 
-      q.status === 'generated' || q.status === 'published'
-    ).length || 0;
-
-    const articlesPublished = queueItems?.filter(q => 
-      q.status === 'published'
-    ).length || 0;
-
-    const articlesQueued = queueItems?.filter(q => 
-      q.status === 'queued'
-    ).length || 0;
+    const articlesGenerated = (queueStats?.generated || 0) + (queueStats?.published || 0);
+    const articlesPublished = queueStats?.published || 0;
+    const articlesQueued = queueStats?.queued || 0;
 
     const linksPending = suggestions?.filter(s => s.status === 'pending').length || 0;
     const linksApplied = suggestions?.filter(s => s.status === 'applied').length || 0;
@@ -67,7 +59,7 @@ export default function CoverageStats() {
       tierCounts,
       tierDistribution,
     };
-  }, [plans, queueItems, suggestions]);
+  }, [plans, queueStats, suggestions]);
 
   const statCards = [
     {
