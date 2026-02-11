@@ -21,6 +21,7 @@ interface Settings {
   letter_delivery_email_enabled: boolean;
   pdf_only_price: string;
   pdf_editable_price: string;
+  edit_unlock_price: string;
 }
 
 const defaultSettings: Settings = {
@@ -33,6 +34,7 @@ const defaultSettings: Settings = {
   letter_delivery_email_enabled: true,
   pdf_only_price: '5.99',
   pdf_editable_price: '9.99',
+  edit_unlock_price: '5.99',
 };
 
 const AdminSettings = () => {
@@ -69,6 +71,7 @@ const AdminSettings = () => {
           letter_delivery_email_enabled: settingsMap.letter_delivery_email_enabled === 'true',
           pdf_only_price: settingsMap.pdf_only_price || defaultSettings.pdf_only_price,
           pdf_editable_price: settingsMap.pdf_editable_price || defaultSettings.pdf_editable_price,
+          edit_unlock_price: settingsMap.edit_unlock_price || defaultSettings.edit_unlock_price,
         });
       }
     } catch (error) {
@@ -96,6 +99,7 @@ const AdminSettings = () => {
         { key: 'letter_delivery_email_enabled', value: String(settings.letter_delivery_email_enabled) },
         { key: 'pdf_only_price', value: settings.pdf_only_price },
         { key: 'pdf_editable_price', value: settings.pdf_editable_price },
+        { key: 'edit_unlock_price', value: settings.edit_unlock_price },
       ];
 
       for (const update of updates) {
@@ -237,7 +241,7 @@ const AdminSettings = () => {
             <CardDescription>Configure per-letter pricing</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pdfOnlyPrice">PDF Only Price ($)</Label>
                 <Input 
@@ -257,6 +261,16 @@ const AdminSettings = () => {
                   placeholder="9.99"
                 />
                 <p className="text-xs text-muted-foreground">PDF + Word document</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editUnlockPrice">Edit Unlock Price ($)</Label>
+                <Input 
+                  id="editUnlockPrice" 
+                  value={settings.edit_unlock_price}
+                  onChange={(e) => updateSetting('edit_unlock_price', e.target.value)}
+                  placeholder="5.99"
+                />
+                <p className="text-xs text-muted-foreground">Unlock editing on purchased letter</p>
               </div>
             </div>
           </CardContent>

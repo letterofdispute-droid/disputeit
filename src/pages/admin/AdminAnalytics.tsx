@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent } from 'lucide-react';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter } from 'lucide-react';
 import ExportButton from '@/components/admin/export/ExportButton';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
@@ -331,8 +331,9 @@ const AdminAnalytics = () => {
       </div>
 
       <Tabs defaultValue="revenue" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="funnel">Funnel</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
@@ -546,6 +547,11 @@ const AdminAnalytics = () => {
           )}
         </TabsContent>
 
+        {/* Funnel Tab */}
+        <TabsContent value="funnel" className="space-y-6">
+          <FunnelTab events={events} purchases={purchases} period={period} formatCurrency={formatCurrency} />
+        </TabsContent>
+
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-6">
           {/* Key Metrics */}
@@ -708,6 +714,239 @@ const AdminAnalytics = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// Full Funnel Tab Component
+const FunnelTab = ({ 
+  events, 
+  purchases, 
+  period,
+  formatCurrency 
+}: { 
+  events: AnalyticsEvent[];
+  purchases: Purchase[];
+  period: string;
+  formatCurrency: (v: number) => string;
+}) => {
+  const funnelData = useMemo(() => {
+    const pageViews = events.filter(e => e.event_type === 'page_view').length;
+    const templateViews = events.filter(e => e.event_type === 'template_view').length;
+    const formStarts = events.filter(e => e.event_type === 'form_started').length;
+    const formCompletes = events.filter(e => e.event_type === 'form_completed').length;
+    const checkoutStarts = events.filter(e => e.event_type === 'checkout_initiated').length;
+    const completedPurchases = purchases.filter(p => p.status === 'completed');
+    const paidPurchases = completedPurchases.filter(p => p.amount_cents > 0);
+    const creditRedemptions = completedPurchases.filter(p => p.amount_cents === 0);
+
+    const steps = [
+      { label: 'Page Views', value: pageViews, color: 'bg-muted-foreground/30' },
+      { label: 'Template Views', value: templateViews, color: 'bg-primary/40' },
+      { label: 'Form Started', value: formStarts, color: 'bg-primary/60' },
+      { label: 'Form Completed', value: formCompletes, color: 'bg-primary/80' },
+      { label: 'Checkout Opened', value: checkoutStarts, color: 'bg-primary' },
+      { label: 'Paid Orders', value: paidPurchases.length, color: 'bg-accent' },
+    ];
+
+    const maxVal = steps[0].value || 1;
+    return steps.map((s, i) => ({
+      ...s,
+      percent: i === 0 ? 100 : ((s.value / maxVal) * 100),
+      dropoff: i === 0 ? null : steps[i - 1].value > 0 
+        ? ((1 - s.value / steps[i - 1].value) * 100).toFixed(1) 
+        : null,
+    }));
+  }, [events, purchases]);
+
+  // Top landing pages
+  const topPages = useMemo(() => {
+    const pageMap: Record<string, number> = {};
+    events
+      .filter(e => e.event_type === 'page_view')
+      .forEach(e => {
+        const path = e.page_path || '/';
+        pageMap[path] = (pageMap[path] || 0) + 1;
+      });
+    return Object.entries(pageMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([path, count]) => ({ path, count }));
+  }, [events]);
+
+  // Template conversion rates
+  const templateConversions = useMemo(() => {
+    const viewMap: Record<string, number> = {};
+    const purchaseMap: Record<string, number> = {};
+
+    events.filter(e => e.event_type === 'template_view').forEach(e => {
+      const slug = (e.event_data as any)?.templateSlug || 'unknown';
+      viewMap[slug] = (viewMap[slug] || 0) + 1;
+    });
+
+    purchases.filter(p => p.status === 'completed').forEach(p => {
+      purchaseMap[p.template_slug] = (purchaseMap[p.template_slug] || 0) + 1;
+    });
+
+    return Object.entries(viewMap)
+      .map(([slug, views]) => ({
+        name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        views,
+        purchases: purchaseMap[slug] || 0,
+        rate: views > 0 ? ((purchaseMap[slug] || 0) / views * 100) : 0,
+      }))
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 8);
+  }, [events, purchases]);
+
+  // Geographic breakdown from locale
+  const geoData = useMemo(() => {
+    const localeMap: Record<string, number> = {};
+    events.forEach(e => {
+      const locale = (e.event_data as any)?.locale;
+      if (locale) {
+        const lang = locale.split('-')[0].toUpperCase();
+        localeMap[lang] = (localeMap[lang] || 0) + 1;
+      }
+    });
+    return Object.entries(localeMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([lang, count]) => ({ lang, count }));
+  }, [events]);
+
+  const maxPageCount = topPages[0]?.count || 1;
+
+  return (
+    <>
+      {/* Visual Funnel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Conversion Funnel
+          </CardTitle>
+          <CardDescription>
+            Full user journey — last {period} days. Drop-off % shown between stages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {funnelData.map((step, i) => (
+              <div key={step.label}>
+                {step.dropoff !== null && (
+                  <div className="text-xs text-destructive/70 text-center mb-1">
+                    ↓ {step.dropoff}% drop-off
+                  </div>
+                )}
+                <div className="flex items-center gap-4">
+                  <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">
+                    {step.label}
+                  </div>
+                  <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
+                    <div 
+                      className={`h-full ${step.color} rounded-full transition-all duration-500`}
+                      style={{ width: `${Math.max(step.percent, 2)}%` }}
+                    />
+                  </div>
+                  <div className="w-20 text-right shrink-0">
+                    <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground ml-1">({step.percent.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Landing Pages */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl">Top Landing Pages</CardTitle>
+            <CardDescription>Most visited pages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topPages.length > 0 ? (
+              <div className="space-y-3">
+                {topPages.map((page, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-foreground truncate max-w-[70%]">
+                        {page.path}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{page.count}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full"
+                        style={{ width: `${(page.count / maxPageCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">No page view data yet</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Template Conversion Rates */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl">Template Conversion Rates</CardTitle>
+            <CardDescription>Views → Purchases by template</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {templateConversions.length > 0 ? (
+              <div className="space-y-3">
+                {templateConversions.map((t, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-foreground truncate max-w-[55%]">
+                        {t.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {t.purchases}/{t.views} = <span className="font-bold text-foreground">{t.rate.toFixed(1)}%</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-accent rounded-full"
+                        style={{ width: `${Math.max(t.rate, 1)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">No conversion data yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Geographic Breakdown */}
+      {geoData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl">Geographic Breakdown</CardTitle>
+            <CardDescription>Visitor language distribution (from browser locale)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {geoData.map((g, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted">
+                  <span className="text-sm font-bold text-foreground">{g.lang}</span>
+                  <span className="text-xs text-muted-foreground">{g.count.toLocaleString()} events</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 };
 
