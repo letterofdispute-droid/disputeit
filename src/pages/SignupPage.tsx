@@ -69,9 +69,14 @@ const SignupPage = () => {
     const { error } = await signUp(email, password, firstName, lastName);
 
     if (error) {
+      const isConflict = error.message?.toLowerCase().includes('already') ||
+                         error.message?.toLowerCase().includes('identity') ||
+                         error.message?.toLowerCase().includes('linked');
       toast({
-        title: 'Error creating account',
-        description: error.message,
+        title: isConflict ? 'Account already exists' : 'Error creating account',
+        description: isConflict
+          ? 'An account with this email already exists. Please sign in with your original method (email or Google), then link additional sign-in methods from Settings.'
+          : error.message,
         variant: 'destructive',
       });
     } else {

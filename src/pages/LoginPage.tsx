@@ -44,9 +44,14 @@ const LoginPage = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
+      const isConflict = error.message?.toLowerCase().includes('already') ||
+                         error.message?.toLowerCase().includes('identity') ||
+                         error.message?.toLowerCase().includes('linked');
       toast({
-        title: 'Error signing in',
-        description: error.message,
+        title: isConflict ? 'Account already exists' : 'Error signing in',
+        description: isConflict
+          ? 'An account with this email already exists. Please sign in with your original method (email or Google), then link additional sign-in methods from Settings.'
+          : error.message,
         variant: 'destructive',
       });
     } else {

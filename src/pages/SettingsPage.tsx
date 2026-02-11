@@ -23,6 +23,7 @@ import {
 import { ArrowLeft, User, Lock, Settings, Trash2, Loader2, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import LinkedAccountsCard from '@/components/settings/LinkedAccountsCard';
 import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
@@ -309,6 +310,8 @@ const SettingsPage = () => {
 
                 {/* Security Tab */}
                 <TabsContent value="security">
+                  <div className="space-y-6">
+                  <LinkedAccountsCard />
                   <Card>
                     <CardHeader>
                       <CardTitle className="font-serif text-xl">Change Password</CardTitle>
@@ -368,6 +371,7 @@ const SettingsPage = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  </div>
                 </TabsContent>
 
                 {/* Preferences Tab */}
