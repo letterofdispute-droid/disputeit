@@ -1176,7 +1176,7 @@ serve(async (req) => {
         .in('id', job.queue_item_ids)
         .eq('status', 'queued')
         .order('priority', { ascending: false })
-        .limit(3);
+        .limit(1);
       
       if (nextError) {
         console.error('[JOB_CONTINUE] Failed to fetch next items:', nextError);
@@ -1276,9 +1276,6 @@ serve(async (req) => {
             break;
           }
         }
-        
-        // Delay between articles
-        await new Promise(resolve => setTimeout(resolve, 5000));
       }
 
       // Update job progress
@@ -1445,8 +1442,8 @@ serve(async (req) => {
 
     console.log(`[JOB_START] Created job ${newJob.id} with ${allIds.length} items`);
 
-    // Process first batch of 3
-    const firstBatch = allQueueItems.slice(0, 3);
+    // Process first article (1 per invocation to avoid timeout)
+    const firstBatch = allQueueItems.slice(0, 1);
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
 
@@ -1472,8 +1469,6 @@ serve(async (req) => {
           break;
         }
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
     // Update job progress
@@ -1497,7 +1492,7 @@ serve(async (req) => {
       await updateJobProgress(supabaseAdmin, newJob.id, succeeded, failed);
       
       // Self-chain if there are more items
-      if (allIds.length > 3) {
+      if (allIds.length > 1) {
         selfChain(newJob.id);
       } else {
         // Small job — complete immediately
