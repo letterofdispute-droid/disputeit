@@ -332,12 +332,16 @@
   }
 
   /* Article middle image styling */
+  .prose {
+    @apply overflow-x-hidden max-w-full;
+  }
+
   .article-middle-image {
-    @apply my-10 rounded-xl overflow-hidden shadow-lg;
+    @apply my-10 rounded-xl overflow-hidden shadow-lg max-w-full box-border;
   }
 
   .article-middle-image img {
-    @apply w-full h-auto my-0;
+    @apply w-full h-auto my-0 block;
   }
 }
 
