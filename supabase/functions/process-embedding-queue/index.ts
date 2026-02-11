@@ -505,11 +505,38 @@ serve(async (req) => {
 
     console.log(`[QUEUE] Complete. Processed: ${processed}, Failed: ${failed}, Links created: ${linksCreated}`);
 
+    // Self-chain: if there are more pending items, trigger another batch
+    let continuationTriggered = false;
+    const { count: remainingCount } = await supabase
+      .from('embedding_queue')
+      .select('*', { count: 'exact', head: true })
+      .is('processed_at', null);
+
+    if (remainingCount && remainingCount > 0) {
+      console.log(`[QUEUE] ${remainingCount} items remaining, triggering continuation...`);
+      try {
+        const functionUrl = `${SUPABASE_URL}/functions/v1/process-embedding-queue`;
+        fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ limit: BATCH_SIZE, triggerBidirectionalScan: true }),
+        }).catch(err => console.error('[QUEUE] Continuation trigger failed:', err));
+        continuationTriggered = true;
+      } catch (err) {
+        console.error('[QUEUE] Failed to trigger continuation:', err);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       processed,
       failed,
       linksCreated,
+      remaining: remainingCount || 0,
+      continuationTriggered,
       results,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

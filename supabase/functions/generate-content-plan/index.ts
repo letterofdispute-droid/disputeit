@@ -543,7 +543,7 @@ Return JSON:
     });
 
     // Valid article type IDs that match the database constraint
-    const VALID_ARTICLE_TYPES = ['how-to', 'mistakes', 'rights', 'sample', 'faq', 'case-study', 'comparison', 'checklist'];
+    const VALID_ARTICLE_TYPES = ['how-to', 'mistakes', 'rights', 'sample', 'faq', 'case-study', 'comparison', 'checklist', 'pillar'];
     
     // Create queue items for each article, validating article type
     const queueItems = finalArticles.map((article: any, index: number) => {
@@ -561,13 +561,31 @@ Return JSON:
         suggested_keywords: article.keywords || [],
         priority: articleType?.priority || (100 - index * 5),
         status: 'queued',
-      };
+    };
     });
+
+    // Add a pillar article as the first item in the queue (highest priority)
+    const pillarItem = {
+      plan_id: plan.id,
+      article_type: 'pillar',
+      suggested_title: `The Complete Guide to ${templateName}`,
+      suggested_keywords: [
+        templateName.toLowerCase(),
+        `${templateName.toLowerCase()} guide`,
+        `how to ${templateName.toLowerCase()}`,
+        'consumer rights',
+        'dispute letter',
+      ],
+      priority: 200,
+      status: 'queued',
+    };
+
+    const allQueueItems = [pillarItem, ...queueItems];
 
     const queuedItems = await withRetry(async () => {
       const { data, error } = await supabase
         .from('content_queue')
-        .insert(queueItems)
+        .insert(allQueueItems)
         .select();
 
       if (error) {

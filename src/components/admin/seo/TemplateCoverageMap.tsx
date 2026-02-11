@@ -6,7 +6,8 @@ import {
   Eye, 
   CheckCircle2,
   Loader2,
-  FileText
+  FileText,
+  Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -20,6 +21,9 @@ import { useBulkPlanningJob } from '@/hooks/useBulkPlanningJob';
 import { allTemplates } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import ClusterPlanner from './ClusterPlanner';
 import BulkPlanConfirmDialog from './BulkPlanConfirmDialog';
 import BulkPlanningProgress from './BulkPlanningProgress';
@@ -46,6 +50,67 @@ export default function TemplateCoverageMap() {
   const { data: templateProgress, isLoading: progressLoading } = useTemplateProgress();
   const { getTierForCategory } = useCategoryTierSettings();
   const { allActiveJobs, startBulkPlan, isStarting, retryFailed, isRetrying, cancelJob, isCancelling, invalidateJobs } = useBulkPlanningJob();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Bulk pillar creation mutation
+  const createAllPillarsMutation = useMutation({
+    mutationFn: async () => {
+      // Find all content plans that don't have a pillar article in the queue
+      const { data: allPlans } = await supabase.from('content_plans').select('id, template_slug, template_name, category_id');
+      if (!allPlans || allPlans.length === 0) throw new Error('No content plans found');
+
+      // Check which plans already have a pillar queued
+      const { data: existingPillars } = await supabase
+        .from('content_queue')
+        .select('plan_id')
+        .eq('article_type', 'pillar');
+
+      const existingPillarPlanIds = new Set(existingPillars?.map(p => p.plan_id) || []);
+      const plansWithoutPillar = allPlans.filter(p => !existingPillarPlanIds.has(p.id));
+
+      if (plansWithoutPillar.length === 0) {
+        return { queued: 0, message: 'All plans already have pillar articles' };
+      }
+
+      // Queue pillar articles for each plan
+      const pillarItems = plansWithoutPillar.map(plan => ({
+        plan_id: plan.id,
+        article_type: 'pillar' as const,
+        suggested_title: `The Complete Guide to ${plan.template_name}`,
+        suggested_keywords: [
+          plan.template_name.toLowerCase(),
+          `${plan.template_name.toLowerCase()} guide`,
+          'consumer rights',
+          'dispute letter',
+        ],
+        priority: 200,
+        status: 'queued' as const,
+      }));
+
+      const { error } = await supabase.from('content_queue').insert(pillarItems);
+      if (error) throw error;
+
+      return { queued: pillarItems.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['template-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      toast({
+        title: 'Pillar articles queued',
+        description: data.queued > 0
+          ? `${data.queued} pillar articles added to the generation queue`
+          : data.message || 'All plans already have pillars',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to queue pillars',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
   
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -207,17 +272,31 @@ export default function TemplateCoverageMap() {
             {plans?.length || 0} templates with content plans • {allTemplates.length} total templates
           </p>
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categoryGroups.map(g => (
-              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => createAllPillarsMutation.mutate()}
+            disabled={createAllPillarsMutation.isPending || !plans || plans.length === 0}
+            size="sm"
+            variant="outline"
+          >
+            {createAllPillarsMutation.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Queuing...</>
+            ) : (
+              <><Crown className="h-4 w-4 mr-1.5" /> Create All Pillars</>
+            )}
+          </Button>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryGroups.map(g => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Category list */}
