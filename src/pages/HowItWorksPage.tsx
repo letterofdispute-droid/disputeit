@@ -148,7 +148,7 @@ const faqs = [
   },
   {
     question: 'Can I customize the letter after generating it?',
-    answer: 'Yes! The PDF + Edit Access ($14.99) option includes 30 days of in-app editing. Make changes anytime, then export to PDF when you\'re ready to send.',
+    answer: 'Yes! The PDF + Edit Access option includes 30 days of in-app editing. Make changes anytime, then export to PDF when you\'re ready to send.',
   },
   {
     question: 'Are these letters legally binding?',

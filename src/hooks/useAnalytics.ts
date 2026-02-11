@@ -1,13 +1,34 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-type EventType = 'page_view' | 'letter_generated' | 'user_signup' | 'template_view' | 'button_click';
+type EventType = 
+  | 'page_view' 
+  | 'letter_generated' 
+  | 'user_signup' 
+  | 'template_view' 
+  | 'button_click'
+  | 'form_started'
+  | 'form_completed'
+  | 'checkout_initiated'
+  | 'checkout_completed'
+  | 'credit_redeemed'
+  | 'category_view';
 
 interface TrackEventParams {
   eventType: EventType;
   eventData?: Record<string, any>;
 }
+
+// Generate or retrieve a session ID for anonymous tracking
+const getSessionId = (): string => {
+  let sessionId = sessionStorage.getItem('analytics_session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem('analytics_session_id', sessionId);
+  }
+  return sessionId;
+};
 
 export const useAnalytics = () => {
   const { user } = useAuth();
@@ -16,9 +37,15 @@ export const useAnalytics = () => {
     try {
       await supabase.from('analytics_events').insert({
         event_type: eventType,
-        event_data: eventData,
+        event_data: {
+          ...eventData,
+          user_agent: navigator.userAgent,
+          locale: navigator.language,
+          screen_width: window.innerWidth,
+        },
         user_id: user?.id || null,
-        page_url: window.location.pathname,
+        session_id: getSessionId(),
+        page_path: window.location.pathname,
       });
     } catch (error) {
       // Silently fail - analytics shouldn't break the app
@@ -57,12 +84,60 @@ export const useAnalytics = () => {
     });
   }, [trackEvent]);
 
+  const trackFormStarted = useCallback((templateSlug: string) => {
+    trackEvent({
+      eventType: 'form_started',
+      eventData: { templateSlug },
+    });
+  }, [trackEvent]);
+
+  const trackFormCompleted = useCallback((templateSlug: string) => {
+    trackEvent({
+      eventType: 'form_completed',
+      eventData: { templateSlug },
+    });
+  }, [trackEvent]);
+
+  const trackCheckoutInitiated = useCallback((templateSlug: string, purchaseType: string, amount: number) => {
+    trackEvent({
+      eventType: 'checkout_initiated',
+      eventData: { templateSlug, purchaseType, amount },
+    });
+  }, [trackEvent]);
+
+  const trackCheckoutCompleted = useCallback((templateSlug: string, purchaseType: string, amount: number) => {
+    trackEvent({
+      eventType: 'checkout_completed',
+      eventData: { templateSlug, purchaseType, amount },
+    });
+  }, [trackEvent]);
+
+  const trackCreditRedeemed = useCallback((templateSlug: string) => {
+    trackEvent({
+      eventType: 'credit_redeemed',
+      eventData: { templateSlug },
+    });
+  }, [trackEvent]);
+
+  const trackCategoryView = useCallback((categoryId: string) => {
+    trackEvent({
+      eventType: 'category_view',
+      eventData: { categoryId },
+    });
+  }, [trackEvent]);
+
   return {
     trackEvent,
     trackPageView,
     trackLetterGenerated,
     trackTemplateView,
     trackUserSignup,
+    trackFormStarted,
+    trackFormCompleted,
+    trackCheckoutInitiated,
+    trackCheckoutCompleted,
+    trackCreditRedeemed,
+    trackCategoryView,
   };
 };
 

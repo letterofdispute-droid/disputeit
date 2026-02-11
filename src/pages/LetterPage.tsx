@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import { getTemplateBySlug, getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
 import { getCategoryById } from '@/data/templateCategories';
@@ -10,6 +11,7 @@ import RelatedTemplates from '@/components/letter/RelatedTemplates';
 import RelatedArticles from '@/components/letter/RelatedArticles';
 import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
+import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
 import { ChevronRight, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,6 +59,22 @@ const LetterPage = () => {
       trackTemplateView(template.slug, category.id, template.title);
     }
   }, [template?.slug, category?.id, template?.title]);
+
+  // Fetch SEO override from DB
+  const { data: seoOverride } = useQuery({
+    queryKey: ['template-seo-override', template?.slug],
+    queryFn: async () => {
+      if (!template) return null;
+      const { data } = await supabase
+        .from('template_seo_overrides')
+        .select('meta_title, meta_description')
+        .eq('slug', template.slug)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!template,
+    staleTime: 5 * 60 * 1000,
+  });
 
   if (!template || !category) {
     return <Navigate to="/404" replace />;

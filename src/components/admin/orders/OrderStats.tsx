@@ -1,10 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { DollarSign, CheckCircle, Clock, RotateCcw } from 'lucide-react';
+import { DollarSign, CheckCircle, Clock, RotateCcw, Gift } from 'lucide-react';
 
 interface OrderStatsProps {
   stats: {
     totalRevenue: number;
-    completedOrders: number;
+    paidOrders: number;
+    creditRedemptions: number;
     pendingOrders: number;
     refundedAmount: number;
   };
@@ -27,18 +28,18 @@ const OrderStats = ({ stats }: OrderStatsProps) => {
       bgColor: 'bg-green-100',
     },
     {
-      label: 'Completed Orders',
-      value: stats.completedOrders.toString(),
+      label: 'Paid Orders',
+      value: stats.paidOrders.toString(),
       icon: CheckCircle,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
     },
     {
-      label: 'Pending Orders',
-      value: stats.pendingOrders.toString(),
-      icon: Clock,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
+      label: 'Credit Redemptions',
+      value: stats.creditRedemptions.toString(),
+      icon: Gift,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
     },
     {
       label: 'Refunded',

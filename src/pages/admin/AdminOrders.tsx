@@ -72,9 +72,10 @@ const AdminOrders = () => {
 
   const stats = {
     totalRevenue: orders
-      .filter(o => o.status === 'completed')
+      .filter(o => o.status === 'completed' && o.amount_cents > 0)
       .reduce((sum, o) => sum + o.amount_cents, 0),
-    completedOrders: orders.filter(o => o.status === 'completed').length,
+    paidOrders: orders.filter(o => o.status === 'completed' && o.amount_cents > 0).length,
+    creditRedemptions: orders.filter(o => o.status === 'completed' && o.amount_cents === 0).length,
     pendingOrders: orders.filter(o => o.status === 'pending').length,
     refundedAmount: orders
       .filter(o => o.status === 'refunded')
