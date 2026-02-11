@@ -753,8 +753,12 @@ const FunnelTab = ({
     return steps.map((s, i) => ({
       ...s,
       percent: i === 0 ? 100 : ((s.value / maxVal) * 100),
-      dropoff: i === 0 ? null : steps[i - 1].value > 0 
-        ? ((1 - s.value / steps[i - 1].value) * 100).toFixed(1) 
+      dropoffRate: i === 0 ? null : steps[i - 1].value > 0 
+        ? parseFloat(((1 - s.value / steps[i - 1].value) * 100).toFixed(1))
+        : null,
+      dropoffLabel: i === 0 ? null : `${steps[i - 1].label} → ${s.label}`,
+      retained: i === 0 ? null : steps[i - 1].value > 0
+        ? parseFloat(((s.value / steps[i - 1].value) * 100).toFixed(1))
         : null,
     }));
   }, [events, purchases]);
@@ -935,8 +939,11 @@ const FunnelTab = ({
             <div className="space-y-3">
               {funnelData.map((step, i) => (
                 <div key={step.label}>
-                  {step.dropoff !== null && (
-                    <div className="text-xs text-destructive/70 text-center mb-1">↓ {step.dropoff}% drop-off</div>
+                  {step.dropoffRate !== null && (
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <div className="text-xs text-destructive/70">↓ {step.dropoffRate}% drop-off</div>
+                      <div className="text-xs text-muted-foreground">({step.retained}% retained)</div>
+                    </div>
                   )}
                   <div className="flex items-center gap-4">
                     <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">{step.label}</div>
@@ -958,6 +965,43 @@ const FunnelTab = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Drop-off Bottlenecks */}
+      {hasEvents && funnelData.filter(s => s.dropoffRate !== null && s.dropoffRate > 0).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Drop-off Bottlenecks
+            </CardTitle>
+            <CardDescription>Stages with the highest user abandonment — focus optimization here</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {funnelData
+                .filter(s => s.dropoffRate !== null && s.dropoffRate > 0)
+                .sort((a, b) => (b.dropoffRate || 0) - (a.dropoffRate || 0))
+                .map((step) => (
+                  <div key={step.label} className="p-4 rounded-lg border border-border bg-muted/30">
+                    <div className="text-xs text-muted-foreground mb-1">{step.dropoffLabel}</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-2xl font-bold ${(step.dropoffRate || 0) > 70 ? 'text-destructive' : (step.dropoffRate || 0) > 40 ? 'text-amber-500' : 'text-foreground'}`}>
+                        {step.dropoffRate}%
+                      </span>
+                      <span className="text-xs text-muted-foreground">lost</span>
+                    </div>
+                    <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${(step.dropoffRate || 0) > 70 ? 'bg-destructive' : (step.dropoffRate || 0) > 40 ? 'bg-amber-500' : 'bg-primary'}`}
+                        style={{ width: `${step.dropoffRate}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Session Explorer + Top Paths */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
