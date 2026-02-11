@@ -40,14 +40,16 @@ export function useGenerationJob() {
     },
   });
 
-  // Fetch last completed job for summary display
+  // Fetch last completed job for summary display (only recent, within 1 hour)
   const { data: lastCompletedJob } = useQuery({
     queryKey: ['generation-job-last'],
     queryFn: async () => {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('generation_jobs')
         .select('*')
         .in('status', ['completed', 'failed', 'cancelled'])
+        .gte('completed_at', oneHourAgo)
         .order('completed_at', { ascending: false })
         .limit(1)
         .maybeSingle();
