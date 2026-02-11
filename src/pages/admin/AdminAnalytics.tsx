@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe } from 'lucide-react';
 import ExportButton from '@/components/admin/export/ExportButton';
+import UTMLinkBuilder from '@/components/admin/analytics/UTMLinkBuilder';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
 import { 
@@ -280,10 +281,11 @@ const AdminAnalytics = () => {
       </div>
 
       <Tabs defaultValue="revenue" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="funnel">Funnel</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
         </TabsList>
 
         {/* Revenue Tab */}
@@ -580,6 +582,11 @@ const AdminAnalytics = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Campaigns Tab */}
+        <TabsContent value="campaigns" className="space-y-6">
+          <UTMLinkBuilder />
         </TabsContent>
       </Tabs>
     </div>
