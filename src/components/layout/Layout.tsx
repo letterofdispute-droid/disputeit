@@ -1,12 +1,14 @@
 import { ReactNode } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import { usePageView } from '@/hooks/useAnalytics';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  usePageView();
   return (
     <div className="flex min-h-screen flex-col">
       {/* Skip Navigation Link for Accessibility */}
