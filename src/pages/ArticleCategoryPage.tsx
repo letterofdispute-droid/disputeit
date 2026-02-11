@@ -37,7 +37,7 @@ const ArticleCategoryPage = () => {
         .select('*')
         .eq('status', 'published')
         .eq('category_slug', category)
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false });
       
       if (error) throw error;
       return data;

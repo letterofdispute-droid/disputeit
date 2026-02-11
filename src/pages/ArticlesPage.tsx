@@ -115,7 +115,7 @@ const ArticlesPage = () => {
         .from('blog_posts')
         .select('*')
         .eq('status', 'published')
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data as BlogPost[];
     },
