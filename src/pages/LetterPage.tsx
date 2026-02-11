@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
 import { trackTemplateView } from '@/hooks/useGTM';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const LetterPage = () => {
   const { categoryId, subcategorySlug, templateSlug } = useParams<{ 
@@ -37,6 +38,7 @@ const LetterPage = () => {
   const template = templateSlug ? getTemplateBySlug(templateSlug) : undefined;
   const category = categoryId ? getCategoryById(categoryId) : undefined;
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { trackTemplateView: trackDbTemplateView } = useAnalytics();
 
   // Get category image for hero background
   const { largeUrl } = useCategoryImage(
@@ -53,10 +55,11 @@ const LetterPage = () => {
     }
   }, [largeUrl]);
 
-  // Track template view
+  // Track template view (GTM + DB analytics)
   useEffect(() => {
     if (template && category) {
       trackTemplateView(template.slug, category.id, template.title);
+      trackDbTemplateView(template.slug, category.id);
     }
   }, [template?.slug, category?.id, template?.title]);
 
