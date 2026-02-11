@@ -1,37 +1,85 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, ExternalLink, Filter } from 'lucide-react';
+import { Search, FileText, ExternalLink, Filter, Edit, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { allTemplates, getCategoryIdFromName } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { inferSubcategory } from '@/data/subcategoryMappings';
 import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const TEMPLATES_PER_PAGE = 100;
 
 const AdminTemplates = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingTemplate, setEditingTemplate] = useState<typeof allTemplates[0] | null>(null);
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch all SEO overrides
+  const { data: seoOverrides = {} } = useQuery({
+    queryKey: ['template-seo-overrides'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('template_seo_overrides')
+        .select('slug, meta_title, meta_description');
+      if (error) throw error;
+      const map: Record<string, { meta_title: string | null; meta_description: string | null }> = {};
+      data?.forEach(item => { map[item.slug] = { meta_title: item.meta_title, meta_description: item.meta_description }; });
+      return map;
+    },
+  });
+
+  const openSeoEditor = (template: typeof allTemplates[0]) => {
+    const override = seoOverrides[template.slug];
+    setEditingTemplate(template);
+    setSeoTitle(override?.meta_title || template.seoTitle || '');
+    setSeoDescription(override?.meta_description || template.seoDescription || '');
+  };
+
+  const saveSeoOverride = async () => {
+    if (!editingTemplate) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('template_seo_overrides')
+        .upsert({
+          slug: editingTemplate.slug,
+          meta_title: seoTitle || null,
+          meta_description: seoDescription || null,
+        }, { onConflict: 'slug' });
+      if (error) throw error;
+      toast({ title: 'SEO saved', description: `Updated SEO for ${editingTemplate.title}` });
+      queryClient.invalidateQueries({ queryKey: ['template-seo-overrides'] });
+      setEditingTemplate(null);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to save SEO override.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -175,13 +223,24 @@ const AdminTemplates = () => {
                         {subcategoryInfo?.name || template.subcategory || '—'}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(getTemplateUrl(template), '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openSeoEditor(template)}
+                            title="Edit SEO"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(getTemplateUrl(template), '_blank')}
+                            title="View"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -216,6 +275,34 @@ const AdminTemplates = () => {
           modify the template files in <code className="bg-muted px-1 rounded">src/data/templates/</code>.
         </p>
       </div>
+
+      {/* SEO Edit Dialog */}
+      <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit SEO — {editingTemplate?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Meta Title</Label>
+              <Input value={seoTitle} onChange={e => setSeoTitle(e.target.value)} placeholder="SEO title..." />
+              <p className="text-xs text-muted-foreground">{seoTitle.length}/60 characters</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Meta Description</Label>
+              <Textarea value={seoDescription} onChange={e => setSeoDescription(e.target.value)} placeholder="SEO description..." rows={3} />
+              <p className="text-xs text-muted-foreground">{seoDescription.length}/160 characters</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTemplate(null)}>Cancel</Button>
+            <Button onClick={saveSeoOverride} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

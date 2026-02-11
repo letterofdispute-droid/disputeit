@@ -136,24 +136,26 @@ const AdminAnalytics = () => {
   // Calculate revenue metrics
   const revenueMetrics = useMemo(() => {
     const completedPurchases = purchases.filter(p => p.status === 'completed');
+    const paidPurchases = completedPurchases.filter(p => p.amount_cents > 0);
+    const creditRedemptions = completedPurchases.filter(p => p.amount_cents === 0);
     const refundedPurchases = purchases.filter(p => p.status === 'refunded');
     
-    const totalRevenue = completedPurchases.reduce((sum, p) => sum + p.amount_cents, 0);
+    const totalRevenue = paidPurchases.reduce((sum, p) => sum + p.amount_cents, 0);
     const refundedAmount = refundedPurchases.reduce((sum, p) => sum + p.amount_cents, 0);
     const netRevenue = totalRevenue - refundedAmount;
-    const orderCount = completedPurchases.length;
-    const averageOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
+    const paidOrderCount = paidPurchases.length;
+    const averageOrderValue = paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0;
     
-    // Conversion rate: completed orders / template views
     const conversionRate = metrics.templateViews > 0 
-      ? (orderCount / metrics.templateViews) * 100 
+      ? (completedPurchases.length / metrics.templateViews) * 100 
       : 0;
 
     return {
       totalRevenue,
       netRevenue,
       refundedAmount,
-      orderCount,
+      orderCount: paidOrderCount,
+      creditRedemptions: creditRedemptions.length,
       averageOrderValue,
       conversionRate,
     };
@@ -190,16 +192,18 @@ const AdminAnalytics = () => {
 
   // Purchase type breakdown
   const purchaseTypeData = useMemo(() => {
-    const completedPurchases = purchases.filter(p => p.status === 'completed');
-    const pdfOnly = completedPurchases.filter(p => p.purchase_type === 'pdf_only');
-    const pdfEdit = completedPurchases.filter(p => p.purchase_type === 'pdf_edit');
+    const completedPurchases = purchases.filter(p => p.status === 'completed' && p.amount_cents > 0);
+    const creditRedemptions = purchases.filter(p => p.status === 'completed' && p.amount_cents === 0);
+    const pdfOnly = completedPurchases.filter(p => p.purchase_type === 'pdf_only' || p.purchase_type === 'pdf-only');
+    const pdfEdit = completedPurchases.filter(p => p.purchase_type === 'pdf_edit' || p.purchase_type === 'pdf-editable');
 
     const pdfOnlyRevenue = pdfOnly.reduce((sum, p) => sum + p.amount_cents, 0);
     const pdfEditRevenue = pdfEdit.reduce((sum, p) => sum + p.amount_cents, 0);
 
     return [
-      { name: 'PDF Only ($9.99)', value: pdfOnlyRevenue / 100, count: pdfOnly.length },
-      { name: 'PDF + Edit ($14.99)', value: pdfEditRevenue / 100, count: pdfEdit.length },
+      { name: 'PDF Only', value: pdfOnlyRevenue / 100, count: pdfOnly.length },
+      { name: 'PDF + Edit', value: pdfEditRevenue / 100, count: pdfEdit.length },
+      { name: 'Credit Redemptions', value: 0, count: creditRedemptions.length },
     ];
   }, [purchases]);
 

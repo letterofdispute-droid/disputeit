@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { trackPricingModalOpen, trackCheckoutInitiated } from '@/hooks/useGTM';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { useAuth } from '@/hooks/useAuth';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { differenceInDays } from 'date-fns';
 
 interface EvidencePhotoPath {
@@ -24,35 +25,6 @@ interface PricingModalProps {
   onClose: () => void;
 }
 
-const pricingOptions = [
-  {
-    id: 'pdf-only',
-    name: 'PDF Only',
-    price: 9.99,
-    icon: FileText,
-    features: [
-      'Professional letter with legal-safe phrasing',
-      'PDF download, ready to send',
-      'Up to 10 evidence photos embedded in PDF',
-      'Cites relevant US federal law',
-    ],
-    popular: false,
-  },
-  {
-    id: 'pdf-editable',
-    name: 'PDF + Edit Access',
-    price: 14.99,
-    icon: Edit,
-    features: [
-      'Everything in PDF Only',
-      '30 days of in-app editing',
-      'Export updated PDF anytime',
-      'AI-powered form assistance',
-    ],
-    popular: true,
-  },
-];
-
 const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhotoPaths, onClose }: PricingModalProps) => {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -60,6 +32,36 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeCredits, oldestActiveCredit, isLoading: creditsLoading } = useUserCredits();
+  const { pdfOnlyPrice, pdfEditablePrice, editUnlockPrice, formatPrice } = useSiteSettings();
+
+  const pricingOptions = [
+    {
+      id: 'pdf-only',
+      name: 'PDF Only',
+      price: pdfOnlyPrice,
+      icon: FileText,
+      features: [
+        'Professional letter with legal-safe phrasing',
+        'PDF download, ready to send',
+        'Up to 10 evidence photos embedded in PDF',
+        'Cites relevant US federal law',
+      ],
+      popular: false,
+    },
+    {
+      id: 'pdf-editable',
+      name: 'PDF + Edit Access',
+      price: pdfEditablePrice,
+      icon: Edit,
+      features: [
+        'Everything in PDF Only',
+        '30 days of in-app editing',
+        'Export updated PDF anytime',
+        'AI-powered form assistance',
+      ],
+      popular: true,
+    },
+  ];
 
   useEffect(() => {
     trackPricingModalOpen(templateSlug);
@@ -152,7 +154,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
 
         {/* Content */}
         <div className="p-6">
-          {/* Terms Agreement Checkbox - FIRST for visibility */}
+          {/* Terms Agreement */}
           <div className="mb-5 p-4 bg-accent/5 rounded-lg border-2 border-accent/30">
             <label className="flex items-start gap-3 cursor-pointer">
               <Checkbox 
@@ -174,7 +176,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
             </label>
           </div>
 
-          {/* Credit Option - shown prominently if user has credits */}
+          {/* Credit Option */}
           {user && !creditsLoading && activeCredits.length > 0 && oldestActiveCredit && (
             <Card className="relative mb-4 border-2 border-success bg-gradient-to-r from-success/5 to-transparent overflow-visible">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-success text-white text-xs font-semibold rounded-full whitespace-nowrap">
@@ -212,7 +214,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
             </Card>
           )}
 
-          {/* Divider when credits are shown */}
+          {/* Divider */}
           {user && !creditsLoading && activeCredits.length > 0 && (
             <div className="flex items-center gap-4 mb-4">
               <div className="flex-1 h-px bg-border" />
@@ -234,7 +236,6 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
                       : 'border border-border hover:border-muted-foreground/50'
                   }`}
                 >
-                  {/* Recommended Badge */}
                   {option.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-full whitespace-nowrap">
                       Recommended
@@ -247,7 +248,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
                     </div>
                     <h4 className="font-semibold text-foreground text-sm mb-1">{option.name}</h4>
                     <div className="font-serif text-2xl font-bold text-foreground">
-                      ${option.price.toFixed(2)}
+                      {formatPrice(option.price)}
                     </div>
                   </div>
 
@@ -283,7 +284,7 @@ const PricingModal = ({ templateSlug, templateName, letterContent, evidencePhoto
           <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">Need to edit after 30 days?</span>
-              {' '}Unlock editing access again for just $5.99
+              {' '}Unlock editing access again for just {formatPrice(editUnlockPrice)}
             </p>
           </div>
 

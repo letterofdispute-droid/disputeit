@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,11 +26,11 @@ import {
   X
 } from 'lucide-react';
 
-const options = [
+const getOptions = (pdfOnlyPrice: number, pdfEditablePrice: number, formatPrice: (p: number) => string) => [
   {
     name: 'PDF Only',
-    price: '$9.99',
-    priceValue: 9.99,
+    price: formatPrice(pdfOnlyPrice),
+    priceValue: pdfOnlyPrice,
     description: 'Download your letter as a professional PDF',
     icon: FileText,
     features: [
@@ -44,8 +45,8 @@ const options = [
   },
   {
     name: 'PDF + Edit Access',
-    price: '$14.99',
-    priceValue: 14.99,
+    price: formatPrice(pdfEditablePrice),
+    priceValue: pdfEditablePrice,
     description: 'PDF plus 30 days of in-app editing',
     icon: Edit,
     features: [
@@ -190,6 +191,9 @@ const faqSchema = {
 };
 
 const PricingPage = () => {
+  const { pdfOnlyPrice, pdfEditablePrice, editUnlockPrice, formatPrice } = useSiteSettings();
+  const options = getOptions(pdfOnlyPrice, pdfEditablePrice, formatPrice);
+
   return (
     <Layout>
       <SEOHead 
@@ -286,7 +290,7 @@ const PricingPage = () => {
           {/* Re-edit info */}
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Need to edit after 30 days? Unlock editing access again for just <span className="font-semibold text-foreground">$5.99</span>
+              Need to edit after 30 days? Unlock editing access again for just <span className="font-semibold text-foreground">{formatPrice(editUnlockPrice)}</span>
             </p>
           </div>
 
