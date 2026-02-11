@@ -9,6 +9,7 @@ import { Save, Loader2, Database, Download, Users, ShoppingCart, BarChart3, File
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ExportButton from '@/components/admin/export/ExportButton';
+import ImageOptimizer from '@/components/admin/storage/ImageOptimizer';
 
 interface Settings {
   site_name: string;
@@ -270,6 +271,9 @@ const AdminSettings = () => {
           )}
           {isSaving ? 'Saving...' : 'Save Settings'}
         </Button>
+
+        {/* Image Storage Optimizer */}
+        <ImageOptimizer />
 
         {/* Data Export Section */}
         <Card className="mt-6">
