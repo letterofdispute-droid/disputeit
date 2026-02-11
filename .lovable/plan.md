@@ -1,63 +1,84 @@
 
 
-# Account Linking: Merge Email + Google Accounts
+# Super-Rich Consumer Rights Guide Content
 
-## The Problem
+## What We're Building
 
-When a user signs up with email/password and later tries to log in with Google using the same email address, one of two things currently happens:
-- A new, separate account is created (losing access to their existing letters and purchases)
-- An error occurs with no helpful guidance
+A massive content expansion of all 13 consumer rights guide pages, transforming them from ~200-word thin pages into 1,500-2,500 word authoritative legal resources. This is a code-only approach -- no database needed -- keeping everything in `consumerRightsContent.ts`.
 
-Neither outcome is good for users.
+## Content Enhancements Per Guide
 
-## The Solution
+Each of the 13 guides will be expanded with:
 
-We'll implement **automatic account linking** on the backend, plus a clear UI flow for edge cases.
+1. **Extended introduction** (3-4 paragraphs instead of 1, citing federal laws)
+2. **6-8 key rights** (up from 4, each with detailed legal basis)
+3. **8-10 common issues** (up from 5)
+4. **8-10 action steps** (up from 5, more specific)
+5. **6-8 important deadlines** (with statute references)
+6. **NEW: Federal Laws section** -- specific statutes that protect consumers (e.g., FCRA, FDCPA, Magnuson-Moss, No Surprises Act)
+7. **NEW: FAQ section** -- 5-6 frequently asked questions with detailed answers (also generates FAQPage schema for Google rich snippets)
+8. **NEW: Warning signs section** -- red flags consumers should watch for
+9. **NEW: Pro tips section** -- expert-level advice
 
-### How It Works
+## Interface Changes
 
-1. **Backend: Enable automatic identity linking** -- Configure the authentication system to automatically merge identities when the same email is used across providers. This means if a user signed up with email and later logs in with Google (same email), both sign-in methods will be linked to the **same account**.
+The `CategoryGuide` interface will be extended with new optional fields:
 
-2. **Frontend: Handle the "email already exists" error gracefully** -- If automatic linking isn't possible (e.g., email isn't confirmed yet), show a helpful message guiding the user to sign in with their original method first.
+```text
++ federalLaws: { name, citation, description, url? }[]
++ faqItems: { question, answer }[]
++ warningSigns: string[]
++ proTips: string[]
+```
 
-3. **Frontend: Add identity linking from the Settings page** -- Allow logged-in users to manually connect their Google account from their account settings, so they can use either method going forward.
+## Page Component Enhancements
 
-## Implementation Steps
+`CategoryGuidePage.tsx` will be updated to render all new sections:
 
-### Step 1: Enable Automatic Identity Linking (Backend)
-- Use the authentication settings tool to enable the "allow linking identities with the same email" option
-- This is a one-time configuration change -- no migration needed
+- Federal Laws card with law name, citation, and description
+- FAQ accordion section (using existing Accordion component)
+- Warning Signs card with alert styling
+- Pro Tips card
+- FAQPage + BreadcrumbList Schema.org structured data in SEOHead
+- Table of Contents with jump links
+- "Last updated" freshness badge
 
-### Step 2: Improve Error Handling on Login/Signup Pages
-- Catch the specific error that occurs when an email conflict is detected
-- Show a user-friendly toast: *"An account with this email already exists. Please sign in with your original method (email/password or Google), then link additional sign-in methods from Settings."*
-- Apply this to both `LoginPage.tsx` and `SignupPage.tsx`
+## All 13 Categories Getting Rich Content
 
-### Step 3: Add "Linked Accounts" Section to Settings Page
-- Add a new card to `SettingsPage.tsx` showing which sign-in methods are connected
-- Display the user's current identities (email, Google, etc.)
-- Add a "Connect Google Account" button if Google isn't linked yet
-- Add ability to unlink a provider (only if another method exists)
+| Category | Key Federal Laws Referenced |
+|----------|---------------------------|
+| Refunds & Purchases | FTC Act, Magnuson-Moss Warranty Act, Fair Credit Billing Act, Cooling-Off Rule |
+| Landlord & Housing | Fair Housing Act, RESPA, Lead Paint Disclosure Act, Servicemembers Civil Relief Act |
+| Travel | DOT Airline Consumer Protections, Montreal Convention, TRIP Act |
+| Damaged & Defective Goods | Magnuson-Moss, UCC Article 2, CPSA, FTC Act Section 5 |
+| Utilities & Telecom | Telecommunications Act, Truth in Billing, TCPA, Cable Act |
+| Financial Services | FCRA, FDCPA, TILA, EFTA, Dodd-Frank Act |
+| Insurance Claims | McCarran-Ferguson Act, ACA, state bad faith laws, ERISA |
+| Vehicle & Auto | Magnuson-Moss, Federal Odometer Act, TILA for auto loans, state lemon laws |
+| Healthcare & Medical | No Surprises Act, HIPAA, EMTALA, ACA, Fair Debt Collection (medical) |
+| Employment & Workplace | FLSA, Title VII, ADA, OSHA Act, WARN Act, FMLA |
+| E-commerce & Online | CAN-SPAM, COPPA, FTC's Mail Order Rule, CCPA/state privacy laws |
+| HOA & Neighbor | Fair Housing Act, state HOA Acts, Davis-Stirling (CA model), covenant law |
+| Contractors & Home Improvement | State contractor licensing acts, FTC Cooling-Off Rule, mechanic's lien statutes |
 
-### Step 4: Profile Data Reconciliation
-- When accounts are merged, ensure the `profiles` table isn't affected (the `handle_new_user` trigger only fires on new user creation, not identity linking)
-- Update the profile's `avatar_url` from Google if the user doesn't already have one
+## Files to Create/Modify
 
-## Technical Details
+1. **`src/data/consumerRightsContent.ts`** -- Complete rewrite with massively expanded content for all 13 categories plus new interface fields
+2. **`src/pages/CategoryGuidePage.tsx`** -- Major update with new sections (Federal Laws, FAQ accordion, Warning Signs, Pro Tips, Table of Contents, structured data)
+3. **`src/components/SEOHead.tsx`** -- Add support for `faqItems` and `breadcrumbs` props to generate FAQPage and BreadcrumbList schema
 
-### Files to Modify
-- `src/pages/LoginPage.tsx` -- Better error messages for email conflicts
-- `src/pages/SignupPage.tsx` -- Better error messages for email conflicts
-- `src/pages/SettingsPage.tsx` -- Add linked accounts management UI
-- `src/hooks/useAuth.tsx` -- Add `linkIdentity` and `unlinkIdentity` methods
+## Estimated Content Volume
 
-### New Components
-- `src/components/settings/LinkedAccountsCard.tsx` -- UI for managing connected sign-in methods
+- ~2,000 words per guide x 13 guides = ~26,000 words of rich, legally-referenced content
+- ~78 FAQ items total (6 per guide) for Google rich snippet eligibility
+- ~91 federal law references across all guides
+- ~130 warning signs and pro tips
 
-### Auth Configuration
-- Enable automatic identity linking in the authentication settings
+## SEO Impact
 
-### Edge Cases Handled
-- User with unconfirmed email tries Google login -- shown guidance to confirm email first
-- User tries to unlink their only sign-in method -- prevented with validation
-- Google provides updated name/avatar -- profile updated if fields are currently empty
+- FAQPage schema on 13 pages = potential for FAQ rich snippets in Google
+- BreadcrumbList schema = breadcrumb display in search results
+- Authoritative legal citations = E-E-A-T signals for YMYL content
+- Dense internal linking to templates = stronger topical authority
+- Long-form content (2,000+ words) = better ranking potential for informational queries
+
