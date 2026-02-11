@@ -1,106 +1,63 @@
 
 
-# Analytics Dashboard Overhaul: Fix Broken Charts + User Journey Paths + Attribution
+# Account Linking: Merge Email + Google Accounts
 
-## Issues Found
+## The Problem
 
-1. **Broken charts**: The Activity tab's bar chart and funnel show a giant "Sign Ups = 2" bar (pulled from `profiles` table count) while everything else is 0 (from `analytics_events` which is empty). This creates a visually broken chart with one massive bar and everything else flat.
+When a user signs up with email/password and later tries to log in with Google using the same email address, one of two things currently happens:
+- A new, separate account is created (losing access to their existing letters and purchases)
+- An error occurs with no helpful guidance
 
-2. **No user journey path tracking**: Currently only discrete events are tracked -- there's no way to see "Homepage -> Template -> Form -> Purchase" as a connected flow.
+Neither outcome is good for users.
 
-3. **No attribution tracking**: No first-touch or last-touch attribution data is captured.
+## The Solution
 
----
+We'll implement **automatic account linking** on the backend, plus a clear UI flow for edge cases.
 
-## Fix 1: Broken Charts
+### How It Works
 
-**Problem**: The Activity funnel mixes data sources -- `signups` comes from `profiles` table count while everything else comes from `analytics_events` (which is empty). This creates a disproportionate bar.
+1. **Backend: Enable automatic identity linking** -- Configure the authentication system to automatically merge identities when the same email is used across providers. This means if a user signed up with email and later logs in with Google (same email), both sign-in methods will be linked to the **same account**.
 
-**Solution**:
-- Remove the hybrid data sourcing. When `analytics_events` has data, use it consistently. When it doesn't, show "No data yet" placeholders instead of broken bars.
-- Add minimum height guards and "empty state" designs so charts look polished even with sparse data.
-- Fix the Activity tab's bar chart to use Recharts `BarChart` instead of the custom CSS-based bars that don't scale properly on mobile (the screenshot shows bars overflowing).
+2. **Frontend: Handle the "email already exists" error gracefully** -- If automatic linking isn't possible (e.g., email isn't confirmed yet), show a helpful message guiding the user to sign in with their original method first.
 
----
+3. **Frontend: Add identity linking from the Settings page** -- Allow logged-in users to manually connect their Google account from their account settings, so they can use either method going forward.
 
-## Fix 2: User Journey Path Tracking
+## Implementation Steps
 
-**Problem**: Events are individual dots with no connection between them. You want to see: "User landed on homepage -> viewed template X -> started form -> purchased."
+### Step 1: Enable Automatic Identity Linking (Backend)
+- Use the authentication settings tool to enable the "allow linking identities with the same email" option
+- This is a one-time configuration change -- no migration needed
 
-**Solution**:
-- Enhance `useAnalytics` to track a `referrer` (previous page within the site) on every `page_view` event, creating a breadcrumb trail per session.
-- Build a **Session Explorer** card in the Funnel tab that groups events by `session_id` and shows the path as a timeline (entry page -> intermediate pages -> exit/conversion point).
-- Add a **Top User Paths** visualization showing the most common sequences (e.g., "Home -> Category -> Template -> Form" with frequency counts).
+### Step 2: Improve Error Handling on Login/Signup Pages
+- Catch the specific error that occurs when an email conflict is detected
+- Show a user-friendly toast: *"An account with this email already exists. Please sign in with your original method (email/password or Google), then link additional sign-in methods from Settings."*
+- Apply this to both `LoginPage.tsx` and `SignupPage.tsx`
 
-Data structure: Group `analytics_events` by `session_id`, sort by `created_at`, then render as a flow.
+### Step 3: Add "Linked Accounts" Section to Settings Page
+- Add a new card to `SettingsPage.tsx` showing which sign-in methods are connected
+- Display the user's current identities (email, Google, etc.)
+- Add a "Connect Google Account" button if Google isn't linked yet
+- Add ability to unlink a provider (only if another method exists)
 
----
+### Step 4: Profile Data Reconciliation
+- When accounts are merged, ensure the `profiles` table isn't affected (the `handle_new_user` trigger only fires on new user creation, not identity linking)
+- Update the profile's `avatar_url` from Google if the user doesn't already have one
 
-## Fix 3: First-Touch & Last-Touch Attribution
+## Technical Details
 
-**Problem**: No attribution data is captured at all currently.
+### Files to Modify
+- `src/pages/LoginPage.tsx` -- Better error messages for email conflicts
+- `src/pages/SignupPage.tsx` -- Better error messages for email conflicts
+- `src/pages/SettingsPage.tsx` -- Add linked accounts management UI
+- `src/hooks/useAuth.tsx` -- Add `linkIdentity` and `unlinkIdentity` methods
 
-**Solution**:
-- On first visit, store `first_touch_source` in `localStorage` by parsing `document.referrer` and UTM parameters (`utm_source`, `utm_medium`, `utm_campaign`). Classify into channels: SEO (Google/Bing referrer), Social (Facebook/Twitter/etc), Email (utm_medium=email), Direct (no referrer), Paid (utm_medium=cpc/ppc).
-- On every event, include `first_touch` (from localStorage, never changes) and `last_touch` (current referrer/UTM at time of event) in `event_data`.
-- Build an **Attribution** section in the Funnel tab with two side-by-side pie charts:
-  - **First Touch**: Shows which channel originally brought users (answers "how did they discover us?")
-  - **Last Touch**: Shows which channel was active before conversion (answers "what drove the purchase?")
-- Filter attribution data to show only sessions that resulted in a purchase for conversion-focused analysis.
+### New Components
+- `src/components/settings/LinkedAccountsCard.tsx` -- UI for managing connected sign-in methods
 
----
+### Auth Configuration
+- Enable automatic identity linking in the authentication settings
 
-## Files to Modify
-
-### `src/hooks/useAnalytics.ts`
-- Add `getAttribution()` helper that reads UTM params and `document.referrer` on first load, stores in localStorage as `first_touch_attribution`.
-- Compute `last_touch_attribution` on each event from current referrer/UTMs.
-- Include both in every event's `event_data`.
-- Track previous page path for journey linking.
-
-### `src/pages/admin/AdminAnalytics.tsx`
-- **Fix Activity tab**: Replace custom CSS bar chart with Recharts BarChart. Add empty state handling when all values are 0. Remove hybrid `profiles`/`analytics_events` mixing for signups.
-- **Enhance Funnel tab**:
-  - Add **Session Explorer** card: Groups events by session_id, shows entry -> exit path with timestamps.
-  - Add **Top Paths** card: Aggregates most common page sequences.
-  - Add **Attribution** section: Two pie charts for first-touch and last-touch channel distribution.
-  - Add **Attribution Table**: Tabular breakdown showing channel, sessions, conversions, and conversion rate per channel.
-
-### New analytics event data shape
-
-Each event's `event_data` will now include:
-```text
-{
-  ...existing fields,
-  referrer: "https://google.com",
-  first_touch: { source: "google", medium: "organic", campaign: null, channel: "SEO" },
-  last_touch: { source: "direct", medium: null, campaign: null, channel: "Direct" },
-  prev_page: "/housing" (internal referrer)
-}
-```
-
-### Channel Classification Logic
-
-```text
-UTM source present? -> Use utm_source + utm_medium
-  utm_medium = "cpc" or "ppc" -> "Paid Search"
-  utm_medium = "email" -> "Email"
-  utm_medium = "social" -> "Social"
-  
-No UTM but has referrer?
-  google/bing/yahoo/duckduckgo -> "Organic Search"
-  facebook/twitter/instagram/linkedin/reddit -> "Social"
-  Other external domain -> "Referral"
-  
-No referrer at all -> "Direct"
-```
-
----
-
-## Implementation Scope
-
-- Fix the broken charts (empty states, consistent data sourcing, Recharts for Activity bars)
-- Add attribution tracking to the analytics hook
-- Build Session Explorer, Top Paths, and Attribution visualizations in the Funnel tab
-- All within existing files, no new database changes needed (attribution data stored in the existing `event_data` JSONB column)
-
+### Edge Cases Handled
+- User with unconfirmed email tries Google login -- shown guidance to confirm email first
+- User tries to unlink their only sign-in method -- prevented with validation
+- Google provides updated name/avatar -- profile updated if fields are currently empty
