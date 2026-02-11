@@ -162,8 +162,8 @@ const LetterPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title={template.seoTitle}
-        description={template.seoDescription}
+        title={seoOverride?.meta_title || template.seoTitle}
+        description={seoOverride?.meta_description || template.seoDescription}
         canonicalPath={canonicalPath}
         type="website"
         templateName={template.title}
@@ -251,10 +251,10 @@ const LetterPage = () => {
 
           <div className="max-w-3xl">
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              {template.seoTitle}
+              {seoOverride?.meta_title || template.seoTitle}
             </h1>
             <p className="text-lg text-primary-foreground/80 mb-6">
-              {template.seoDescription}
+              {seoOverride?.meta_description || template.seoDescription}
             </p>
             <Button
               variant="accent"
