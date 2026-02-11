@@ -9,11 +9,13 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone } from 'lucide-react';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone, ArrowUpRight, ArrowDownRight, Minus, GitCompareArrows } from 'lucide-react';
 import ExportButton from '@/components/admin/export/ExportButton';
 import UTMLinkBuilder from '@/components/admin/analytics/UTMLinkBuilder';
 import { supabase } from '@/integrations/supabase/client';
-import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, parseISO } from 'date-fns';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
@@ -189,10 +191,50 @@ const AdminAnalytics = () => {
   const [userCount, setUserCount] = useState(0);
   const [letterCount, setLetterCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [comparisonEvents, setComparisonEvents] = useState<AnalyticsEvent[]>([]);
+  const [comparisonPurchases, setComparisonPurchases] = useState<Purchase[]>([]);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
   }, [period]);
+
+  // Fetch comparison period data (the previous equivalent period)
+  useEffect(() => {
+    if (!compareEnabled) {
+      setComparisonEvents([]);
+      setComparisonPurchases([]);
+      return;
+    }
+    const fetchComparison = async () => {
+      setIsComparisonLoading(true);
+      const daysAgo = parseInt(period);
+      const compEnd = startOfDay(subDays(new Date(), daysAgo));
+      const compStart = startOfDay(subDays(new Date(), daysAgo * 2));
+
+      try {
+        const [eventsRes, purchasesRes] = await Promise.all([
+          supabase.from('analytics_events').select('*')
+            .gte('created_at', compStart.toISOString())
+            .lt('created_at', compEnd.toISOString())
+            .order('created_at', { ascending: false }),
+          supabase.from('letter_purchases')
+            .select('id, amount_cents, purchase_type, template_slug, status, created_at')
+            .gte('created_at', compStart.toISOString())
+            .lt('created_at', compEnd.toISOString())
+            .order('created_at', { ascending: false }),
+        ]);
+        setComparisonEvents(eventsRes.data || []);
+        setComparisonPurchases(purchasesRes.data || []);
+      } catch (error) {
+        console.error('Error fetching comparison data:', error);
+      } finally {
+        setIsComparisonLoading(false);
+      }
+    };
+    fetchComparison();
+  }, [compareEnabled, period]);
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
@@ -559,7 +601,22 @@ const AdminAnalytics = () => {
 
         {/* Funnel Tab */}
         <TabsContent value="funnel" className="space-y-6">
-          <FunnelTab events={events} purchases={purchases} period={period} formatCurrency={formatCurrency} />
+          {/* Compare Toggle */}
+          <div className="flex items-center gap-3">
+            <Switch id="compare-toggle" checked={compareEnabled} onCheckedChange={setCompareEnabled} />
+            <Label htmlFor="compare-toggle" className="text-sm font-medium cursor-pointer">
+              Compare with previous {period} days
+            </Label>
+            {isComparisonLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+          <FunnelTab
+            events={events}
+            purchases={purchases}
+            period={period}
+            formatCurrency={formatCurrency}
+            comparisonEvents={compareEnabled ? comparisonEvents : undefined}
+            comparisonPurchases={compareEnabled ? comparisonPurchases : undefined}
+          />
         </TabsContent>
 
         {/* Activity Tab */}
@@ -722,46 +779,56 @@ const AdminAnalytics = () => {
   );
 };
 
+// ─── Helper: compute funnel steps from events + purchases ──────────────────
+const computeFunnelSteps = (events: AnalyticsEvent[], purchases: Purchase[]) => {
+  const pageViews = events.filter(e => e.event_type === 'page_view').length;
+  const templateViews = events.filter(e => e.event_type === 'template_view').length;
+  const formStarts = events.filter(e => e.event_type === 'form_started').length;
+  const formCompletes = events.filter(e => e.event_type === 'form_completed').length;
+  const checkoutStarts = events.filter(e => e.event_type === 'checkout_initiated').length;
+  const paidPurchases = purchases.filter(p => p.status === 'completed' && p.amount_cents > 0);
+
+  const steps = [
+    { label: 'Page Views', value: pageViews, color: 'bg-muted-foreground/30' },
+    { label: 'Template Views', value: templateViews, color: 'bg-primary/40' },
+    { label: 'Form Started', value: formStarts, color: 'bg-primary/60' },
+    { label: 'Form Completed', value: formCompletes, color: 'bg-primary/80' },
+    { label: 'Checkout Opened', value: checkoutStarts, color: 'bg-primary' },
+    { label: 'Paid Orders', value: paidPurchases.length, color: 'bg-accent' },
+  ];
+
+  const maxVal = steps[0].value || 1;
+  return steps.map((s, i) => ({
+    ...s,
+    percent: i === 0 ? 100 : ((s.value / maxVal) * 100),
+    dropoffRate: i === 0 ? null : steps[i - 1].value > 0
+      ? parseFloat(((1 - s.value / steps[i - 1].value) * 100).toFixed(1))
+      : null,
+    dropoffLabel: i === 0 ? null : `${steps[i - 1].label} → ${s.label}`,
+    retained: i === 0 ? null : steps[i - 1].value > 0
+      ? parseFloat(((s.value / steps[i - 1].value) * 100).toFixed(1))
+      : null,
+  }));
+};
+
 // ─── Funnel Tab ─────────────────────────────────────────────────────────────────
 const FunnelTab = ({ 
-  events, purchases, period, formatCurrency 
+  events, purchases, period, formatCurrency, comparisonEvents, comparisonPurchases
 }: { 
   events: AnalyticsEvent[];
   purchases: Purchase[];
   period: string;
   formatCurrency: (v: number) => string;
+  comparisonEvents?: AnalyticsEvent[];
+  comparisonPurchases?: Purchase[];
 }) => {
+  const hasComparison = !!comparisonEvents && !!comparisonPurchases;
   // Conversion funnel
-  const funnelData = useMemo(() => {
-    const pageViews = events.filter(e => e.event_type === 'page_view').length;
-    const templateViews = events.filter(e => e.event_type === 'template_view').length;
-    const formStarts = events.filter(e => e.event_type === 'form_started').length;
-    const formCompletes = events.filter(e => e.event_type === 'form_completed').length;
-    const checkoutStarts = events.filter(e => e.event_type === 'checkout_initiated').length;
-    const paidPurchases = purchases.filter(p => p.status === 'completed' && p.amount_cents > 0);
-
-    const steps = [
-      { label: 'Page Views', value: pageViews, color: 'bg-muted-foreground/30' },
-      { label: 'Template Views', value: templateViews, color: 'bg-primary/40' },
-      { label: 'Form Started', value: formStarts, color: 'bg-primary/60' },
-      { label: 'Form Completed', value: formCompletes, color: 'bg-primary/80' },
-      { label: 'Checkout Opened', value: checkoutStarts, color: 'bg-primary' },
-      { label: 'Paid Orders', value: paidPurchases.length, color: 'bg-accent' },
-    ];
-
-    const maxVal = steps[0].value || 1;
-    return steps.map((s, i) => ({
-      ...s,
-      percent: i === 0 ? 100 : ((s.value / maxVal) * 100),
-      dropoffRate: i === 0 ? null : steps[i - 1].value > 0 
-        ? parseFloat(((1 - s.value / steps[i - 1].value) * 100).toFixed(1))
-        : null,
-      dropoffLabel: i === 0 ? null : `${steps[i - 1].label} → ${s.label}`,
-      retained: i === 0 ? null : steps[i - 1].value > 0
-        ? parseFloat(((s.value / steps[i - 1].value) * 100).toFixed(1))
-        : null,
-    }));
-  }, [events, purchases]);
+  const funnelData = useMemo(() => computeFunnelSteps(events, purchases), [events, purchases]);
+  const comparisonFunnelData = useMemo(() => 
+    hasComparison ? computeFunnelSteps(comparisonEvents!, comparisonPurchases!) : null,
+    [hasComparison, comparisonEvents, comparisonPurchases]
+  );
 
   // Session Explorer: group events by session_id
   const sessionPaths = useMemo(() => {
@@ -932,32 +999,91 @@ const FunnelTab = ({
             <Filter className="h-5 w-5" />
             Conversion Funnel
           </CardTitle>
-          <CardDescription>Full user journey — last {period} days. Drop-off % shown between stages.</CardDescription>
+          <CardDescription>
+            Full user journey — last {period} days. Drop-off % shown between stages.
+            {hasComparison && ' Compared with previous period.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {hasEvents ? (
-            <div className="space-y-3">
-              {funnelData.map((step, i) => (
-                <div key={step.label}>
-                  {step.dropoffRate !== null && (
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <div className="text-xs text-destructive/70">↓ {step.dropoffRate}% drop-off</div>
-                      <div className="text-xs text-muted-foreground">({step.retained}% retained)</div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-4">
-                    <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">{step.label}</div>
-                    <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
-                      <div className={`h-full ${step.color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(step.percent, 2)}%` }} />
-                    </div>
-                    <div className="w-20 text-right shrink-0">
-                      <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
-                      <span className="text-xs text-muted-foreground ml-1">({step.percent.toFixed(1)}%)</span>
+            hasComparison && comparisonFunnelData ? (
+              /* ── Comparison Table View ── */
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Stage</TableHead>
+                    <TableHead className="text-right">Current</TableHead>
+                    <TableHead className="text-right">Previous</TableHead>
+                    <TableHead className="text-right">Change</TableHead>
+                    <TableHead className="text-right">Drop-off</TableHead>
+                    <TableHead className="text-right">Prev Drop-off</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {funnelData.map((step, i) => {
+                    const prev = comparisonFunnelData[i];
+                    const diff = prev ? step.value - prev.value : 0;
+                    const diffPercent = prev && prev.value > 0 ? ((diff / prev.value) * 100) : null;
+                    const dropoffDelta = step.dropoffRate !== null && prev?.dropoffRate !== null && prev?.dropoffRate !== undefined
+                      ? step.dropoffRate - prev.dropoffRate : null;
+                    return (
+                      <TableRow key={step.label}>
+                        <TableCell className="font-medium">{step.label}</TableCell>
+                        <TableCell className="text-right font-bold">{step.value.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{prev?.value?.toLocaleString() ?? '—'}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={`inline-flex items-center gap-0.5 text-sm font-medium ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            {diff > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : diff < 0 ? <ArrowDownRight className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
+                            {diffPercent !== null ? `${Math.abs(diffPercent).toFixed(1)}%` : '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {step.dropoffRate !== null ? (
+                            <span className="text-xs text-destructive/70">{step.dropoffRate}%</span>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {prev?.dropoffRate !== null && prev?.dropoffRate !== undefined ? (
+                            <span className="text-xs text-muted-foreground">
+                              {prev.dropoffRate}%
+                              {dropoffDelta !== null && dropoffDelta !== 0 && (
+                                <span className={`ml-1 ${dropoffDelta < 0 ? 'text-green-600' : 'text-destructive'}`}>
+                                  ({dropoffDelta > 0 ? '+' : ''}{dropoffDelta.toFixed(1)}pp)
+                                </span>
+                              )}
+                            </span>
+                          ) : '—'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              /* ── Standard Bar View ── */
+              <div className="space-y-3">
+                {funnelData.map((step, i) => (
+                  <div key={step.label}>
+                    {step.dropoffRate !== null && (
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="text-xs text-destructive/70">↓ {step.dropoffRate}% drop-off</div>
+                        <div className="text-xs text-muted-foreground">({step.retained}% retained)</div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4">
+                      <div className="w-36 text-sm font-medium text-right text-foreground shrink-0">{step.label}</div>
+                      <div className="flex-1 bg-muted rounded-full h-8 relative overflow-hidden">
+                        <div className={`h-full ${step.color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(step.percent, 2)}%` }} />
+                      </div>
+                      <div className="w-20 text-right shrink-0">
+                        <span className="text-sm font-bold text-foreground">{step.value.toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground ml-1">({step.percent.toFixed(1)}%)</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           ) : (
             <div className="h-[150px] flex items-center justify-center">
               <p className="text-sm text-muted-foreground">No funnel data yet — events will populate as users interact</p>
