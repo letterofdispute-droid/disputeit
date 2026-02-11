@@ -18,7 +18,7 @@ import { useContentPlans, ContentPlan } from '@/hooks/useContentPlans';
 import { useTemplateProgress } from '@/hooks/useTemplateProgress';
 import { useCategoryTierSettings } from '@/hooks/useCategoryTierSettings';
 import { useBulkPlanningJob } from '@/hooks/useBulkPlanningJob';
-import { allTemplates } from '@/data/allTemplates';
+import { allTemplates, getCategoryIdFromName } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 import { supabase } from '@/integrations/supabase/client';
@@ -146,7 +146,7 @@ export default function TemplateCoverageMap() {
     const groups: Record<string, CategoryGroup> = {};
     
     allTemplates.forEach(template => {
-      const categoryId = template.category;
+      const categoryId = getCategoryIdFromName(template.category);
       if (!groups[categoryId]) {
         const category = templateCategories.find(c => c.id === categoryId);
         groups[categoryId] = {
