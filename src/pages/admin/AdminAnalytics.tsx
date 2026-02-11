@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe } from 'lucide-react';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone } from 'lucide-react';
 import ExportButton from '@/components/admin/export/ExportButton';
 import UTMLinkBuilder from '@/components/admin/analytics/UTMLinkBuilder';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +54,133 @@ interface CategoryData {
 }
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+// Campaign Performance component
+const CampaignPerformance = ({ events, purchases, formatCurrency }: { events: AnalyticsEvent[]; purchases: Purchase[]; formatCurrency: (v: number) => string }) => {
+  const campaignData = useMemo(() => {
+    // Build a map of session_id -> campaign name (from first/last touch UTM data)
+    const sessionCampaigns: Record<string, string> = {};
+    const campaignStats: Record<string, { clicks: number; sessions: Set<string>; conversions: number; revenue: number }> = {};
+
+    events.forEach(e => {
+      const data = e.event_data as any;
+      const campaign = data?.last_touch?.campaign || data?.first_touch?.campaign;
+      if (!campaign) return;
+
+      if (e.session_id) {
+        sessionCampaigns[e.session_id] = campaign;
+      }
+
+      if (!campaignStats[campaign]) {
+        campaignStats[campaign] = { clicks: 0, sessions: new Set(), conversions: 0, revenue: 0 };
+      }
+
+      if (e.event_type === 'page_view') {
+        campaignStats[campaign].clicks++;
+      }
+      if (e.session_id) {
+        campaignStats[campaign].sessions.add(e.session_id);
+      }
+    });
+
+    // Match conversions: checkout_completed events with a campaign
+    events.filter(e => e.event_type === 'checkout_completed').forEach(e => {
+      const data = e.event_data as any;
+      const campaign = data?.last_touch?.campaign || data?.first_touch?.campaign;
+      if (campaign && campaignStats[campaign]) {
+        campaignStats[campaign].conversions++;
+        campaignStats[campaign].revenue += (data?.amount || 0);
+      }
+    });
+
+    // Also attribute purchases to campaigns via session matching
+    const purchaseSessions = events.filter(e => e.event_type === 'checkout_completed');
+    purchaseSessions.forEach(e => {
+      if (e.session_id && sessionCampaigns[e.session_id]) {
+        const campaign = sessionCampaigns[e.session_id];
+        const data = e.event_data as any;
+        // Only count if not already counted above
+        if (!data?.last_touch?.campaign && !data?.first_touch?.campaign) {
+          if (campaignStats[campaign]) {
+            campaignStats[campaign].conversions++;
+          }
+        }
+      }
+    });
+
+    return Object.entries(campaignStats)
+      .map(([name, stats]) => ({
+        name,
+        clicks: stats.clicks,
+        sessions: stats.sessions.size,
+        conversions: stats.conversions,
+        revenue: stats.revenue,
+        conversionRate: stats.sessions.size > 0 ? (stats.conversions / stats.sessions.size) * 100 : 0,
+      }))
+      .sort((a, b) => b.sessions - a.sessions);
+  }, [events]);
+
+  if (campaignData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <Megaphone className="h-5 w-5" />
+            Campaign Performance
+          </CardTitle>
+          <CardDescription>Track clicks, conversions and revenue per UTM campaign</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[150px] flex items-center justify-center">
+            <div className="text-center">
+              <Megaphone className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No campaign data yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Create a campaign link below and share it to start tracking</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-serif text-xl flex items-center gap-2">
+          <Megaphone className="h-5 w-5" />
+          Campaign Performance
+        </CardTitle>
+        <CardDescription>Clicks, conversions and revenue per UTM campaign</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Campaign</TableHead>
+              <TableHead className="text-right">Sessions</TableHead>
+              <TableHead className="text-right">Page Views</TableHead>
+              <TableHead className="text-right">Conversions</TableHead>
+              <TableHead className="text-right">Conv. Rate</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {campaignData.map((campaign) => (
+              <TableRow key={campaign.name}>
+                <TableCell className="font-medium">{campaign.name}</TableCell>
+                <TableCell className="text-right">{campaign.sessions}</TableCell>
+                <TableCell className="text-right">{campaign.clicks}</TableCell>
+                <TableCell className="text-right">{campaign.conversions}</TableCell>
+                <TableCell className="text-right">{campaign.conversionRate.toFixed(1)}%</TableCell>
+                <TableCell className="text-right">{formatCurrency(campaign.revenue / 100)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
 
 const AdminAnalytics = () => {
   const [period, setPeriod] = useState('30');
@@ -586,6 +713,8 @@ const AdminAnalytics = () => {
 
         {/* Campaigns Tab */}
         <TabsContent value="campaigns" className="space-y-6">
+          {/* Campaign Performance Table */}
+          <CampaignPerformance events={events} purchases={purchases} formatCurrency={formatCurrency} />
           <UTMLinkBuilder />
         </TabsContent>
       </Tabs>
