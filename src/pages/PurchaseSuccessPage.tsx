@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Check, Download, FileText, Edit, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { trackPurchaseComplete, trackDownloadPdf } from '@/hooks/useGTM';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface PurchaseData {
   id: string;
@@ -23,6 +24,7 @@ const PurchaseSuccessPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [purchase, setPurchase] = useState<PurchaseData | null>(null);
   const purchaseTrackedRef = useRef(false);
+  const { trackCheckoutCompleted } = useAnalytics();
 
   const sessionId = searchParams.get('session_id');
   const purchaseId = searchParams.get('purchase_id');
@@ -89,8 +91,9 @@ const PurchaseSuccessPage = () => {
               purchaseData.template_slug || 'unknown',
               'unknown',
               purchaseData.purchase_type,
-              0 // Credit redemption is free
+              0
             );
+            trackCheckoutCompleted(purchaseData.template_slug || 'unknown', purchaseData.purchase_type, 0);
           }
         } else {
           // Standard Stripe purchase verification
@@ -112,6 +115,7 @@ const PurchaseSuccessPage = () => {
                 data.purchase.purchaseType,
                 price
               );
+              trackCheckoutCompleted(data.purchase.templateSlug || 'unknown', data.purchase.purchaseType, price * 100);
             }
           } else {
             setError(data?.error || 'Payment verification failed');

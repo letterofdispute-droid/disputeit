@@ -21,6 +21,7 @@ import { useFormAssistant } from '@/hooks/useFormAssistant';
 import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
 import { useEvidenceUpload } from '@/hooks/useEvidenceUpload';
 import { useAuth } from '@/hooks/useAuth';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { toast } from 'sonner';
 import {
   trackLetterFormStart, 
@@ -57,6 +58,7 @@ const LetterGenerator = ({
   const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
   const evidenceUpload = useEvidenceUpload();
   const { user } = useAuth();
+  const { trackFormStarted, trackFormCompleted } = useAnalytics();
   const totalSteps = 3;
 
   // Generate fallback letter content (for preview only)
@@ -78,6 +80,7 @@ const LetterGenerator = ({
     if (!formStartedRef.current && value.length > 0) {
       formStartedRef.current = true;
       trackLetterFormStart(template.slug);
+      trackFormStarted(template.slug);
     }
     setFormData(prev => ({
       ...prev,
@@ -325,6 +328,7 @@ const LetterGenerator = ({
                   disabled={isGenerating || showGeneratingOverlay || evidenceUpload.isUploading}
                   onClick={async () => {
                     trackGenerateLetterClick(template.slug);
+                    trackFormCompleted(template.slug);
                     setShowGeneratingOverlay(true);
                     
                     // Upload evidence photos first if user is logged in and has photos
