@@ -30,6 +30,7 @@ export default function ContentQueue() {
     isRetrying,
     deleteItems,
     getFailedIds,
+    fetchAllFailedIds,
   } = useContentQueue(undefined, undefined, statusFilter);
 
   const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping } = useGenerationJob();
@@ -99,17 +100,25 @@ export default function ContentQueue() {
     }
   };
 
-  const handleClearFailed = () => {
-    const failedIds = getFailedIds();
-    if (failedIds.length > 0) {
-      deleteItems(failedIds);
+  const handleClearFailed = async () => {
+    try {
+      const failedIds = await fetchAllFailedIds();
+      if (failedIds.length > 0) {
+        deleteItems(failedIds);
+      }
+    } catch (e) {
+      console.error('Failed to fetch failed IDs:', e);
     }
   };
 
-  const handleRetryFailed = () => {
-    const failedIds = getFailedIds();
-    if (failedIds.length > 0) {
-      retryFailed(failedIds);
+  const handleRetryFailed = async () => {
+    try {
+      const failedIds = await fetchAllFailedIds();
+      if (failedIds.length > 0) {
+        retryFailed(failedIds);
+      }
+    } catch (e) {
+      console.error('Failed to fetch failed IDs:', e);
     }
   };
 
