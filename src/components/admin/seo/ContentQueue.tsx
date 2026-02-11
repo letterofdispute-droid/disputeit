@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
 import { useQueueStats } from '@/hooks/useQueueStats';
+import { useGenerationJob } from '@/hooks/useGenerationJob';
 import QueueStats from './queue/QueueStats';
 import QueueFilters from './queue/QueueFilters';
 import QueueActions from './queue/QueueActions';
@@ -29,15 +30,16 @@ export default function ContentQueue() {
     isRetrying,
     deleteItems,
     getFailedIds,
-    generationProgress,
   } = useContentQueue(undefined, undefined, statusFilter);
 
-  // Use separate hook for accurate global stats (not limited by pagination)
+  const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping } = useGenerationJob();
+
+  // Use separate hook for accurate global stats
   const { data: globalStats, isLoading: statsLoading } = useQueueStats();
   
   const stats = globalStats || { queued: 0, generating: 0, generated: 0, published: 0, failed: 0, total: 0 };
 
-  // Filter items (status is now filtered server-side, only category filter needed client-side)
+  // Filter items
   const filteredItems = queueItems?.filter(item => {
     if (categoryFilter !== 'all' && item.content_plans?.category_id !== categoryFilter) return false;
     return true;
@@ -50,7 +52,6 @@ export default function ContentQueue() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Reset to page 1 when filters change
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
     setCurrentPage(1);
@@ -86,7 +87,7 @@ export default function ContentQueue() {
     });
     
     if (queuedIds.length > 0) {
-      bulkGenerate({ queueItemIds: queuedIds, batchSize: Math.min(batchSize, queuedIds.length) });
+      bulkGenerate({ queueItemIds: queuedIds });
       setSelectedIds(new Set());
     }
   };
@@ -120,19 +121,20 @@ export default function ContentQueue() {
     );
   }
 
+  // Show active job or last completed job
+  const jobToShow = activeJob || lastCompletedJob;
+
   return (
     <div className="space-y-4">
       {/* Stats */}
       <QueueStats stats={stats} />
 
-      {/* Progress indicator during generation */}
-      {(isBulkGenerating || isRetrying) && (
+      {/* Job-based progress indicator */}
+      {jobToShow && (
         <GenerationProgress
-          current={generationProgress?.current || 0}
-          total={generationProgress?.total || selectedIds.size || stats.failed}
-          currentTitle={generationProgress?.currentTitle}
-          currentBatch={generationProgress?.currentBatch}
-          totalBatches={generationProgress?.totalBatches}
+          job={jobToShow}
+          onStop={stopJob}
+          isStopping={isStopping}
         />
       )}
 
@@ -154,7 +156,7 @@ export default function ContentQueue() {
         <QueueActions
           selectedCount={selectedIds.size}
           failedCount={stats.failed}
-          isBulkGenerating={isBulkGenerating || isRetrying}
+          isBulkGenerating={isBulkGenerating || isRetrying || isRunning}
           batchSize={batchSize}
           onBatchSizeChange={setBatchSize}
           onGenerateSelected={handleGenerateSelected}

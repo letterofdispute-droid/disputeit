@@ -42,7 +42,7 @@ export default function ClusterPlanner({
   existingPlan,
 }: ClusterPlannerProps) {
   const { generatePlan, isGeneratingPlan } = useContentPlans();
-  const { queueItems, bulkGenerate, isBulkGenerating, retryFailed, isRetrying, getStaleGeneratingItems, resetStaleItems, isResettingStale } = useContentQueue(existingPlan?.id);
+  const { queueItems, bulkGenerate, isBulkGenerating, retryFailed, isRetrying } = useContentQueue(existingPlan?.id);
   
   const [valueTier, setValueTier] = useState<ValueTier>(
     (existingPlan?.value_tier as ValueTier) || 'medium'
@@ -63,10 +63,14 @@ export default function ClusterPlanner({
     });
   }, [planQueueItems]);
 
-  const handleMarkStaleAsFailed = () => {
+  const handleMarkStaleAsFailed = async () => {
     const staleIds = staleItems.map(i => i.id);
     if (staleIds.length > 0) {
-      resetStaleItems(staleIds);
+      const { error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('content_queue')
+        .update({ status: 'failed', error_message: 'Generation timed out - manually reset' })
+        .in('id', staleIds);
+      if (!error) window.location.reload();
     }
   };
 
@@ -123,7 +127,6 @@ export default function ClusterPlanner({
     bulkGenerate({
       planId: existingPlan.id,
       queueItemIds: queuedIds,
-      batchSize: queuedIds.length,
     });
   };
 
@@ -224,14 +227,10 @@ export default function ClusterPlanner({
                   variant="outline"
                   size="sm"
                   onClick={handleMarkStaleAsFailed}
-                  disabled={isResettingStale}
+                  disabled={false}
                   className="ml-4"
                 >
-                  {isResettingStale ? (
-                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Resetting...</>
-                  ) : (
-                    'Mark as failed & retry'
-                  )}
+                  Mark as failed & retry
                 </Button>
               </AlertDescription>
             </Alert>
