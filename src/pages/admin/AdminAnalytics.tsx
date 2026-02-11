@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone, ArrowUpRight, ArrowDownRight, Minus, GitCompareArrows } from 'lucide-react';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone, ArrowUpRight, ArrowDownRight, Minus, GitCompareArrows, Search } from 'lucide-react';
+import SiteSearchReport from '@/components/admin/analytics/SiteSearchReport';
 import ExportButton from '@/components/admin/export/ExportButton';
 import UTMLinkBuilder from '@/components/admin/analytics/UTMLinkBuilder';
 import { supabase } from '@/integrations/supabase/client';
@@ -450,11 +451,15 @@ const AdminAnalytics = () => {
       </div>
 
       <Tabs defaultValue="revenue" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="funnel">Funnel</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="search" className="flex items-center gap-1">
+            <Search className="h-3 w-3" />
+            <span className="hidden sm:inline">Search</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Revenue Tab */}
@@ -773,6 +778,11 @@ const AdminAnalytics = () => {
           {/* Campaign Performance Table */}
           <CampaignPerformance events={events} purchases={purchases} formatCurrency={formatCurrency} />
           <UTMLinkBuilder />
+        </TabsContent>
+
+        {/* Site Search Tab */}
+        <TabsContent value="search" className="space-y-6">
+          <SiteSearchReport events={events} period={period} />
         </TabsContent>
       </Tabs>
     </div>
