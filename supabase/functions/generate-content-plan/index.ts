@@ -596,6 +596,14 @@ Return JSON:
       return data;
     });
 
+    // Sync target_article_count to actual inserted count
+    if (queuedItems.length !== tierConfig.articleCount + 1) {
+      await supabase
+        .from('content_plans')
+        .update({ target_article_count: queuedItems.length })
+        .eq('id', plan.id);
+    }
+
     console.log(`Created plan ${plan.id} with ${queuedItems.length} diverse queued articles`);
 
     return new Response(JSON.stringify({
