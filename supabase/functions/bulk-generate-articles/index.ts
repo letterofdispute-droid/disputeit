@@ -1090,6 +1090,47 @@ async function completeJob(
     .eq('id', jobId);
 }
 
+// Helper to batch .in() updates to avoid URL-too-long errors
+async function batchedInUpdate(
+  supabase: SupabaseClient,
+  table: string,
+  updateData: any,
+  ids: string[]
+): Promise<void> {
+  const CHUNK_SIZE = 100;
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from(table).update(updateData).in('id', chunk);
+    if (error) throw error;
+  }
+}
+
+// Helper to batch .in() queries to avoid URL-too-long errors (max ~100 IDs per chunk)
+async function batchedInQuery(
+  supabase: SupabaseClient,
+  table: string,
+  selectCols: string,
+  ids: string[],
+  extraFilters?: (q: any) => any,
+  limit?: number
+): Promise<any[]> {
+  const CHUNK_SIZE = 100;
+  const results: any[] = [];
+  
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    let query = supabase.from(table).select(selectCols).in('id', chunk);
+    if (extraFilters) query = extraFilters(query);
+    if (limit && results.length >= limit) break;
+    const { data, error } = await query;
+    if (error) throw error;
+    if (data) results.push(...data);
+    if (limit && results.length >= limit) break;
+  }
+  
+  return limit ? results.slice(0, limit) : results;
+}
+
 async function selfChain(jobId: string) {
   const selfUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-generate-articles`;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1169,14 +1210,20 @@ serve(async (req) => {
         });
       }
 
-      // Fetch next batch of queued items from this job's queue_item_ids
-      const { data: nextItems, error: nextError } = await supabaseAdmin
-        .from('content_queue')
-        .select(`*, content_plans!inner(template_slug, template_name, category_id, subcategory_slug)`)
-        .in('id', job.queue_item_ids)
-        .eq('status', 'queued')
-        .order('priority', { ascending: false })
-        .limit(1);
+      // Fetch next batch of queued items from this job's queue_item_ids (batched to avoid URL length limits)
+      let nextItems: any[] | null = null;
+      let nextError: any = null;
+      try {
+        nextItems = await batchedInQuery(
+          supabaseAdmin, 'content_queue',
+          `*, content_plans!inner(template_slug, template_name, category_id, subcategory_slug)`,
+          job.queue_item_ids,
+          (q: any) => q.eq('status', 'queued').order('priority', { ascending: false }),
+          1
+        );
+      } catch (e) {
+        nextError = e;
+      }
       
       if (nextError) {
         console.error('[JOB_CONTINUE] Failed to fetch next items:', nextError);
@@ -1192,11 +1239,11 @@ serve(async (req) => {
         console.log(`[JOB_CONTINUE] No more queued items for job ${jobId}`);
         
         // Check for retryable failures (one-time retry)
-        const { data: failedItems } = await supabaseAdmin
-          .from('content_queue')
-          .select('id, error_message')
-          .in('id', job.queue_item_ids)
-          .eq('status', 'failed');
+        const failedItems = await batchedInQuery(
+          supabaseAdmin, 'content_queue', 'id, error_message',
+          job.queue_item_ids,
+          (q: any) => q.eq('status', 'failed')
+        );
         
         const retryableItems = (failedItems || []).filter(f => 
           f.error_message && 
@@ -1234,13 +1281,13 @@ serve(async (req) => {
 
         // All done - complete the job
         // Re-count actual statuses for accuracy
-        const { data: finalItems } = await supabaseAdmin
-          .from('content_queue')
-          .select('status')
-          .in('id', job.queue_item_ids);
+        const finalItems = await batchedInQuery(
+          supabaseAdmin, 'content_queue', 'status',
+          job.queue_item_ids
+        );
         
-        const finalSucceeded = (finalItems || []).filter(i => i.status === 'generated').length;
-        const finalFailed = (finalItems || []).filter(i => i.status === 'failed').length;
+        const finalSucceeded = finalItems.filter(i => i.status === 'generated').length;
+        const finalFailed = finalItems.filter(i => i.status === 'failed').length;
         
         await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
         console.log(`[JOB_COMPLETE] Job ${jobId} finished: ${finalSucceeded} succeeded, ${finalFailed} failed`);
@@ -1284,20 +1331,20 @@ serve(async (req) => {
 
       if (bailReason) {
         // Bail out: mark remaining items as failed
-        const { data: remainingItems } = await supabaseAdmin
-          .from('content_queue')
-          .select('id')
-          .in('id', job.queue_item_ids)
-          .eq('status', 'queued');
+        const remainingItems = await batchedInQuery(
+          supabaseAdmin, 'content_queue', 'id',
+          job.queue_item_ids,
+          (q: any) => q.eq('status', 'queued')
+        );
         
         if (remainingItems && remainingItems.length > 0) {
           const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
              ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
              : 'RATE_LIMITED: Skipped - rate limit hit.';
-          await supabaseAdmin
-            .from('content_queue')
-            .update({ status: 'failed', error_message: skipMsg })
-            .in('id', remainingItems.map(r => r.id));
+           await batchedInUpdate(supabaseAdmin, 'content_queue',
+             { status: 'failed', error_message: skipMsg },
+             remainingItems.map(r => r.id)
+           );
         }
 
         await updateJobProgress(supabaseAdmin, jobId, newSucceeded, newFailed + (remainingItems?.length || 0), bailReason);
@@ -1389,27 +1436,33 @@ serve(async (req) => {
     const wordCount = Math.max(requestedWordCount, 1200);
 
     // Build query for ALL queued items matching the request
-    let query = supabaseAdmin
-      .from('content_queue')
-      .select(`*, content_plans!inner(template_slug, template_name, category_id, subcategory_slug)`)
-      .eq('status', 'queued')
-      .order('priority', { ascending: false });
+    let allQueueItems: any[] = [];
 
     if (queueItemIds && queueItemIds.length > 0) {
-      query = query.in('id', queueItemIds);
-    } else if (planId) {
-      query = query.eq('plan_id', planId);
-    } else if (categoryId) {
-      query = query.eq('content_plans.category_id', categoryId);
-    }
+      // Use batched query to avoid URL-too-long errors with many IDs
+      allQueueItems = await batchedInQuery(
+        supabaseAdmin, 'content_queue',
+        `*, content_plans!inner(template_slug, template_name, category_id, subcategory_slug)`,
+        queueItemIds,
+        (q: any) => q.eq('status', 'queued').order('priority', { ascending: false })
+      );
+    } else {
+      let query = supabaseAdmin
+        .from('content_queue')
+        .select(`*, content_plans!inner(template_slug, template_name, category_id, subcategory_slug)`)
+        .eq('status', 'queued')
+        .order('priority', { ascending: false });
 
-    // Fetch ALL matching items (up to 2000) - not just a batch of 3
-    query = query.limit(2000);
+      if (planId) {
+        query = query.eq('plan_id', planId);
+      } else if (categoryId) {
+        query = query.eq('content_plans.category_id', categoryId);
+      }
 
-    const { data: allQueueItems, error: queueError } = await query;
-
-    if (queueError) {
-      throw new Error(`Failed to fetch queue items: ${queueError.message}`);
+      query = query.limit(2000);
+      const { data, error: queueError } = await query;
+      if (queueError) throw new Error(`Failed to fetch queue items: ${queueError.message}`);
+      allQueueItems = data || [];
     }
 
     if (!allQueueItems || allQueueItems.length === 0) {
@@ -1481,10 +1534,10 @@ serve(async (req) => {
         const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
            ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
            : 'RATE_LIMITED: Skipped - rate limit hit.';
-        await supabaseAdmin
-          .from('content_queue')
-          .update({ status: 'failed', error_message: skipMsg })
-          .in('id', remainingIds);
+        await batchedInUpdate(supabaseAdmin, 'content_queue',
+          { status: 'failed', error_message: skipMsg },
+          remainingIds
+        );
       }
       
       await updateJobProgress(supabaseAdmin, newJob.id, succeeded, failed + remainingIds.length, bailReason);
