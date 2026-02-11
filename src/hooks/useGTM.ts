@@ -328,3 +328,23 @@ export const trackNavClick = (destination: string) => {
     event_label: destination,
   });
 };
+
+// ============ SITE SEARCH ============
+
+export const trackSiteSearch = (
+  searchTerm: string,
+  resultsCount: number,
+  searchLocation: string
+) => {
+  pushToDataLayer({
+    event: 'view_search_results',
+    funnel_stage: 'interest',
+    event_category: 'site_search',
+    event_action: 'search',
+    event_label: searchTerm,
+    event_value: resultsCount,
+    search_term: searchTerm,
+    search_results_count: resultsCount,
+    search_location: searchLocation,
+  });
+};

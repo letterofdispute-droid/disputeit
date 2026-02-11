@@ -278,6 +278,7 @@ const CategoryPage = () => {
                 placeholder={`Search ${category.name.toLowerCase()} templates...`}
                 resultCount={filteredTemplates.length}
                 totalCount={templates.length}
+                searchLocation={`category:${categoryId}`}
               />
             </div>
 

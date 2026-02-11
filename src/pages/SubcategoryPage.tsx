@@ -203,6 +203,7 @@ const SubcategoryPage = () => {
               placeholder={`Search ${subcategoryInfo.name.toLowerCase()} templates...`}
               resultCount={filteredTemplates.length}
               totalCount={subcategoryTemplates.length}
+              searchLocation={`subcategory:${categoryId}/${subcategorySlug}`}
             />
           </div>
         </div>
