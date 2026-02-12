@@ -45,7 +45,7 @@ Think: What would a professional stock photographer capture for this topic?`;
     console.log('Generating image with Google Gemini for:', title);
 
     const result = await generateImageWithGoogle(imagePrompt, geminiKey);
-    const { buffer, extension } = imageResultToBuffer(result);
+    const { buffer, extension } = await imageResultToBuffer(result);
 
     // Generate unique filename
     const timestamp = Date.now();
