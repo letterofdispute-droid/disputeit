@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { HardDrive, Loader2, CheckCircle, Zap, Search, XCircle } from 'lucide-react';
+import { HardDrive, Loader2, CheckCircle, Zap, Search, XCircle, AlertTriangle, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,7 @@ interface Job {
   freed_bytes: number;
   current_offset: number;
   errors: string[];
+  updated_at: string;
 }
 
 function formatBytes(bytes: number): string {
@@ -28,10 +29,12 @@ function formatBytes(bytes: number): string {
 }
 
 const ACTIVE_STATUSES = ['pending', 'scanning', 'optimizing'];
+const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 const ImageOptimizer = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
 
@@ -129,6 +132,20 @@ const ImageOptimizer = () => {
     }
   };
 
+  const handleResume = async () => {
+    if (!job) return;
+    setIsResuming(true);
+    try {
+      await callFunction({ mode: 'optimize', jobId: job.id });
+      startPolling(job.id);
+      toast({ title: 'Resumed', description: 'Optimization chain restarted.' });
+    } catch (err: any) {
+      toast({ title: 'Resume failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsResuming(false);
+    }
+  };
+
   const handleCancel = async () => {
     if (!job) return;
     try {
@@ -152,6 +169,10 @@ const ImageOptimizer = () => {
 
   const isActive = job && ACTIVE_STATUSES.includes(job.status);
   const showStats = job && job.status !== 'pending';
+
+  // Stale detection: optimizing but no update in 5+ minutes
+  const isStale = job?.status === 'optimizing' && job.updated_at &&
+    (Date.now() - new Date(job.updated_at).getTime()) > STALE_THRESHOLD_MS;
 
   return (
     <Card>
@@ -187,8 +208,27 @@ const ImageOptimizer = () => {
           </div>
         )}
 
+        {/* Stale warning + Resume */}
+        {isStale && job && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Job appears stalled</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  No progress for 5+ minutes ({job.processed} / {job.oversized_files} processed). The background chain may have broken.
+                </p>
+                <Button onClick={handleResume} size="sm" className="mt-2" disabled={isResuming}>
+                  {isResuming ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                  Resume
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Progress bar */}
-        {job?.status === 'optimizing' && (
+        {job?.status === 'optimizing' && !isStale && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Optimizing images in-place...</span>
