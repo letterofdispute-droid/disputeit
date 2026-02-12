@@ -1131,23 +1131,32 @@ async function batchedInQuery(
   return limit ? results.slice(0, limit) : results;
 }
 
-async function selfChain(jobId: string) {
+async function selfChainWithRetry(jobId: string): Promise<void> {
   const selfUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-generate-articles`;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  
-  console.log(`[SELF_CHAIN] Firing continuation for job ${jobId}`);
-  
-  // Fire and forget - don't await
-  fetch(selfUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ jobId }),
-  }).catch((err) => {
-    console.error(`[SELF_CHAIN] Failed to self-chain:`, err);
-  });
+  const headers = {
+    'Authorization': `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json',
+  };
+  const body = JSON.stringify({ jobId });
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(`[SELF_CHAIN] Attempt ${attempt} for job ${jobId}`);
+      const response = await fetch(selfUrl, { method: 'POST', headers, body });
+      if (response.ok) {
+        console.log(`[SELF_CHAIN] Attempt ${attempt} succeeded for job ${jobId}`);
+        return;
+      }
+      console.warn(`[SELF_CHAIN] Attempt ${attempt} got ${response.status} for job ${jobId}`);
+    } catch (err) {
+      console.error(`[SELF_CHAIN] Attempt ${attempt} failed for job ${jobId}:`, err);
+    }
+    if (attempt < 2) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  console.error(`[SELF_CHAIN] CRITICAL: selfChain failed after 2 attempts for job ${jobId}. pg_cron will auto-recover.`);
 }
 
 // ============================================
@@ -1272,7 +1281,7 @@ serve(async (req) => {
             .eq('id', jobId);
           
           // Self-chain to process retries
-          selfChain(jobId);
+          await selfChainWithRetry(jobId);
           
           return new Response(JSON.stringify({ success: true, message: 'Starting retry pass' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1310,62 +1319,84 @@ serve(async (req) => {
       let batchSucceeded = 0;
       let batchFailed = 0;
       let bailReason: string | null = null;
+      let shouldContinue = true;
 
-      for (const item of nextItems) {
-        const result = await generateSingleArticle(supabaseAdmin, apiKey, item, 'expert_professional', 1500, existingDbTitles);
-        
-        if (result.success) {
-          batchSucceeded++;
+      try {
+        for (const item of nextItems) {
+          const result = await generateSingleArticle(supabaseAdmin, apiKey, item, 'expert_professional', 1500, existingDbTitles);
+          
+          if (result.success) {
+            batchSucceeded++;
+          } else {
+            batchFailed++;
+            if (result.bailReason) {
+              bailReason = result.bailReason;
+              shouldContinue = false;
+              break;
+            }
+          }
+        }
+      } catch (unexpectedError) {
+        // Catch any unexpected errors (DB timeouts, JSON crashes, etc.)
+        console.error(`[JOB_CONTINUE] Unexpected error during batch processing:`, unexpectedError);
+        batchFailed++;
+      } finally {
+        // Update job progress regardless of success/failure
+        const newSucceeded = job.succeeded_items + batchSucceeded;
+        const newFailed = job.failed_items + batchFailed;
+
+        if (!shouldContinue && bailReason) {
+          // Bail out: mark remaining items as failed
+          const remainingItems = await batchedInQuery(
+            supabaseAdmin, 'content_queue', 'id',
+            job.queue_item_ids,
+            (q: any) => q.eq('status', 'queued')
+          );
+          
+          if (remainingItems && remainingItems.length > 0) {
+            const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
+               ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
+               : 'RATE_LIMITED: Skipped - rate limit hit.';
+             await batchedInUpdate(supabaseAdmin, 'content_queue',
+               { status: 'failed', error_message: skipMsg },
+               remainingItems.map(r => r.id)
+             );
+          }
+
+          await updateJobProgress(supabaseAdmin, jobId, newSucceeded, newFailed + (remainingItems?.length || 0), bailReason);
+          console.log(`[JOB_BAIL] Job ${jobId} bailed: ${bailReason}`);
         } else {
-          batchFailed++;
-          if (result.bailReason) {
-            bailReason = result.bailReason;
-            break;
+          // Update progress
+          await updateJobProgress(supabaseAdmin, jobId, newSucceeded, newFailed);
+          
+          // Check if there are more items to process
+          const moreItems = await batchedInQuery(
+            supabaseAdmin, 'content_queue', 'id',
+            job.queue_item_ids,
+            (q: any) => q.eq('status', 'queued'),
+            1
+          );
+
+          if (moreItems && moreItems.length > 0) {
+            // Self-chain with retry for next batch
+            await selfChainWithRetry(jobId);
+          } else {
+            // No more items - complete the job
+            const finalItems = await batchedInQuery(
+              supabaseAdmin, 'content_queue', 'status',
+              job.queue_item_ids
+            );
+            const finalSucceeded = finalItems.filter(i => i.status === 'generated').length;
+            const finalFailed = finalItems.filter(i => i.status === 'failed').length;
+            await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
+            console.log(`[JOB_COMPLETE] Job ${jobId} finished: ${finalSucceeded} succeeded, ${finalFailed} failed`);
           }
         }
       }
 
-      // Update job progress
-      const newSucceeded = job.succeeded_items + batchSucceeded;
-      const newFailed = job.failed_items + batchFailed;
-
-      if (bailReason) {
-        // Bail out: mark remaining items as failed
-        const remainingItems = await batchedInQuery(
-          supabaseAdmin, 'content_queue', 'id',
-          job.queue_item_ids,
-          (q: any) => q.eq('status', 'queued')
-        );
-        
-        if (remainingItems && remainingItems.length > 0) {
-          const skipMsg = bailReason === 'CREDIT_EXHAUSTED'
-             ? 'CREDIT_EXHAUSTED: Skipped - AI credits exhausted.'
-             : 'RATE_LIMITED: Skipped - rate limit hit.';
-           await batchedInUpdate(supabaseAdmin, 'content_queue',
-             { status: 'failed', error_message: skipMsg },
-             remainingItems.map(r => r.id)
-           );
-        }
-
-        await updateJobProgress(supabaseAdmin, jobId, newSucceeded, newFailed + (remainingItems?.length || 0), bailReason);
-        console.log(`[JOB_BAIL] Job ${jobId} bailed: ${bailReason}`);
-        
-        return new Response(JSON.stringify({ success: true, bailReason }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Update progress and self-chain
-      await updateJobProgress(supabaseAdmin, jobId, newSucceeded, newFailed);
-      
-      // Self-chain for next batch
-      selfChain(jobId);
-
       return new Response(JSON.stringify({ 
         success: true, 
-        message: `Batch complete: ${batchSucceeded} succeeded, ${batchFailed} failed`,
-        succeeded: newSucceeded,
-        failed: newFailed,
+        message: `Batch processed`,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -1546,7 +1577,7 @@ serve(async (req) => {
       
       // Self-chain if there are more items
       if (allIds.length > 1) {
-        selfChain(newJob.id);
+        await selfChainWithRetry(newJob.id);
       } else {
         // Small job - complete immediately
         await completeJob(supabaseAdmin, newJob.id, succeeded, failed);
