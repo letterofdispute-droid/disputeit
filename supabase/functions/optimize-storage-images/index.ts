@@ -232,16 +232,8 @@ async function processOneImage(supabase: any, file: { path: string; size: number
   const { error: upErr } = await supabase.storage.from(BUCKET).upload(file.path, compressed, { contentType: 'image/jpeg', upsert: true })
   if (upErr) throw upErr
 
-  // Clean up any legacy -opt.jpg copy
-  let cleaned = 0
-  const pathParts = file.path.split('.')
-  pathParts.pop()
-  const legacyOptPath = pathParts.join('.') + '-opt.jpg'
-  const { error: rmErr } = await supabase.storage.from(BUCKET).remove([legacyOptPath])
-  if (!rmErr) cleaned = 1
-
   console.log(`[OPTIMIZE] ${file.path}: ${(originalSize / 1024).toFixed(0)}KB -> ${(newSize / 1024).toFixed(0)}KB`)
-  return { saved: originalSize - newSize, cleaned }
+  return { saved: originalSize - newSize, cleaned: 0 }
 }
 
 // ── Mode handlers ──
