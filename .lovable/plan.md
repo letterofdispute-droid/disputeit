@@ -1,40 +1,62 @@
+# Upgrade Image Storage Optimizer: In-Place Optimization
 
+## Problem
 
-# Resume Stuck Generation Job and Add Stale Job Recovery
+The current optimizer creates `-opt.jpg` copies alongside originals, then requires a separate "Cleanup" step to delete originals. If cleanup isn't run, every new scan shows the same oversized count. This is confusing and wasteful.
 
-## What Happened
+Additionally, newly AI-generated images are already compressed JPEGs (via the image generation pipeline), so only legacy images need optimization.
 
-The bulk article generation job (460 items) got stuck after processing 96 items (93 succeeded, 3 failed). The self-chaining mechanism broke when the URL-length 500 error occurred. After we deployed the fix, the chain was never restarted - so the job has been idle for ~6 hours while still showing "processing."
+## Solution: In-Place Replacement
 
-## Fix (Two Parts)
+Instead of the two-step copy-then-delete workflow, the optimizer will **replace files in-place** -- overwrite the original with the optimized version. This eliminates the cleanup step entirely.
 
-### Part 1: Immediately Resume the Stuck Job
+### Changes to Edge Function (`supabase/functions/optimize-storage-images/index.ts`)
 
-Call the `bulk-generate-articles` edge function with the stuck job's ID to restart the self-chain. This will pick up right where it left off, processing the remaining 364 queued items.
+1. **Lower threshold from 500KB to 300KB** -- files under 300KB are considered acceptable
+2. **In-place optimization** -- download the file, compress it, upload back to the **same path** with `upsert: true`. No more `-opt.jpg` suffix, no more cleanup step
+3. **Remove cleanup mode entirely** -- no longer needed since originals are replaced
+4. **Exclude already-optimized files** -- track optimized paths in the job metadata so re-runs within the same scan don't re-process. Also skip files that are already JPEG and under 300KB
+5. **Better scan filtering** -- only count files above 300KB that aren't already small JPEGs
 
-### Part 2: Add Stale Job Detection + Resume Button
+### Changes to UI Component (`src/components/admin/storage/ImageOptimizer.tsx`)
 
-To prevent this from happening again silently, we will:
+1. Update threshold display text from ">500KB" to ">300KB"
+2. Remove the "Delete Originals" / cleanup button and related states
+3. After optimization completes, show a simpler "Done" message (no cleanup step needed)
+4. Update description text to reflect the new in-place behavior
 
-1. **Add a "Resume" button** to the `GenerationProgress` component that appears when a job appears stalled (no progress update in the last 5 minutes while still in "processing" status).
+### Scan Logic (Updated)
 
-2. **Resume logic in `useGenerationJob` hook** - add a `resumeJob` mutation that calls the `bulk-generate-articles` edge function with the stalled job's ID to restart the chain.
+```text
+For each file in storage:
+  - Skip if size <= 300KB (already acceptable)
+  - Skip if name ends with '-opt.jpg' (legacy optimized copy)
+  - Count everything else as "oversized" / needs optimization
+```
+
+### Optimize Logic (Updated)
+
+```text
+For each oversized file:
+  1. Download it
+  2. Resize to max 1200px width
+  3. Encode as JPEG at 80% quality
+  4. If compressed size < original size:
+     - Upload compressed version to SAME PATH (overwrite)
+     - No DB reference updates needed (URL stays the same)
+  5. If compressed size >= original: skip (already optimal)
+```
+
+Since the URL doesn't change (same path, overwritten in place), there is **no need to update blog_posts or category_images references**. This is a major simplification.
+
+### Legacy `-opt.jpg` Cleanup
+
+The scan will also count any lingering `-opt.jpg` files that have a corresponding original still present. During optimization, if an `-opt.jpg` exists alongside an original, the optimizer will delete the `-opt.jpg` copy (since the original will now be optimized in-place).
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/hooks/useGenerationJob.ts` | Add `resumeJob` mutation that POSTs `{ jobId }` to the edge function |
-| `src/components/admin/seo/queue/GenerationProgress.tsx` | Add "Resume" button when job is stale (updated_at > 5 min ago and status is processing) |
-| `src/components/admin/seo/ContentQueue.tsx` | Pass `resumeJob` and `isResuming` to `GenerationProgress` |
 
-### How Stale Detection Works
-
-```text
-If job.status === 'processing'
-  AND (now - job.updated_at) > 5 minutes
-  -> Show "Stalled - Resume" button instead of spinner
-```
-
-The Resume button calls the same edge function endpoint with `{ jobId }` to restart the self-chain, exactly as if it had chained itself.
-
+| File                                                  | Change                                                                        |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `supabase/functions/optimize-storage-images/index.ts` | Lower threshold, in-place overwrite, remove cleanup mode, simplify DB updates |
+| `src/components/admin/storage/ImageOptimizer.tsx`     | Remove cleanup UI, update threshold labels, simplify flow                     |
