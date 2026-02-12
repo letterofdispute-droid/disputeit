@@ -934,7 +934,22 @@ Respond with ONLY this JSON:
     const imageStyles = getImageStyles();
     
     const featuredContext = await extractVisualKeywords(apiKey, parsedContent.title, plan.category_id);
-    let featuredResult = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, featuredContext, `articles/${slug}-featured`, imageStyles.featured);
+    let featuredResult: { url: string | null; altText: string | null } = { url: null, altText: null };
+    
+    // Try Gemini with retry on 429
+    try {
+      featuredResult = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, featuredContext, `articles/${slug}-featured`, imageStyles.featured);
+    } catch (imgErr) {
+      if (isGoogleImageError(imgErr) && imgErr.category === 'RATE_LIMITED') {
+        console.log('[IMAGE_RETRY] Rate limited on featured image, waiting 10s and retrying...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        try {
+          featuredResult = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, featuredContext, `articles/${slug}-featured`, imageStyles.featured);
+        } catch (retryErr) {
+          console.log('[IMAGE_RETRY] Retry also failed, falling back to Pixabay');
+        }
+      }
+    }
     
     if (!featuredResult.url) {
       featuredResult = await fetchPixabayFallback(supabaseAdmin, apiKey, featuredContext, `articles/${slug}-featured`, parsedContent.title);
@@ -949,7 +964,7 @@ Respond with ONLY this JSON:
     const useInfographic = INFOGRAPHIC_ARTICLE_TYPES.includes(item.article_type as any);
     
     if (hasMiddleImage1) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
       if (useInfographic) {
         const infographicResult = await generateInfographic(supabaseAdmin, apiKey, parsedContent.title, item.article_type, parsedContent.content, `articles/${slug}-middle1`);
@@ -968,7 +983,7 @@ Respond with ONLY this JSON:
     }
 
     if (hasMiddleImage2) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
       const middleContext2 = await extractVisualKeywords(apiKey, `${item.suggested_keywords?.[1] || 'dispute resolution'} advice`, plan.category_id);
       middleImage2Result = await generateAIImage(supabaseAdmin, apiKey, parsedContent.title, middleContext2, `articles/${slug}-middle2`, imageStyles.middle2);
       if (!middleImage2Result.url) {

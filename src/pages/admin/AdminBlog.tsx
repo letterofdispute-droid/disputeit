@@ -44,6 +44,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
 import ExportButton from '@/components/admin/export/ExportButton';
+import ImageBackfillCard from '@/components/admin/blog/ImageBackfillCard';
 
 interface BlogPost {
   id: string;
@@ -332,6 +333,9 @@ const AdminBlog = () => {
           </Button>
         </div>
       </div>
+
+      {/* Image Backfill Card */}
+      <ImageBackfillCard />
 
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
