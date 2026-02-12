@@ -1,61 +1,92 @@
 
 
-# Fix: Smarter Backfill -- Only Generate Images Articles Actually Need
+# Fix: Robust Image Backfill with Progress Tracking
 
-## Root Cause
+## Root Causes Found
 
-Two problems discovered:
+1. **CPU timeout**: The `imageResultToBuffer` function imports `imagescript` (a heavy image processing library) to resize and compress images. This alone can exhaust the CPU budget before any image is even uploaded.
+2. **Infinite loop**: Posts with NULL `middle_image_1_url` or `middle_image_2_url` but NO placeholder in their content are fetched every invocation, skipped, and fetched again -- forever.
+3. **Cascading timeout**: The self-chain `fetch()` call awaits the full response. If the chained invocation also times out, it cascades back.
 
-### 1. Generating unnecessary images (1,365 wasted calls)
+## Solution
 
-The backfill is trying to generate `middle_image_2` for ALL articles where it's NULL. But most articles were intentionally generated with only 1 middle image (no `{{MIDDLE_IMAGE_2}}` placeholder in their content). Of the 1,606 "missing" middle_image_2:
-- Only **241** actually need it (their content has a `{{MIDDLE_IMAGE_2}}` placeholder)
-- **1,365** never needed one -- the AI chose to include only 1 middle image
+### 1. Database: Add `backfill_jobs` table for progress tracking
 
-### 2. CPU timeout (too much work per invocation)
-
-Generating 3 images + 3 alt texts per post = 6 API calls. With 3 posts per batch, that's 18 API calls per invocation, which exceeds the edge function CPU time limit.
-
-## Real missing image counts
-
-| Type | Actually Missing |
-|------|-----------------|
-| Featured | 465 |
-| Middle 1 | 467 (468 minus 1 that has no placeholder either) |
-| Middle 2 | 241 (only those with `{{MIDDLE_IMAGE_2}}` in content) |
-| **Total** | **~1,173** (not 2,542) |
-
-## Changes
-
-### 1. Edge Function: Only generate images articles actually need
-
-In `backfill-blog-images/index.ts`:
-
-- For **middle_image_2**: only generate if the article content contains `MIDDLE_IMAGE_2` placeholder
-- For **middle_image_1**: only generate if the article content contains `MIDDLE_IMAGE_1` placeholder (nearly all do)
-- Reduce batch size from 3 to **1 article per invocation** to avoid CPU timeout
-- Skip the separate alt-text API call -- just use the article title as alt text (saves CPU time)
-- Keep the self-chaining pattern
-
-### 2. Status query: Reflect actual missing counts
-
-Update the status mode to check content for placeholders, giving accurate counts:
+Create a simple tracking table so the UI can show real progress:
 
 ```sql
--- Accurate missing middle_image_2 count
-SELECT COUNT(*) FROM blog_posts 
-WHERE status = 'published' 
-  AND middle_image_2_url IS NULL 
-  AND content LIKE '%MIDDLE_IMAGE_2%'
+CREATE TABLE backfill_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending, processing, complete, paused, failed
+  total_images INTEGER DEFAULT 0,
+  processed_images INTEGER DEFAULT 0,
+  failed_images INTEGER DEFAULT 0,
+  last_post_slug TEXT,
+  last_error TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-### 3. UI: No changes needed
+### 2. Edge Function: Complete rewrite with fixes
 
-The `ImageBackfillCard` already displays whatever counts the function returns.
+**Remove `imagescript` compression** -- upload raw base64 as PNG/JPEG directly. Gemini already returns reasonably sized images, and the compression was the main CPU killer.
 
-## Files to Modify
+**Fix the query** -- exclude posts that will be skipped by filtering on content placeholders in the SQL:
+
+```sql
+-- Only fetch posts that ACTUALLY need images
+SELECT * FROM blog_posts
+WHERE status = 'published'
+  AND (
+    featured_image_url IS NULL
+    OR (middle_image_1_url IS NULL AND content LIKE '%MIDDLE_IMAGE_1%')
+    OR (middle_image_2_url IS NULL AND content LIKE '%MIDDLE_IMAGE_2%')
+  )
+ORDER BY created_at DESC
+LIMIT 1
+```
+
+**Fire-and-forget self-chain** -- don't await the chained call. Treat 504 as success per the project's established pattern.
+
+**Add logging at every step**:
+- `[BACKFILL] Starting batch, job={id}`
+- `[BACKFILL] Processing post: {slug}, needs: featured={bool}, mid1={bool}, mid2={bool}`
+- `[BACKFILL] Generated {type} for {slug} ({size}KB)`
+- `[BACKFILL] Upload complete: {url}`
+- `[BACKFILL] Batch done: {processed} images, {remaining} remaining`
+- `[BACKFILL] Chain triggered for next batch`
+
+**Update `backfill_jobs` row** after each post with atomic increments.
+
+### 3. UI Component: Real progress from database
+
+Update `ImageBackfillCard` to:
+- Create a `backfill_jobs` row when starting
+- Poll the `backfill_jobs` table directly (not the edge function) for progress
+- Show: "Processing... 42/1,173 images (3.6%) -- Last: dispute-letter-template-slug"
+- Show error count and last error if any
+
+### Per-post processing flow (simplified)
+
+```text
+1. Fetch 1 post that actually needs images (smart SQL filter)
+2. For each missing image type:
+   a. Call Gemini API
+   b. Convert base64 to raw buffer (NO imagescript)
+   c. Upload to storage
+   d. Update backfill_jobs progress (atomic increment)
+3. Update blog_posts with new URLs
+4. Fire-and-forget self-chain to next batch
+5. Return response immediately
+```
+
+## Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/backfill-blog-images/index.ts` | Check content for placeholders before generating middle images; reduce batch to 1; remove alt-text API call; fix status query |
+| Migration | Create `backfill_jobs` table |
+| `supabase/functions/backfill-blog-images/index.ts` | Full rewrite: remove imagescript, fix query, fire-and-forget chain, add logging, track progress in DB |
+| `supabase/functions/_shared/googleImageGen.ts` | Add a lightweight `imageResultToRawBuffer` function that skips compression |
+| `src/components/admin/blog/ImageBackfillCard.tsx` | Poll `backfill_jobs` table for real progress, show detailed status |
 
