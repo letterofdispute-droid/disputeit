@@ -11,6 +11,8 @@ const MAX_WIDTH = 1200
 const JPEG_QUALITY = 80
 const SIZE_THRESHOLD = 300 * 1024 // 300KB
 const BATCH_SIZE = 5
+const IMAGE_TIMEOUT_MS = 20_000 // 20 seconds per image
+const SELF_INVOKE_RETRY_DELAY_MS = 2000
 
 function getSupabase() {
   return createClient(
@@ -35,17 +37,48 @@ async function verifyAdmin(req: Request): Promise<boolean> {
   return !!isAdmin
 }
 
-function selfInvoke(body: object) {
+// Layer 2: Self-invoke with retry — await + retry once on failure
+async function selfInvokeWithRetry(body: object): Promise<boolean> {
   const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/optimize-storage-images`
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-      'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
-    },
-    body: JSON.stringify(body),
-  }).catch(err => console.error('[SELF-INVOKE] Error:', err))
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+    'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
+  }
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
+      if (response.ok) {
+        console.log(`[SELF-INVOKE] Success on attempt ${attempt}`)
+        return true
+      }
+      const text = await response.text().catch(() => 'no body')
+      console.warn(`[SELF-INVOKE] Attempt ${attempt} got ${response.status}: ${text}`)
+    } catch (err) {
+      console.warn(`[SELF-INVOKE] Attempt ${attempt} failed:`, err)
+    }
+    if (attempt < 2) {
+      await new Promise(r => setTimeout(r, SELF_INVOKE_RETRY_DELAY_MS))
+    }
+  }
+  console.error('[SELF-INVOKE] CRITICAL: Failed after 2 attempts — chain broken')
+  return false
+}
+
+// Layer 3: Per-image timeout wrapper
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms)
+    promise.then(
+      (val) => { clearTimeout(timer); resolve(val) },
+      (err) => { clearTimeout(timer); reject(err) },
+    )
+  })
 }
 
 Deno.serve(async (req) => {
@@ -75,7 +108,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Invalid mode' }), { status: 400, headers: corsHeaders })
     }
   } catch (err) {
-    console.error('[OPTIMIZE] Error:', err)
+    console.error('[OPTIMIZE] Top-level error:', err)
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders })
   }
 })
@@ -133,10 +166,11 @@ async function listFolderFiles(supabase: any, folder: string): Promise<any[]> {
 
 // ── Job helpers ──
 
-async function getJob(supabase: any, jobId: string) {
+// Layer 4: Lightweight job fetch — excludes file_list
+async function getJobLite(supabase: any, jobId: string) {
   const { data, error } = await supabase
     .from('image_optimization_jobs')
-    .select('*')
+    .select('id, status, total_files, total_size_bytes, oversized_files, oversized_size_bytes, processed, saved_bytes, deleted, freed_bytes, current_offset, errors, created_at, updated_at, completed_at')
     .eq('id', jobId)
     .single()
   if (error) throw error
@@ -155,14 +189,62 @@ function jsonRes(data: any) {
   return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
 
-// ── Helper: get files needing optimization ──
-
 function getOversizedFiles(allFiles: any[]): any[] {
   return allFiles.filter((f: any) => {
     if (f.name.endsWith('-opt.jpg')) return false
     if (f.size <= SIZE_THRESHOLD) return false
     return true
   })
+}
+
+// Layer 4: Fetch batch via RPC — only gets the slice needed
+async function getBatch(supabase: any, jobId: string, offset: number): Promise<{ path: string; size: number }[]> {
+  const { data, error } = await supabase.rpc('get_optimization_batch', {
+    p_job_id: jobId,
+    p_offset: offset,
+    p_limit: BATCH_SIZE,
+  })
+  if (error) throw error
+  return data || []
+}
+
+// Layer 3: Process a single image with timeout
+async function processOneImage(supabase: any, file: { path: string; size: number }): Promise<{ saved: number; cleaned: number }> {
+  const { data: fileData, error: dlErr } = await supabase.storage.from(BUCKET).download(file.path)
+  if (dlErr) throw dlErr
+
+  const arrayBuffer = await fileData.arrayBuffer()
+  const originalSize = arrayBuffer.byteLength
+  const buffer = new Uint8Array(arrayBuffer)
+
+  let img: any
+  try { img = await Image.decode(buffer) } catch {
+    console.log(`[OPTIMIZE] Skipping ${file.path} - cannot decode`)
+    return { saved: 0, cleaned: 0 }
+  }
+
+  if (img.width > MAX_WIDTH) {
+    const ratio = MAX_WIDTH / img.width
+    img = img.resize(MAX_WIDTH, Math.round(img.height * ratio))
+  }
+
+  const compressed = await img.encodeJPEG(JPEG_QUALITY)
+  const newSize = compressed.byteLength
+  if (newSize >= originalSize) return { saved: 0, cleaned: 0 }
+
+  const { error: upErr } = await supabase.storage.from(BUCKET).upload(file.path, compressed, { contentType: 'image/jpeg', upsert: true })
+  if (upErr) throw upErr
+
+  // Clean up any legacy -opt.jpg copy
+  let cleaned = 0
+  const pathParts = file.path.split('.')
+  pathParts.pop()
+  const legacyOptPath = pathParts.join('.') + '-opt.jpg'
+  const { error: rmErr } = await supabase.storage.from(BUCKET).remove([legacyOptPath])
+  if (!rmErr) cleaned = 1
+
+  console.log(`[OPTIMIZE] ${file.path}: ${(originalSize / 1024).toFixed(0)}KB -> ${(newSize / 1024).toFixed(0)}KB`)
+  return { saved: originalSize - newSize, cleaned }
 }
 
 // ── Mode handlers ──
@@ -182,11 +264,9 @@ async function handleScan(supabase: any) {
   const totalSize = allFiles.reduce((s: number, f: any) => s + f.size, 0)
   const oversized = getOversizedFiles(allFiles)
   const oversizedSize = oversized.reduce((s: number, f: any) => s + f.size, 0)
-
-  // Count legacy -opt.jpg files for info
   const legacyOptFiles = allFiles.filter((f: any) => f.name.endsWith('-opt.jpg'))
 
-  // Store oversized file paths in file_list so optimize doesn't need to re-scan
+  // Store oversized paths in file_list for batch processing
   const fileList = oversized.map((f: any) => ({ path: f.path, size: f.size }))
 
   await updateJob(supabase, jobId, {
@@ -199,12 +279,14 @@ async function handleScan(supabase: any) {
     file_list: fileList,
   })
 
-  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized (>300KB), ${legacyOptFiles.length} legacy -opt.jpg. Stored ${fileList.length} paths.`)
+  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized, stored ${fileList.length} paths.`)
   return jsonRes({ jobId })
 }
 
 async function handleOptimize(supabase: any, jobId: string) {
-  const job = await getJob(supabase, jobId)
+  // Layer 4: Lightweight job fetch — no file_list
+  const job = await getJobLite(supabase, jobId)
+
   if (job.status === 'cancelled') {
     console.log(`[OPTIMIZE] Job ${jobId}: cancelled, stopping`)
     return jsonRes({ stopped: true })
@@ -215,94 +297,104 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
-  // Read batch directly from stored file_list — no re-listing needed
-  const fileList: { path: string; size: number }[] = job.file_list || []
-  const batch = fileList.slice(job.current_offset, job.current_offset + BATCH_SIZE)
+  // Layer 4: Fetch only the batch slice via RPC
+  const batch = await getBatch(supabase, jobId, job.current_offset)
 
   if (batch.length === 0) {
-    // Nothing left to process
     await updateJob(supabase, jobId, {
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
-    console.log(`[OPTIMIZE] Job ${jobId}: complete (no more files)`)
+    console.log(`[OPTIMIZE] Job ${jobId}: complete`)
     return jsonRes({ ok: true })
   }
 
+  // Layer 1: Guaranteed self-chain via finally block
   let batchProcessed = 0
   let batchSaved = 0
   let legacyCleaned = 0
   const errors: string[] = []
+  let shouldChain = false
 
-  for (const file of batch) {
-    try {
-      const { data: fileData, error: dlErr } = await supabase.storage.from(BUCKET).download(file.path)
-      if (dlErr) throw dlErr
-
-      const arrayBuffer = await fileData.arrayBuffer()
-      const originalSize = arrayBuffer.byteLength
-      const buffer = new Uint8Array(arrayBuffer)
-
-      let img: any
-      try { img = await Image.decode(buffer) } catch {
-        console.log(`[OPTIMIZE] Skipping ${file.path} - cannot decode`)
-        continue
+  try {
+    // Layer 3: Process each image with per-image timeout
+    for (const file of batch) {
+      try {
+        const result = await withTimeout(
+          processOneImage(supabase, file),
+          IMAGE_TIMEOUT_MS,
+          file.path
+        )
+        if (result.saved > 0) {
+          batchProcessed++
+          batchSaved += result.saved
+        }
+        legacyCleaned += result.cleaned
+      } catch (err) {
+        console.error(`[OPTIMIZE] Image failed: ${file.path}:`, err.message || err)
+        errors.push(`${file.path}: ${err.message || 'Unknown error'}`)
+        // Continue to next image — don't let one bad image kill the batch
       }
-
-      if (img.width > MAX_WIDTH) {
-        const ratio = MAX_WIDTH / img.width
-        img = img.resize(MAX_WIDTH, Math.round(img.height * ratio))
-      }
-
-      const compressed = await img.encodeJPEG(JPEG_QUALITY)
-      const newSize = compressed.byteLength
-      if (newSize >= originalSize) { continue }
-
-      // In-place overwrite
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(file.path, compressed, { contentType: 'image/jpeg', upsert: true })
-      if (upErr) throw upErr
-
-      // Clean up any legacy -opt.jpg copy
-      const pathParts = file.path.split('.')
-      pathParts.pop()
-      const legacyOptPath = pathParts.join('.') + '-opt.jpg'
-      // Try to remove — if it doesn't exist, that's fine
-      const { error: rmErr } = await supabase.storage.from(BUCKET).remove([legacyOptPath])
-      if (!rmErr) legacyCleaned++
-
-      batchSaved += (originalSize - newSize)
-      batchProcessed++
-      console.log(`[OPTIMIZE] ${file.path}: ${(originalSize / 1024).toFixed(0)}KB -> ${(newSize / 1024).toFixed(0)}KB`)
-    } catch (err) {
-      console.error(`[OPTIMIZE] Error: ${file.path}:`, err)
-      errors.push(`${file.path}: ${err.message}`)
     }
-  }
 
-  const newOffset = job.current_offset + BATCH_SIZE
-  const hasMore = newOffset < fileList.length
-  const jobErrors = [...(job.errors || []), ...errors]
+    const newOffset = job.current_offset + BATCH_SIZE
+    const jobErrors = [...(job.errors || []), ...errors]
 
-  if (hasMore) {
-    await updateJob(supabase, jobId, {
-      processed: job.processed + batchProcessed,
-      saved_bytes: job.saved_bytes + batchSaved,
-      deleted: (job.deleted || 0) + legacyCleaned,
-      current_offset: newOffset,
-      errors: jobErrors,
-    })
-    selfInvoke({ mode: 'optimize', jobId })
-  } else {
-    await updateJob(supabase, jobId, {
-      status: 'completed',
-      processed: job.processed + batchProcessed,
-      saved_bytes: job.saved_bytes + batchSaved,
-      deleted: (job.deleted || 0) + legacyCleaned,
-      current_offset: newOffset,
-      errors: jobErrors,
-      completed_at: new Date().toISOString(),
-    })
-    console.log(`[OPTIMIZE] Job ${jobId}: complete`)
+    // Check if more to process (use oversized_files from job)
+    shouldChain = newOffset < (job.oversized_files || 0)
+
+    if (shouldChain) {
+      await updateJob(supabase, jobId, {
+        processed: (job.processed || 0) + batchProcessed,
+        saved_bytes: (job.saved_bytes || 0) + batchSaved,
+        deleted: (job.deleted || 0) + legacyCleaned,
+        current_offset: newOffset,
+        errors: jobErrors,
+      })
+    } else {
+      await updateJob(supabase, jobId, {
+        status: 'completed',
+        processed: (job.processed || 0) + batchProcessed,
+        saved_bytes: (job.saved_bytes || 0) + batchSaved,
+        deleted: (job.deleted || 0) + legacyCleaned,
+        current_offset: newOffset,
+        errors: jobErrors,
+        completed_at: new Date().toISOString(),
+      })
+      console.log(`[OPTIMIZE] Job ${jobId}: complete`)
+    }
+  } catch (err) {
+    // Batch-level crash — skip this batch, keep going
+    console.error(`[OPTIMIZE] Batch crash at offset ${job.current_offset}:`, err)
+    const newOffset = job.current_offset + BATCH_SIZE
+    shouldChain = newOffset < (job.oversized_files || 0)
+
+    try {
+      await updateJob(supabase, jobId, {
+        processed: (job.processed || 0) + batchProcessed,
+        saved_bytes: (job.saved_bytes || 0) + batchSaved,
+        current_offset: newOffset,
+        errors: [...(job.errors || []), `Batch crash at offset ${job.current_offset}: ${err.message}`],
+      })
+    } catch (updateErr) {
+      console.error(`[OPTIMIZE] Failed to update job after crash:`, updateErr)
+    }
+  } finally {
+    // Layer 1 + 2: Always try to chain if there's more work and job wasn't cancelled
+    if (shouldChain) {
+      // Re-check cancellation before chaining
+      try {
+        const freshJob = await getJobLite(supabase, jobId)
+        if (freshJob.status === 'cancelled') {
+          console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
+        } else {
+          await selfInvokeWithRetry({ mode: 'optimize', jobId })
+        }
+      } catch {
+        // If even the cancel check fails, still try to chain
+        await selfInvokeWithRetry({ mode: 'optimize', jobId })
+      }
+    }
   }
 
   return jsonRes({ ok: true })
@@ -315,8 +407,6 @@ async function handleCancel(supabase: any, jobId: string) {
 }
 
 async function handleStatus(supabase: any, jobId: string) {
-  const job = await getJob(supabase, jobId)
-  // Don't send file_list to client (can be huge)
-  const { file_list, ...rest } = job
-  return jsonRes(rest)
+  const job = await getJobLite(supabase, jobId)
+  return jsonRes(job)
 }

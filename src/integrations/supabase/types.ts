@@ -1242,6 +1242,10 @@ export type Database = {
         Args: { keywords_a: string[]; keywords_b: string[] }
         Returns: number
       }
+      get_optimization_batch: {
+        Args: { p_job_id: string; p_limit: number; p_offset: number }
+        Returns: Json
+      }
       get_orphan_articles: {
         Args: { category_filter?: string }
         Returns: {
