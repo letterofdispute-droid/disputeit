@@ -1,61 +1,46 @@
 
 
-# Fix: Backfill Stops After 15 Images
+# Fix: Prevent Future Missing Images
 
-## Root Cause
+## The Problem
 
-The process query (line 205) fetches 10 posts where ANY image column is NULL:
+During bulk article generation, when Gemini rate-limits and Pixabay fails, the article is saved with `null` image URLs and no record is kept. The backfill system only finds these posts IF the content contains placeholders, and there's no automatic trigger to retry -- you have to manually click "Start Backfill."
 
-```sql
-WHERE featured_image_url IS NULL 
-   OR middle_image_1_url IS NULL 
-   OR middle_image_2_url IS NULL
-```
+## Solution: Automatic Image Retry via pg_cron
 
-But ~1,365 posts have `middle_image_2_url = NULL` without a `MIDDLE_IMAGE_2` placeholder in their content. These posts are fetched, fail the in-code filter, and block the query from reaching posts that actually need images. After the few valid ones in the first 10 results are processed, the same invalid posts keep being returned, and the function marks the job as "complete."
+### 1. Add a recovery cron job for backfill
 
-## Fix
+Just like the existing `recover_stale_generation_jobs` cron, add a scheduled function that automatically detects posts with missing images and triggers the backfill edge function if needed.
 
-### 1. Create a database function for smart post fetching
+Create a database function `recover_stale_backfill_jobs` that:
+- Checks if there are published posts missing images (using the same smart query as `get_next_backfill_post`)
+- Checks if there's already an active backfill job running
+- If posts need images and no job is running, uses `pg_net` to invoke the backfill edge function automatically
 
-Create an RPC `get_next_backfill_post` that does the placeholder filtering in SQL:
+This runs every 30 minutes, so any images that fail during bulk generation will be retried automatically without manual intervention.
 
-```sql
-CREATE OR REPLACE FUNCTION get_next_backfill_post()
-RETURNS SETOF blog_posts
-LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT * FROM blog_posts
-  WHERE status = 'published'
-    AND (
-      featured_image_url IS NULL
-      OR (middle_image_1_url IS NULL AND content LIKE '%MIDDLE_IMAGE_1%')
-      OR (middle_image_2_url IS NULL AND content LIKE '%MIDDLE_IMAGE_2%')
-    )
-  ORDER BY created_at DESC
-  LIMIT 1;
-$$;
-```
+### 2. Add retry with longer delays in bulk generation
 
-This ensures every returned post genuinely needs at least one image.
+Currently the retry on 429 waits only 10 seconds. Google's rate limits typically need 60+ seconds to reset. Update the retry logic:
+- First attempt: normal
+- On 429: wait 30 seconds, retry once
+- On second 429: skip (the cron will catch it later)
 
-### 2. Update edge function to use the RPC
+This gives Gemini more breathing room during bulk runs and reduces the number of posts that end up with missing images in the first place.
 
-Replace the current query + in-code filter (lines 201-218) with a single RPC call:
+### 3. Increase delay between image generations
 
-```typescript
-const { data: posts } = await supabase.rpc('get_next_backfill_post');
-const post = posts?.[0];
-if (!post) { /* mark complete */ }
-```
-
-### 3. Fix duplicate job issue
-
-The logs show TWO concurrent jobs running (IDs `84928f55` and `6ecaf1ee`). Add a check in the `start` mode to cancel any existing active jobs before creating a new one.
+The current 5-second delay between middle images is too aggressive for large batches. Increase to 8 seconds to stay under Gemini's per-minute rate limits during sustained generation.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| Migration | Create `get_next_backfill_post` RPC function |
-| `supabase/functions/backfill-blog-images/index.ts` | Use RPC instead of query+filter; cancel stale jobs on start |
+| Migration | Create `recover_stale_backfill_jobs` function + schedule via pg_cron |
+| `supabase/functions/bulk-generate-articles/index.ts` | Increase retry delay to 30s; increase inter-image delay to 8s |
 
+## Result
+
+- Missing images from bulk generation will be automatically retried within 30 minutes
+- Longer delays reduce rate-limit hits during generation
+- No manual "Start Backfill" button needed -- the system self-heals
