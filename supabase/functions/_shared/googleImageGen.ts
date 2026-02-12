@@ -106,6 +106,17 @@ export async function imageResultToBuffer(result: GoogleImageResult): Promise<{ 
 }
 
 /**
+ * Convert Google image result to raw Uint8Array without compression.
+ * Use this in CPU-constrained environments (e.g., backfill) to avoid imagescript overhead.
+ */
+export function imageResultToRawBuffer(result: GoogleImageResult): { buffer: Uint8Array; extension: string } {
+  const buffer = Uint8Array.from(atob(result.base64Data), c => c.charCodeAt(0));
+  const extension = result.mimeType.includes('jpeg') || result.mimeType.includes('jpg') ? 'jpg' : 'png';
+  console.log(`[IMAGE_RAW] ${(buffer.byteLength / 1024).toFixed(0)}KB (no compression)`);
+  return { buffer, extension };
+}
+
+/**
  * Check if an error is a GoogleImageError with a bail-out category.
  */
 export function isGoogleImageError(err: unknown): err is GoogleImageError {
