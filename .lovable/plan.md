@@ -1,72 +1,64 @@
 
+# Fix: Image Optimizer Counter Going Backwards
 
-# Fix: Generation Progress Counter Missing Retried Items
+## Root Cause
 
-## What Happened
+The self-chain gets **504 Gateway Timeout** responses constantly. A 504 means the chained invocation IS running — it just took longer than the gateway allows. The current code treats 504 as a failure and retries, creating a **second concurrent invocation**. Both invocations then:
 
-All 10 articles are safe -- 9 generated, 1 failed. The banner incorrectly shows "7 succeeded, 1 failed" because of two bugs:
+1. Read `processed = 416` from the database at the start
+2. Process their own batch of 5 images
+3. Write `processed = 416 + batchCount` — overwriting each other
 
-1. **Race condition at completion**: When the job finishes processing, it re-counts item statuses from the database. But items retried via the automatic retry mechanism may still be in `generating` status at the moment of counting. These get counted as neither succeeded nor failed, creating the gap.
-
-2. **Infinite retry loop risk**: Failed items are retried automatically, but when a retry fails again, the error message has no prefix to mark it as already-retried. The system would attempt to retry it again indefinitely until something else stops it.
+This creates the backwards counter: 426 → 419 → 416 → 418.
 
 ## Fixes
 
-### Fix 1: Handle "generating" items at completion time
+### Fix 1: Atomic SQL Increments (Database Migration)
 
-In the `finally` block of the continuation path, before calling `completeJob`, check if any items are still in `generating` status. If so, wait briefly and re-check, or self-chain instead of completing prematurely.
+Create an RPC function that uses `SET processed = processed + X` instead of `SET processed = absoluteValue`:
 
-```text
-// Before completing:
-const generatingCount = finalItems.filter(i => i.status === 'generating').length;
-if (generatingCount > 0) {
-  // Items still processing -- self-chain to check again
-  await selfChainWithRetry(jobId);
-  return;
-}
-// Safe to complete
-await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
+```sql
+CREATE FUNCTION increment_optimization_progress(
+  p_job_id uuid,
+  p_processed int,
+  p_saved_bytes bigint,
+  p_deleted int,
+  p_new_offset int,
+  p_errors jsonb DEFAULT '[]'
+) ...
+  UPDATE image_optimization_jobs SET
+    processed = processed + p_processed,
+    saved_bytes = saved_bytes + p_saved_bytes,
+    deleted = deleted + p_deleted,
+    current_offset = p_new_offset,
+    errors = errors || p_errors,
+    updated_at = now()
+  WHERE id = p_job_id;
 ```
 
-### Fix 2: Prefix retry failures with "RETRY_FAILED:"
+This eliminates the race condition entirely — even with concurrent invocations, each one safely adds its own contribution.
 
-When a retried item fails again, the error message should be prefixed so the retry checker does not attempt infinite retries. In `generateSingleArticle`, after the retry mechanism resets items, mark subsequent failures:
+### Fix 2: Treat 504 as Success (Edge Function)
 
-```text
-// In the retry pass: before resetting items to queued, store that this is a retry
-// When the retried item fails, prefix the error:
-error_message = "RETRY_FAILED: " + originalError
-```
-
-This is already partially implemented (line 1261 checks for the prefix) but nothing ever SETS it. The fix is to track which items are retries and prefix their errors accordingly.
-
-### Fix 3: Mark "generating" items as failed in the catch block
-
-In the outer `catch` at line 1339-1342, when an unexpected error occurs during batch processing, the item stays stuck in `generating` status. Update it to `failed`:
+In `selfChainWithRetry`, treat a 504 response as a success — the chained function IS running. Only retry on actual failures (network errors, 500s):
 
 ```text
-} catch (unexpectedError) {
-  console.error('Unexpected error:', unexpectedError);
-  batchFailed++;
-  // Also mark the current item as failed
-  for (const item of nextItems) {
-    await supabaseAdmin.from('content_queue')
-      .update({ status: 'failed', error_message: 'Unexpected processing error' })
-      .eq('id', item.id)
-      .eq('status', 'generating');
-  }
-}
+if (res.ok || res.status === 504) return  // 504 = function running, just slow
 ```
 
-## Files to Modify
+### Fix 3: Use Atomic RPC in handleOptimize (Edge Function)
+
+Replace the `updateJob` calls in the batch processing path with the new `increment_optimization_progress` RPC. The `updateJob` function is still used for status changes (completed, cancelled) where absolute values are correct.
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/bulk-generate-articles/index.ts` | 1) Add generating-item check before completing job. 2) Prefix retry failure errors with "RETRY_FAILED:". 3) Mark generating items as failed in catch block. |
+| New migration | Create `increment_optimization_progress` RPC function |
+| `supabase/functions/optimize-storage-images/index.ts` | 1) Use atomic RPC for progress updates. 2) Treat 504 as success in selfChainWithRetry. |
 
 ## Impact
 
-- The progress banner will show accurate counts (9/1 instead of 7/1)
-- No more infinite retry loops for items that consistently fail
-- No more "missing" items in the counter
-
+- Counter will only ever go up, never backwards
+- No more duplicate concurrent processing from unnecessary retries
+- The pg_cron recovery still handles genuinely stalled jobs
