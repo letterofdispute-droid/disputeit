@@ -1,64 +1,61 @@
 
-# Fix: Image Optimizer Counter Going Backwards
 
-## Root Cause
+# Fix: Image Optimizer Concurrent Instance Double-Processing
 
-The self-chain gets **504 Gateway Timeout** responses constantly. A 504 means the chained invocation IS running — it just took longer than the gateway allows. The current code treats 504 as a failure and retries, creating a **second concurrent invocation**. Both invocations then:
+## What's Happening
 
-1. Read `processed = 416` from the database at the start
-2. Process their own batch of 5 images
-3. Write `processed = 416 + batchCount` — overwriting each other
+The counter shows **3265 / 2651** (and the database shows `processed = 5163`) because multiple concurrent instances are running simultaneously. Each one:
 
-This creates the backwards counter: 426 → 419 → 416 → 418.
+1. Reads `current_offset = 500` from the database
+2. Processes images at offset 500-504
+3. Atomically increments `processed += 5` (good)
+4. Sets `current_offset = 505` (bad -- overwrites, doesn't claim)
 
-## Fixes
+Three concurrent instances all read offset 500, all process the same 5 images, all increment processed by 5 (total +15 for 5 images), and all set offset to 505. Then they repeat.
 
-### Fix 1: Atomic SQL Increments (Database Migration)
+## The Fix: Atomic Offset Claiming
 
-Create an RPC function that uses `SET processed = processed + X` instead of `SET processed = absoluteValue`:
+Replace the current "read offset, process, write offset" pattern with an atomic **claim** mechanism. Each function instance atomically grabs its own offset range before processing, so no two instances ever work on the same batch.
+
+### New RPC: `claim_optimization_batch`
 
 ```sql
-CREATE FUNCTION increment_optimization_progress(
-  p_job_id uuid,
-  p_processed int,
-  p_saved_bytes bigint,
-  p_deleted int,
-  p_new_offset int,
-  p_errors jsonb DEFAULT '[]'
-) ...
-  UPDATE image_optimization_jobs SET
-    processed = processed + p_processed,
-    saved_bytes = saved_bytes + p_saved_bytes,
-    deleted = deleted + p_deleted,
-    current_offset = p_new_offset,
-    errors = errors || p_errors,
-    updated_at = now()
-  WHERE id = p_job_id;
+CREATE FUNCTION claim_optimization_batch(p_job_id uuid, p_batch_size int)
+RETURNS int  -- returns the claimed offset, or -1 if nothing to claim
 ```
 
-This eliminates the race condition entirely — even with concurrent invocations, each one safely adds its own contribution.
+This function atomically:
+1. Reads the current offset
+2. If offset >= oversized_files, returns -1 (done)
+3. Advances `current_offset` by `batch_size`
+4. Returns the OLD offset (the one this instance should process)
 
-### Fix 2: Treat 504 as Success (Edge Function)
+Because it runs as a single SQL transaction, no two instances can claim the same offset.
 
-In `selfChainWithRetry`, treat a 504 response as a success — the chained function IS running. Only retry on actual failures (network errors, 500s):
+### Edge Function Changes
 
+Replace the current flow:
 ```text
-if (res.ok || res.status === 504) return  // 504 = function running, just slow
+OLD: job = readJob() -> process(job.current_offset) -> writeOffset(offset + BATCH_SIZE)
+NEW: claimedOffset = claimBatch(jobId) -> if -1, complete -> process(claimedOffset) -> incrementProgress()
 ```
 
-### Fix 3: Use Atomic RPC in handleOptimize (Edge Function)
+The `increment_optimization_progress` RPC no longer needs to set `current_offset` since claiming already advanced it.
 
-Replace the `updateJob` calls in the batch processing path with the new `increment_optimization_progress` RPC. The `updateJob` function is still used for status changes (completed, cancelled) where absolute values are correct.
+### Updated `increment_optimization_progress`
+
+Remove `p_new_offset` parameter since offset is now managed by the claim RPC. Only increments processed/saved/deleted/errors.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| New migration | Create `increment_optimization_progress` RPC function |
-| `supabase/functions/optimize-storage-images/index.ts` | 1) Use atomic RPC for progress updates. 2) Treat 504 as success in selfChainWithRetry. |
+| New migration | 1) Create `claim_optimization_batch` RPC. 2) Update `increment_optimization_progress` to remove offset param. |
+| `supabase/functions/optimize-storage-images/index.ts` | Use claim-based flow: call `claim_optimization_batch` to get offset, use `get_optimization_batch` with that offset, process, then call updated `increment_optimization_progress`. |
 
 ## Impact
 
-- Counter will only ever go up, never backwards
-- No more duplicate concurrent processing from unnecessary retries
-- The pg_cron recovery still handles genuinely stalled jobs
+- Each batch is processed exactly once, even with concurrent instances
+- Counter will never exceed total oversized count
+- The existing job should be cancelled and a fresh scan started after deploying
+
