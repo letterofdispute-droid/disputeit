@@ -1,61 +1,75 @@
 
+# Fix: Restore 665+ Broken Blog Images
 
-# Fix: Image Optimizer Concurrent Instance Double-Processing
+## What Happened
 
-## What's Happening
+The image optimizer's "legacy cleanup" code (lines 236-241) deleted `-opt.jpg` files from storage. However, **665 blog posts** still reference these `-opt.jpg` URLs in their database records. The original files (`.png` extension) still exist and are valid -- they just need to be referenced correctly.
 
-The counter shows **3265 / 2651** (and the database shows `processed = 5163`) because multiple concurrent instances are running simultaneously. Each one:
+## Scope of Damage
 
-1. Reads `current_offset = 500` from the database
-2. Processes images at offset 500-504
-3. Atomically increments `processed += 5` (good)
-4. Sets `current_offset = 505` (bad -- overwrites, doesn't claim)
+| Column | Affected Posts |
+|--------|---------------|
+| `featured_image_url` | 665 |
+| `middle_image_1_url` | 669 |
+| `middle_image_2_url` | 300 |
 
-Three concurrent instances all read offset 500, all process the same 5 images, all increment processed by 5 (total +15 for 5 images), and all set offset to 505. Then they repeat.
+Additionally, 467 posts have a separate pre-existing bug where URLs end in `.undefined` (broken file extension from the image generation code).
 
-## The Fix: Atomic Offset Claiming
+## Fix 1: Database URL Repair (Migration)
 
-Replace the current "read offset, process, write offset" pattern with an atomic **claim** mechanism. Each function instance atomically grabs its own offset range before processing, so no two instances ever work on the same batch.
-
-### New RPC: `claim_optimization_batch`
+Run SQL to update all `-opt.jpg` references to point to the original `.png` files that still exist in storage:
 
 ```sql
-CREATE FUNCTION claim_optimization_batch(p_job_id uuid, p_batch_size int)
-RETURNS int  -- returns the claimed offset, or -1 if nothing to claim
+-- Fix featured images: -opt.jpg -> .png
+UPDATE blog_posts 
+SET featured_image_url = REPLACE(featured_image_url, '-opt.jpg', '.png')
+WHERE featured_image_url LIKE '%-opt.jpg';
+
+-- Fix middle image 1: handle both -infographic-opt.jpg and -opt.jpg
+UPDATE blog_posts 
+SET middle_image_1_url = REPLACE(middle_image_1_url, '-opt.jpg', '.png')
+WHERE middle_image_1_url LIKE '%-opt.jpg';
+
+-- Fix middle image 2
+UPDATE blog_posts 
+SET middle_image_2_url = REPLACE(middle_image_2_url, '-opt.jpg', '.png')
+WHERE middle_image_2_url LIKE '%-opt.jpg';
 ```
 
-This function atomically:
-1. Reads the current offset
-2. If offset >= oversized_files, returns -1 (done)
-3. Advances `current_offset` by `batch_size`
-4. Returns the OLD offset (the one this instance should process)
+This works because:
+- The original `.png` files still exist in storage (confirmed by fetching them)
+- They contain valid JPEG image data (the optimizer overwrote them in-place with JPEG content)
+- They are served with `Content-Type: image/jpeg` so browsers display them correctly
 
-Because it runs as a single SQL transaction, no two instances can claim the same offset.
+## Fix 2: Remove Legacy Cleanup Code (Edge Function)
 
-### Edge Function Changes
+Remove the dangerous "clean up legacy -opt.jpg" code from `processOneImage` in `optimize-storage-images/index.ts` (lines 236-241) so the optimizer never deletes files that might be referenced by blog posts.
 
-Replace the current flow:
-```text
-OLD: job = readJob() -> process(job.current_offset) -> writeOffset(offset + BATCH_SIZE)
-NEW: claimedOffset = claimBatch(jobId) -> if -1, complete -> process(claimedOffset) -> incrementProgress()
+## Fix 3: Fix `.undefined` URLs (Migration)
+
+Separately fix the 467 posts with `.undefined` extensions. These files likely don't exist in storage at all (they were never properly saved). Set these URLs to NULL so they show a fallback instead of a broken image:
+
+```sql
+UPDATE blog_posts SET featured_image_url = NULL 
+WHERE featured_image_url LIKE '%.undefined';
+
+UPDATE blog_posts SET middle_image_1_url = NULL 
+WHERE middle_image_1_url LIKE '%.undefined';
+
+UPDATE blog_posts SET middle_image_2_url = NULL 
+WHERE middle_image_2_url LIKE '%.undefined';
 ```
-
-The `increment_optimization_progress` RPC no longer needs to set `current_offset` since claiming already advanced it.
-
-### Updated `increment_optimization_progress`
-
-Remove `p_new_offset` parameter since offset is now managed by the claim RPC. Only increments processed/saved/deleted/errors.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| New migration | 1) Create `claim_optimization_batch` RPC. 2) Update `increment_optimization_progress` to remove offset param. |
-| `supabase/functions/optimize-storage-images/index.ts` | Use claim-based flow: call `claim_optimization_batch` to get offset, use `get_optimization_batch` with that offset, process, then call updated `increment_optimization_progress`. |
+| New migration | SQL to fix `-opt.jpg` and `.undefined` URLs |
+| `supabase/functions/optimize-storage-images/index.ts` | Remove legacy `-opt.jpg` cleanup code (lines 236-241) |
 
 ## Impact
 
-- Each batch is processed exactly once, even with concurrent instances
-- Counter will never exceed total oversized count
-- The existing job should be cancelled and a fresh scan started after deploying
-
+- ~665 broken featured images restored immediately
+- ~669 broken middle images restored immediately
+- 467 `.undefined` URLs cleaned up (will show fallback instead of broken image)
+- Optimizer will never delete referenced files again
