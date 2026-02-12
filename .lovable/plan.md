@@ -1,46 +1,72 @@
 
 
-# Fix: Template Coverage Map Showing Wrong Article Counts
+# Fix: Generation Progress Counter Missing Retried Items
 
-## Problem
+## What Happened
 
-The Template Coverage Map shows incorrect progress numbers (e.g., "2/2 Done" instead of "10/10") because the `useTemplateProgress` hook hits the default 1,000-row limit when fetching from `content_queue`. With 2,547 queue items in the database, only the first 1,000 are returned, causing templates to show partial or missing counts.
+All 10 articles are safe -- 9 generated, 1 failed. The banner incorrectly shows "7 succeeded, 1 failed" because of two bugs:
 
-## Solution
+1. **Race condition at completion**: When the job finishes processing, it re-counts item statuses from the database. But items retried via the automatic retry mechanism may still be in `generating` status at the moment of counting. These get counted as neither succeeded nor failed, creating the gap.
 
-Replace the client-side aggregation approach with a **server-side aggregation** using an RPC function. Instead of fetching all 2,547+ rows and counting in JavaScript, a database function will return pre-aggregated counts per template slug -- just ~470 small rows instead of thousands.
+2. **Infinite retry loop risk**: Failed items are retried automatically, but when a retry fails again, the error message has no prefix to mark it as already-retried. The system would attempt to retry it again indefinitely until something else stops it.
 
-## Changes
+## Fixes
 
-### 1. Database Migration -- Create `get_template_progress` RPC
+### Fix 1: Handle "generating" items at completion time
 
-A SQL function that groups `content_queue` by template slug and returns the total and generated counts:
+In the `finally` block of the continuation path, before calling `completeJob`, check if any items are still in `generating` status. If so, wait briefly and re-check, or self-chain instead of completing prematurely.
 
-```sql
-CREATE FUNCTION get_template_progress()
-RETURNS TABLE(template_slug text, total bigint, generated bigint)
-AS $$
-  SELECT cp.template_slug,
-         count(*) as total,
-         count(*) FILTER (WHERE cq.status IN ('generated','published')) as generated
-  FROM content_queue cq
-  JOIN content_plans cp ON cp.id = cq.plan_id
-  GROUP BY cp.template_slug
-$$;
+```text
+// Before completing:
+const generatingCount = finalItems.filter(i => i.status === 'generating').length;
+if (generatingCount > 0) {
+  // Items still processing -- self-chain to check again
+  await selfChainWithRetry(jobId);
+  return;
+}
+// Safe to complete
+await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
 ```
 
-This returns ~470 rows (one per template) instead of 2,547+ individual queue items.
+### Fix 2: Prefix retry failures with "RETRY_FAILED:"
 
-### 2. Update `src/hooks/useTemplateProgress.ts`
+When a retried item fails again, the error message should be prefixed so the retry checker does not attempt infinite retries. In `generateSingleArticle`, after the retry mechanism resets items, mark subsequent failures:
 
-Replace the current fetch-all-rows approach with a single `supabase.rpc('get_template_progress')` call and map the results into the same `Record<string, TemplateProgress>` shape.
+```text
+// In the retry pass: before resetting items to queued, store that this is a retry
+// When the retried item fails, prefix the error:
+error_message = "RETRY_FAILED: " + originalError
+```
 
-## Why This Fixes It
+This is already partially implemented (line 1261 checks for the prefix) but nothing ever SETS it. The fix is to track which items are retries and prefix their errors accordingly.
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Rows fetched | 1,000 (of 2,547) | ~470 (aggregated) |
-| Accuracy | Partial -- misses 60% of data | 100% accurate |
-| Performance | Downloads 1,000 rows of queue data | Downloads ~470 tiny summary rows |
-| Scales to 5,000+ items | Breaks further | Still ~470 rows |
+### Fix 3: Mark "generating" items as failed in the catch block
+
+In the outer `catch` at line 1339-1342, when an unexpected error occurs during batch processing, the item stays stuck in `generating` status. Update it to `failed`:
+
+```text
+} catch (unexpectedError) {
+  console.error('Unexpected error:', unexpectedError);
+  batchFailed++;
+  // Also mark the current item as failed
+  for (const item of nextItems) {
+    await supabaseAdmin.from('content_queue')
+      .update({ status: 'failed', error_message: 'Unexpected processing error' })
+      .eq('id', item.id)
+      .eq('status', 'generating');
+  }
+}
+```
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/functions/bulk-generate-articles/index.ts` | 1) Add generating-item check before completing job. 2) Prefix retry failure errors with "RETRY_FAILED:". 3) Mark generating items as failed in catch block. |
+
+## Impact
+
+- The progress banner will show accurate counts (9/1 instead of 7/1)
+- No more infinite retry loops for items that consistently fail
+- No more "missing" items in the counter
 
