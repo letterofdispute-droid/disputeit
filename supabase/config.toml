@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.optimize-storage-images]
 verify_jwt = false
+
+[functions.backfill-blog-images]
+verify_jwt = false
