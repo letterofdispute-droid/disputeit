@@ -1021,9 +1021,19 @@ Respond with ONLY this JSON:
     return { success: true, blogPostId: blogPost.id };
 
   } catch (error) {
-    const errorMsg = isGoogleImageError(error)
+    const rawErrorMsg = isGoogleImageError(error)
       ? error.message
       : (error instanceof Error ? error.message : 'Unknown error');
+    
+    // Check if this item was a retry (marked with RETRY_PENDING) — prefix error to prevent infinite retries
+    const { data: currentItem } = await supabaseAdmin
+      .from('content_queue')
+      .select('error_message')
+      .eq('id', item.id)
+      .single();
+    
+    const isRetry = currentItem?.error_message === 'RETRY_PENDING';
+    const errorMsg = isRetry ? `RETRY_FAILED: ${rawErrorMsg}` : rawErrorMsg;
     
     logStep(item.suggested_title, 'ERROR', errorMsg);
     
@@ -1264,11 +1274,11 @@ serve(async (req) => {
         if (retryableItems.length > 0 && !job.bail_reason) {
           console.log(`[JOB_RETRY] Found ${retryableItems.length} retryable items, starting retry pass`);
           
-          // Reset retryable items to queued with a retry marker
+          // Reset retryable items to queued, but mark them as retries so failures get RETRY_FAILED: prefix
           const retryIds = retryableItems.map(f => f.id);
           await supabaseAdmin
             .from('content_queue')
-            .update({ status: 'queued', error_message: null })
+            .update({ status: 'queued', error_message: 'RETRY_PENDING' })
             .in('id', retryIds);
           
           // Update job to reflect retry (reduce failed count since we're retrying)
@@ -1294,6 +1304,16 @@ serve(async (req) => {
           supabaseAdmin, 'content_queue', 'status',
           job.queue_item_ids
         );
+        
+        // Guard: if any items are still generating (retry in-flight), self-chain to wait
+        const stillGenerating = finalItems.filter(i => i.status === 'generating').length;
+        if (stillGenerating > 0) {
+          console.log(`[JOB_WAIT] ${stillGenerating} items still generating, self-chaining to wait`);
+          await selfChainWithRetry(jobId);
+          return new Response(JSON.stringify({ success: true, message: 'Waiting for in-flight items' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
         
         const finalSucceeded = finalItems.filter(i => i.status === 'generated').length;
         const finalFailed = finalItems.filter(i => i.status === 'failed').length;
@@ -1340,6 +1360,14 @@ serve(async (req) => {
         // Catch any unexpected errors (DB timeouts, JSON crashes, etc.)
         console.error(`[JOB_CONTINUE] Unexpected error during batch processing:`, unexpectedError);
         batchFailed++;
+        // Mark any items stuck in 'generating' as failed
+        for (const item of nextItems) {
+          await supabaseAdmin
+            .from('content_queue')
+            .update({ status: 'failed', error_message: 'Unexpected processing error: ' + (unexpectedError instanceof Error ? unexpectedError.message : 'Unknown') })
+            .eq('id', item.id)
+            .eq('status', 'generating');
+        }
       } finally {
         // Update job progress regardless of success/failure
         const newSucceeded = job.succeeded_items + batchSucceeded;
@@ -1386,10 +1414,18 @@ serve(async (req) => {
               supabaseAdmin, 'content_queue', 'status',
               job.queue_item_ids
             );
-            const finalSucceeded = finalItems.filter(i => i.status === 'generated').length;
-            const finalFailed = finalItems.filter(i => i.status === 'failed').length;
-            await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
-            console.log(`[JOB_COMPLETE] Job ${jobId} finished: ${finalSucceeded} succeeded, ${finalFailed} failed`);
+            
+            // Guard: if any items are still generating (retry in-flight), self-chain to wait
+            const stillGenerating = finalItems.filter(i => i.status === 'generating').length;
+            if (stillGenerating > 0) {
+              console.log(`[JOB_WAIT] ${stillGenerating} items still generating in finally, self-chaining`);
+              await selfChainWithRetry(jobId);
+            } else {
+              const finalSucceeded = finalItems.filter(i => i.status === 'generated').length;
+              const finalFailed = finalItems.filter(i => i.status === 'failed').length;
+              await completeJob(supabaseAdmin, jobId, finalSucceeded, finalFailed);
+              console.log(`[JOB_COMPLETE] Job ${jobId} finished: ${finalSucceeded} succeeded, ${finalFailed} failed`);
+            }
           }
         }
       }
