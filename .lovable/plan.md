@@ -1,37 +1,49 @@
 
 
-# Fix: Published Post Count Mismatch
+# Fix: Sync 434 Stale "Generated" Queue Items and Clarify Stats
 
-## The Problem
+## The Real Problem
 
-The SEO Command Center shows **3,006 "Articles Generated"** while Blog Posts shows **2,572 published**. These numbers should be consistent but they're mixing two different data sources:
+The 434 "generated" items in the content queue ALL have corresponding blog posts that are already **published**. The queue status was never updated to "published" when those posts were published — it's a sync issue, not actual drafts waiting.
 
-- `generated` count comes from `content_queue` table (434 items with status "generated")
-- `published` count comes from `blog_posts` table (2,572 published posts)
-- The dashboard adds them: 434 + 2,572 = 3,006 -- this is wrong
-
-The `content_queue` table has its own `published` status (2,122 items), which is the correct number to pair with its `generated` count.
+There are **zero draft blog posts** in the database. All 2,572 blog posts are published.
 
 ## Solution
 
-Update `useQueueStats` to fetch `published` from `content_queue` instead of `blog_posts`, keeping all pipeline stats from the same source. Then add a separate `blog_posts` published count for the CoverageStats card that needs the real published number.
+### Step 1: Database Migration — Sync stale queue items
 
-### Changes
+Run a SQL migration to update all `content_queue` items from "generated" to "published" where the linked blog post is already published:
 
-**File: `src/hooks/useQueueStats.ts`**
-- Change the `published` query from `blog_posts` to `content_queue` where `status = 'published'`
-- Add a new field `blogPublished` that queries `blog_posts` for the real published count
+```sql
+UPDATE content_queue 
+SET status = 'published', 
+    published_at = bp.published_at
+FROM blog_posts bp
+WHERE content_queue.blog_post_id = bp.id
+  AND content_queue.status = 'generated'
+  AND bp.status = 'published';
+```
 
-**File: `src/components/admin/seo/CoverageStats.tsx`**
-- Use `blogPublished` for the "Articles Generated" description line showing published count
-- This ensures the numbers shown match what the Blog Posts page reports
+This will fix the 434 items immediately.
 
-### Result
+### Step 2: Add a "Generated" filter to the Blog Posts page
+
+Even though there are currently no drafts, adding a "Generated (not published)" filter ensures that in the future, if the generation pipeline creates blog posts as drafts, you can easily find and publish them. This filter will query `blog_posts` where `status = 'draft'` — same as the existing Drafts filter.
+
+No code change needed here since the Drafts filter already covers this.
+
+### Step 3: Prevent future sync drift
+
+Update `src/hooks/useCreateDraftFromGenerated.ts` — when the bulk generation creates a blog post and marks it as published, also update the corresponding `content_queue` row. This is already done in the bulk publish handler in AdminBlog, but may not happen during auto-publish flows.
+
+### Result After Fix
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Articles Generated | 3,006 (wrong) | 2,556 (434 generated + 2,122 queue-published) |
-| Published shown | 2,572 (from wrong source) | 2,572 (from blog_posts, correctly labeled) |
+| Queue: generated | 434 | 0 |
+| Queue: published | 2,122 | 2,556 |
+| Articles Generated (dashboard) | 2,556 | 2,556 |
+| Blog Posts published | 2,572 | 2,572 |
 
-Both pages will show consistent numbers from the correct data sources.
+The remaining 16-post gap (2,572 - 2,556) represents blog posts created outside the content queue pipeline (manual posts, AI Generate, etc.) — which is expected and correct.
 
