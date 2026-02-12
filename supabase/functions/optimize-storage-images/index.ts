@@ -53,7 +53,8 @@ async function selfChainWithRetry(body: object): Promise<void> {
       console.log(`[SELF-CHAIN] Attempt ${attempt}: status ${res.status}`)
       // Read body to fully close the connection
       await res.text()
-      if (res.ok) return
+      // 504 = function IS running, just exceeded gateway timeout — treat as success
+      if (res.ok || res.status === 504) return
       if (attempt < 2) {
         await new Promise(r => setTimeout(r, 2000))
       }
@@ -329,25 +330,21 @@ async function handleOptimize(supabase: any, jobId: string) {
     }
 
     const newOffset = job.current_offset + BATCH_SIZE
-    const jobErrors = [...(job.errors || []), ...errors]
     shouldChain = newOffset < (job.oversized_files || 0)
 
-    if (shouldChain) {
-      await updateJob(supabase, jobId, {
-        processed: (job.processed || 0) + batchProcessed,
-        saved_bytes: (job.saved_bytes || 0) + batchSaved,
-        deleted: (job.deleted || 0) + legacyCleaned,
-        current_offset: newOffset,
-        errors: jobErrors,
-      })
-    } else {
+    // Use atomic increments to prevent race conditions with concurrent invocations
+    await supabase.rpc('increment_optimization_progress', {
+      p_job_id: jobId,
+      p_processed: batchProcessed,
+      p_saved_bytes: batchSaved,
+      p_deleted: legacyCleaned,
+      p_new_offset: newOffset,
+      p_errors: errors.length > 0 ? errors : [],
+    })
+
+    if (!shouldChain) {
       await updateJob(supabase, jobId, {
         status: 'completed',
-        processed: (job.processed || 0) + batchProcessed,
-        saved_bytes: (job.saved_bytes || 0) + batchSaved,
-        deleted: (job.deleted || 0) + legacyCleaned,
-        current_offset: newOffset,
-        errors: jobErrors,
         completed_at: new Date().toISOString(),
       })
       console.log(`[OPTIMIZE] Job ${jobId}: complete`)
@@ -358,11 +355,13 @@ async function handleOptimize(supabase: any, jobId: string) {
     shouldChain = newOffset < (job.oversized_files || 0)
 
     try {
-      await updateJob(supabase, jobId, {
-        processed: (job.processed || 0) + batchProcessed,
-        saved_bytes: (job.saved_bytes || 0) + batchSaved,
-        current_offset: newOffset,
-        errors: [...(job.errors || []), `Batch crash at offset ${job.current_offset}: ${err.message}`],
+      await supabase.rpc('increment_optimization_progress', {
+        p_job_id: jobId,
+        p_processed: batchProcessed,
+        p_saved_bytes: batchSaved,
+        p_deleted: 0,
+        p_new_offset: newOffset,
+        p_errors: [`Batch crash at offset ${job.current_offset}: ${err.message}`],
       })
     } catch (updateErr) {
       console.error(`[OPTIMIZE] Failed to update job after crash:`, updateErr)
