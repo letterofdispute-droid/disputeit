@@ -1242,6 +1242,10 @@ export type Database = {
         Args: { keywords_a: string[]; keywords_b: string[] }
         Returns: number
       }
+      claim_optimization_batch: {
+        Args: { p_batch_size: number; p_job_id: string }
+        Returns: number
+      }
       get_optimization_batch: {
         Args: { p_job_id: string; p_limit: number; p_offset: number }
         Returns: Json
@@ -1272,17 +1276,28 @@ export type Database = {
         }
         Returns: boolean
       }
-      increment_optimization_progress: {
-        Args: {
-          p_deleted: number
-          p_errors?: Json
-          p_job_id: string
-          p_new_offset: number
-          p_processed: number
-          p_saved_bytes: number
-        }
-        Returns: undefined
-      }
+      increment_optimization_progress:
+        | {
+            Args: {
+              p_deleted: number
+              p_errors?: Json
+              p_job_id: string
+              p_processed: number
+              p_saved_bytes: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_deleted: number
+              p_errors?: Json
+              p_job_id: string
+              p_new_offset: number
+              p_processed: number
+              p_saved_bytes: number
+            }
+            Returns: undefined
+          }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
       match_semantic_links: {

@@ -292,15 +292,32 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
-  // Fetch only the batch slice via RPC
-  const batch = await getBatch(supabase, jobId, job.current_offset)
+  // Atomically claim a batch offset — no two instances can get the same range
+  const { data: claimedOffset, error: claimErr } = await supabase.rpc('claim_optimization_batch', {
+    p_job_id: jobId,
+    p_batch_size: BATCH_SIZE,
+  })
+  if (claimErr) throw claimErr
+
+  if (claimedOffset === -1) {
+    // Nothing left to claim — mark complete
+    await updateJob(supabase, jobId, {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    console.log(`[OPTIMIZE] Job ${jobId}: complete (nothing to claim)`)
+    return jsonRes({ ok: true })
+  }
+
+  // Fetch the batch using the claimed offset
+  const batch = await getBatch(supabase, jobId, claimedOffset)
 
   if (batch.length === 0) {
     await updateJob(supabase, jobId, {
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
-    console.log(`[OPTIMIZE] Job ${jobId}: complete`)
+    console.log(`[OPTIMIZE] Job ${jobId}: complete (empty batch)`)
     return jsonRes({ ok: true })
   }
 
@@ -308,7 +325,6 @@ async function handleOptimize(supabase: any, jobId: string) {
   let batchSaved = 0
   let legacyCleaned = 0
   const errors: string[] = []
-  let shouldChain = false
 
   try {
     for (const file of batch) {
@@ -329,59 +345,40 @@ async function handleOptimize(supabase: any, jobId: string) {
       }
     }
 
-    const newOffset = job.current_offset + BATCH_SIZE
-    shouldChain = newOffset < (job.oversized_files || 0)
-
-    // Use atomic increments to prevent race conditions with concurrent invocations
+    // Atomic increment — no offset needed, claim already advanced it
     await supabase.rpc('increment_optimization_progress', {
       p_job_id: jobId,
       p_processed: batchProcessed,
       p_saved_bytes: batchSaved,
       p_deleted: legacyCleaned,
-      p_new_offset: newOffset,
       p_errors: errors.length > 0 ? errors : [],
     })
-
-    if (!shouldChain) {
-      await updateJob(supabase, jobId, {
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
-      console.log(`[OPTIMIZE] Job ${jobId}: complete`)
-    }
   } catch (err) {
-    console.error(`[OPTIMIZE] Batch crash at offset ${job.current_offset}:`, err)
-    const newOffset = job.current_offset + BATCH_SIZE
-    shouldChain = newOffset < (job.oversized_files || 0)
-
+    console.error(`[OPTIMIZE] Batch crash at claimed offset ${claimedOffset}:`, err)
     try {
       await supabase.rpc('increment_optimization_progress', {
         p_job_id: jobId,
         p_processed: batchProcessed,
         p_saved_bytes: batchSaved,
         p_deleted: 0,
-        p_new_offset: newOffset,
-        p_errors: [`Batch crash at offset ${job.current_offset}: ${err.message}`],
+        p_errors: [`Batch crash at offset ${claimedOffset}: ${err.message}`],
       })
     } catch (updateErr) {
       console.error(`[OPTIMIZE] Failed to update job after crash:`, updateErr)
     }
   }
 
-  // CRITICAL: Await the self-chain BEFORE returning the response.
-  // This is the key fix — the old fire-and-forget pattern let the runtime
-  // kill background fetches after the response was sent.
-  if (shouldChain) {
-    try {
-      const freshJob = await getJobLite(supabase, jobId)
-      if (freshJob.status === 'cancelled') {
-        console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
-      } else {
-        await selfChainWithRetry({ mode: 'optimize', jobId })
-      }
-    } catch {
+  // Always chain — the next invocation will claim its own batch.
+  // If there's nothing left, claim returns -1 and it marks complete.
+  try {
+    const freshJob = await getJobLite(supabase, jobId)
+    if (freshJob.status === 'cancelled') {
+      console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
+    } else {
       await selfChainWithRetry({ mode: 'optimize', jobId })
     }
+  } catch {
+    await selfChainWithRetry({ mode: 'optimize', jobId })
   }
 
   return jsonRes({ ok: true })
