@@ -134,6 +134,14 @@ export function useCreateDraftFromGenerated() {
         throw postError;
       }
 
+      // Sync content_queue status if this post came from the pipeline
+      if (post.id && publish) {
+        await supabase
+          .from('content_queue')
+          .update({ status: 'published', published_at: new Date().toISOString() })
+          .eq('blog_post_id', post.id);
+      }
+
       toast({
         title: publish ? 'Post published!' : 'Draft created!',
         description: `"${content.title}" has been ${publish ? 'published' : 'saved as draft'}`,
