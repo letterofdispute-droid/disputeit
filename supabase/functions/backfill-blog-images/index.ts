@@ -129,6 +129,11 @@ serve(async (req) => {
         });
       }
 
+      // Cancel any existing active jobs to prevent duplicates
+      await supabase.from('backfill_jobs')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .in('status', ['pending', 'processing']);
+
       // Count total missing images for the job
       const [{ count: mFeatured }, { count: mMiddle1 }, { count: mMiddle2 }] = await Promise.all([
         supabase.from('blog_posts').select('*', { count: 'exact', head: true })
@@ -197,25 +202,12 @@ serve(async (req) => {
         });
       }
 
-      // Fetch 1 post that ACTUALLY needs images (placeholder-aware query)
-      const { data: posts, error: fetchError } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, content, featured_image_url, middle_image_1_url, middle_image_2_url')
-        .eq('status', 'published')
-        .or('featured_image_url.is.null,middle_image_1_url.is.null,middle_image_2_url.is.null')
-        .order('created_at', { ascending: false })
-        .limit(10); // fetch 10, filter in code for placeholder awareness
+      // Use RPC to fetch 1 post that ACTUALLY needs images (placeholder-aware SQL)
+      const { data: posts, error: fetchError } = await supabase.rpc('get_next_backfill_post');
 
       if (fetchError) throw fetchError;
 
-      // Filter to posts that actually need images
-      const post = posts?.find(p => {
-        const content = p.content || '';
-        const needsFeatured = !p.featured_image_url;
-        const needsMiddle1 = !p.middle_image_1_url && content.includes('MIDDLE_IMAGE_1');
-        const needsMiddle2 = !p.middle_image_2_url && content.includes('MIDDLE_IMAGE_2');
-        return needsFeatured || needsMiddle1 || needsMiddle2;
-      });
+      const post = posts?.[0];
 
       if (!post) {
         // No more posts need images — mark complete
