@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   }
 })
 
-// ── File listing helpers ──
+// ── File listing helpers (only used during scan) ──
 
 async function listAllFiles(supabase: any): Promise<any[]> {
   const allFiles: any[] = []
@@ -159,9 +159,7 @@ function jsonRes(data: any) {
 
 function getOversizedFiles(allFiles: any[]): any[] {
   return allFiles.filter((f: any) => {
-    // Skip legacy -opt.jpg copies
     if (f.name.endsWith('-opt.jpg')) return false
-    // Skip files already under threshold
     if (f.size <= SIZE_THRESHOLD) return false
     return true
   })
@@ -188,17 +186,20 @@ async function handleScan(supabase: any) {
   // Count legacy -opt.jpg files for info
   const legacyOptFiles = allFiles.filter((f: any) => f.name.endsWith('-opt.jpg'))
 
+  // Store oversized file paths in file_list so optimize doesn't need to re-scan
+  const fileList = oversized.map((f: any) => ({ path: f.path, size: f.size }))
+
   await updateJob(supabase, jobId, {
     status: 'scanned',
     total_files: allFiles.length,
     total_size_bytes: totalSize,
     oversized_files: oversized.length,
     oversized_size_bytes: oversizedSize,
-    // Store legacy count in freed_bytes temporarily for UI info
     deleted: legacyOptFiles.length,
+    file_list: fileList,
   })
 
-  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized (>300KB), ${legacyOptFiles.length} legacy -opt.jpg`)
+  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized (>300KB), ${legacyOptFiles.length} legacy -opt.jpg. Stored ${fileList.length} paths.`)
   return jsonRes({ jobId })
 }
 
@@ -214,9 +215,19 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
-  const allFiles = await listAllFiles(supabase)
-  const oversized = getOversizedFiles(allFiles)
-  const batch = oversized.slice(job.current_offset, job.current_offset + BATCH_SIZE)
+  // Read batch directly from stored file_list — no re-listing needed
+  const fileList: { path: string; size: number }[] = job.file_list || []
+  const batch = fileList.slice(job.current_offset, job.current_offset + BATCH_SIZE)
+
+  if (batch.length === 0) {
+    // Nothing left to process
+    await updateJob(supabase, jobId, {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    console.log(`[OPTIMIZE] Job ${jobId}: complete (no more files)`)
+    return jsonRes({ ok: true })
+  }
 
   let batchProcessed = 0
   let batchSaved = 0
@@ -247,20 +258,17 @@ async function handleOptimize(supabase: any, jobId: string) {
       const newSize = compressed.byteLength
       if (newSize >= originalSize) { continue }
 
-      // In-place overwrite: upload to the SAME path
+      // In-place overwrite
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(file.path, compressed, { contentType: 'image/jpeg', upsert: true })
       if (upErr) throw upErr
 
-      // Clean up any legacy -opt.jpg copy if it exists
+      // Clean up any legacy -opt.jpg copy
       const pathParts = file.path.split('.')
       pathParts.pop()
       const legacyOptPath = pathParts.join('.') + '-opt.jpg'
-      const legacyExists = allFiles.some((f: any) => f.path === legacyOptPath)
-      if (legacyExists) {
-        await supabase.storage.from(BUCKET).remove([legacyOptPath])
-        legacyCleaned++
-        console.log(`[OPTIMIZE] Removed legacy copy: ${legacyOptPath}`)
-      }
+      // Try to remove — if it doesn't exist, that's fine
+      const { error: rmErr } = await supabase.storage.from(BUCKET).remove([legacyOptPath])
+      if (!rmErr) legacyCleaned++
 
       batchSaved += (originalSize - newSize)
       batchProcessed++
@@ -272,7 +280,7 @@ async function handleOptimize(supabase: any, jobId: string) {
   }
 
   const newOffset = job.current_offset + BATCH_SIZE
-  const hasMore = newOffset < oversized.length
+  const hasMore = newOffset < fileList.length
   const jobErrors = [...(job.errors || []), ...errors]
 
   if (hasMore) {
@@ -308,5 +316,7 @@ async function handleCancel(supabase: any, jobId: string) {
 
 async function handleStatus(supabase: any, jobId: string) {
   const job = await getJob(supabase, jobId)
-  return jsonRes(job)
+  // Don't send file_list to client (can be huge)
+  const { file_list, ...rest } = job
+  return jsonRes(rest)
 }

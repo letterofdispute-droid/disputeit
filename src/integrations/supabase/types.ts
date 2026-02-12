@@ -717,6 +717,7 @@ export type Database = {
           current_offset: number | null
           deleted: number | null
           errors: Json | null
+          file_list: Json | null
           freed_bytes: number | null
           id: string
           oversized_files: number | null
@@ -734,6 +735,7 @@ export type Database = {
           current_offset?: number | null
           deleted?: number | null
           errors?: Json | null
+          file_list?: Json | null
           freed_bytes?: number | null
           id?: string
           oversized_files?: number | null
@@ -751,6 +753,7 @@ export type Database = {
           current_offset?: number | null
           deleted?: number | null
           errors?: Json | null
+          file_list?: Json | null
           freed_bytes?: number | null
           id?: string
           oversized_files?: number | null
