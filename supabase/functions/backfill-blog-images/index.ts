@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1;
 const DELAY_BETWEEN_IMAGES_MS = 3000;
 
 const STYLE_VARIANTS = ['warm', 'cool', 'neutral', 'dramatic'] as const;
@@ -22,36 +22,9 @@ function pickStyle(): string {
   return STYLE_GUIDES[STYLE_VARIANTS[Math.floor(Math.random() * STYLE_VARIANTS.length)]];
 }
 
-async function generateSEOAltText(apiKey: string, title: string, imageType: string): Promise<string> {
-  try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: `Generate SEO-optimized alt text for a ${imageType} blog image. 10-15 words max. Describe the likely scene. No "image of" or "photo of".` },
-          { role: 'user', content: `Article: "${title}"` }
-        ],
-        temperature: 0.5,
-        max_tokens: 50,
-      }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      const alt = data.choices[0]?.message?.content?.trim();
-      if (alt) return alt.replace(/['"]/g, '').substring(0, 125);
-    }
-  } catch (e) {
-    console.log('[BACKFILL] Alt text gen failed:', e);
-  }
-  return title.replace(/['"]/g, '').substring(0, 100);
-}
-
 async function generateAndUpload(
   supabase: any,
   geminiKey: string,
-  lovableKey: string,
   post: { id: string; title: string; slug: string },
   imageType: 'featured' | 'middle1' | 'middle2',
 ): Promise<{ url: string; alt: string } | null> {
@@ -96,11 +69,12 @@ Style: ${style}
       .from('blog-images')
       .getPublicUrl(`${storagePath}.${extension}`);
 
-    const alt = await generateSEOAltText(lovableKey, post.title, imageType);
+    // Use title as alt text directly (no extra API call to save CPU)
+    const alt = post.title.replace(/['"]/g, '').substring(0, 125);
     console.log(`[BACKFILL] ${imageType} success: ${post.slug}`);
     return { url: urlData.publicUrl, alt };
   } catch (err) {
-    if (shouldBailOut(err)) throw err; // Re-throw bail errors
+    if (shouldBailOut(err)) throw err;
     console.log(`[BACKFILL] ${imageType} failed for ${post.slug}: ${(err as any).message}`);
     return null;
   }
@@ -114,19 +88,23 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY')!;
     const geminiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json().catch(() => ({}));
     const mode = body.mode || 'status';
 
-    // STATUS mode
+    // STATUS mode — accurate counts using content placeholder checks
     if (mode === 'status') {
       const [{ count: mFeatured }, { count: mMiddle1 }, { count: mMiddle2 }] = await Promise.all([
-        supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published').is('featured_image_url', null),
-        supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published').is('middle_image_1_url', null),
-        supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published').is('middle_image_2_url', null),
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true })
+          .eq('status', 'published').is('featured_image_url', null),
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true })
+          .eq('status', 'published').is('middle_image_1_url', null)
+          .like('content', '%MIDDLE_IMAGE_1%'),
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true })
+          .eq('status', 'published').is('middle_image_2_url', null)
+          .like('content', '%MIDDLE_IMAGE_2%'),
       ]);
 
       return new Response(JSON.stringify({
@@ -146,9 +124,10 @@ serve(async (req) => {
         });
       }
 
+      // Fetch posts that have ANY missing image
       const { data: posts, error: fetchError } = await supabase
         .from('blog_posts')
-        .select('id, title, slug, category_slug, featured_image_url, middle_image_1_url, middle_image_2_url')
+        .select('id, title, slug, content, featured_image_url, middle_image_1_url, middle_image_2_url')
         .eq('status', 'published')
         .or('featured_image_url.is.null,middle_image_1_url.is.null,middle_image_2_url.is.null')
         .order('created_at', { ascending: false })
@@ -163,7 +142,7 @@ serve(async (req) => {
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Count total remaining articles (not images)
+      // Count total remaining articles
       const { count: totalRemaining } = await supabase
         .from('blog_posts')
         .select('*', { count: 'exact', head: true })
@@ -177,28 +156,37 @@ serve(async (req) => {
       for (const post of posts) {
         if (bailed) break;
 
+        const content = post.content || '';
+        const needsFeatured = !post.featured_image_url;
+        const needsMiddle1 = !post.middle_image_1_url && content.includes('MIDDLE_IMAGE_1');
+        const needsMiddle2 = !post.middle_image_2_url && content.includes('MIDDLE_IMAGE_2');
+
+        // If this post has no actual missing images (middle columns null but no placeholders), skip & clear
+        if (!needsFeatured && !needsMiddle1 && !needsMiddle2) {
+          processed++;
+          continue;
+        }
+
         try {
           const update: Record<string, string | null> = {};
 
-          // Generate each missing image with delay between
-          if (!post.featured_image_url) {
-            const result = await generateAndUpload(supabase, geminiKey, lovableKey, post, 'featured');
+          if (needsFeatured) {
+            const result = await generateAndUpload(supabase, geminiKey, post, 'featured');
             if (result) { update.featured_image_url = result.url; update.featured_image_alt = result.alt; imagesGenerated++; }
-            await new Promise(r => setTimeout(r, DELAY_BETWEEN_IMAGES_MS));
+            if (needsMiddle1 || needsMiddle2) await new Promise(r => setTimeout(r, DELAY_BETWEEN_IMAGES_MS));
           }
 
-          if (!post.middle_image_1_url && !bailed) {
-            const result = await generateAndUpload(supabase, geminiKey, lovableKey, post, 'middle1');
+          if (needsMiddle1 && !bailed) {
+            const result = await generateAndUpload(supabase, geminiKey, post, 'middle1');
             if (result) { update.middle_image_1_url = result.url; update.middle_image_1_alt = result.alt; imagesGenerated++; }
-            await new Promise(r => setTimeout(r, DELAY_BETWEEN_IMAGES_MS));
+            if (needsMiddle2) await new Promise(r => setTimeout(r, DELAY_BETWEEN_IMAGES_MS));
           }
 
-          if (!post.middle_image_2_url && !bailed) {
-            const result = await generateAndUpload(supabase, geminiKey, lovableKey, post, 'middle2');
+          if (needsMiddle2 && !bailed) {
+            const result = await generateAndUpload(supabase, geminiKey, post, 'middle2');
             if (result) { update.middle_image_2_url = result.url; update.middle_image_2_alt = result.alt; imagesGenerated++; }
           }
 
-          // Update DB if any images were generated
           if (Object.keys(update).length > 0) {
             await supabase.from('blog_posts').update(update).eq('id', post.id);
           }
