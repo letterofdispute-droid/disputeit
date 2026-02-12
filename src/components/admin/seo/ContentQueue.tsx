@@ -33,7 +33,7 @@ export default function ContentQueue() {
     fetchAllFailedIds,
   } = useContentQueue(undefined, undefined, statusFilter);
 
-  const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping } = useGenerationJob();
+  const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping, resumeJob, isResuming } = useGenerationJob();
 
   // Use separate hook for accurate global stats
   const { data: globalStats, isLoading: statsLoading } = useQueueStats();
@@ -144,6 +144,8 @@ export default function ContentQueue() {
           job={jobToShow}
           onStop={stopJob}
           isStopping={isStopping}
+          onResume={resumeJob}
+          isResuming={isResuming}
         />
       )}
 
