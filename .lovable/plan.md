@@ -1,83 +1,61 @@
 
 
-# Fix: Backfill All Missing Images (No Pixabay)
+# Fix: Smarter Backfill -- Only Generate Images Articles Actually Need
 
-## Problem
+## Root Cause
 
-- 467 articles missing featured images
-- 470 articles missing middle image 1
-- 1,608 articles missing middle image 2
-- Pixabay quality is poor -- remove it entirely
+Two problems discovered:
+
+### 1. Generating unnecessary images (1,365 wasted calls)
+
+The backfill is trying to generate `middle_image_2` for ALL articles where it's NULL. But most articles were intentionally generated with only 1 middle image (no `{{MIDDLE_IMAGE_2}}` placeholder in their content). Of the 1,606 "missing" middle_image_2:
+- Only **241** actually need it (their content has a `{{MIDDLE_IMAGE_2}}` placeholder)
+- **1,365** never needed one -- the AI chose to include only 1 middle image
+
+### 2. CPU timeout (too much work per invocation)
+
+Generating 3 images + 3 alt texts per post = 6 API calls. With 3 posts per batch, that's 18 API calls per invocation, which exceeds the edge function CPU time limit.
+
+## Real missing image counts
+
+| Type | Actually Missing |
+|------|-----------------|
+| Featured | 465 |
+| Middle 1 | 467 (468 minus 1 that has no placeholder either) |
+| Middle 2 | 241 (only those with `{{MIDDLE_IMAGE_2}}` in content) |
+| **Total** | **~1,173** (not 2,542) |
 
 ## Changes
 
-### 1. Rewrite `backfill-blog-images/index.ts`
+### 1. Edge Function: Only generate images articles actually need
 
-- **Remove** all Pixabay fallback code (the `fetchPixabayFallback` function and its usage)
-- **Add middle image generation**: For each post, generate up to 3 images (featured, middle_1, middle_2) if they are NULL
-- Query posts where ANY image column is NULL (not just featured)
-- Generate each missing image with Gemini using different prompts:
-  - Featured: "realistic photograph" prompt (existing)
-  - Middle 1: "detailed scene or process" prompt with different style
-  - Middle 2: "supporting visual or infographic-style" prompt
-- Update all three columns + their alt text columns in one DB update per post
-- Keep the 3s delay between each image (not per post), so ~9s per post if all 3 are missing
-- If Gemini fails (non-bail error), skip that image and continue to the next -- no Pixabay fallback
-- Bail on rate limit / quota exhaustion as before
+In `backfill-blog-images/index.ts`:
 
-### 2. Update status mode
+- For **middle_image_2**: only generate if the article content contains `MIDDLE_IMAGE_2` placeholder
+- For **middle_image_1**: only generate if the article content contains `MIDDLE_IMAGE_1` placeholder (nearly all do)
+- Reduce batch size from 3 to **1 article per invocation** to avoid CPU timeout
+- Skip the separate alt-text API call -- just use the article title as alt text (saves CPU time)
+- Keep the self-chaining pattern
 
-Return counts for all three image types so the UI can show a more complete picture:
+### 2. Status query: Reflect actual missing counts
 
-```json
-{
-  "missing_featured": 467,
-  "missing_middle1": 470,
-  "missing_middle2": 1608,
-  "total_missing": 2545,
-  "status": "idle"
-}
-```
-
-### 3. Update query to find posts needing images
-
-Instead of only `featured_image_url IS NULL`, query for posts where ANY of the three image columns is NULL:
+Update the status mode to check content for placeholders, giving accurate counts:
 
 ```sql
-SELECT id, title, slug, category_slug, 
-       featured_image_url, middle_image_1_url, middle_image_2_url
-FROM blog_posts
-WHERE status = 'published'
-  AND (featured_image_url IS NULL 
-    OR middle_image_1_url IS NULL 
-    OR middle_image_2_url IS NULL)
+-- Accurate missing middle_image_2 count
+SELECT COUNT(*) FROM blog_posts 
+WHERE status = 'published' 
+  AND middle_image_2_url IS NULL 
+  AND content LIKE '%MIDDLE_IMAGE_2%'
 ```
 
-### 4. Update `ImageBackfillCard.tsx`
+### 3. UI: No changes needed
 
-- Show total missing count across all three types (e.g., "2,545 missing images across 470 articles")
-- No other UI changes needed
-
-## Technical Details
-
-### Per-post processing flow
-
-```text
-For each post:
-  1. If featured_image_url IS NULL -> generate featured image (3s delay)
-  2. If middle_image_1_url IS NULL -> generate middle image 1 (3s delay)
-  3. If middle_image_2_url IS NULL -> generate middle image 2 (3s delay)
-  4. Update DB with all generated URLs in one call
-```
-
-### Batch size adjustment
-
-Since each post may need up to 3 images (9s+ per post), reduce batch size from 5 to 3 posts per invocation to stay within edge function timeout limits.
+The `ImageBackfillCard` already displays whatever counts the function returns.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/backfill-blog-images/index.ts` | Remove Pixabay, add middle image generation, update query |
-| `src/components/admin/blog/ImageBackfillCard.tsx` | Show total missing count across all image types |
+| `supabase/functions/backfill-blog-images/index.ts` | Check content for placeholders before generating middle images; reduce batch to 1; remove alt-text API call; fix status query |
 
