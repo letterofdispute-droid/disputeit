@@ -1272,6 +1272,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_optimization_progress: {
+        Args: {
+          p_deleted: number
+          p_errors?: Json
+          p_job_id: string
+          p_new_offset: number
+          p_processed: number
+          p_saved_bytes: number
+        }
+        Returns: undefined
+      }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
       match_semantic_links: {
