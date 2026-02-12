@@ -12,7 +12,6 @@ const JPEG_QUALITY = 80
 const SIZE_THRESHOLD = 300 * 1024 // 300KB
 const BATCH_SIZE = 5
 const IMAGE_TIMEOUT_MS = 20_000 // 20 seconds per image
-const SELF_INVOKE_RETRY_DELAY_MS = 2000
 
 function getSupabase() {
   return createClient(
@@ -37,8 +36,10 @@ async function verifyAdmin(req: Request): Promise<boolean> {
   return !!isAdmin
 }
 
-// Layer 2: Fire-and-forget self-invoke with retry on failure
-function selfInvokeFireAndForget(body: object): void {
+// CRITICAL FIX: Await the self-chain fetch before returning the response.
+// The old fire-and-forget pattern caused background fetches to be killed
+// when the Edge Function runtime terminated after returning the response.
+async function selfChainWithRetry(body: object): Promise<void> {
   const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/optimize-storage-images`
   const headers = {
     'Content-Type': 'application/json',
@@ -46,30 +47,27 @@ function selfInvokeFireAndForget(body: object): void {
     'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
   }
 
-  fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
-    .then(res => {
-      if (!res.ok) {
-        console.warn(`[SELF-INVOKE] Got ${res.status}, retrying once...`)
-        setTimeout(() => {
-          fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
-            .then(r => console.log(`[SELF-INVOKE] Retry got ${r.status}`))
-            .catch(e => console.error('[SELF-INVOKE] Retry failed:', e))
-        }, SELF_INVOKE_RETRY_DELAY_MS)
-      } else {
-        console.log('[SELF-INVOKE] Fired successfully')
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+      console.log(`[SELF-CHAIN] Attempt ${attempt}: status ${res.status}`)
+      // Read body to fully close the connection
+      await res.text()
+      if (res.ok) return
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 2000))
       }
-    })
-    .catch(err => {
-      console.warn('[SELF-INVOKE] Initial fire failed, retrying...', err)
-      setTimeout(() => {
-        fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
-          .then(r => console.log(`[SELF-INVOKE] Retry got ${r.status}`))
-          .catch(e => console.error('[SELF-INVOKE] CRITICAL: Retry also failed:', e))
-      }, SELF_INVOKE_RETRY_DELAY_MS)
-    })
+    } catch (err) {
+      console.warn(`[SELF-CHAIN] Attempt ${attempt} failed:`, err)
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 2000))
+      }
+    }
+  }
+  console.error('[SELF-CHAIN] Both attempts failed — pg_cron recovery will pick up the job')
 }
 
-// Layer 3: Per-image timeout wrapper
+// Per-image timeout wrapper
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms)
@@ -165,7 +163,6 @@ async function listFolderFiles(supabase: any, folder: string): Promise<any[]> {
 
 // ── Job helpers ──
 
-// Layer 4: Lightweight job fetch — excludes file_list
 async function getJobLite(supabase: any, jobId: string) {
   const { data, error } = await supabase
     .from('image_optimization_jobs')
@@ -196,7 +193,7 @@ function getOversizedFiles(allFiles: any[]): any[] {
   })
 }
 
-// Layer 4: Fetch batch via RPC — only gets the slice needed
+// Fetch batch via RPC — only gets the slice needed
 async function getBatch(supabase: any, jobId: string, offset: number): Promise<{ path: string; size: number }[]> {
   const { data, error } = await supabase.rpc('get_optimization_batch', {
     p_job_id: jobId,
@@ -207,7 +204,7 @@ async function getBatch(supabase: any, jobId: string, offset: number): Promise<{
   return data || []
 }
 
-// Layer 3: Process a single image with timeout
+// Process a single image with timeout
 async function processOneImage(supabase: any, file: { path: string; size: number }): Promise<{ saved: number; cleaned: number }> {
   const { data: fileData, error: dlErr } = await supabase.storage.from(BUCKET).download(file.path)
   if (dlErr) throw dlErr
@@ -265,7 +262,6 @@ async function handleScan(supabase: any) {
   const oversizedSize = oversized.reduce((s: number, f: any) => s + f.size, 0)
   const legacyOptFiles = allFiles.filter((f: any) => f.name.endsWith('-opt.jpg'))
 
-  // Store oversized paths in file_list for batch processing
   const fileList = oversized.map((f: any) => ({ path: f.path, size: f.size }))
 
   await updateJob(supabase, jobId, {
@@ -283,7 +279,6 @@ async function handleScan(supabase: any) {
 }
 
 async function handleOptimize(supabase: any, jobId: string) {
-  // Layer 4: Lightweight job fetch — no file_list
   const job = await getJobLite(supabase, jobId)
 
   if (job.status === 'cancelled') {
@@ -296,7 +291,7 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
-  // Layer 4: Fetch only the batch slice via RPC
+  // Fetch only the batch slice via RPC
   const batch = await getBatch(supabase, jobId, job.current_offset)
 
   if (batch.length === 0) {
@@ -308,7 +303,6 @@ async function handleOptimize(supabase: any, jobId: string) {
     return jsonRes({ ok: true })
   }
 
-  // Layer 1: Guaranteed self-chain via finally block
   let batchProcessed = 0
   let batchSaved = 0
   let legacyCleaned = 0
@@ -316,7 +310,6 @@ async function handleOptimize(supabase: any, jobId: string) {
   let shouldChain = false
 
   try {
-    // Layer 3: Process each image with per-image timeout
     for (const file of batch) {
       try {
         const result = await withTimeout(
@@ -332,14 +325,11 @@ async function handleOptimize(supabase: any, jobId: string) {
       } catch (err) {
         console.error(`[OPTIMIZE] Image failed: ${file.path}:`, err.message || err)
         errors.push(`${file.path}: ${err.message || 'Unknown error'}`)
-        // Continue to next image — don't let one bad image kill the batch
       }
     }
 
     const newOffset = job.current_offset + BATCH_SIZE
     const jobErrors = [...(job.errors || []), ...errors]
-
-    // Check if more to process (use oversized_files from job)
     shouldChain = newOffset < (job.oversized_files || 0)
 
     if (shouldChain) {
@@ -363,7 +353,6 @@ async function handleOptimize(supabase: any, jobId: string) {
       console.log(`[OPTIMIZE] Job ${jobId}: complete`)
     }
   } catch (err) {
-    // Batch-level crash — skip this batch, keep going
     console.error(`[OPTIMIZE] Batch crash at offset ${job.current_offset}:`, err)
     const newOffset = job.current_offset + BATCH_SIZE
     shouldChain = newOffset < (job.oversized_files || 0)
@@ -378,19 +367,21 @@ async function handleOptimize(supabase: any, jobId: string) {
     } catch (updateErr) {
       console.error(`[OPTIMIZE] Failed to update job after crash:`, updateErr)
     }
-  } finally {
-    // Layer 1 + 2: Fire-and-forget chain if there's more work
-    if (shouldChain) {
-      try {
-        const freshJob = await getJobLite(supabase, jobId)
-        if (freshJob.status === 'cancelled') {
-          console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
-        } else {
-          selfInvokeFireAndForget({ mode: 'optimize', jobId })
-        }
-      } catch {
-        selfInvokeFireAndForget({ mode: 'optimize', jobId })
+  }
+
+  // CRITICAL: Await the self-chain BEFORE returning the response.
+  // This is the key fix — the old fire-and-forget pattern let the runtime
+  // kill background fetches after the response was sent.
+  if (shouldChain) {
+    try {
+      const freshJob = await getJobLite(supabase, jobId)
+      if (freshJob.status === 'cancelled') {
+        console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
+      } else {
+        await selfChainWithRetry({ mode: 'optimize', jobId })
       }
+    } catch {
+      await selfChainWithRetry({ mode: 'optimize', jobId })
     }
   }
 
