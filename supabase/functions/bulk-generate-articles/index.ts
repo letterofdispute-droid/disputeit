@@ -481,7 +481,7 @@ Think: What would a professional stock photographer capture for this topic?`;
     }
 
     const result = await generateImageWithGoogle(imagePrompt, geminiKey);
-    const { buffer, extension } = imageResultToBuffer(result);
+    const { buffer, extension } = await imageResultToBuffer(result);
 
     const { error: uploadError } = await supabase.storage
       .from('blog-images')
@@ -667,7 +667,7 @@ async function generateInfographic(
       buildInfographicPrompt(title, articleType, content),
       geminiKey
     );
-    const { buffer, extension } = imageResultToBuffer(result);
+    const { buffer, extension } = await imageResultToBuffer(result);
 
     const { error: uploadError } = await supabase.storage
       .from('blog-images')
