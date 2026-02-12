@@ -73,14 +73,35 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
   // Bulk generate: now just fires a single call and gets back a jobId
   const bulkGenerateMutation = useMutation({
     mutationFn: async (params: BulkGenerateParams) => {
-      const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
-        body: params,
-      });
-
-      if (error) throw new Error(error.message || 'Failed to start generation');
-      if (!data?.success) throw new Error(data?.error || 'Failed to start generation');
+      let lastError: Error | null = null;
       
-      return data as { success: boolean; jobId: string; totalItems: number; message: string };
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const { data, error } = await supabase.functions.invoke('bulk-generate-articles', {
+            body: params,
+          });
+
+          if (error) {
+            const msg = error.message || 'Failed to send a request to the Edge Function';
+            if (msg.includes('Failed to fetch') && attempt < 2) {
+              await new Promise(r => setTimeout(r, 3000));
+              continue;
+            }
+            throw new Error(msg);
+          }
+          if (!data?.success) throw new Error(data?.error || 'Failed to start generation');
+          
+          return data as { success: boolean; jobId: string; totalItems: number; message: string };
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          if (attempt < 2 && lastError.message.includes('Failed to fetch')) {
+            await new Promise(r => setTimeout(r, 3000));
+            continue;
+          }
+        }
+      }
+      
+      throw new Error(lastError?.message || 'Failed to connect to the server. The function may be busy — try again in a moment.');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['generation-job-active'] });
@@ -94,7 +115,7 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     onError: (error) => {
       toast({
         title: 'Generation failed to start',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Failed to connect. Please try again.',
         variant: 'destructive',
       });
     },
