@@ -18,7 +18,7 @@ export default function CoverageStats() {
     const templatesWithoutPlans = totalTemplates - templatesWithPlans;
 
     const articlesGenerated = (queueStats?.generated || 0) + (queueStats?.published || 0);
-    const articlesPublished = queueStats?.published || 0;
+    const articlesPublished = queueStats?.blogPublished || 0;
     const articlesQueued = queueStats?.queued || 0;
 
     const linksPending = suggestions?.filter(s => s.status === 'pending').length || 0;

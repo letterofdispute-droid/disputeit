@@ -8,6 +8,7 @@ export interface QueueStats {
   published: number;
   failed: number;
   total: number;
+  blogPublished: number;
 }
 
 export function useQueueStats() {
@@ -15,11 +16,12 @@ export function useQueueStats() {
     queryKey: ['queue-stats'],
     queryFn: async () => {
       // Use head:true + count:'exact' for each status to avoid 1000-row limit
-      const [queued, generating, generated, failed, published] = await Promise.all([
+      const [queued, generating, generated, failed, published, blogPublished] = await Promise.all([
         supabase.from('content_queue').select('*', { count: 'exact', head: true }).eq('status', 'queued'),
         supabase.from('content_queue').select('*', { count: 'exact', head: true }).eq('status', 'generating'),
         supabase.from('content_queue').select('*', { count: 'exact', head: true }).eq('status', 'generated'),
         supabase.from('content_queue').select('*', { count: 'exact', head: true }).eq('status', 'failed'),
+        supabase.from('content_queue').select('*', { count: 'exact', head: true }).eq('status', 'published'),
         supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
       ]);
 
@@ -32,6 +34,7 @@ export function useQueueStats() {
         published: published.count || 0,
         failed: failed.count || 0,
         total: (queued.count || 0) + (generating.count || 0) + (generated.count || 0) + (failed.count || 0),
+        blogPublished: blogPublished.count || 0,
       };
 
       return stats;
