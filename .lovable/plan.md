@@ -1,75 +1,64 @@
 
-# Fix: Restore 665+ Broken Blog Images
 
-## What Happened
+# Fix: Backfill Missing Blog Images + Harden Image Pipeline
 
-The image optimizer's "legacy cleanup" code (lines 236-241) deleted `-opt.jpg` files from storage. However, **665 blog posts** still reference these `-opt.jpg` URLs in their database records. The original files (`.png` extension) still exist and are valid -- they just need to be referenced correctly.
+## Problem
 
-## Scope of Damage
+467 published articles have no featured image (`featured_image_url = NULL`). These were generated during a bulk run where Gemini image generation hit quota/rate limits and the Pixabay fallback also failed. The articles were then bulk-published without images.
 
-| Column | Affected Posts |
-|--------|---------------|
-| `featured_image_url` | 665 |
-| `middle_image_1_url` | 669 |
-| `middle_image_2_url` | 300 |
+## Solution: Two Parts
 
-Additionally, 467 posts have a separate pre-existing bug where URLs end in `.undefined` (broken file extension from the image generation code).
+### Part 1: Backfill Edge Function
 
-## Fix 1: Database URL Repair (Migration)
+Create a new edge function `backfill-blog-images` that:
 
-Run SQL to update all `-opt.jpg` references to point to the original `.png` files that still exist in storage:
+1. Queries `blog_posts` where `featured_image_url IS NULL` and `status = 'published'` (in batches of 5)
+2. For each post, attempts Gemini image generation first, then Pixabay fallback
+3. Updates the `featured_image_url` and `featured_image_alt` columns
+4. Self-chains to process the next batch (same pattern as the optimizer)
+5. Includes rate-limit delays (3s between images) to avoid hitting Gemini quotas again
+6. Tracks progress in a simple status response
 
-```sql
--- Fix featured images: -opt.jpg -> .png
-UPDATE blog_posts 
-SET featured_image_url = REPLACE(featured_image_url, '-opt.jpg', '.png')
-WHERE featured_image_url LIKE '%-opt.jpg';
+The function will be callable from the admin settings page.
 
--- Fix middle image 1: handle both -infographic-opt.jpg and -opt.jpg
-UPDATE blog_posts 
-SET middle_image_1_url = REPLACE(middle_image_1_url, '-opt.jpg', '.png')
-WHERE middle_image_1_url LIKE '%-opt.jpg';
+### Part 2: Admin UI - Backfill Button
 
--- Fix middle image 2
-UPDATE blog_posts 
-SET middle_image_2_url = REPLACE(middle_image_2_url, '-opt.jpg', '.png')
-WHERE middle_image_2_url LIKE '%-opt.jpg';
-```
+Add a "Backfill Missing Images" card to the admin settings page (or a button on the blog management page) showing:
+- Count of articles missing images
+- A button to start the backfill
+- Progress indicator while running
 
-This works because:
-- The original `.png` files still exist in storage (confirmed by fetching them)
-- They contain valid JPEG image data (the optimizer overwrote them in-place with JPEG content)
-- They are served with `Content-Type: image/jpeg` so browsers display them correctly
+### Part 3: Harden Bulk Generator (Future Batches)
 
-## Fix 2: Remove Legacy Cleanup Code (Edge Function)
+Modify `bulk-generate-articles/index.ts` to add longer delays between image generation attempts (5s instead of 3s) and add a retry with exponential backoff for Gemini 429 errors before falling to Pixabay. This reduces the chance of quota exhaustion during bulk runs.
 
-Remove the dangerous "clean up legacy -opt.jpg" code from `processOneImage` in `optimize-storage-images/index.ts` (lines 236-241) so the optimizer never deletes files that might be referenced by blog posts.
+## Technical Details
 
-## Fix 3: Fix `.undefined` URLs (Migration)
+### New file: `supabase/functions/backfill-blog-images/index.ts`
 
-Separately fix the 467 posts with `.undefined` extensions. These files likely don't exist in storage at all (they were never properly saved). Set these URLs to NULL so they show a fallback instead of a broken image:
+- Accepts `{ mode: 'status' | 'start' }` 
+- On `start`: queries up to 5 posts with null images, generates images, updates DB, self-chains
+- Uses existing `generateImageWithGoogle` from `_shared/googleImageGen.ts` 
+- Falls back to Pixabay if Gemini fails
+- 3-second delay between each image to respect rate limits
+- Returns `{ processed, remaining, status }` for the UI
 
-```sql
-UPDATE blog_posts SET featured_image_url = NULL 
-WHERE featured_image_url LIKE '%.undefined';
+### Modified file: `src/pages/admin/AdminSettings.tsx` (or wherever the admin settings live)
 
-UPDATE blog_posts SET middle_image_1_url = NULL 
-WHERE middle_image_1_url LIKE '%.undefined';
+- Add a card showing "X articles missing images" with a "Generate Missing Images" button
+- Poll for progress while running
 
-UPDATE blog_posts SET middle_image_2_url = NULL 
-WHERE middle_image_2_url LIKE '%.undefined';
-```
+### Modified file: `supabase/functions/bulk-generate-articles/index.ts`
 
-## Files to Change
+- Increase delay between image generations from 3s to 5s
+- Add a single retry with 10s backoff on Gemini 429 before falling to Pixabay
+- This makes future bulk runs more resilient to rate limits
+
+## Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| New migration | SQL to fix `-opt.jpg` and `.undefined` URLs |
-| `supabase/functions/optimize-storage-images/index.ts` | Remove legacy `-opt.jpg` cleanup code (lines 236-241) |
-
-## Impact
-
-- ~665 broken featured images restored immediately
-- ~669 broken middle images restored immediately
-- 467 `.undefined` URLs cleaned up (will show fallback instead of broken image)
-- Optimizer will never delete referenced files again
+| `supabase/functions/backfill-blog-images/index.ts` | New edge function to backfill missing images |
+| `src/components/admin/blog/ImageBackfillCard.tsx` | New UI component for triggering and monitoring backfill |
+| `src/pages/admin/AdminBlog.tsx` | Add ImageBackfillCard to the blog management page |
+| `supabase/functions/bulk-generate-articles/index.ts` | Increase image generation delays and add retry logic |
