@@ -1,92 +1,61 @@
 
 
-# Fix: Robust Image Backfill with Progress Tracking
+# Fix: Backfill Stops After 15 Images
 
-## Root Causes Found
+## Root Cause
 
-1. **CPU timeout**: The `imageResultToBuffer` function imports `imagescript` (a heavy image processing library) to resize and compress images. This alone can exhaust the CPU budget before any image is even uploaded.
-2. **Infinite loop**: Posts with NULL `middle_image_1_url` or `middle_image_2_url` but NO placeholder in their content are fetched every invocation, skipped, and fetched again -- forever.
-3. **Cascading timeout**: The self-chain `fetch()` call awaits the full response. If the chained invocation also times out, it cascades back.
-
-## Solution
-
-### 1. Database: Add `backfill_jobs` table for progress tracking
-
-Create a simple tracking table so the UI can show real progress:
+The process query (line 205) fetches 10 posts where ANY image column is NULL:
 
 ```sql
-CREATE TABLE backfill_jobs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  status TEXT NOT NULL DEFAULT 'pending',  -- pending, processing, complete, paused, failed
-  total_images INTEGER DEFAULT 0,
-  processed_images INTEGER DEFAULT 0,
-  failed_images INTEGER DEFAULT 0,
-  last_post_slug TEXT,
-  last_error TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+WHERE featured_image_url IS NULL 
+   OR middle_image_1_url IS NULL 
+   OR middle_image_2_url IS NULL
 ```
 
-### 2. Edge Function: Complete rewrite with fixes
+But ~1,365 posts have `middle_image_2_url = NULL` without a `MIDDLE_IMAGE_2` placeholder in their content. These posts are fetched, fail the in-code filter, and block the query from reaching posts that actually need images. After the few valid ones in the first 10 results are processed, the same invalid posts keep being returned, and the function marks the job as "complete."
 
-**Remove `imagescript` compression** -- upload raw base64 as PNG/JPEG directly. Gemini already returns reasonably sized images, and the compression was the main CPU killer.
+## Fix
 
-**Fix the query** -- exclude posts that will be skipped by filtering on content placeholders in the SQL:
+### 1. Create a database function for smart post fetching
+
+Create an RPC `get_next_backfill_post` that does the placeholder filtering in SQL:
 
 ```sql
--- Only fetch posts that ACTUALLY need images
-SELECT * FROM blog_posts
-WHERE status = 'published'
-  AND (
-    featured_image_url IS NULL
-    OR (middle_image_1_url IS NULL AND content LIKE '%MIDDLE_IMAGE_1%')
-    OR (middle_image_2_url IS NULL AND content LIKE '%MIDDLE_IMAGE_2%')
-  )
-ORDER BY created_at DESC
-LIMIT 1
+CREATE OR REPLACE FUNCTION get_next_backfill_post()
+RETURNS SETOF blog_posts
+LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT * FROM blog_posts
+  WHERE status = 'published'
+    AND (
+      featured_image_url IS NULL
+      OR (middle_image_1_url IS NULL AND content LIKE '%MIDDLE_IMAGE_1%')
+      OR (middle_image_2_url IS NULL AND content LIKE '%MIDDLE_IMAGE_2%')
+    )
+  ORDER BY created_at DESC
+  LIMIT 1;
+$$;
 ```
 
-**Fire-and-forget self-chain** -- don't await the chained call. Treat 504 as success per the project's established pattern.
+This ensures every returned post genuinely needs at least one image.
 
-**Add logging at every step**:
-- `[BACKFILL] Starting batch, job={id}`
-- `[BACKFILL] Processing post: {slug}, needs: featured={bool}, mid1={bool}, mid2={bool}`
-- `[BACKFILL] Generated {type} for {slug} ({size}KB)`
-- `[BACKFILL] Upload complete: {url}`
-- `[BACKFILL] Batch done: {processed} images, {remaining} remaining`
-- `[BACKFILL] Chain triggered for next batch`
+### 2. Update edge function to use the RPC
 
-**Update `backfill_jobs` row** after each post with atomic increments.
+Replace the current query + in-code filter (lines 201-218) with a single RPC call:
 
-### 3. UI Component: Real progress from database
-
-Update `ImageBackfillCard` to:
-- Create a `backfill_jobs` row when starting
-- Poll the `backfill_jobs` table directly (not the edge function) for progress
-- Show: "Processing... 42/1,173 images (3.6%) -- Last: dispute-letter-template-slug"
-- Show error count and last error if any
-
-### Per-post processing flow (simplified)
-
-```text
-1. Fetch 1 post that actually needs images (smart SQL filter)
-2. For each missing image type:
-   a. Call Gemini API
-   b. Convert base64 to raw buffer (NO imagescript)
-   c. Upload to storage
-   d. Update backfill_jobs progress (atomic increment)
-3. Update blog_posts with new URLs
-4. Fire-and-forget self-chain to next batch
-5. Return response immediately
+```typescript
+const { data: posts } = await supabase.rpc('get_next_backfill_post');
+const post = posts?.[0];
+if (!post) { /* mark complete */ }
 ```
 
-## Files to Create/Modify
+### 3. Fix duplicate job issue
+
+The logs show TWO concurrent jobs running (IDs `84928f55` and `6ecaf1ee`). Add a check in the `start` mode to cancel any existing active jobs before creating a new one.
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| Migration | Create `backfill_jobs` table |
-| `supabase/functions/backfill-blog-images/index.ts` | Full rewrite: remove imagescript, fix query, fire-and-forget chain, add logging, track progress in DB |
-| `supabase/functions/_shared/googleImageGen.ts` | Add a lightweight `imageResultToRawBuffer` function that skips compression |
-| `src/components/admin/blog/ImageBackfillCard.tsx` | Poll `backfill_jobs` table for real progress, show detailed status |
+| Migration | Create `get_next_backfill_post` RPC function |
+| `supabase/functions/backfill-blog-images/index.ts` | Use RPC instead of query+filter; cancel stale jobs on start |
 
