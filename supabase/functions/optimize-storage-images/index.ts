@@ -37,8 +37,8 @@ async function verifyAdmin(req: Request): Promise<boolean> {
   return !!isAdmin
 }
 
-// Layer 2: Self-invoke with retry — await + retry once on failure
-async function selfInvokeWithRetry(body: object): Promise<boolean> {
+// Layer 2: Fire-and-forget self-invoke with retry on failure
+function selfInvokeFireAndForget(body: object): void {
   const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/optimize-storage-images`
   const headers = {
     'Content-Type': 'application/json',
@@ -46,28 +46,27 @@ async function selfInvokeWithRetry(body: object): Promise<boolean> {
     'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
   }
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      })
-      if (response.ok) {
-        console.log(`[SELF-INVOKE] Success on attempt ${attempt}`)
-        return true
+  fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+    .then(res => {
+      if (!res.ok) {
+        console.warn(`[SELF-INVOKE] Got ${res.status}, retrying once...`)
+        setTimeout(() => {
+          fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+            .then(r => console.log(`[SELF-INVOKE] Retry got ${r.status}`))
+            .catch(e => console.error('[SELF-INVOKE] Retry failed:', e))
+        }, SELF_INVOKE_RETRY_DELAY_MS)
+      } else {
+        console.log('[SELF-INVOKE] Fired successfully')
       }
-      const text = await response.text().catch(() => 'no body')
-      console.warn(`[SELF-INVOKE] Attempt ${attempt} got ${response.status}: ${text}`)
-    } catch (err) {
-      console.warn(`[SELF-INVOKE] Attempt ${attempt} failed:`, err)
-    }
-    if (attempt < 2) {
-      await new Promise(r => setTimeout(r, SELF_INVOKE_RETRY_DELAY_MS))
-    }
-  }
-  console.error('[SELF-INVOKE] CRITICAL: Failed after 2 attempts — chain broken')
-  return false
+    })
+    .catch(err => {
+      console.warn('[SELF-INVOKE] Initial fire failed, retrying...', err)
+      setTimeout(() => {
+        fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+          .then(r => console.log(`[SELF-INVOKE] Retry got ${r.status}`))
+          .catch(e => console.error('[SELF-INVOKE] CRITICAL: Retry also failed:', e))
+      }, SELF_INVOKE_RETRY_DELAY_MS)
+    })
 }
 
 // Layer 3: Per-image timeout wrapper
@@ -380,19 +379,17 @@ async function handleOptimize(supabase: any, jobId: string) {
       console.error(`[OPTIMIZE] Failed to update job after crash:`, updateErr)
     }
   } finally {
-    // Layer 1 + 2: Always try to chain if there's more work and job wasn't cancelled
+    // Layer 1 + 2: Fire-and-forget chain if there's more work
     if (shouldChain) {
-      // Re-check cancellation before chaining
       try {
         const freshJob = await getJobLite(supabase, jobId)
         if (freshJob.status === 'cancelled') {
           console.log(`[OPTIMIZE] Job ${jobId}: cancelled during batch, stopping chain`)
         } else {
-          await selfInvokeWithRetry({ mode: 'optimize', jobId })
+          selfInvokeFireAndForget({ mode: 'optimize', jobId })
         }
       } catch {
-        // If even the cancel check fails, still try to chain
-        await selfInvokeWithRetry({ mode: 'optimize', jobId })
+        selfInvokeFireAndForget({ mode: 'optimize', jobId })
       }
     }
   }

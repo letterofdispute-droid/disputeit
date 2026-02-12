@@ -34,7 +34,6 @@ const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const ImageOptimizer = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const [isResuming, setIsResuming] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
 
@@ -121,29 +120,24 @@ const ImageOptimizer = () => {
     }
   };
 
-  const handleOptimize = async () => {
+  const handleOptimize = () => {
     if (!job) return;
-    try {
-      await callFunction({ mode: 'optimize', jobId: job.id });
-      startPolling(job.id);
-      setJob(prev => prev ? { ...prev, status: 'optimizing' } : prev);
-    } catch (err: any) {
-      toast({ title: 'Optimize failed', description: err.message, variant: 'destructive' });
-    }
+    // Fire-and-forget: don't await the response to avoid browser timeout
+    callFunction({ mode: 'optimize', jobId: job.id }).catch(err => {
+      console.warn('[ImageOptimizer] Optimize trigger warning (non-fatal):', err);
+    });
+    setJob(prev => prev ? { ...prev, status: 'optimizing' } : prev);
+    startPolling(job.id);
   };
 
-  const handleResume = async () => {
+  const handleResume = () => {
     if (!job) return;
-    setIsResuming(true);
-    try {
-      await callFunction({ mode: 'optimize', jobId: job.id });
-      startPolling(job.id);
-      toast({ title: 'Resumed', description: 'Optimization chain restarted.' });
-    } catch (err: any) {
-      toast({ title: 'Resume failed', description: err.message, variant: 'destructive' });
-    } finally {
-      setIsResuming(false);
-    }
+    // Fire-and-forget: don't await the response
+    callFunction({ mode: 'optimize', jobId: job.id }).catch(err => {
+      console.warn('[ImageOptimizer] Resume trigger warning (non-fatal):', err);
+    });
+    startPolling(job.id);
+    toast({ title: 'Resumed', description: 'Optimization chain restarted.' });
   };
 
   const handleCancel = async () => {
@@ -218,8 +212,8 @@ const ImageOptimizer = () => {
                 <p className="text-xs text-muted-foreground mt-1">
                   No progress for 5+ minutes ({job.processed} / {job.oversized_files} processed). The background chain may have broken.
                 </p>
-                <Button onClick={handleResume} size="sm" className="mt-2" disabled={isResuming}>
-                  {isResuming ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                <Button onClick={handleResume} size="sm" className="mt-2">
+                  <Play className="h-4 w-4 mr-2" />
                   Resume
                 </Button>
               </div>
