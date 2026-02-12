@@ -1,64 +1,83 @@
 
 
-# Fix: Backfill Missing Blog Images + Harden Image Pipeline
+# Fix: Backfill All Missing Images (No Pixabay)
 
 ## Problem
 
-467 published articles have no featured image (`featured_image_url = NULL`). These were generated during a bulk run where Gemini image generation hit quota/rate limits and the Pixabay fallback also failed. The articles were then bulk-published without images.
+- 467 articles missing featured images
+- 470 articles missing middle image 1
+- 1,608 articles missing middle image 2
+- Pixabay quality is poor -- remove it entirely
 
-## Solution: Two Parts
+## Changes
 
-### Part 1: Backfill Edge Function
+### 1. Rewrite `backfill-blog-images/index.ts`
 
-Create a new edge function `backfill-blog-images` that:
+- **Remove** all Pixabay fallback code (the `fetchPixabayFallback` function and its usage)
+- **Add middle image generation**: For each post, generate up to 3 images (featured, middle_1, middle_2) if they are NULL
+- Query posts where ANY image column is NULL (not just featured)
+- Generate each missing image with Gemini using different prompts:
+  - Featured: "realistic photograph" prompt (existing)
+  - Middle 1: "detailed scene or process" prompt with different style
+  - Middle 2: "supporting visual or infographic-style" prompt
+- Update all three columns + their alt text columns in one DB update per post
+- Keep the 3s delay between each image (not per post), so ~9s per post if all 3 are missing
+- If Gemini fails (non-bail error), skip that image and continue to the next -- no Pixabay fallback
+- Bail on rate limit / quota exhaustion as before
 
-1. Queries `blog_posts` where `featured_image_url IS NULL` and `status = 'published'` (in batches of 5)
-2. For each post, attempts Gemini image generation first, then Pixabay fallback
-3. Updates the `featured_image_url` and `featured_image_alt` columns
-4. Self-chains to process the next batch (same pattern as the optimizer)
-5. Includes rate-limit delays (3s between images) to avoid hitting Gemini quotas again
-6. Tracks progress in a simple status response
+### 2. Update status mode
 
-The function will be callable from the admin settings page.
+Return counts for all three image types so the UI can show a more complete picture:
 
-### Part 2: Admin UI - Backfill Button
+```json
+{
+  "missing_featured": 467,
+  "missing_middle1": 470,
+  "missing_middle2": 1608,
+  "total_missing": 2545,
+  "status": "idle"
+}
+```
 
-Add a "Backfill Missing Images" card to the admin settings page (or a button on the blog management page) showing:
-- Count of articles missing images
-- A button to start the backfill
-- Progress indicator while running
+### 3. Update query to find posts needing images
 
-### Part 3: Harden Bulk Generator (Future Batches)
+Instead of only `featured_image_url IS NULL`, query for posts where ANY of the three image columns is NULL:
 
-Modify `bulk-generate-articles/index.ts` to add longer delays between image generation attempts (5s instead of 3s) and add a retry with exponential backoff for Gemini 429 errors before falling to Pixabay. This reduces the chance of quota exhaustion during bulk runs.
+```sql
+SELECT id, title, slug, category_slug, 
+       featured_image_url, middle_image_1_url, middle_image_2_url
+FROM blog_posts
+WHERE status = 'published'
+  AND (featured_image_url IS NULL 
+    OR middle_image_1_url IS NULL 
+    OR middle_image_2_url IS NULL)
+```
+
+### 4. Update `ImageBackfillCard.tsx`
+
+- Show total missing count across all three types (e.g., "2,545 missing images across 470 articles")
+- No other UI changes needed
 
 ## Technical Details
 
-### New file: `supabase/functions/backfill-blog-images/index.ts`
+### Per-post processing flow
 
-- Accepts `{ mode: 'status' | 'start' }` 
-- On `start`: queries up to 5 posts with null images, generates images, updates DB, self-chains
-- Uses existing `generateImageWithGoogle` from `_shared/googleImageGen.ts` 
-- Falls back to Pixabay if Gemini fails
-- 3-second delay between each image to respect rate limits
-- Returns `{ processed, remaining, status }` for the UI
+```text
+For each post:
+  1. If featured_image_url IS NULL -> generate featured image (3s delay)
+  2. If middle_image_1_url IS NULL -> generate middle image 1 (3s delay)
+  3. If middle_image_2_url IS NULL -> generate middle image 2 (3s delay)
+  4. Update DB with all generated URLs in one call
+```
 
-### Modified file: `src/pages/admin/AdminSettings.tsx` (or wherever the admin settings live)
+### Batch size adjustment
 
-- Add a card showing "X articles missing images" with a "Generate Missing Images" button
-- Poll for progress while running
+Since each post may need up to 3 images (9s+ per post), reduce batch size from 5 to 3 posts per invocation to stay within edge function timeout limits.
 
-### Modified file: `supabase/functions/bulk-generate-articles/index.ts`
-
-- Increase delay between image generations from 3s to 5s
-- Add a single retry with 10s backoff on Gemini 429 before falling to Pixabay
-- This makes future bulk runs more resilient to rate limits
-
-## Files to Create/Modify
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/backfill-blog-images/index.ts` | New edge function to backfill missing images |
-| `src/components/admin/blog/ImageBackfillCard.tsx` | New UI component for triggering and monitoring backfill |
-| `src/pages/admin/AdminBlog.tsx` | Add ImageBackfillCard to the blog management page |
-| `supabase/functions/bulk-generate-articles/index.ts` | Increase image generation delays and add retry logic |
+| `supabase/functions/backfill-blog-images/index.ts` | Remove Pixabay, add middle image generation, update query |
+| `src/components/admin/blog/ImageBackfillCard.tsx` | Show total missing count across all image types |
+
