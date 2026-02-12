@@ -1282,6 +1282,50 @@ export type Database = {
         Args: { p_batch_size: number; p_job_id: string }
         Returns: number
       }
+      get_next_backfill_post: {
+        Args: never
+        Returns: {
+          article_type: string | null
+          author: string
+          author_id: string | null
+          category: string
+          category_slug: string
+          content: string
+          content_hash: string | null
+          content_plan_id: string | null
+          created_at: string
+          excerpt: string | null
+          featured: boolean
+          featured_image_alt: string | null
+          featured_image_url: string | null
+          id: string
+          last_link_scan_at: string | null
+          meta_description: string | null
+          meta_title: string | null
+          middle_image_1_alt: string | null
+          middle_image_1_url: string | null
+          middle_image_2_alt: string | null
+          middle_image_2_url: string | null
+          primary_keyword: string | null
+          published_at: string | null
+          read_time: string | null
+          related_templates: string[] | null
+          scheduled_at: string | null
+          secondary_keywords: string[] | null
+          slug: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          views: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "blog_posts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_optimization_batch: {
         Args: { p_job_id: string; p_limit: number; p_offset: number }
         Returns: Json
