@@ -82,6 +82,37 @@ export function useGenerationJob() {
     },
   });
 
+  // Resume a stalled job by re-triggering the edge function
+  const resumeJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-generate-articles`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ jobId }),
+        }
+      );
+      // Fire-and-forget style — the function self-chains, so we don't need to wait
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to resume job');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['generation-job-active'] });
+      toast({ title: 'Job resumed', description: 'The generation chain has been restarted.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to resume job', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const isRunning = !!activeJob;
   const progress = activeJob ? {
     current: activeJob.succeeded_items + activeJob.failed_items,
@@ -98,5 +129,7 @@ export function useGenerationJob() {
     progress,
     stopJob: stopJobMutation.mutate,
     isStopping: stopJobMutation.isPending,
+    resumeJob: resumeJobMutation.mutate,
+    isResuming: resumeJobMutation.isPending,
   };
 }
