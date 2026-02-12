@@ -1257,6 +1257,14 @@ export type Database = {
           title: string
         }[]
       }
+      get_template_progress: {
+        Args: never
+        Returns: {
+          generated: number
+          template_slug: string
+          total: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
