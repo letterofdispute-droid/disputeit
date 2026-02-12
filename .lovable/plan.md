@@ -1,62 +1,76 @@
-# Upgrade Image Storage Optimizer: In-Place Optimization
+
+
+# Fix Image Optimizer Stalled Job + Add Recovery
 
 ## Problem
 
-The current optimizer creates `-opt.jpg` copies alongside originals, then requires a separate "Cleanup" step to delete originals. If cleanup isn't run, every new scan shows the same oversized count. This is confusing and wasteful.
+The optimization job stalled at 775/5024 images. The self-chain broke (same pattern as the bulk article generator). The root cause is that `handleOptimize` calls `listAllFiles()` on every batch invocation, which lists all 7,145 files across multiple storage API calls. This is slow and can cause the function to timeout before it finishes processing the batch, breaking the chain.
 
-Additionally, newly AI-generated images are already compressed JPEGs (via the image generation pipeline), so only legacy images need optimization.
+## Fix (Three Parts)
 
-## Solution: In-Place Replacement
+### Part 1: Resume the Stuck Job Immediately
 
-Instead of the two-step copy-then-delete workflow, the optimizer will **replace files in-place** -- overwrite the original with the optimized version. This eliminates the cleanup step entirely.
+Call the edge function with `{ mode: 'optimize', jobId: 'c708f342-688e-4c65-bfda-9456451b6c38' }` to restart the chain.
 
-### Changes to Edge Function (`supabase/functions/optimize-storage-images/index.ts`)
+### Part 2: Add Stale Detection + Resume Button to ImageOptimizer UI
 
-1. **Lower threshold from 500KB to 300KB** -- files under 300KB are considered acceptable
-2. **In-place optimization** -- download the file, compress it, upload back to the **same path** with `upsert: true`. No more `-opt.jpg` suffix, no more cleanup step
-3. **Remove cleanup mode entirely** -- no longer needed since originals are replaced
-4. **Exclude already-optimized files** -- track optimized paths in the job metadata so re-runs within the same scan don't re-process. Also skip files that are already JPEG and under 300KB
-5. **Better scan filtering** -- only count files above 300KB that aren't already small JPEGs
+Apply the same pattern we used for `GenerationProgress`:
 
-### Changes to UI Component (`src/components/admin/storage/ImageOptimizer.tsx`)
+- Detect when a job is `optimizing` but `updated_at` is more than 5 minutes old
+- Show a "Resume" button instead of the spinner
+- The Resume button calls the edge function with `{ mode: 'optimize', jobId }` to restart the chain
 
-1. Update threshold display text from ">500KB" to ">300KB"
-2. Remove the "Delete Originals" / cleanup button and related states
-3. After optimization completes, show a simpler "Done" message (no cleanup step needed)
-4. Update description text to reflect the new in-place behavior
+**File: `src/components/admin/storage/ImageOptimizer.tsx`**
+- Add `isStale` detection logic comparing `updated_at` against a 5-minute threshold
+- Show a warning banner with a Resume button when stale
+- Add a `handleResume` function that calls the optimize endpoint
 
-### Scan Logic (Updated)
+### Part 3: Optimize the Edge Function to Avoid Re-listing All Files
 
-```text
-For each file in storage:
-  - Skip if size <= 300KB (already acceptable)
-  - Skip if name ends with '-opt.jpg' (legacy optimized copy)
-  - Count everything else as "oversized" / needs optimization
+The current `handleOptimize` calls `listAllFiles()` (which pages through all 7,145 files) on every single batch of 5 images. This is extremely wasteful and slow.
+
+**File: `supabase/functions/optimize-storage-images/index.ts`**
+
+Change the optimize logic to use `current_offset` directly with the storage list API instead of fetching all files and slicing:
+
+- Instead of `listAllFiles()` then `getOversizedFiles()` then `slice(offset, offset+5)`, use a targeted listing approach
+- List files in batches directly from storage using offset/limit, filtering for oversized ones
+- This dramatically reduces the work per batch from "list 7000+ files" to "list ~50 files and pick 5 oversized ones"
+
+Alternatively, a simpler approach: store the list of oversized file paths in the job record during the scan phase, then during optimization just read the next batch of paths from that stored list. This avoids re-scanning entirely.
+
+**Chosen approach**: Store oversized file paths as a JSONB array in a new `file_list` column on `image_optimization_jobs` during the scan. During optimization, read `file_list[offset:offset+batch_size]` directly -- no re-listing needed.
+
+### Database Migration
+
+Add a `file_list` column to `image_optimization_jobs`:
+
+```sql
+ALTER TABLE image_optimization_jobs 
+ADD COLUMN IF NOT EXISTS file_list jsonb DEFAULT '[]'::jsonb;
 ```
-
-### Optimize Logic (Updated)
-
-```text
-For each oversized file:
-  1. Download it
-  2. Resize to max 1200px width
-  3. Encode as JPEG at 80% quality
-  4. If compressed size < original size:
-     - Upload compressed version to SAME PATH (overwrite)
-     - No DB reference updates needed (URL stays the same)
-  5. If compressed size >= original: skip (already optimal)
-```
-
-Since the URL doesn't change (same path, overwritten in place), there is **no need to update blog_posts or category_images references**. This is a major simplification.
-
-### Legacy `-opt.jpg` Cleanup
-
-The scan will also count any lingering `-opt.jpg` files that have a corresponding original still present. During optimization, if an `-opt.jpg` exists alongside an original, the optimizer will delete the `-opt.jpg` copy (since the original will now be optimized in-place).
 
 ### Files to Modify
 
+| File | Change |
+|------|--------|
+| `supabase/functions/optimize-storage-images/index.ts` | Store oversized paths during scan, read from stored list during optimize (no re-listing), redeploy |
+| `src/components/admin/storage/ImageOptimizer.tsx` | Add stale detection + Resume button |
+| Database migration | Add `file_list` column to `image_optimization_jobs` |
 
-| File                                                  | Change                                                                        |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `supabase/functions/optimize-storage-images/index.ts` | Lower threshold, in-place overwrite, remove cleanup mode, simplify DB updates |
-| `src/components/admin/storage/ImageOptimizer.tsx`     | Remove cleanup UI, update threshold labels, simplify flow                     |
+### Flow After Fix
+
+```text
+SCAN:
+  1. List all files (once)
+  2. Filter oversized (>300KB, not -opt.jpg)
+  3. Store paths in file_list column
+  4. Update job status to 'scanned'
+
+OPTIMIZE:
+  1. Read file_list from job record
+  2. Slice file_list[offset : offset+5] for current batch
+  3. Process batch (download, compress, upload in-place)
+  4. Update offset, self-chain to next batch
+  -- No more listAllFiles() calls during optimization
+```
