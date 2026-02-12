@@ -1,124 +1,76 @@
 
 
-# Bulletproof Image Storage Optimizer
+# Fix: Image Optimizer "Failed to fetch" -- Two Blocking Awaits
 
 ## Root Cause
 
-The self-chain keeps breaking because:
-1. `selfInvoke` is fire-and-forget — if it fails, no one knows
-2. A single corrupt image can hang the entire batch until timeout, killing the chain
-3. Every batch loads 130KB of `file_list` JSON unnecessarily via `SELECT *`
-4. The pg_cron job marks stale jobs as `failed` instead of restarting them
-5. If the batch processing throws an unhandled error, the self-chain never fires
+There are two bugs causing the "Failed to fetch" error:
 
-## Solution: Five Layers of Reliability
+1. **Client-side**: `handleOptimize` awaits the edge function response. The function processes a full batch of 5 images (downloading, decoding, compressing, uploading each) before returning. This takes 20-30+ seconds, causing the browser fetch to timeout.
 
-### Layer 1: Guaranteed Self-Chain (Edge Function)
+2. **Edge function self-invoke**: `selfInvokeWithRetry` uses `await fetch(...)` and checks `response.ok`. This means each batch waits for the NEXT batch to finish before it can return its own response. This creates a cascading chain: batch 1 waits for batch 2, which waits for batch 3... until Cloudflare's gateway kills the chain with 502/504 errors (visible in the logs: "Attempt 1 got 504", "Attempt 1 got 502").
 
-Restructure `handleOptimize` so the self-invoke happens in a `finally` block, ensuring the chain continues even if the batch crashes:
+## Fix
 
-```text
-try {
-  process batch of 5 images
-  update job with results
-} catch (error) {
-  log error, increment offset anyway (skip bad batch)
-} finally {
-  if (hasMore && !cancelled) selfInvoke with retry
-}
-```
+### Change 1: Fire-and-forget self-invoke (Edge Function)
 
-### Layer 2: Self-Invoke with Retry (Edge Function)
-
-Replace the fire-and-forget `fetch` with an `await`-ed call that retries once on failure:
+Replace the `await fetch()` in `selfInvokeWithRetry` with a fire-and-forget pattern. Don't wait for the response -- just confirm the request was sent:
 
 ```text
-async selfInvoke(body):
-  for attempt in [1, 2]:
-    try:
-      response = await fetch(url, ...)
-      if response.ok: return true
-    catch:
+selfInvokeWithRetry(body):
+  fetch(url, { method: 'POST', headers, body })
+    .then(res => {
+      if (!res.ok) log warning
+    })
+    .catch(err => {
       log warning
-      wait 2 seconds
-  log CRITICAL: self-invoke failed after 2 attempts
-  return false
+      // retry once after delay
+      setTimeout(() => {
+        fetch(url, { method: 'POST', headers, body }).catch(log)
+      }, 2000)
+    })
 ```
 
-### Layer 3: Per-Image Timeout (Edge Function)
+This breaks the cascading wait chain. Each batch fires and forgets the next one.
 
-Wrap each image's download+decode+compress cycle in a 20-second timeout using `Promise.race`:
+### Change 2: Fire-and-forget client call (ImageOptimizer.tsx)
+
+Change `handleOptimize` to not await the edge function response. Instead, fire the request and immediately start polling:
 
 ```text
-for each file in batch:
-  result = await Promise.race([
-    processImage(file),     // download, decode, compress, upload
-    timeout(20_000)         // 20 second deadline
-  ])
-  if timed out: log + skip, continue to next image
+handleOptimize:
+  callFunction({ mode: 'optimize', jobId }).catch(err => log warning)
+  setJob(prev => ({ ...prev, status: 'optimizing' }))
+  startPolling(job.id)
 ```
 
-This prevents a single bad image from killing the entire batch.
+Same change for `handleResume`.
 
-### Layer 4: Don't Load file_list on Every Batch (Database + Edge Function)
+### Change 3: Return early from optimize mode (Edge Function)
 
-Create a database function that returns just the batch slice instead of loading the entire 130KB JSONB array:
+As an additional safety measure, restructure `handleOptimize` to return the HTTP response immediately before processing the batch. Use Deno's event loop to continue processing in the background:
 
-```sql
-CREATE FUNCTION get_optimization_batch(p_job_id uuid, p_offset int, p_limit int)
-RETURNS jsonb
-```
+The edge function should return `{ ok: true, started: true }` immediately, then process the batch. This prevents any HTTP timeout regardless of how long processing takes.
 
-The edge function calls this RPC to get just 5 items instead of all 4255.
-
-Also change `getJob` for optimize batches to `select` only the columns it needs (excluding `file_list`).
-
-### Layer 5: Auto-Resume via pg_cron (Database)
-
-Change the existing `recover_stale_image_optimization_jobs` pg_cron function from marking stale jobs as `failed` to calling the edge function to resume them:
-
-Since pg_cron can't directly call edge functions, use a two-step approach:
-- pg_cron resets stale `optimizing` jobs by bumping `updated_at` (giving a fresh 15-min window)
-- Add a `net.http_post` call via pg_net to directly invoke the edge function with the stalled job's ID
-
-This creates fully automatic recovery with zero manual intervention.
+Since Deno.serve doesn't have a built-in `waitUntil`, we can use the pattern of returning the response first and letting the async work continue via a detached promise.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/optimize-storage-images/index.ts` | Guaranteed self-chain in finally block, await+retry selfInvoke, per-image timeout, use RPC for batch fetching |
-| Database migration | Create `get_optimization_batch` RPC function; update `recover_stale_image_optimization_jobs` to auto-resume via pg_net |
+| `supabase/functions/optimize-storage-images/index.ts` | Make selfInvoke fire-and-forget (no await on response); restructure optimize handler to not block the HTTP response |
+| `src/components/admin/storage/ImageOptimizer.tsx` | Make handleOptimize and handleResume fire-and-forget (don't await response, start polling immediately) |
 
-## Failure Scenarios Covered
-
-| Scenario | Before | After |
-|----------|--------|-------|
-| Self-invoke HTTP fails | Chain dies silently | Retries once, logs critical warning |
-| Corrupt image hangs decode | Batch times out, chain dies | 20s timeout per image, skip + continue |
-| Batch processing crashes | Chain dies | `finally` block ensures next batch fires |
-| Chain breaks for unknown reason | Manual Resume button (5 min) | pg_cron auto-resumes every 5 min via pg_net |
-| 130KB file_list loaded per batch | Slow DB reads every 3 seconds | RPC returns only the 5-item slice needed |
-| Edge function cold start fails invoke | Chain dies | Retry with 2s delay handles cold starts |
-
-## Processing Flow After Fix
+## Why This Was Failing
 
 ```text
-handleOptimize(jobId):
-  1. getJobLite(jobId)           -- fetch job WITHOUT file_list
-  2. Check cancelled? -> stop
-  3. getBatch(jobId, offset, 5)  -- RPC returns only 5 items
-  4. try:
-       for each file (with 20s timeout):
-         download -> decode -> compress -> upload
-       update job (processed, saved_bytes, offset)
-     catch:
-       log error, bump offset to skip batch
-     finally:
-       if hasMore: await selfInvoke({ mode: 'optimize', jobId }) with retry
+BEFORE (cascading awaits):
+  Client AWAITS -> Batch 1 processes -> AWAITS selfInvoke -> Batch 2 processes -> AWAITS selfInvoke -> ...
+  Result: Everything hangs, Cloudflare kills with 502/504
 
-BACKGROUND RECOVERY (pg_cron every 5 min):
-  Find jobs where status='optimizing' AND updated_at < 5 min ago
-  For each: call edge function via pg_net to resume
+AFTER (fire-and-forget):
+  Client fires -> returns immediately, starts polling
+  Batch 1 processes -> fires selfInvoke -> returns immediately  
+  Batch 2 processes -> fires selfInvoke -> returns immediately
+  Each batch is independent, no cascading waits
 ```
-
