@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { allTemplates } from '@/data/allTemplates';
 import { templateCategories } from '@/data/templateCategories';
+import { useTemplateProgress } from '@/hooks/useTemplateProgress';
 import { AlertTriangle, CheckCircle2, Target, TrendingUp, FileText } from 'lucide-react';
 
 interface ContentPlan {
@@ -16,11 +17,6 @@ interface ContentPlan {
   category_id: string;
   value_tier: string;
   target_article_count: number;
-}
-
-interface QueueItem {
-  plan_id: string | null;
-  status: string;
 }
 
 interface BlogPost {
@@ -40,16 +36,8 @@ export default function GapAnalysis() {
     },
   });
 
-  const { data: queueItems } = useQuery({
-    queryKey: ['gap-queue-items'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('content_queue')
-        .select('plan_id, status');
-      if (error) throw error;
-      return data as QueueItem[];
-    },
-  });
+  // Use server-side aggregation via RPC (bypasses 1000-row limit)
+  const { data: templateProgress } = useTemplateProgress();
 
   const { data: blogPosts } = useQuery({
     queryKey: ['gap-blog-posts'],
@@ -65,18 +53,6 @@ export default function GapAnalysis() {
 
   const analysis = useMemo(() => {
     const plansBySlug = new Map(contentPlans?.map(p => [p.template_slug, p]) || []);
-    const queueByPlan = new Map<string, { generated: number; published: number; queued: number }>();
-    
-    queueItems?.forEach(item => {
-      if (!item.plan_id) return;
-      if (!queueByPlan.has(item.plan_id)) {
-        queueByPlan.set(item.plan_id, { generated: 0, published: 0, queued: 0 });
-      }
-      const stats = queueByPlan.get(item.plan_id)!;
-      if (item.status === 'published') stats.published++;
-      else if (item.status === 'generated') stats.generated++;
-      else if (item.status === 'queued') stats.queued++;
-    });
 
     // Count articles per template from blog_posts
     const articlesByTemplate = new Map<string, number>();
@@ -140,8 +116,9 @@ export default function GapAnalysis() {
 
       if (plan) {
         categoryGaps[catId].withPlan++;
-        const queueStats = queueByPlan.get(plan.id);
-        const totalProgress = (queueStats?.published || 0) + (queueStats?.generated || 0);
+        // Use server-side aggregated progress from RPC
+        const progress = templateProgress?.[template.slug];
+        const totalProgress = progress?.generated || 0;
         
         if (totalProgress >= plan.target_article_count) {
           categoryGaps[catId].fullyConvered++;
@@ -187,7 +164,7 @@ export default function GapAnalysis() {
       templatesWithPlans,
       coveragePercent,
     };
-  }, [contentPlans, queueItems, blogPosts]);
+  }, [contentPlans, templateProgress, blogPosts]);
 
   const getCategoryName = (id: string) => {
     return templateCategories.find(c => c.id === id)?.name || id;
