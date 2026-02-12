@@ -9,7 +9,7 @@ const corsHeaders = {
 const BUCKET = 'blog-images'
 const MAX_WIDTH = 1200
 const JPEG_QUALITY = 80
-const SIZE_THRESHOLD = 500 * 1024
+const SIZE_THRESHOLD = 300 * 1024 // 300KB
 const BATCH_SIZE = 5
 
 function getSupabase() {
@@ -56,7 +56,6 @@ Deno.serve(async (req) => {
   try {
     const { mode, jobId } = await req.json()
 
-    // Self-chained calls use service role key directly, so skip admin check for those
     const isSelfChain = req.headers.get('Authorization')?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     if (!isSelfChain) {
       const isAdmin = await verifyAdmin(req)
@@ -70,7 +69,6 @@ Deno.serve(async (req) => {
     switch (mode) {
       case 'scan': return await handleScan(supabase)
       case 'optimize': return await handleOptimize(supabase, jobId)
-      case 'cleanup': return await handleCleanup(supabase, jobId)
       case 'cancel': return await handleCancel(supabase, jobId)
       case 'status': return await handleStatus(supabase, jobId)
       default:
@@ -157,10 +155,21 @@ function jsonRes(data: any) {
   return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
 
+// ── Helper: get files needing optimization ──
+
+function getOversizedFiles(allFiles: any[]): any[] {
+  return allFiles.filter((f: any) => {
+    // Skip legacy -opt.jpg copies
+    if (f.name.endsWith('-opt.jpg')) return false
+    // Skip files already under threshold
+    if (f.size <= SIZE_THRESHOLD) return false
+    return true
+  })
+}
+
 // ── Mode handlers ──
 
 async function handleScan(supabase: any) {
-  // Create job
   const { data: job, error: insertErr } = await supabase
     .from('image_optimization_jobs')
     .insert({ status: 'scanning' })
@@ -173,8 +182,11 @@ async function handleScan(supabase: any) {
 
   const allFiles = await listAllFiles(supabase)
   const totalSize = allFiles.reduce((s: number, f: any) => s + f.size, 0)
-  const oversized = allFiles.filter((f: any) => f.size > SIZE_THRESHOLD && !f.name.endsWith('-opt.jpg'))
+  const oversized = getOversizedFiles(allFiles)
   const oversizedSize = oversized.reduce((s: number, f: any) => s + f.size, 0)
+
+  // Count legacy -opt.jpg files for info
+  const legacyOptFiles = allFiles.filter((f: any) => f.name.endsWith('-opt.jpg'))
 
   await updateJob(supabase, jobId, {
     status: 'scanned',
@@ -182,9 +194,11 @@ async function handleScan(supabase: any) {
     total_size_bytes: totalSize,
     oversized_files: oversized.length,
     oversized_size_bytes: oversizedSize,
+    // Store legacy count in freed_bytes temporarily for UI info
+    deleted: legacyOptFiles.length,
   })
 
-  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized`)
+  console.log(`[SCAN] Job ${jobId}: ${allFiles.length} files, ${oversized.length} oversized (>300KB), ${legacyOptFiles.length} legacy -opt.jpg`)
   return jsonRes({ jobId })
 }
 
@@ -197,15 +211,16 @@ async function handleOptimize(supabase: any, jobId: string) {
 
   // Mark as optimizing on first call
   if (job.status === 'scanned') {
-    await updateJob(supabase, jobId, { status: 'optimizing' })
+    await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
   const allFiles = await listAllFiles(supabase)
-  const oversized = allFiles.filter((f: any) => f.size > SIZE_THRESHOLD && !f.name.endsWith('-opt.jpg'))
+  const oversized = getOversizedFiles(allFiles)
   const batch = oversized.slice(job.current_offset, job.current_offset + BATCH_SIZE)
 
   let batchProcessed = 0
   let batchSaved = 0
+  let legacyCleaned = 0
   const errors: string[] = []
 
   for (const file of batch) {
@@ -232,24 +247,19 @@ async function handleOptimize(supabase: any, jobId: string) {
       const newSize = compressed.byteLength
       if (newSize >= originalSize) { continue }
 
-      const pathParts = file.path.split('.')
-      pathParts.pop()
-      const optPath = pathParts.join('.') + '-opt.jpg'
-
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(optPath, compressed, { contentType: 'image/jpeg', upsert: true })
+      // In-place overwrite: upload to the SAME path
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(file.path, compressed, { contentType: 'image/jpeg', upsert: true })
       if (upErr) throw upErr
 
-      // Update DB references
-      const { data: oldUrlData } = supabase.storage.from(BUCKET).getPublicUrl(file.path)
-      const { data: newUrlData } = supabase.storage.from(BUCKET).getPublicUrl(optPath)
-      const oldUrl = oldUrlData.publicUrl
-      const newUrl = newUrlData.publicUrl
-
-      for (const col of ['featured_image_url', 'middle_image_1_url', 'middle_image_2_url']) {
-        await supabase.from('blog_posts').update({ [col]: newUrl }).eq(col, oldUrl)
-      }
-      for (const col of ['image_url', 'thumbnail_url', 'large_url']) {
-        await supabase.from('category_images').update({ [col]: newUrl }).eq(col, oldUrl)
+      // Clean up any legacy -opt.jpg copy if it exists
+      const pathParts = file.path.split('.')
+      pathParts.pop()
+      const legacyOptPath = pathParts.join('.') + '-opt.jpg'
+      const legacyExists = allFiles.some((f: any) => f.path === legacyOptPath)
+      if (legacyExists) {
+        await supabase.storage.from(BUCKET).remove([legacyOptPath])
+        legacyCleaned++
+        console.log(`[OPTIMIZE] Removed legacy copy: ${legacyOptPath}`)
       }
 
       batchSaved += (originalSize - newSize)
@@ -269,82 +279,22 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, {
       processed: job.processed + batchProcessed,
       saved_bytes: job.saved_bytes + batchSaved,
+      deleted: (job.deleted || 0) + legacyCleaned,
       current_offset: newOffset,
       errors: jobErrors,
     })
-    // Self-chain
     selfInvoke({ mode: 'optimize', jobId })
   } else {
     await updateJob(supabase, jobId, {
-      status: 'optimized',
+      status: 'completed',
       processed: job.processed + batchProcessed,
       saved_bytes: job.saved_bytes + batchSaved,
+      deleted: (job.deleted || 0) + legacyCleaned,
       current_offset: newOffset,
       errors: jobErrors,
       completed_at: new Date().toISOString(),
     })
     console.log(`[OPTIMIZE] Job ${jobId}: complete`)
-  }
-
-  return jsonRes({ ok: true })
-}
-
-async function handleCleanup(supabase: any, jobId: string) {
-  const job = await getJob(supabase, jobId)
-  if (job.status === 'cancelled') return jsonRes({ stopped: true })
-
-  if (job.status === 'optimized') {
-    await updateJob(supabase, jobId, { status: 'cleaning', current_offset: 0 })
-  }
-
-  const allFiles = await listAllFiles(supabase)
-  const optimizedPrefixes = new Set(
-    allFiles.filter((f: any) => f.name.endsWith('-opt.jpg')).map((f: any) => f.path.replace('-opt.jpg', ''))
-  )
-
-  const toDelete: any[] = []
-  for (const file of allFiles) {
-    if (file.name.endsWith('-opt.jpg')) continue
-    const pathWithoutExt = file.path.split('.').slice(0, -1).join('.')
-    if (optimizedPrefixes.has(pathWithoutExt) && file.size > SIZE_THRESHOLD) {
-      toDelete.push(file)
-    }
-  }
-
-  // Process a batch of 20 deletions
-  const offset = job.status === 'cleaning' ? (job.current_offset || 0) : 0
-  const batch = toDelete.slice(offset, offset + 20)
-
-  let batchDeleted = 0
-  let batchFreed = 0
-
-  if (batch.length > 0) {
-    const paths = batch.map((f: any) => f.path)
-    const { error } = await supabase.storage.from(BUCKET).remove(paths)
-    if (!error) {
-      batchDeleted = batch.length
-      batchFreed = batch.reduce((s: number, f: any) => s + f.size, 0)
-    }
-  }
-
-  const newOffset = offset + 20
-  const hasMore = newOffset < toDelete.length
-
-  if (hasMore) {
-    await updateJob(supabase, jobId, {
-      deleted: (job.deleted || 0) + batchDeleted,
-      freed_bytes: (job.freed_bytes || 0) + batchFreed,
-      current_offset: newOffset,
-    })
-    selfInvoke({ mode: 'cleanup', jobId })
-  } else {
-    await updateJob(supabase, jobId, {
-      status: 'completed',
-      deleted: (job.deleted || 0) + batchDeleted,
-      freed_bytes: (job.freed_bytes || 0) + batchFreed,
-      completed_at: new Date().toISOString(),
-    })
-    console.log(`[CLEANUP] Job ${jobId}: complete, deleted ${(job.deleted || 0) + batchDeleted} files`)
   }
 
   return jsonRes({ ok: true })

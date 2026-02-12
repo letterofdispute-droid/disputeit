@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { HardDrive, Loader2, CheckCircle, Trash2, Zap, Search, XCircle } from 'lucide-react';
+import { HardDrive, Loader2, CheckCircle, Zap, Search, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,7 +27,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-const ACTIVE_STATUSES = ['pending', 'scanning', 'optimizing', 'cleaning'];
+const ACTIVE_STATUSES = ['pending', 'scanning', 'optimizing'];
 
 const ImageOptimizer = () => {
   const [job, setJob] = useState<Job | null>(null);
@@ -77,14 +77,11 @@ const ImageOptimizer = () => {
     }
   }, []);
 
-  // On mount, check for in-progress job
   useEffect(() => {
     const checkExisting = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
-        // Query for active jobs using the function status mode won't work without jobId,
-        // so we query the table directly
         const { data } = await supabase
           .from('image_optimization_jobs')
           .select('*')
@@ -109,7 +106,6 @@ const ImageOptimizer = () => {
     setIsStarting(true);
     try {
       const { jobId } = await callFunction({ mode: 'scan' });
-      // Initial poll
       const data = await callFunction({ mode: 'status', jobId });
       setJob(data);
       if (ACTIVE_STATUSES.includes(data.status)) {
@@ -130,17 +126,6 @@ const ImageOptimizer = () => {
       setJob(prev => prev ? { ...prev, status: 'optimizing' } : prev);
     } catch (err: any) {
       toast({ title: 'Optimize failed', description: err.message, variant: 'destructive' });
-    }
-  };
-
-  const handleCleanup = async () => {
-    if (!job) return;
-    try {
-      await callFunction({ mode: 'cleanup', jobId: job.id });
-      startPolling(job.id);
-      setJob(prev => prev ? { ...prev, status: 'cleaning' } : prev);
-    } catch (err: any) {
-      toast({ title: 'Cleanup failed', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -176,7 +161,7 @@ const ImageOptimizer = () => {
           Image Storage Optimizer
         </CardTitle>
         <CardDescription>
-          Scan, compress, and clean up oversized images. Runs in background - you can close this tab.
+          Scan and compress oversized images in-place. Runs in background - you can close this tab.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -193,7 +178,7 @@ const ImageOptimizer = () => {
             </div>
             <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-center">
               <p className="text-2xl font-bold text-destructive">{job.oversized_files}</p>
-              <p className="text-xs text-muted-foreground">Oversized (&gt;500KB)</p>
+              <p className="text-xs text-muted-foreground">Oversized (&gt;300KB)</p>
             </div>
             <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 text-center">
               <p className="text-2xl font-bold text-primary">{formatBytes(job.saved_bytes)}</p>
@@ -203,34 +188,13 @@ const ImageOptimizer = () => {
         )}
 
         {/* Progress bar */}
-        {job && (job.status === 'optimizing' || job.status === 'cleaning') && (
+        {job?.status === 'optimizing' && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>{job.status === 'optimizing' ? 'Optimizing images...' : 'Cleaning up originals...'}</span>
-              <span>
-                {job.status === 'optimizing'
-                  ? `${job.processed} / ${job.oversized_files} (${formatBytes(job.saved_bytes)} saved)`
-                  : `${job.deleted} deleted (${formatBytes(job.freed_bytes)} freed)`
-                }
-              </span>
+              <span>Optimizing images in-place...</span>
+              <span>{job.processed} / {job.oversized_files} ({formatBytes(job.saved_bytes)} saved)</span>
             </div>
-            <Progress value={job.status === 'optimizing' ? progress : undefined} className="h-3" />
-          </div>
-        )}
-
-        {/* Optimized result */}
-        {job?.status === 'optimized' && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Optimization Complete</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Processed {job.processed} images, saved {formatBytes(job.saved_bytes)}.
-                  Original files are still intact - use Cleanup to delete them.
-                </p>
-              </div>
-            </div>
+            <Progress value={progress} className="h-3" />
           </div>
         )}
 
@@ -242,8 +206,8 @@ const ImageOptimizer = () => {
               <div>
                 <p className="text-sm font-medium">All Done!</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Optimized {job.processed} images (saved {formatBytes(job.saved_bytes)}).
-                  Deleted {job.deleted} originals, freed {formatBytes(job.freed_bytes)}.
+                  Optimized {job.processed} images in-place, saved {formatBytes(job.saved_bytes)}.
+                  {job.deleted > 0 && ` Cleaned up ${job.deleted} legacy copies.`}
                 </p>
               </div>
             </div>
@@ -259,6 +223,21 @@ const ImageOptimizer = () => {
                 <p className="text-sm font-medium">Job Cancelled</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Processed {job.processed} images before stopping. Saved {formatBytes(job.saved_bytes)}.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Failed */}
+        {job?.status === 'failed' && (
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-destructive mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Job Failed</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Processed {job.processed} images before failure. Saved {formatBytes(job.saved_bytes)}.
                 </p>
               </div>
             </div>
@@ -302,25 +281,11 @@ const ImageOptimizer = () => {
               Cancel
             </Button>
           )}
-
-          {job?.status === 'optimized' && (
-            <Button onClick={handleCleanup} variant="destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Originals & Reclaim Space
-            </Button>
-          )}
-
-          {job?.status === 'cleaning' && (
-            <Button disabled variant="destructive">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Cleaning up...
-            </Button>
-          )}
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Images are resized to max 1200px width and converted to JPEG at 80% quality.
-          Database references are updated automatically. Process runs server-side in background.
+          Images over 300KB are resized to max 1200px width and compressed as JPEG at 80% quality.
+          Files are replaced in-place — no duplicates created. Process runs server-side in background.
         </p>
       </CardContent>
     </Card>
