@@ -142,6 +142,42 @@ export type Database = {
           },
         ]
       }
+      backfill_jobs: {
+        Row: {
+          created_at: string | null
+          failed_images: number | null
+          id: string
+          last_error: string | null
+          last_post_slug: string | null
+          processed_images: number | null
+          status: string
+          total_images: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          failed_images?: number | null
+          id?: string
+          last_error?: string | null
+          last_post_slug?: string | null
+          processed_images?: number | null
+          status?: string
+          total_images?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          failed_images?: number | null
+          id?: string
+          last_error?: string | null
+          last_post_slug?: string | null
+          processed_images?: number | null
+          status?: string
+          total_images?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -1275,6 +1311,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_backfill_progress: {
+        Args: {
+          p_failed: number
+          p_job_id: string
+          p_last_slug: string
+          p_processed: number
+        }
+        Returns: undefined
       }
       increment_optimization_progress:
         | {
