@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
 import { useQueueStats } from '@/hooks/useQueueStats';
 import { useGenerationJob } from '@/hooks/useGenerationJob';
@@ -34,10 +37,28 @@ export default function ContentQueue() {
   } = useContentQueue(undefined, undefined, statusFilter);
 
   const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping, resumeJob, isResuming } = useGenerationJob();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Use separate hook for accurate global stats
   const { data: globalStats, isLoading: statsLoading } = useQueueStats();
-  
+
+  // Reset orphaned generating items
+  const resetStuckMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('reset_orphaned_generating_items');
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      toast({ title: `Reset ${count} stuck item(s) back to queued` });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to reset', description: error.message, variant: 'destructive' });
+    },
+  });
   const stats = globalStats || { queued: 0, generating: 0, generated: 0, published: 0, failed: 0, total: 0 };
 
   // Filter items
@@ -136,7 +157,12 @@ export default function ContentQueue() {
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <QueueStats stats={stats} />
+      <QueueStats
+        stats={stats}
+        isRunning={isRunning}
+        onResetStuck={() => resetStuckMutation.mutate()}
+        isResetting={resetStuckMutation.isPending}
+      />
 
       {/* Job-based progress indicator */}
       {jobToShow && (
