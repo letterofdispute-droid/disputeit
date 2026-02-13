@@ -69,25 +69,25 @@ const SubcategoryPage = () => {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://disputeletters.com/',
+        item: 'https://letterofdispute.com/',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Templates',
-        item: 'https://disputeletters.com/templates',
+        item: 'https://letterofdispute.com/templates',
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: category.name,
-        item: `https://disputeletters.com/templates/${category.id}`,
+        item: `https://letterofdispute.com/templates/${category.id}`,
       },
       {
         '@type': 'ListItem',
         position: 4,
         name: subcategoryInfo.name,
-        item: `https://disputeletters.com/templates/${category.id}/${subcategoryInfo.slug}`,
+        item: `https://letterofdispute.com/templates/${category.id}/${subcategoryInfo.slug}`,
       },
     ],
   };
@@ -103,7 +103,7 @@ const SubcategoryPage = () => {
       '@type': 'ListItem',
       position: index + 1,
       name: template.title,
-      url: `https://disputeletters.com/templates/${category.id}/${subcategoryInfo.slug}/${template.slug}`,
+      url: `https://letterofdispute.com/templates/${category.id}/${subcategoryInfo.slug}/${template.slug}`,
     })),
   };
 

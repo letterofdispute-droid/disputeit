@@ -29,13 +29,13 @@ const AllTemplatesPage = () => {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://disputeletters.com/',
+        item: 'https://letterofdispute.com/',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Templates',
-        item: 'https://disputeletters.com/templates',
+        item: 'https://letterofdispute.com/templates',
       },
     ],
   };
@@ -51,7 +51,7 @@ const AllTemplatesPage = () => {
       '@type': 'ItemList',
       name: category.name,
       numberOfItems: category.templateCount,
-      url: `https://disputeletters.com/templates/${category.id}`,
+      url: `https://letterofdispute.com/templates/${category.id}`,
     })),
   };
 

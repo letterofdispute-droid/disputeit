@@ -118,19 +118,19 @@ const CategoryPage = () => {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://disputeletters.com/',
+        item: 'https://letterofdispute.com/',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Templates',
-        item: 'https://disputeletters.com/templates',
+        item: 'https://letterofdispute.com/templates',
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: category.name,
-        item: `https://disputeletters.com/templates/${category.id}`,
+        item: `https://letterofdispute.com/templates/${category.id}`,
       },
     ],
   };
@@ -149,7 +149,7 @@ const CategoryPage = () => {
         '@type': 'ListItem',
         position: index + 1,
         name: template.title,
-        url: `https://disputeletters.com/templates/${category.id}/${subSlug}/${template.slug}`,
+        url: `https://letterofdispute.com/templates/${category.id}/${subSlug}/${template.slug}`,
       };
     }),
   };
