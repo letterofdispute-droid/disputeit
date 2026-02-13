@@ -1,45 +1,44 @@
 
 
-# Remove Pixabay Fallback -- Fail Fast with Admin Email Notification
+# Fix Blog Posts Not Loading
 
-## What Changes
+## Problem
+The `blog_posts` query on `/articles` is returning HTTP 500 errors. The page gets stuck showing skeleton loaders with no content because:
+1. The query errors but React Query retries keep it in "loading" state
+2. When it finally gives up, there's no error-state UI — the fallback to static data only checks if `dbPosts` is empty, not if the query errored
 
-The `fetch-category-images` function currently falls back to raw Pixabay URLs when storage upload fails. This is unacceptable because Pixabay URLs expire after 24 hours, causing broken images on the site.
+## Fix
 
-**New behavior:** If the image cannot be downloaded and self-hosted in storage, the function will:
-1. **Abort the operation** -- return `null` image with a clear error status
-2. **Send an admin notification email** via Resend directly within the function (no auth required since this is a system-level alert)
-3. The frontend (`useCategoryImage`) already handles missing images by showing CSS gradient fallbacks -- no frontend changes needed
+### 1. Reload schema cache (immediate)
+Run `NOTIFY pgrst, 'reload schema'` again to clear the stale cache that's causing the 500s.
 
-## Changes
+### 2. Make ArticlesPage resilient (`src/pages/ArticlesPage.tsx`)
+- Add `retry: 2` and `retryDelay: 1000` to both React Query calls (blog_posts and blog_categories)
+- Handle the **error state**: when the query fails after retries, fall back to static blog posts from `src/data/blogPosts.ts` instead of showing empty skeletons forever
+- Change the loading check: only show skeletons when `isLoading && !error` — if there's an error, skip straight to the static fallback
 
-### 1. `supabase/functions/fetch-category-images/index.ts`
+### 3. Make ArticleCategoryPage resilient (`src/pages/ArticleCategoryPage.tsx`)
+- Same pattern: add retry + error fallback to static data
 
-- Remove all Pixabay URL fallback logic (lines 134-183 where `selfHosted` flag and fallback URLs are used)
-- If image download or storage upload fails:
-  - Send an email to admin (`noreply@mail.letterofdispute.com` sender, admin email hardcoded or from env) using Resend API directly in the function
-  - Return `{ image: null, error: "Image hosting failed", notified: true }` with HTTP 200 (not 500, so the frontend handles it gracefully)
-- Remove the 20-hour Pixabay cache expiry path -- all cached images will be self-hosted with 1-year expiry
-- If caching to the `category_images` table also fails (DB timeout), skip caching and return the error with notification
+### Technical Detail
 
-### 2. Admin Email Content
+Current code (line ~136):
+```typescript
+const posts = dbPosts && dbPosts.length > 0 ? dbPosts : staticBlogPosts.map(...)
+```
 
-- **From:** `Letter of Dispute <noreply@mail.letterofdispute.com>`
-- **To:** Admin email (will need an `ADMIN_EMAIL` secret or hardcode it)
-- **Subject:** `[Alert] Category image hosting failed: {categoryId}`
-- **Body:** Details including category ID, context key, search query, and the specific error message
+This only works when `dbPosts` is `undefined` (no error). But during an error, React Query may set data to `undefined` **and** `isLoading` to `false` only after all retries — during retries it shows loading forever. The fix adds:
 
-### 3. Frontend Behavior (no code changes needed)
+```typescript
+const { data: dbPosts, isLoading, isError } = useQuery({
+  queryKey: ['blog-posts'],
+  queryFn: async () => { ... },
+  retry: 2,
+  retryDelay: 1000,
+});
 
-The `useCategoryImage` hook already handles `data?.error` by setting the error state, and the `FALLBACK_GRADIENTS` map provides CSS gradient backgrounds for each category when no image is available. This means the UI will show colored gradient cards instead of broken images.
+// Show skeletons only while genuinely loading (not errored)
+// When errored, fall through to static fallback immediately
+```
 
-## Secret Needed
-
-An `ADMIN_EMAIL` secret needs to be configured so the function knows where to send failure alerts. I will ask you to provide this before implementing.
-
-## Technical Details
-
-- Resend is imported directly in the edge function (same pattern as `send-admin-email`)
-- The email sending is wrapped in try/catch so if even the email fails, the function still returns gracefully
-- No changes to `useCategoryImage.ts` or any frontend code
-
+This ensures blog content is always visible even when the database API is temporarily down.
