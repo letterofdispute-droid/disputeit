@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/pagination';
 
 const POSTS_PER_PAGE = 12;
+const LEAN_SELECT = 'slug, title, excerpt, category, category_slug, author, published_at, read_time, featured_image_url';
 
 const ArticleCategoryPage = () => {
   const { category } = useParams<{ category: string }>();
@@ -28,30 +29,31 @@ const ArticleCategoryPage = () => {
   
   const categoryData = category ? getBlogCategoryBySlug(category) : undefined;
 
-  // Fetch posts from database filtered by category
-  const { data: dbPosts, isLoading, isError } = useQuery({
-    queryKey: ['blog-posts-category', category],
+  const offset = (currentPage - 1) * POSTS_PER_PAGE;
+
+  // Fetch posts with server-side pagination
+  const { data: queryResult, isLoading, isError } = useQuery({
+    queryKey: ['blog-posts-category', category, currentPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select(LEAN_SELECT, { count: 'exact' })
         .eq('status', 'published')
         .eq('category_slug', category)
-        .order('published_at', { ascending: false, nullsFirst: false });
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .range(offset, offset + POSTS_PER_PAGE - 1);
       
       if (error) throw error;
-      return data;
+      return { posts: data || [], totalCount: count || 0 };
     },
     enabled: !!category,
     retry: 2,
     retryDelay: 1000,
   });
 
-  // Pagination logic
-  const posts = dbPosts || [];
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
-  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-  const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+  const posts = queryResult?.posts || [];
+  const totalCount = queryResult?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setSearchParams({ page: page.toString() });
@@ -68,19 +70,11 @@ const ArticleCategoryPage = () => {
       }
     } else {
       pages.push(1);
-      
-      if (currentPage > 3) {
-        pages.push('ellipsis');
-      }
-      
+      if (currentPage > 3) pages.push('ellipsis');
       for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
         pages.push(i);
       }
-      
-      if (currentPage < totalPages - 2) {
-        pages.push('ellipsis');
-      }
-      
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
       pages.push(totalPages);
     }
     
@@ -103,13 +97,9 @@ const ArticleCategoryPage = () => {
       <section className="bg-muted/50 py-4 border-b border-border">
         <div className="container-wide">
           <nav className="flex items-center gap-2 text-sm">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
-              Home
-            </Link>
+            <Link to="/" className="text-muted-foreground hover:text-foreground">Home</Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Link to="/articles" className="text-muted-foreground hover:text-foreground">
-              Knowledge Center
-            </Link>
+            <Link to="/articles" className="text-muted-foreground hover:text-foreground">Knowledge Center</Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <span className="text-foreground font-medium">{categoryData.name}</span>
           </nav>
@@ -124,9 +114,7 @@ const ArticleCategoryPage = () => {
             <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
               {categoryData.name}
             </h1>
-            <p className="text-lg text-primary-foreground/80">
-              {categoryData.description}
-            </p>
+            <p className="text-lg text-primary-foreground/80">{categoryData.description}</p>
           </div>
         </div>
       </section>
@@ -136,9 +124,7 @@ const ArticleCategoryPage = () => {
         <div className="container-wide">
           <div className="flex flex-wrap items-center gap-3">
             <Link to="/articles">
-              <Badge variant="outline" className="cursor-pointer hover:bg-muted">
-                All Articles
-              </Badge>
+              <Badge variant="outline" className="cursor-pointer hover:bg-muted">All Articles</Badge>
             </Link>
             {blogCategories.map((cat) => (
               <Link key={cat.slug} to={`/articles/${cat.slug}`}>
@@ -158,7 +144,6 @@ const ArticleCategoryPage = () => {
       <section className="py-12 md:py-16 bg-background">
         <div className="container-wide">
           {isLoading && !isError ? (
-            // Loading skeleton
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
@@ -176,33 +161,24 @@ const ArticleCategoryPage = () => {
                 </Card>
               ))}
             </div>
-          ) : paginatedPosts.length > 0 ? (
+          ) : posts.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedPosts.map((post) => (
+                {posts.map((post) => (
                   <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
                     <CardHeader>
-                      <Badge variant="secondary" className="w-fit mb-2">
-                        {post.category}
-                      </Badge>
+                      <Badge variant="secondary" className="w-fit mb-2">{post.category}</Badge>
                       <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">
-                        <Link to={`/articles/${post.category_slug}/${post.slug}`}>
-                          {post.title}
-                        </Link>
+                        <Link to={`/articles/${post.category_slug}/${post.slug}`}>{post.title}</Link>
                       </CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {post.excerpt}
-                      </CardDescription>
+                      <CardDescription className="line-clamp-2">{post.excerpt}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            {post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric' 
-                            }) : 'Draft'}
+                            {post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Draft'}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
@@ -222,13 +198,9 @@ const ArticleCategoryPage = () => {
                     <PaginationContent>
                       {currentPage > 1 && (
                         <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            className="cursor-pointer"
-                          />
+                          <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} className="cursor-pointer" />
                         </PaginationItem>
                       )}
-                      
                       {getPageNumbers().map((page, index) => (
                         <PaginationItem key={index}>
                           {page === 'ellipsis' ? (
@@ -244,13 +216,9 @@ const ArticleCategoryPage = () => {
                           )}
                         </PaginationItem>
                       ))}
-                      
                       {currentPage < totalPages && (
                         <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            className="cursor-pointer"
-                          />
+                          <PaginationNext onClick={() => handlePageChange(currentPage + 1)} className="cursor-pointer" />
                         </PaginationItem>
                       )}
                     </PaginationContent>
@@ -259,15 +227,11 @@ const ArticleCategoryPage = () => {
               )}
             </>
           ) : (
-            // Empty state
             <div className="text-center py-12">
               <div className="max-w-md mx-auto">
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  No articles in this category yet
-                </h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No articles in this category yet</h3>
                 <p className="text-muted-foreground mb-6">
-                  We're working on adding more content to the {categoryData.name} category. 
-                  Check back soon or explore our other articles.
+                  We're working on adding more content to the {categoryData.name} category. Check back soon or explore our other articles.
                 </p>
                 <Button variant="outline" asChild>
                   <Link to="/articles">View All Articles</Link>
@@ -281,16 +245,12 @@ const ArticleCategoryPage = () => {
       {/* CTA Section */}
       <section className="py-12 md:py-16 bg-muted/30">
         <div className="container-wide text-center">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-4">
-            Need Help With a Dispute?
-          </h2>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground mb-4">Need Help With a Dispute?</h2>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
             Our pre-validated letter templates make it easy to create professional complaint letters.
           </p>
           <Button variant="accent" size="lg" asChild>
-            <Link to="/#letters">
-              Create Your Letter <ArrowRight className="h-5 w-5" />
-            </Link>
+            <Link to="/#letters">Create Your Letter <ArrowRight className="h-5 w-5" /></Link>
           </Button>
         </div>
       </section>
