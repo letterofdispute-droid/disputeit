@@ -1,73 +1,45 @@
 
 
-# Fix: Self-Chain Timeout in Bulk Article Generation
+# Remove Pixabay Fallback -- Fail Fast with Admin Email Notification
 
-## Problem
+## What Changes
 
-The `selfChainWithRetry` function awaits the full HTTP response of the next chained edge function call. Since each article now takes longer (with proper image compression), the connection exceeds the ~150-second edge function limit. The downstream function finishes its work, but the chain breaks because the caller's connection was killed.
+The `fetch-category-images` function currently falls back to raw Pixabay URLs when storage upload fails. This is unacceptable because Pixabay URLs expire after 24 hours, causing broken images on the site.
 
-## Why This Is the Correct Fix (Not a Workaround)
+**New behavior:** If the image cannot be downloaded and self-hosted in storage, the function will:
+1. **Abort the operation** -- return `null` image with a clear error status
+2. **Send an admin notification email** via Resend directly within the function (no auth required since this is a system-level alert)
+3. The frontend (`useCategoryImage`) already handles missing images by showing CSS gradient fallbacks -- no frontend changes needed
 
-The self-chain's only job is to **trigger** the next invocation — it never uses the response data. Awaiting the full response was always unnecessary; it just didn't cause problems before because articles generated fast enough. The AbortController pattern is the standard Web/Deno API approach for "fire a request and confirm receipt."
+## Changes
 
-Nothing else in the system is affected:
-- Article processing, image generation, error handling, bail-out logic, job progress tracking, and pg_cron recovery all remain untouched.
-- The only change is HOW LONG the self-chain waits for acknowledgment (10 seconds instead of the full processing time).
+### 1. `supabase/functions/fetch-category-images/index.ts`
 
-## Technical Changes
+- Remove all Pixabay URL fallback logic (lines 134-183 where `selfHosted` flag and fallback URLs are used)
+- If image download or storage upload fails:
+  - Send an email to admin (`noreply@mail.letterofdispute.com` sender, admin email hardcoded or from env) using Resend API directly in the function
+  - Return `{ image: null, error: "Image hosting failed", notified: true }` with HTTP 200 (not 500, so the frontend handles it gracefully)
+- Remove the 20-hour Pixabay cache expiry path -- all cached images will be self-hosted with 1-year expiry
+- If caching to the `category_images` table also fails (DB timeout), skip caching and return the error with notification
 
-### File: `supabase/functions/bulk-generate-articles/index.ts`
+### 2. Admin Email Content
 
-Replace `selfChainWithRetry` (lines 1159-1185) with an AbortController-based version:
+- **From:** `Letter of Dispute <noreply@mail.letterofdispute.com>`
+- **To:** Admin email (will need an `ADMIN_EMAIL` secret or hardcode it)
+- **Subject:** `[Alert] Category image hosting failed: {categoryId}`
+- **Body:** Details including category ID, context key, search query, and the specific error message
 
-```typescript
-async function selfChainWithRetry(jobId: string): Promise<void> {
-  const selfUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-generate-articles`;
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const headers = {
-    'Authorization': `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json',
-  };
-  const body = JSON.stringify({ jobId });
+### 3. Frontend Behavior (no code changes needed)
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      console.log(`[SELF_CHAIN] Attempt ${attempt} for job ${jobId}`);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+The `useCategoryImage` hook already handles `data?.error` by setting the error state, and the `FALLBACK_GRADIENTS` map provides CSS gradient backgrounds for each category when no image is available. This means the UI will show colored gradient cards instead of broken images.
 
-      try {
-        const response = await fetch(selfUrl, {
-          method: 'POST', headers, body,
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (response.ok || response.status === 504) {
-          console.log(`[SELF_CHAIN] Attempt ${attempt} accepted (${response.status})`);
-          return;
-        }
-        console.warn(`[SELF_CHAIN] Attempt ${attempt} got ${response.status}`);
-      } catch (fetchErr) {
-        clearTimeout(timeout);
-        if (fetchErr instanceof DOMException && fetchErr.name === 'AbortError') {
-          console.log(`[SELF_CHAIN] Attempt ${attempt} timed out (expected) -- function is running`);
-          return; // Success: function was invoked
-        }
-        throw fetchErr;
-      }
-    } catch (err) {
-      console.warn(`[SELF_CHAIN] Attempt ${attempt} error:`, err);
-    }
-    if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
-  }
-  console.error(`[SELF_CHAIN] CRITICAL: failed after 2 attempts for job ${jobId}. pg_cron will recover.`);
-}
-```
+## Secret Needed
 
-### Deployment
+An `ADMIN_EMAIL` secret needs to be configured so the function knows where to send failure alerts. I will ask you to provide this before implementing.
 
-The `bulk-generate-articles` edge function will be redeployed automatically.
+## Technical Details
 
-### Testing
+- Resend is imported directly in the edge function (same pattern as `send-admin-email`)
+- The email sending is wrapped in try/catch so if even the email fails, the function still returns gracefully
+- No changes to `useCategoryImage.ts` or any frontend code
 
-Generate a batch of 10-20 articles from the queue to confirm the chain no longer breaks.
