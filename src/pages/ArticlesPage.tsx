@@ -108,7 +108,7 @@ const ArticlesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
-  const { data: dbPosts, isLoading } = useQuery({
+  const { data: dbPosts, isLoading, isError } = useQuery({
     queryKey: ['blog-posts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -119,6 +119,8 @@ const ArticlesPage = () => {
       if (error) throw error;
       return data as BlogPost[];
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { data: dbCategories } = useQuery({
@@ -131,9 +133,11 @@ const ArticlesPage = () => {
       if (error) throw error;
       return data;
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  const posts = dbPosts && dbPosts.length > 0
+  const posts = (!isError && dbPosts && dbPosts.length > 0)
     ? dbPosts
     : staticBlogPosts.map(p => ({
         slug: p.slug,
@@ -219,8 +223,8 @@ const ArticlesPage = () => {
         </div>
       </section>
 
-      {/* Loading State */}
-      {isLoading && (
+      {/* Loading State — skip if errored so fallback renders immediately */}
+      {isLoading && !isError && (
         <section className="py-12 bg-background">
           <div className="container-wide">
             <Skeleton className="w-full h-[400px] rounded-lg mb-8" />
@@ -233,7 +237,7 @@ const ArticlesPage = () => {
       )}
 
       {/* Featured Article Hero (page 1 only) */}
-      {!isLoading && latestPost && currentPage === 1 && (
+      {(!isLoading || isError) && latestPost && currentPage === 1 && (
         <section className="py-10 md:py-14 bg-background">
           <div className="container-wide">
             <Link
@@ -309,7 +313,7 @@ const ArticlesPage = () => {
       )}
 
       {/* Articles Grid */}
-      {!isLoading && paginatedPosts.length > 0 && (
+      {(!isLoading || isError) && paginatedPosts.length > 0 && (
         <section className="py-10 md:py-14 bg-muted/30">
           <div className="container-wide">
             {/* Subtle divider instead of heading */}
@@ -369,7 +373,7 @@ const ArticlesPage = () => {
         </section>
       )}
 
-      {!isLoading && paginatedPosts.length === 0 && !latestPost && (
+      {(!isLoading || isError) && paginatedPosts.length === 0 && !latestPost && (
         <section className="py-16 bg-background">
           <div className="container-wide text-center">
             <p className="text-muted-foreground">No articles published yet. Check back soon!</p>

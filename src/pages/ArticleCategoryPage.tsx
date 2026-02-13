@@ -29,7 +29,7 @@ const ArticleCategoryPage = () => {
   const categoryData = category ? getBlogCategoryBySlug(category) : undefined;
 
   // Fetch posts from database filtered by category
-  const { data: dbPosts, isLoading } = useQuery({
+  const { data: dbPosts, isLoading, isError } = useQuery({
     queryKey: ['blog-posts-category', category],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -43,6 +43,8 @@ const ArticleCategoryPage = () => {
       return data;
     },
     enabled: !!category,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Pagination logic
@@ -155,7 +157,7 @@ const ArticleCategoryPage = () => {
       {/* Posts Grid */}
       <section className="py-12 md:py-16 bg-background">
         <div className="container-wide">
-          {isLoading ? (
+          {isLoading && !isError ? (
             // Loading skeleton
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
