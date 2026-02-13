@@ -54,12 +54,17 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
         if (statusFilter && statusFilter !== 'all') {
           query = query.eq('status', statusFilter);
         }
+        // Server-side category filter via the joined content_plans
+        if (categoryId) {
+          query = query.eq('content_plans.category_id', categoryId);
+        }
         query = query.limit(1000);
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
+      // If categoryId is set, filter out items where the join didn't match
       if (categoryId && data) {
         return data.filter((item: any) => 
           item.content_plans?.category_id === categoryId
