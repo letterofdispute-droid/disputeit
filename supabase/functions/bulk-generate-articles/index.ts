@@ -1168,20 +1168,34 @@ async function selfChainWithRetry(jobId: string): Promise<void> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       console.log(`[SELF_CHAIN] Attempt ${attempt} for job ${jobId}`);
-      const response = await fetch(selfUrl, { method: 'POST', headers, body });
-      if (response.ok) {
-        console.log(`[SELF_CHAIN] Attempt ${attempt} succeeded for job ${jobId}`);
-        return;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      try {
+        const response = await fetch(selfUrl, {
+          method: 'POST', headers, body,
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (response.ok || response.status === 504) {
+          console.log(`[SELF_CHAIN] Attempt ${attempt} accepted (${response.status})`);
+          return;
+        }
+        console.warn(`[SELF_CHAIN] Attempt ${attempt} got ${response.status}`);
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        if (fetchErr instanceof DOMException && fetchErr.name === 'AbortError') {
+          console.log(`[SELF_CHAIN] Attempt ${attempt} timed out (expected) -- function is running`);
+          return; // Success: function was invoked
+        }
+        throw fetchErr;
       }
-      console.warn(`[SELF_CHAIN] Attempt ${attempt} got ${response.status} for job ${jobId}`);
     } catch (err) {
-      console.error(`[SELF_CHAIN] Attempt ${attempt} failed for job ${jobId}:`, err);
+      console.warn(`[SELF_CHAIN] Attempt ${attempt} error:`, err);
     }
-    if (attempt < 2) {
-      await new Promise(r => setTimeout(r, 2000));
-    }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
   }
-  console.error(`[SELF_CHAIN] CRITICAL: selfChain failed after 2 attempts for job ${jobId}. pg_cron will auto-recover.`);
+  console.error(`[SELF_CHAIN] CRITICAL: failed after 2 attempts for job ${jobId}. pg_cron will recover.`);
 }
 
 // ============================================
