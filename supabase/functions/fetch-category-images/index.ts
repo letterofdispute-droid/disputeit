@@ -1,4 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
+
+const ADMIN_EMAIL = "letterofdispute@gmail.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,22 +22,8 @@ interface PixabayResponse {
   totalHits: number;
 }
 
-interface CategoryImage {
-  id: string;
-  category_id: string;
-  context_key: string;
-  image_url: string;
-  thumbnail_url: string;
-  large_url: string;
-  pixabay_id: string;
-  search_query: string;
-  alt_text: string;
-  expires_at: string;
-}
-
 // Generate SEO-friendly alt text
 function generateAltText(categoryName: string, searchQuery: string, tags: string): string {
-  // Use Pixabay tags if available, otherwise fall back to search query
   const descriptor = tags ? tags.split(',')[0].trim() : searchQuery;
   return `${categoryName} - ${descriptor} imagery`;
 }
@@ -48,8 +37,41 @@ async function downloadImage(url: string): Promise<ArrayBuffer> {
   return await response.arrayBuffer();
 }
 
+// Send admin alert email when image hosting fails
+async function sendAdminAlert(categoryId: string, contextKey: string, searchQuery: string, errorMessage: string): Promise<void> {
+  try {
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured — cannot send admin alert");
+      return;
+    }
+
+    const resend = new Resend(resendApiKey);
+    await resend.emails.send({
+      from: "Letter of Dispute <noreply@mail.letterofdispute.com>",
+      to: [ADMIN_EMAIL],
+      subject: `[Alert] Category image hosting failed: ${categoryId}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">⚠️ Image Hosting Failure</h2>
+          <p>The system failed to download and self-host a category image.</p>
+          <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Category ID</td><td style="padding: 8px; border: 1px solid #ddd;">${categoryId}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Context Key</td><td style="padding: 8px; border: 1px solid #ddd;">${contextKey}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Search Query</td><td style="padding: 8px; border: 1px solid #ddd;">${searchQuery}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Error</td><td style="padding: 8px; border: 1px solid #ddd; color: #dc2626;">${errorMessage}</td></tr>
+          </table>
+          <p style="color: #666; font-size: 12px;">The frontend will display a gradient fallback for this category. No Pixabay URLs were served.</p>
+        </div>
+      `,
+    });
+    console.log(`Admin alert email sent for ${categoryId}/${contextKey}`);
+  } catch (emailErr) {
+    console.error("Failed to send admin alert email:", emailErr);
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -110,7 +132,12 @@ Deno.serve(async (req) => {
     const pixabayResponse = await fetch(pixabayUrl.toString());
     
     if (!pixabayResponse.ok) {
-      throw new Error(`Pixabay API error: ${pixabayResponse.status}`);
+      const errMsg = `Pixabay API error: ${pixabayResponse.status}`;
+      await sendAdminAlert(categoryId, contextKey, searchQuery, errMsg);
+      return new Response(
+        JSON.stringify({ image: null, error: errMsg, notified: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const pixabayData: PixabayResponse = await pixabayResponse.json();
@@ -131,61 +158,64 @@ Deno.serve(async (req) => {
     ).join(' ');
     const altText = generateAltText(displayName, searchQuery, hit.tags);
 
-    // Try to download and self-host, but fall back to Pixabay URLs if storage times out
-    let imageUrl = hit.largeImageURL;
-    let thumbnailUrl = hit.previewURL;
-    let selfHosted = false;
-
+    // Download and self-host — NO fallback to Pixabay URLs
+    console.log(`Downloading image from Pixabay...`);
+    let imageBuffer: ArrayBuffer;
     try {
-      console.log(`Downloading image from Pixabay...`);
-      const imageBuffer = await downloadImage(hit.largeImageURL);
-      
-      const storagePath = `categories/${categoryId}/${contextKey}.jpg`;
-      const thumbnailPath = `categories/${categoryId}/${contextKey}-thumb.jpg`;
-      
-      console.log(`Uploading to storage: ${storagePath}`);
-      const { error: uploadError } = await supabase.storage
+      imageBuffer = await downloadImage(hit.largeImageURL);
+    } catch (downloadErr) {
+      const errMsg = `Image download failed: ${downloadErr instanceof Error ? downloadErr.message : String(downloadErr)}`;
+      console.error(errMsg);
+      await sendAdminAlert(categoryId, contextKey, searchQuery, errMsg);
+      return new Response(
+        JSON.stringify({ image: null, error: "Image hosting failed", notified: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const storagePath = `categories/${categoryId}/${contextKey}.jpg`;
+    const thumbnailPath = `categories/${categoryId}/${contextKey}-thumb.jpg`;
+
+    console.log(`Uploading to storage: ${storagePath}`);
+    const { error: uploadError } = await supabase.storage
+      .from("blog-images")
+      .upload(storagePath, imageBuffer, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      const errMsg = `Storage upload failed: ${uploadError.message}`;
+      console.error(errMsg);
+      await sendAdminAlert(categoryId, contextKey, searchQuery, errMsg);
+      return new Response(
+        JSON.stringify({ image: null, error: "Image hosting failed", notified: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Upload thumbnail (non-fatal if it fails)
+    try {
+      const thumbnailBuffer = await downloadImage(hit.previewURL);
+      await supabase.storage
         .from("blog-images")
-        .upload(storagePath, imageBuffer, {
+        .upload(thumbnailPath, thumbnailBuffer, {
           contentType: "image/jpeg",
           upsert: true,
         });
-
-      if (uploadError) {
-        console.warn("Storage upload failed, using Pixabay URLs as fallback:", uploadError.message);
-      } else {
-        // Upload thumbnail too
-        try {
-          const thumbnailBuffer = await downloadImage(hit.previewURL);
-          await supabase.storage
-            .from("blog-images")
-            .upload(thumbnailPath, thumbnailBuffer, {
-              contentType: "image/jpeg",
-              upsert: true,
-            });
-        } catch (thumbErr) {
-          console.warn("Thumbnail upload failed, using Pixabay thumbnail URL");
-        }
-
-        const { data: { publicUrl: storedImageUrl } } = supabase.storage
-          .from("blog-images")
-          .getPublicUrl(storagePath);
-        const { data: { publicUrl: storedThumbUrl } } = supabase.storage
-          .from("blog-images")
-          .getPublicUrl(thumbnailPath);
-
-        imageUrl = storedImageUrl;
-        thumbnailUrl = storedThumbUrl;
-        selfHosted = true;
-      }
-    } catch (storageErr) {
-      console.warn("Image hosting failed, using Pixabay URLs as fallback:", storageErr);
+    } catch (thumbErr) {
+      console.warn("Thumbnail upload failed, main image still hosted successfully");
     }
 
-    // Cache expiry: 1 year if self-hosted, 20 hours if using Pixabay URLs
-    const expiresAt = selfHosted
-      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-      : new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString();
+    const { data: { publicUrl: imageUrl } } = supabase.storage
+      .from("blog-images")
+      .getPublicUrl(storagePath);
+    const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+      .from("blog-images")
+      .getPublicUrl(thumbnailPath);
+
+    // All self-hosted images get 1-year cache
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
     // Delete old cached images for this category/context
     try {
@@ -225,7 +255,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Successfully processed image for ${categoryId}/${contextKey} (self-hosted: ${selfHosted})`);
+    console.log(`Successfully self-hosted image for ${categoryId}/${contextKey}`);
     
     return new Response(
       JSON.stringify({ image: insertedImage, cached: false }),
