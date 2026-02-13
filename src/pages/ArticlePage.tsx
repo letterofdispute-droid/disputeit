@@ -42,6 +42,7 @@ interface BlogPost {
   category_slug: string;
   author: string;
   published_at: string | null;
+  updated_at?: string | null;
   read_time: string | null;
   featured_image_url: string | null;
   featured: boolean;
@@ -429,7 +430,7 @@ const ArticlePage = () => {
           },
         },
         datePublished: post.published_at,
-        dateModified: post.published_at,
+        dateModified: post.updated_at || post.published_at,
         image: post.featured_image_url || undefined,
         mainEntityOfPage: {
           "@type": "WebPage",
