@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -14,11 +13,12 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 
 const POSTS_PER_PAGE = 12;
 
-interface BlogPost {
+const LEAN_SELECT = 'slug, title, excerpt, category, category_slug, author, published_at, read_time, featured_image_url, featured, views';
+
+interface BlogPostCard {
   slug: string;
   title: string;
   excerpt: string | null;
-  content: string;
   category: string;
   category_slug: string;
   author: string;
@@ -29,12 +29,6 @@ interface BlogPost {
   views: number;
 }
 
-const getReadTime = (post: BlogPost) => {
-  if (post.read_time) return post.read_time;
-  const words = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
-  return `${Math.ceil(words / 200)} min read`;
-};
-
 const formatDate = (dateStr: string | null, style: 'short' | 'long' = 'short') => {
   if (!dateStr) return '';
   const opts: Intl.DateTimeFormatOptions = style === 'long'
@@ -44,7 +38,7 @@ const formatDate = (dateStr: string | null, style: 'short' | 'long' = 'short') =
 };
 
 /* ─── Article Card (shared for grid) ─── */
-const ArticleCard = ({ post, getCategoryName, size = 'default' }: { post: BlogPost; getCategoryName: (p: BlogPost) => string; size?: 'large' | 'default' }) => (
+const ArticleCard = ({ post, getCategoryName, size = 'default' }: { post: BlogPostCard; getCategoryName: (p: BlogPostCard) => string; size?: 'large' | 'default' }) => (
   <Link
     to={`/articles/${post.category_slug}/${post.slug}`}
     className="group flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden hover:shadow-elevated hover:border-primary/30 transition-all duration-300"
@@ -97,7 +91,7 @@ const ArticleCard = ({ post, getCategoryName, size = 'default' }: { post: BlogPo
         </span>
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          {getReadTime(post)}
+          {post.read_time || '5 min read'}
         </span>
       </div>
     </div>
@@ -108,16 +102,39 @@ const ArticlesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
-  const { data: dbPosts, isLoading, isError } = useQuery({
-    queryKey: ['blog-posts'],
+  // Hero post — only fetched on page 1
+  const { data: heroPost, isLoading: heroLoading, isError: heroError } = useQuery({
+    queryKey: ['blog-hero-post'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select(LEAN_SELECT)
         .eq('status', 'published')
-        .order('published_at', { ascending: false, nullsFirst: false });
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .single();
       if (error) throw error;
-      return data as BlogPost[];
+      return data as BlogPostCard;
+    },
+    retry: 2,
+    retryDelay: 1000,
+    enabled: currentPage === 1,
+  });
+
+  // Grid posts — server-side paginated
+  // On page 1 we offset by 1 to skip the hero post
+  const gridOffset = currentPage === 1 ? 1 : (currentPage - 1) * POSTS_PER_PAGE + 1;
+  const { data: gridData, isLoading: gridLoading, isError: gridError } = useQuery({
+    queryKey: ['blog-posts-page', currentPage],
+    queryFn: async () => {
+      const { data, error, count } = await supabase
+        .from('blog_posts')
+        .select(LEAN_SELECT, { count: 'exact' })
+        .eq('status', 'published')
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .range(gridOffset, gridOffset + POSTS_PER_PAGE - 1);
+      if (error) throw error;
+      return { posts: (data || []) as BlogPostCard[], totalCount: count || 0 };
     },
     retry: 2,
     retryDelay: 1000,
@@ -137,37 +154,42 @@ const ArticlesPage = () => {
     retryDelay: 1000,
   });
 
-  const posts = (!isError && dbPosts && dbPosts.length > 0)
-    ? dbPosts
-    : staticBlogPosts.map(p => ({
-        slug: p.slug,
-        title: p.title,
-        excerpt: p.excerpt,
-        content: p.content,
-        category: p.category,
-        category_slug: p.categorySlug,
-        author: p.author,
-        published_at: p.publishedAt,
-        read_time: p.readTime,
-        featured_image_url: p.image || null,
-        featured: p.featured || false,
-        views: 0,
-      }));
+  // Determine if we use DB data or static fallback
+  const useStaticFallback = (heroError && gridError) || (!heroLoading && !gridLoading && heroError && gridError);
+
+  const staticPosts: BlogPostCard[] = staticBlogPosts.map(p => ({
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    category: p.category,
+    category_slug: p.categorySlug,
+    author: p.author,
+    published_at: p.publishedAt,
+    read_time: p.readTime,
+    featured_image_url: p.image || null,
+    featured: p.featured || false,
+    views: 0,
+  }));
+
+  const latestPost = useStaticFallback ? staticPosts[0] : heroPost;
+  const paginatedPosts = useStaticFallback
+    ? staticPosts.slice(1, 1 + POSTS_PER_PAGE)
+    : (gridData?.posts || []);
+  // Total count excludes the hero post
+  const totalGridPosts = useStaticFallback
+    ? Math.max(0, staticPosts.length - 1)
+    : Math.max(0, (gridData?.totalCount || 0) - 1);
+  const totalPages = Math.ceil(totalGridPosts / POSTS_PER_PAGE);
 
   const categories = dbCategories && dbCategories.length > 0 ? dbCategories : blogCategories;
 
-  const getCategoryName = (post: BlogPost) => {
+  const getCategoryName = (post: BlogPostCard) => {
     const cat = categories.find(c => c.slug === post.category_slug);
     return cat?.name || post.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
-  // Latest post is the hero (page 1 only), rest go into the grid
-  const latestPost = posts[0] ?? null;
-  const gridPosts = currentPage === 1 ? posts.slice(1) : posts;
-  const totalGridPosts = posts.length > 1 ? posts.length - 1 : 0;
-  const totalPages = Math.ceil(totalGridPosts / POSTS_PER_PAGE);
-  const pageStartIndex = (currentPage - 1) * POSTS_PER_PAGE;
-  const paginatedPosts = gridPosts.slice(pageStartIndex, pageStartIndex + POSTS_PER_PAGE);
+  const isLoading = (heroLoading && currentPage === 1) || gridLoading;
+  const isError = heroError && gridError;
 
   // Split paginated posts: first 2 are "large", rest are compact grid
   const largePosts = paginatedPosts.slice(0, 2);
@@ -297,7 +319,7 @@ const ArticlesPage = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {getReadTime(latestPost)}
+                    {latestPost.read_time || '5 min read'}
                   </span>
                   {latestPost.views > 0 && (
                     <span className="flex items-center gap-1">
