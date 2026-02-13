@@ -59,6 +59,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const initializeAuth = async () => {
+      // Safety timeout: if auth initialization hangs (e.g. network issues), stop loading after 8s
+      const safetyTimeout = setTimeout(() => {
+        if (isMounted) {
+          console.warn('[Auth] Initialization timed out — setting isLoading=false');
+          setIsLoading(false);
+        }
+      }, 8000);
+
       try {
         // STEP 1: Process OAuth token if present in URL
         const oauthResult = await processOAuthToken();
@@ -79,7 +87,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           await fetchProfile(session.user.id);
         }
+      } catch (err) {
+        console.warn('[Auth] Initialization error:', err);
       } finally {
+        clearTimeout(safetyTimeout);
         if (isMounted) {
           setIsLoading(false);
         }
