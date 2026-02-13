@@ -1,44 +1,56 @@
 
 
-# Fix Blog Posts Not Loading
+# Implement Server-Side Pagination for Blog Posts
 
 ## Problem
-The `blog_posts` query on `/articles` is returning HTTP 500 errors. The page gets stuck showing skeleton loaders with no content because:
-1. The query errors but React Query retries keep it in "loading" state
-2. When it finally gives up, there's no error-state UI — the fallback to static data only checks if `dbPosts` is empty, not if the query errored
+
+The `/articles` page fetches **all ~2,800 published blog posts** in a single query using `select('*')`. This means:
+- Full HTML `content` for every post is transferred (huge payload)
+- PostgREST silently caps results at 1,000 rows, so posts beyond that are invisible
+- The heavy query strains the database and contributes to 503/500 errors
+- Only 12 posts are displayed per page, making 99%+ of fetched data wasted
 
 ## Fix
 
-### 1. Reload schema cache (immediate)
-Run `NOTIFY pgrst, 'reload schema'` again to clear the stale cache that's causing the 500s.
+### 1. Server-side pagination with lean column selection (`ArticlesPage.tsx`)
 
-### 2. Make ArticlesPage resilient (`src/pages/ArticlesPage.tsx`)
-- Add `retry: 2` and `retryDelay: 1000` to both React Query calls (blog_posts and blog_categories)
-- Handle the **error state**: when the query fails after retries, fall back to static blog posts from `src/data/blogPosts.ts` instead of showing empty skeletons forever
-- Change the loading check: only show skeletons when `isLoading && !error` — if there's an error, skip straight to the static fallback
-
-### 3. Make ArticleCategoryPage resilient (`src/pages/ArticleCategoryPage.tsx`)
-- Same pattern: add retry + error fallback to static data
-
-### Technical Detail
-
-Current code (line ~136):
-```typescript
-const posts = dbPosts && dbPosts.length > 0 ? dbPosts : staticBlogPosts.map(...)
-```
-
-This only works when `dbPosts` is `undefined` (no error). But during an error, React Query may set data to `undefined` **and** `isLoading` to `false` only after all retries — during retries it shows loading forever. The fix adds:
+Replace the "fetch everything" query with a paginated query that only selects the columns needed for the card UI:
 
 ```typescript
-const { data: dbPosts, isLoading, isError } = useQuery({
-  queryKey: ['blog-posts'],
-  queryFn: async () => { ... },
-  retry: 2,
-  retryDelay: 1000,
-});
-
-// Show skeletons only while genuinely loading (not errored)
-// When errored, fall through to static fallback immediately
+const { data, error, count } = await supabase
+  .from('blog_posts')
+  .select('slug, title, excerpt, category, category_slug, author, published_at, read_time, featured_image_url, featured, views', { count: 'exact' })
+  .eq('status', 'published')
+  .order('published_at', { ascending: false, nullsFirst: false })
+  .range(offset, offset + POSTS_PER_PAGE - 1);
 ```
 
-This ensures blog content is always visible even when the database API is temporarily down.
+Key changes:
+- **Drop `content` from select** -- saves massive payload (content is only needed on the individual article page)
+- **Use `.range()`** for true server-side pagination instead of fetching all and slicing client-side
+- **Use `{ count: 'exact' }`** to get the total post count for pagination controls without fetching all rows
+- **Query key includes page number** so React Query caches each page separately
+
+### 2. Separate featured/hero post query (page 1 only)
+
+Fetch the latest post separately for the hero section on page 1, then fetch the grid posts with an offset:
+
+- Page 1: hero post (1 query, limit 1) + grid posts (1 query, limit 12, offset 1)
+- Page 2+: grid posts only (1 query, limit 12, offset based on page)
+
+### 3. Update `ArticleCategoryPage.tsx` with same pattern
+
+Apply the same lean select + server-side pagination to the category page.
+
+### 4. Update the `BlogPost` interface
+
+Remove the requirement for `content` in the listing interface since it won't be fetched for card views. The `getReadTime` helper already has a fallback for when `read_time` is set, so dropping `content` won't break it.
+
+## Technical Details
+
+- **Current payload**: ~2,800 posts x full HTML content = potentially 50-100MB+ of data per page load
+- **After fix**: 12-13 posts x card fields only = ~10-20KB per page load
+- **Pagination math**: total pages calculated from `count` returned by Supabase, not from array length
+- **Static fallback**: preserved for error states -- if paginated query fails, fall back to static posts
+- **React Query cache**: each page cached independently with key `['blog-posts', page]`
+
