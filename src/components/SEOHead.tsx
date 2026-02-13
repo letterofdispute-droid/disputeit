@@ -25,6 +25,8 @@ interface SEOHeadProps {
   // For guide pages
   faqItems?: FAQItem[];
   breadcrumbs?: BreadcrumbItem[];
+  // Social sharing image
+  ogImage?: string;
 }
 
 const SEOHead = ({ 
@@ -40,9 +42,12 @@ const SEOHead = ({
   currency = 'EUR',
   faqItems,
   breadcrumbs,
+  ogImage,
 }: SEOHeadProps) => {
-  const siteUrl = 'https://disputeletters.com';
+  const siteUrl = 'https://letterofdispute.com';
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
+  const defaultOgImage = `${siteUrl}/og-image.png`;
+  const resolvedOgImage = ogImage || defaultOgImage;
   
   // WebApplication schema for template pages
   const webAppSchema = templateName ? {
@@ -62,7 +67,7 @@ const SEOHead = ({
     },
     provider: {
       '@type': 'Organization',
-      name: 'Dispute Letters',
+      name: 'Letter of Dispute',
       url: siteUrl,
       logo: `${siteUrl}/ld-logo.svg`,
     },
@@ -75,7 +80,7 @@ const SEOHead = ({
   const organizationSchema = !templateName ? {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Dispute Letters',
+    name: 'Letter of Dispute',
     url: siteUrl,
     logo: `${siteUrl}/ld-logo.svg`,
     description: 'Professional dispute letter templates for consumers',
@@ -91,7 +96,7 @@ const SEOHead = ({
     dateModified: modifiedTime || new Date().toISOString(),
     publisher: {
       '@type': 'Organization',
-      name: 'Dispute Letters'
+      name: 'Letter of Dispute'
     }
   } : null;
 
@@ -110,13 +115,15 @@ const SEOHead = ({
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:site_name" content="Dispute Letters" />
+      <meta property="og:site_name" content="Letter of Dispute" />
+      <meta property="og:image" content={resolvedOgImage} />
       
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={canonicalUrl} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={resolvedOgImage} />
       
       {/* Schema.org structured data */}
       {webAppSchema && (

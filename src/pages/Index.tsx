@@ -11,6 +11,7 @@ import HowItWorks from '@/components/home/HowItWorks';
 import TrustIndicators from '@/components/home/TrustIndicators';
 import Pricing from '@/components/home/Pricing';
 import FAQ from '@/components/home/FAQ';
+import SEOHead from '@/components/SEOHead';
 import { trackHomepageView } from '@/hooks/useGTM';
 
 const Index = () => {
@@ -20,6 +21,12 @@ const Index = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title="Letter of Dispute - Professional Complaint Letter Generator | 500+ Templates"
+        description="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. 500+ legally-referenced templates ready in minutes."
+        canonicalPath="/"
+        type="website"
+      />
       <Hero />
       
       {/* Trust Bar */}

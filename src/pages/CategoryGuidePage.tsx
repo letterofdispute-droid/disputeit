@@ -35,9 +35,9 @@ const CategoryGuidePage = () => {
 
   // Build breadcrumbs for schema
   const breadcrumbs = [
-    { name: 'Home', url: 'https://disputeletters.com/' },
-    { name: 'Consumer Rights Guides', url: 'https://disputeletters.com/guides' },
-    { name: guide.title, url: `https://disputeletters.com/guides/${categoryId}` },
+    { name: 'Home', url: 'https://letterofdispute.com/' },
+    { name: 'Consumer Rights Guides', url: 'https://letterofdispute.com/guides' },
+    { name: guide.title, url: `https://letterofdispute.com/guides/${categoryId}` },
   ];
 
   return (

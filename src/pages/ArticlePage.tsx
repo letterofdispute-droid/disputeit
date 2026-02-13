@@ -460,6 +460,7 @@ const ArticlePage = () => {
         title={post.meta_title || `${post.title} | Letter Of Dispute`}
         description={post.meta_description || post.excerpt || ""}
         canonicalPath={`/articles/${post.category_slug}/${post.slug}`}
+        ogImage={post.featured_image_url || undefined}
       />
 
       {/* JSON-LD Schema */}
