@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, MoreHorizontal, Mail, Ban, 
-  UserCheck, Calendar, Loader2, Shield, ShieldOff, Trash2, Gift
+  UserCheck, Calendar, Loader2, Shield, ShieldOff, Trash2, Gift,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -56,10 +58,12 @@ export interface UserProfile {
   role: string | null;
 }
 
+const USERS_PER_PAGE = 50;
+
 const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -68,43 +72,77 @@ const AdminUsers = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'admins'>('all');
-  const [stats, setStats] = useState({
-    total: 0,
-    pro: 0,
-    unlimited: 0,
-    admins: 0,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast({
-        title: 'Error fetching users',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      setUsers(data || []);
-      
-      // Calculate stats
-      const total = data?.length || 0;
-      const pro = data?.filter(u => u.plan === 'pro').length || 0;
-      const unlimited = data?.filter(u => u.plan === 'unlimited').length || 0;
-      const admins = data?.filter(u => u.is_admin).length || 0;
-      setStats({ total, pro, unlimited, admins });
-    }
-    setIsLoading(false);
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(val);
+      setCurrentPage(1);
+    }, 300);
+    setSearchTimeout(timeout);
   };
+
+  const handleStatusFilterChange = (val: 'all' | 'active' | 'admins') => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+
+  const offset = (currentPage - 1) * USERS_PER_PAGE;
+
+  // Server-side stats
+  const { data: stats } = useQuery({
+    queryKey: ['admin-user-stats'],
+    queryFn: async () => {
+      const [total, admins, pro, unlimited] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_admin', true),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('plan', 'pro'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('plan', 'unlimited'),
+      ]);
+      return {
+        total: total.count || 0,
+        admins: admins.count || 0,
+        pro: pro.count || 0,
+        unlimited: unlimited.count || 0,
+      };
+    },
+    staleTime: 30000,
+  });
+
+  // Server-side paginated + filtered query
+  const { data: usersData, isLoading, refetch } = useQuery({
+    queryKey: ['admin-users', debouncedSearch, statusFilter, currentPage],
+    queryFn: async () => {
+      let query = supabase
+        .from('profiles')
+        .select('id, user_id, first_name, last_name, email, status, plan, letters_count, created_at, is_admin, role', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      if (debouncedSearch) {
+        query = query.or(`email.ilike.%${debouncedSearch}%,first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%`);
+      }
+
+      if (statusFilter === 'active') {
+        query = query.eq('status', 'active');
+      } else if (statusFilter === 'admins') {
+        query = query.eq('is_admin', true);
+      }
+
+      query = query.range(offset, offset + USERS_PER_PAGE - 1);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { users: (data || []) as UserProfile[], totalCount: count || 0 };
+    },
+  });
+
+  const users = usersData?.users || [];
+  const totalCount = usersData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / USERS_PER_PAGE);
 
   const updateUserStatus = async (userId: string, status: string) => {
     const { error } = await supabase
@@ -113,17 +151,10 @@ const AdminUsers = () => {
       .eq('id', userId);
 
     if (error) {
-      toast({
-        title: 'Error updating user',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error updating user', description: error.message, variant: 'destructive' });
     } else {
-      toast({
-        title: 'User updated',
-        description: `User status changed to ${status}`,
-      });
-      fetchUsers();
+      toast({ title: 'User updated', description: `User status changed to ${status}` });
+      refetch();
     }
     setSuspendDialogOpen(false);
   };
@@ -141,49 +172,26 @@ const AdminUsers = () => {
 
   const confirmAdminAction = async () => {
     if (!selectedUser) return;
-
     const isGranting = adminAction === 'grant';
     const { error } = await supabase
       .from('profiles')
-      .update({ 
-        is_admin: isGranting,
-        role: isGranting ? 'admin' : 'user'
-      })
+      .update({ is_admin: isGranting, role: isGranting ? 'admin' : 'user' })
       .eq('id', selectedUser.id);
 
     if (error) {
-      toast({
-        title: 'Error updating admin status',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error updating admin status', description: error.message, variant: 'destructive' });
     } else {
       toast({
         title: isGranting ? 'Admin granted' : 'Admin revoked',
         description: `${selectedUser.email} ${isGranting ? 'is now an admin' : 'is no longer an admin'}`,
       });
-      fetchUsers();
+      refetch();
     }
     setAdminDialogOpen(false);
   };
 
-  const filteredUsers = users.filter(user => {
-    const name = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
-    const email = (user.email || '').toLowerCase();
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = name.includes(query) || email.includes(query);
-    
-    if (statusFilter === 'active') {
-      return matchesSearch && user.status === 'active';
-    }
-    if (statusFilter === 'admins') {
-      return matchesSearch && user.is_admin;
-    }
-    return matchesSearch;
-  });
-
   // Get all user_ids for credit count fetching
-  const userIds = filteredUsers.map(u => u.user_id);
+  const userIds = users.map(u => u.user_id);
   const { creditCounts, isLoading: creditsLoading } = useUsersCreditCounts(userIds);
 
   const handleViewDetails = (user: UserProfile) => {
@@ -212,23 +220,17 @@ const AdminUsers = () => {
   };
 
   const getInitials = (firstName?: string | null, lastName?: string | null, email?: string | null) => {
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    }
-    if (email) {
-      return email[0].toUpperCase();
-    }
+    if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    if (email) return email[0].toUpperCase();
     return 'U';
   };
 
   const getDisplayName = (user: UserProfile) => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name} ${user.last_name}`;
-    }
+    if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`;
     return user.email || 'Anonymous User';
   };
 
-  if (isLoading) {
+  if (isLoading && users.length === 0) {
     return (
       <div className="p-6 lg:p-8 flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -251,25 +253,25 @@ const AdminUsers = () => {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.total ?? '—'}</div>
             <p className="text-sm text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats.admins}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.admins ?? '—'}</div>
             <p className="text-sm text-muted-foreground">Administrators</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats.pro}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.pro ?? '—'}</div>
             <p className="text-sm text-muted-foreground">Pro Subscribers</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats.unlimited}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.unlimited ?? '—'}</div>
             <p className="text-sm text-muted-foreground">Unlimited Subscribers</p>
           </CardContent>
         </Card>
@@ -284,32 +286,14 @@ const AdminUsers = () => {
               <Input 
                 placeholder="Search users..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button 
-                variant={statusFilter === 'all' ? 'outline' : 'ghost'}
-                onClick={() => setStatusFilter('all')}
-                className="w-full sm:w-auto"
-              >
-                All
-              </Button>
-              <Button 
-                variant={statusFilter === 'active' ? 'outline' : 'ghost'}
-                onClick={() => setStatusFilter('active')}
-                className="w-full sm:w-auto"
-              >
-                Active
-              </Button>
-              <Button 
-                variant={statusFilter === 'admins' ? 'outline' : 'ghost'}
-                onClick={() => setStatusFilter('admins')}
-                className="w-full sm:w-auto"
-              >
-                Admins
-              </Button>
+              <Button variant={statusFilter === 'all' ? 'outline' : 'ghost'} onClick={() => handleStatusFilterChange('all')} className="w-full sm:w-auto">All</Button>
+              <Button variant={statusFilter === 'active' ? 'outline' : 'ghost'} onClick={() => handleStatusFilterChange('active')} className="w-full sm:w-auto">Active</Button>
+              <Button variant={statusFilter === 'admins' ? 'outline' : 'ghost'} onClick={() => handleStatusFilterChange('admins')} className="w-full sm:w-auto">Admins</Button>
             </div>
           </div>
         </CardContent>
@@ -318,7 +302,7 @@ const AdminUsers = () => {
       {/* Users Table */}
       <Card className="overflow-hidden">
         <CardContent className="p-0 overflow-x-auto">
-          {filteredUsers.length > 0 ? (
+          {users.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -333,7 +317,7 @@ const AdminUsers = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -350,40 +334,29 @@ const AdminUsers = () => {
                     </TableCell>
                     <TableCell>
                       {user.is_admin ? (
-                        <Badge className="bg-primary">
-                          <Shield className="h-3 w-3 mr-1" />
-                          Admin
-                        </Badge>
+                        <Badge className="bg-primary"><Shield className="h-3 w-3 mr-1" />Admin</Badge>
                       ) : (
                         <Badge variant="outline">User</Badge>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={user.status === 'active' ? 'default' : 'secondary'}
-                        className={user.status === 'active' ? 'bg-green-600' : ''}
-                      >
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className={user.status === 'active' ? 'bg-green-600' : ''}>
                         {user.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.plan}</Badge>
-                    </TableCell>
+                    <TableCell><Badge variant="outline">{user.plan}</Badge></TableCell>
                     <TableCell>
                       {creditsLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       ) : creditCounts[user.user_id] ? (
                         <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
-                          <Gift className="h-3 w-3 mr-1" />
-                          {creditCounts[user.user_id]}
+                          <Gift className="h-3 w-3 mr-1" />{creditCounts[user.user_id]}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">0</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.letters_count}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{user.letters_count}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
@@ -393,48 +366,31 @@ const AdminUsers = () => {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleViewDetails(user)}>
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            View Details
+                            <UserCheck className="h-4 w-4 mr-2" />View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEmailUser(user)}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Email User
+                            <Mail className="h-4 w-4 mr-2" />Email User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {user.is_admin ? (
-                            <DropdownMenuItem 
-                              onClick={() => handleAdminAction(user, 'revoke')}
-                              disabled={user.user_id === currentUser?.id}
-                            >
-                              <ShieldOff className="h-4 w-4 mr-2" />
-                              Revoke Admin
+                            <DropdownMenuItem onClick={() => handleAdminAction(user, 'revoke')} disabled={user.user_id === currentUser?.id}>
+                              <ShieldOff className="h-4 w-4 mr-2" />Revoke Admin
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem onClick={() => handleAdminAction(user, 'grant')}>
-                              <Shield className="h-4 w-4 mr-2" />
-                              Make Admin
+                              <Shield className="h-4 w-4 mr-2" />Make Admin
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleSuspendAction(user)}
-                          >
-                            <Ban className="h-4 w-4 mr-2" />
-                            {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                          <DropdownMenuItem onClick={() => handleSuspendAction(user)}>
+                            <Ban className="h-4 w-4 mr-2" />{user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeleteUser(user)}
-                            disabled={user.user_id === currentUser?.id}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete User
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)} disabled={user.user_id === currentUser?.id}>
+                            <Trash2 className="h-4 w-4 mr-2" />Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -451,13 +407,29 @@ const AdminUsers = () => {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {offset + 1}–{Math.min(offset + USERS_PER_PAGE, totalCount)} of {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="flex items-center text-sm px-2">{currentPage} / {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Admin Confirmation Dialog */}
       <AlertDialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {adminAction === 'grant' ? 'Grant Admin Access' : 'Revoke Admin Access'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{adminAction === 'grant' ? 'Grant Admin Access' : 'Revoke Admin Access'}</AlertDialogTitle>
             <AlertDialogDescription>
               {adminAction === 'grant' 
                 ? `Are you sure you want to make ${selectedUser?.email} an administrator? They will have full access to the admin dashboard.`
@@ -478,9 +450,7 @@ const AdminUsers = () => {
       <AlertDialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedUser?.status === 'suspended' ? 'Unsuspend User' : 'Suspend User'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{selectedUser?.status === 'suspended' ? 'Unsuspend User' : 'Suspend User'}</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedUser?.status === 'suspended'
                 ? `Are you sure you want to unsuspend ${selectedUser?.email}? They will regain access to their account.`
@@ -514,7 +484,7 @@ const AdminUsers = () => {
         user={selectedUser}
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onSuccess={fetchUsers}
+        onSuccess={() => refetch()}
       />
 
       {/* Email User Dialog */}

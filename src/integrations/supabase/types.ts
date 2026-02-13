@@ -1341,6 +1341,13 @@ export type Database = {
           title: string
         }[]
       }
+      get_template_article_counts: {
+        Args: never
+        Returns: {
+          article_count: number
+          template_slug: string
+        }[]
+      }
       get_template_progress: {
         Args: never
         Returns: {

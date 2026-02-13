@@ -19,10 +19,6 @@ interface ContentPlan {
   target_article_count: number;
 }
 
-interface BlogPost {
-  id: string;
-  related_templates: string[] | null;
-}
 
 export default function GapAnalysis() {
   const { data: contentPlans } = useQuery({
@@ -39,28 +35,25 @@ export default function GapAnalysis() {
   // Use server-side aggregation via RPC (bypasses 1000-row limit)
   const { data: templateProgress } = useTemplateProgress();
 
-  const { data: blogPosts } = useQuery({
-    queryKey: ['gap-blog-posts'],
+  // Use server-side aggregation via RPC (bypasses 1000-row limit)
+  const { data: templateArticleCounts } = useQuery({
+    queryKey: ['gap-template-article-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, related_templates')
-        .eq('status', 'published');
+      const { data, error } = await supabase.rpc('get_template_article_counts');
       if (error) throw error;
-      return data as BlogPost[];
+      const map = new Map<string, number>();
+      (data || []).forEach((row: { template_slug: string; article_count: number }) => {
+        map.set(row.template_slug, row.article_count);
+      });
+      return map;
     },
   });
 
   const analysis = useMemo(() => {
     const plansBySlug = new Map(contentPlans?.map(p => [p.template_slug, p]) || []);
 
-    // Count articles per template from blog_posts
-    const articlesByTemplate = new Map<string, number>();
-    blogPosts?.forEach(post => {
-      post.related_templates?.forEach(slug => {
-        articlesByTemplate.set(slug, (articlesByTemplate.get(slug) || 0) + 1);
-      });
-    });
+    // Use server-side aggregated article counts
+    const articlesByTemplate = templateArticleCounts || new Map<string, number>();
 
     // Analyze by category
     const categoryGaps: Record<string, {
@@ -164,7 +157,7 @@ export default function GapAnalysis() {
       templatesWithPlans,
       coveragePercent,
     };
-  }, [contentPlans, templateProgress, blogPosts]);
+  }, [contentPlans, templateProgress, templateArticleCounts]);
 
   const getCategoryName = (id: string) => {
     return templateCategories.find(c => c.id === id)?.name || id;

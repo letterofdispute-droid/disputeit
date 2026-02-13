@@ -215,19 +215,30 @@ const AdminAnalytics = () => {
       const compStart = startOfDay(subDays(new Date(), daysAgo * 2));
 
       try {
-        const [eventsRes, purchasesRes] = await Promise.all([
-          supabase.from('analytics_events').select('*')
+        // Fetch comparison events in batches
+        const compEvents: AnalyticsEvent[] = [];
+        let compFrom = 0;
+        const compBatch = 1000;
+        while (true) {
+          const { data: batch } = await supabase.from('analytics_events').select('*')
             .gte('created_at', compStart.toISOString())
             .lt('created_at', compEnd.toISOString())
-            .order('created_at', { ascending: false }),
-          supabase.from('letter_purchases')
-            .select('id, amount_cents, purchase_type, template_slug, status, created_at')
-            .gte('created_at', compStart.toISOString())
-            .lt('created_at', compEnd.toISOString())
-            .order('created_at', { ascending: false }),
-        ]);
-        setComparisonEvents(eventsRes.data || []);
-        setComparisonPurchases(purchasesRes.data || []);
+            .order('created_at', { ascending: false })
+            .range(compFrom, compFrom + compBatch - 1);
+          if (!batch || batch.length === 0) break;
+          compEvents.push(...batch);
+          if (batch.length < compBatch) break;
+          compFrom += compBatch;
+        }
+
+        const { data: compPurchases } = await supabase.from('letter_purchases')
+          .select('id, amount_cents, purchase_type, template_slug, status, created_at')
+          .gte('created_at', compStart.toISOString())
+          .lt('created_at', compEnd.toISOString())
+          .order('created_at', { ascending: false });
+
+        setComparisonEvents(compEvents);
+        setComparisonPurchases(compPurchases || []);
       } catch (error) {
         console.error('Error fetching comparison data:', error);
       } finally {
@@ -243,14 +254,25 @@ const AdminAnalytics = () => {
     const startDate = startOfDay(subDays(new Date(), daysAgo)).toISOString();
 
     try {
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('analytics_events')
-        .select('*')
-        .gte('created_at', startDate)
-        .order('created_at', { ascending: false });
+      // Fetch events in batches to bypass 1000-row limit
+      const allEvents: AnalyticsEvent[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data: batch, error: eventsError } = await supabase
+          .from('analytics_events')
+          .select('*')
+          .gte('created_at', startDate)
+          .order('created_at', { ascending: false })
+          .range(from, from + batchSize - 1);
 
-      if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
+        if (eventsError) throw eventsError;
+        if (!batch || batch.length === 0) break;
+        allEvents.push(...batch);
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+      setEvents(allEvents);
 
       const { data: purchasesData, error: purchasesError } = await supabase
         .from('letter_purchases')

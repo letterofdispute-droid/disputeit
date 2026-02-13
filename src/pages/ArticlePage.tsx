@@ -124,7 +124,7 @@ const ArticlePage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blog_posts")
-        .select("*")
+        .select("slug, title, excerpt, category, category_slug, author, published_at, read_time, featured_image_url, featured, views")
         .eq("category_slug", category)
         .eq("status", "published")
         .neq("slug", slug)
