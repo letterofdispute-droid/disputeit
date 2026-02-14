@@ -15,6 +15,7 @@ export interface SemanticScanResponse {
   totalSuggestions: number;
   results: ScanResult[];
   error?: string;
+  jobId?: string;
 }
 
 export interface EmbeddingStats {
@@ -34,6 +35,19 @@ export interface EmbeddingJob {
   failed_items: number;
   skipped_items: number;
   error_messages: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface SemanticScanJob {
+  id: string;
+  status: string;
+  total_items: number;
+  processed_items: number;
+  total_suggestions: number;
+  similarity_threshold: number;
+  category_filter: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -78,6 +92,26 @@ export function useSemanticLinkScan() {
     },
   });
 
+  // Fetch active semantic scan job (with polling while processing)
+  const { data: activeScanJob } = useQuery({
+    queryKey: ['semantic-scan-job-active'],
+    queryFn: async (): Promise<SemanticScanJob | null> => {
+      const { data, error } = await supabase
+        .from('semantic_scan_jobs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as SemanticScanJob | null;
+    },
+    refetchInterval: (query) => {
+      const job = query.state.data as SemanticScanJob | null;
+      return job?.status === 'processing' ? 2000 : 10000;
+    },
+  });
+
   // Fetch orphan articles
   const { data: orphanArticles, refetch: refetchOrphans } = useQuery({
     queryKey: ['orphan-articles'],
@@ -86,7 +120,7 @@ export function useSemanticLinkScan() {
       if (error) throw error;
       return (data || []) as OrphanArticle[];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch embedding queue stats
@@ -105,10 +139,10 @@ export function useSemanticLinkScan() {
 
       return { pending: pending || 0, processed: processed || 0 };
     },
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   });
 
-  // Semantic scan mutation
+  // Semantic scan mutation - now fires the background job
   const scanMutation = useMutation({
     mutationFn: async (params: { 
       postId?: string; 
@@ -126,11 +160,12 @@ export function useSemanticLinkScan() {
       return data as SemanticScanResponse;
     },
     onSuccess: (data) => {
-      setLastScanResults(data.results);
+      // Job is now running in the background — start polling
+      queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
       toast({
-        title: 'Semantic scan complete',
-        description: `Found ${data.totalSuggestions} link opportunities across ${data.scanned} articles`,
+        title: 'Link scan started',
+        description: 'Scanning all articles in the background...',
       });
     },
     onError: (error) => {
@@ -139,6 +174,22 @@ export function useSemanticLinkScan() {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
+    },
+  });
+
+  // Cancel scan job
+  const cancelScanJobMutation = useMutation({
+    mutationFn: async (scanJobId: string) => {
+      const { error } = await supabase
+        .from('semantic_scan_jobs')
+        .update({ status: 'cancelled', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', scanJobId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+      toast({ title: 'Scan cancelled', description: 'The link scan will stop after the current batch.' });
     },
   });
 
@@ -205,22 +256,17 @@ export function useSemanticLinkScan() {
     },
   });
 
-  // Reset all embeddings (clear and start fresh)
+  // Reset all embeddings
   const resetEmbeddingsMutation = useMutation({
     mutationFn: async (params: { category_filter?: string }) => {
-      // Delete all embeddings for the category
       let query = supabase.from('article_embeddings').delete();
-      
       if (params.category_filter) {
         query = query.eq('category_id', params.category_filter);
       } else {
-        // Must have a filter for delete, so use content_type
         query = query.eq('content_type', 'article');
       }
-      
       const { error } = await query;
       if (error) throw error;
-      
       return { success: true };
     },
     onSuccess: () => {
@@ -302,7 +348,7 @@ export function useSemanticLinkScan() {
     return Math.round(((job.processed_items + job.failed_items) / job.total_items) * 100);
   }, []);
 
-  // Cancel a stuck job
+  // Cancel a stuck embedding job
   const cancelJobMutation = useMutation({
     mutationFn: async (jobId: string) => {
       const { error } = await supabase
@@ -388,11 +434,25 @@ export function useSemanticLinkScan() {
     },
   });
 
+  // Scan job progress
+  const scanJobProgress = activeScanJob && activeScanJob.total_items > 0
+    ? Math.round((activeScanJob.processed_items / activeScanJob.total_items) * 100)
+    : 0;
+
+  const isScanJobRunning = activeScanJob?.status === 'processing';
+
   return {
     // Semantic scan
     semanticScan: scanMutation.mutate,
     isSemanticScanning: scanMutation.isPending,
     lastScanResults,
+    
+    // Scan job tracking
+    activeScanJob,
+    isScanJobRunning,
+    scanJobProgress,
+    cancelScanJob: cancelScanJobMutation.mutate,
+    isCancellingScan: cancelScanJobMutation.isPending,
     
     // Bulk embedding
     startBulkEmbedding: bulkEmbeddingMutation.mutate,

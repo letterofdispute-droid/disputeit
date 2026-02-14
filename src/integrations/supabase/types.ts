@@ -1110,6 +1110,45 @@ export type Database = {
           },
         ]
       }
+      semantic_scan_jobs: {
+        Row: {
+          category_filter: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          processed_items: number
+          similarity_threshold: number
+          status: string
+          total_items: number
+          total_suggestions: number
+          updated_at: string
+        }
+        Insert: {
+          category_filter?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          processed_items?: number
+          similarity_threshold?: number
+          status?: string
+          total_items?: number
+          total_suggestions?: number
+          updated_at?: string
+        }
+        Update: {
+          category_filter?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          processed_items?: number
+          similarity_threshold?: number
+          status?: string
+          total_items?: number
+          total_suggestions?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string | null
@@ -1394,6 +1433,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      increment_scan_progress: {
+        Args: { p_job_id: string; p_processed: number; p_suggestions: number }
+        Returns: undefined
+      }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
       match_semantic_links: {

@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 interface ScanRequest {
+  jobId?: string;
   postId?: string;
   categorySlug?: string;
   batchSize?: number;
@@ -88,6 +89,7 @@ serve(async (req) => {
     }
 
     const { 
+      jobId,
       postId, 
       categorySlug, 
       batchSize = 10,
@@ -96,7 +98,65 @@ serve(async (req) => {
       includeBidirectional = true,
     } = await req.json() as ScanRequest;
 
-    console.log('[SEMANTIC-SCAN] Starting scan', { postId, categorySlug, batchSize, similarityThreshold });
+    console.log('[SEMANTIC-SCAN] Starting scan', { jobId, postId, categorySlug, batchSize, similarityThreshold });
+
+    // ---- JOB TRACKING ----
+    // If no jobId, this is the initial invocation: count total and create a job row
+    let currentJobId = jobId;
+    if (!currentJobId) {
+      // Count total articles that need scanning
+      let countQuery = supabaseAdmin
+        .from('article_embeddings')
+        .select('id', { count: 'exact', head: true })
+        .eq('embedding_status', 'completed')
+        .not('embedding', 'is', null);
+
+      if (postId) {
+        countQuery = countQuery.eq('content_id', postId);
+      } else if (categorySlug) {
+        countQuery = countQuery.eq('category_id', categorySlug);
+      }
+
+      // For initial scan, count articles due for scanning
+      if (!postId) {
+        countQuery = countQuery.or('next_scan_due_at.is.null,next_scan_due_at.lte.now()');
+      }
+
+      const { count: totalCount } = await countQuery;
+
+      // Create job row
+      const { data: newJob, error: jobError } = await supabaseAdmin
+        .from('semantic_scan_jobs')
+        .insert({
+          total_items: totalCount || 0,
+          similarity_threshold: similarityThreshold,
+          category_filter: categorySlug || null,
+        })
+        .select('id')
+        .single();
+
+      if (jobError) {
+        console.error('[SEMANTIC-SCAN] Failed to create job:', jobError);
+        throw new Error(`Failed to create scan job: ${jobError.message}`);
+      }
+
+      currentJobId = newJob.id;
+      console.log(`[SEMANTIC-SCAN] Created job ${currentJobId} with ${totalCount} items`);
+    }
+
+    // Check if job was cancelled
+    const { data: jobRow } = await supabaseAdmin
+      .from('semantic_scan_jobs')
+      .select('status')
+      .eq('id', currentJobId)
+      .single();
+
+    if (jobRow?.status === 'cancelled') {
+      console.log('[SEMANTIC-SCAN] Job was cancelled, stopping');
+      return new Response(JSON.stringify({ success: true, cancelled: true, jobId: currentJobId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Build query to find articles with embeddings that need scanning
     let query = supabaseAdmin
@@ -106,7 +166,6 @@ serve(async (req) => {
       .not('embedding', 'is', null);
 
     if (postId) {
-      // Scan specific post - find its embedding by content_id
       query = query.eq('content_id', postId);
     } else if (categorySlug) {
       query = query.eq('category_id', categorySlug);
@@ -126,9 +185,17 @@ serve(async (req) => {
     }
 
     if (!sourceArticles || sourceArticles.length === 0) {
+      // No more articles to scan — mark job complete
+      await supabaseAdmin
+        .from('semantic_scan_jobs')
+        .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', currentJobId);
+
+      console.log('[SEMANTIC-SCAN] No more articles to scan, job complete');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No articles ready for semantic scanning',
+        jobId: currentJobId,
+        message: 'Scan complete',
         scanned: 0,
         suggestions: 0,
       }), {
@@ -136,15 +203,12 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[SEMANTIC-SCAN] Found ${sourceArticles.length} articles to scan`);
+    console.log(`[SEMANTIC-SCAN] Processing batch of ${sourceArticles.length} articles`);
 
-    let totalSuggestions = 0;
-    const results: Array<{ articleId: string; title: string; suggestionsFound: number }> = [];
+    let batchSuggestions = 0;
 
     for (const source of sourceArticles as ArticleEmbedding[]) {
       try {
-        console.log(`[SEMANTIC-SCAN] Processing: ${source.title}`);
-
         // Call the match_semantic_links function to find similar articles
         const { data: matches, error: matchError } = await supabaseAdmin.rpc('match_semantic_links', {
           query_embedding: source.embedding,
@@ -160,13 +224,10 @@ serve(async (req) => {
         }
 
         if (!matches || matches.length === 0) {
-          console.log(`[SEMANTIC-SCAN] No matches found for ${source.title}`);
-          // Update scan timestamp even if no matches
           await supabaseAdmin
             .from('article_embeddings')
             .update({ next_scan_due_at: getNextScanDate() })
             .eq('id', source.id);
-          results.push({ articleId: source.id, title: source.title, suggestionsFound: 0 });
           continue;
         }
 
@@ -174,8 +235,6 @@ serve(async (req) => {
         const validMatches = (matches as SemanticMatch[]).filter(m => 
           m.id !== source.id && m.slug !== source.slug
         );
-
-        console.log(`[SEMANTIC-SCAN] Found ${validMatches.length} valid matches for ${source.title}`);
 
         // Check for existing suggestions to avoid duplicates
         const { data: existingSuggestions } = await supabaseAdmin
@@ -188,25 +247,15 @@ serve(async (req) => {
         // Generate link suggestions for top matches
         const newSuggestions = [];
         for (const match of validMatches.slice(0, maxLinksPerArticle)) {
-          // Skip if already suggested
-          if (existingSlugs.has(match.slug)) {
-            continue;
-          }
+          if (existingSlugs.has(match.slug)) continue;
+          if (match.inbound_count >= match.max_inbound) continue;
 
-          // Skip if target has reached max inbound links
-          if (match.inbound_count >= match.max_inbound) {
-            console.log(`[SEMANTIC-SCAN] Skipping ${match.slug} - max inbound reached`);
-            continue;
-          }
-
-          // Get target's anchor variants for smart anchor selection
           const { data: targetEmbedding } = await supabaseAdmin
             .from('article_embeddings')
             .select('anchor_variants, primary_keyword')
             .eq('id', match.id)
             .single();
 
-          // Select best anchor text
           const anchorText = selectAnchorText(
             targetEmbedding?.anchor_variants || [],
             targetEmbedding?.primary_keyword || match.primary_keyword,
@@ -214,14 +263,10 @@ serve(async (req) => {
             source.primary_keyword
           );
 
-          // Calculate keyword overlap score
           const keywordOverlap = calculateKeywordOverlap(
             source.secondary_keywords || [],
             match.secondary_keywords || []
           );
-
-          // Build URL based on content type
-          const targetUrl = buildTargetUrl(match.content_type, match.slug, match.category_id);
 
           newSuggestions.push({
             source_post_id: source.content_id || source.id,
@@ -245,22 +290,19 @@ serve(async (req) => {
             .from('link_suggestions')
             .insert(newSuggestions);
 
-          if (insertError) {
-            console.error(`[SEMANTIC-SCAN] Failed to insert suggestions for ${source.title}:`, insertError);
+          if (!insertError) {
+            batchSuggestions += newSuggestions.length;
           } else {
-            totalSuggestions += newSuggestions.length;
-            console.log(`[SEMANTIC-SCAN] Created ${newSuggestions.length} outbound suggestions for ${source.title}`);
+            console.error(`[SEMANTIC-SCAN] Insert error for ${source.title}:`, insertError);
           }
         }
 
-        // BIDIRECTIONAL: Find existing articles that should link TO this source article
-        let inboundSuggestions = 0;
+        // BIDIRECTIONAL: Find existing articles that should link TO this source
         if (includeBidirectional && source.content_id) {
           const sourceEmbedding = typeof source.embedding === 'string' 
             ? JSON.parse(source.embedding) 
             : source.embedding;
 
-          // Get all other embeddings to check for inbound links
           const { data: otherEmbeddings } = await supabaseAdmin
             .from('article_embeddings')
             .select('id, content_id, slug, title, embedding, category_id, primary_keyword, article_role')
@@ -272,7 +314,6 @@ serve(async (req) => {
             for (const candidate of otherEmbeddings) {
               if (!candidate.content_id || !candidate.embedding) continue;
 
-              // Check if reverse suggestion already exists
               const { data: existingReverse } = await supabaseAdmin
                 .from('link_suggestions')
                 .select('id')
@@ -287,7 +328,6 @@ serve(async (req) => {
                   ? JSON.parse(candidate.embedding)
                   : candidate.embedding;
 
-                // Calculate similarity
                 const similarity = cosineSimilarity(candidateEmbedding, sourceEmbedding);
 
                 if (similarity > similarityThreshold) {
@@ -295,7 +335,7 @@ serve(async (req) => {
                     .from('link_suggestions')
                     .insert({
                       source_post_id: candidate.content_id,
-                      target_type: source.content_type || 'article',
+                      target_type: 'article',
                       target_slug: source.slug,
                       target_title: source.title,
                       target_embedding_id: source.id,
@@ -308,18 +348,13 @@ serve(async (req) => {
                     });
 
                   if (!reverseInsertError) {
-                    inboundSuggestions++;
-                    totalSuggestions++;
+                    batchSuggestions++;
                   }
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Skip invalid embeddings
               }
             }
-          }
-
-          if (inboundSuggestions > 0) {
-            console.log(`[SEMANTIC-SCAN] Created ${inboundSuggestions} inbound suggestions for ${source.title}`);
           }
         }
 
@@ -329,25 +364,57 @@ serve(async (req) => {
           .update({ next_scan_due_at: getNextScanDate() })
           .eq('id', source.id);
 
-        results.push({ 
-          articleId: source.id, 
-          title: source.title, 
-          suggestionsFound: newSuggestions.length + inboundSuggestions,
-        });
-
       } catch (error) {
         console.error(`[SEMANTIC-SCAN] Error processing ${source.title}:`, error);
-        results.push({ articleId: source.id, title: source.title, suggestionsFound: 0 });
       }
     }
 
-    console.log(`[SEMANTIC-SCAN] Complete. Scanned: ${sourceArticles.length}, Suggestions: ${totalSuggestions}`);
+    // Atomically update job progress
+    await supabaseAdmin.rpc('increment_scan_progress', {
+      p_job_id: currentJobId,
+      p_processed: sourceArticles.length,
+      p_suggestions: batchSuggestions,
+    });
+
+    console.log(`[SEMANTIC-SCAN] Batch done: ${sourceArticles.length} scanned, ${batchSuggestions} suggestions`);
+
+    // ---- SELF-CHAIN: fire-and-forget next batch ----
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      const selfUrl = `${supabaseUrl}/functions/v1/scan-for-semantic-links`;
+      const chainResponse = await fetch(selfUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          jobId: currentJobId,
+          categorySlug,
+          batchSize,
+          similarityThreshold,
+          maxLinksPerArticle,
+          includeBidirectional,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+      console.log(`[SEMANTIC-SCAN] Self-chain triggered, status: ${chainResponse.status}`);
+    } catch (chainError) {
+      // AbortError or network error — both are fine for fire-and-forget
+      const errorName = chainError instanceof Error ? chainError.name : 'Unknown';
+      console.log(`[SEMANTIC-SCAN] Self-chain fire-and-forget: ${errorName}`);
+    }
 
     return new Response(JSON.stringify({
       success: true,
+      jobId: currentJobId,
       scanned: sourceArticles.length,
-      totalSuggestions,
-      results,
+      batchSuggestions,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -364,16 +431,14 @@ serve(async (req) => {
   }
 });
 
-/**
- * Select the best anchor text for a link
- */
+// ---- Helper Functions ----
+
 function selectAnchorText(
   anchorVariants: string[],
   primaryKeyword: string | null,
   title: string,
   sourceKeyword: string | null
 ): string {
-  // Priority 1: Use anchor variant that doesn't overlap with source keyword
   if (anchorVariants.length > 0 && sourceKeyword) {
     const sourceWords = new Set(sourceKeyword.toLowerCase().split(/\s+/));
     const nonOverlapping = anchorVariants.find(anchor => {
@@ -382,82 +447,36 @@ function selectAnchorText(
     });
     if (nonOverlapping) return nonOverlapping;
   }
-
-  // Priority 2: First anchor variant
-  if (anchorVariants.length > 0) {
-    return anchorVariants[0];
-  }
-
-  // Priority 3: Primary keyword
-  if (primaryKeyword) {
-    return primaryKeyword;
-  }
-
-  // Priority 4: Shortened title
+  if (anchorVariants.length > 0) return anchorVariants[0];
+  if (primaryKeyword) return primaryKeyword;
   const words = title.split(/\s+/);
-  if (words.length > 6) {
-    return words.slice(0, 5).join(' ') + '...';
-  }
-  return title;
+  return words.length > 6 ? words.slice(0, 5).join(' ') + '...' : title;
 }
 
-/**
- * Calculate keyword overlap between two keyword arrays (Jaccard similarity)
- */
 function calculateKeywordOverlap(keywordsA: string[], keywordsB: string[]): number {
   if (!keywordsA.length || !keywordsB.length) return 0;
-  
   const setA = new Set(keywordsA.map(k => k.toLowerCase()));
   const setB = new Set(keywordsB.map(k => k.toLowerCase()));
-  
   let intersection = 0;
   for (const word of setA) {
     if (setB.has(word)) intersection++;
   }
-  
   const union = setA.size + setB.size - intersection;
   return union > 0 ? intersection / union : 0;
 }
 
-/**
- * Cosine similarity between two vectors
- */
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
-  
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  
+  let dotProduct = 0, normA = 0, normB = 0;
   for (let i = 0; i < a.length; i++) {
     dotProduct += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
   }
-  
   const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
   return magnitude === 0 ? 0 : dotProduct / magnitude;
 }
 
-/**
- * Build the target URL based on content type
- */
-function buildTargetUrl(contentType: string, slug: string, categoryId: string): string {
-  switch (contentType) {
-    case 'template':
-      return `/letter/${slug}`;
-    case 'article':
-      return `/articles/${slug}`;
-    case 'guide':
-      return `/guides/${categoryId}`;
-    default:
-      return `/${slug}`;
-  }
-}
-
-/**
- * Calculate next scan date (7 days from now)
- */
 function getNextScanDate(): string {
   const date = new Date();
   date.setDate(date.getDate() + 7);
