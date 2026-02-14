@@ -1,57 +1,71 @@
 
 
-# Fix: Embedding Stats Showing 1000/1000
+# Cleaner Step 1 UI with Smart State Communication
 
 ## Problem
 
-The "Articles with embeddings" counter shows **1000/1000** because the stats query fetches all rows from `article_embeddings` and counts them client-side. The database API has a default limit of 1,000 rows per request, so the count is capped at 1,000 regardless of how many embeddings actually exist.
+After completing Step 1 (4626/4626 embeddings), the panel is cluttered and confusing:
+- "Generate All" button is still prominent even though everything is done
+- "4015 auto-queued from new articles" is unclear -- what are these? Why 4015?
+- "Last job: 4626 processed, 1 failed" + Retry button coexists with the queue alert
+- No guidance on what happens when you publish new articles
 
 ## Solution
 
-Replace the client-side counting approach with **server-side aggregation** using `count: 'exact'` and `head: true` -- the same pattern already used throughout the project for accurate reporting.
+Redesign Step 1 to show **contextual states** instead of dumping everything at once.
+
+### State 1: All Done (current situation -- 4626/4626, no pending queue)
+- Show a green success banner: "All 4,626 articles embedded"
+- Replace "Generate All" with a subtle "Re-check" or hide it entirely
+- Keep "Force Re-embed" as an advanced option only
+- Add a note: "New articles are automatically queued when published"
+
+### State 2: New Articles Pending (queue has items)
+- Show an actionable alert: "12 new articles need embeddings" with a "Process Now" button
+- Explain: "These were auto-queued when you published new articles"
+
+### State 3: In Progress (job running)
+- Keep current progress bar (no changes needed)
+
+### State 4: Has Failures
+- Show retry prompt with count
+
+### Specific UI changes:
+
+**When 100% complete and no pending queue:**
+```
+[checkmark] All 4,626 articles embedded
+New articles are automatically queued when published.
+
+[Force Re-embed]  (outline, small)
+```
+
+**When queue has pending items:**
+```
+[checkmark] 4,626 / 4,638 articles embedded
+[info] 12 new articles ready to process  [Process Now]
+These were auto-queued when you published new content.
+```
+
+**When job just completed with failures:**
+```
+[checkmark] 4,626 / 4,627 embedded (1 failed)
+[Retry Failed]
+```
 
 ## Technical Changes
 
-**File: `src/hooks/useSemanticLinkScan.ts`**
+**File: `src/components/admin/seo/links/SemanticScanPanel.tsx`**
 
-Replace `fetchEmbeddingStats` (currently around lines 197-211) which does:
-```
-// CURRENT (broken at 1000+)
-const { data } = await supabase.from('article_embeddings').select('embedding_status');
-return { total: data.length, completed: data.filter(...).length, ... };
-```
-
-With three separate `count: 'exact', head: true` queries:
-```
-// NEW (accurate at any scale)
-const { count: total } = await supabase
-  .from('article_embeddings')
-  .select('*', { count: 'exact', head: true });
-
-const { count: completed } = await supabase
-  .from('article_embeddings')
-  .select('*', { count: 'exact', head: true })
-  .eq('embedding_status', 'completed');
-
-const { count: failed } = await supabase
-  .from('article_embeddings')
-  .select('*', { count: 'exact', head: true })
-  .eq('embedding_status', 'failed');
-
-return {
-  total: total || 0,
-  completed: completed || 0,
-  pending: (total || 0) - (completed || 0) - (failed || 0),
-  failed: failed || 0,
-};
-```
-
-This approach:
-- Returns accurate counts regardless of table size
-- Transfers zero row data (head-only requests)
-- Is consistent with the project's existing reporting pattern
+- Add `isFullyComplete` computed flag: `embeddingProgress === 100 && !hasPendingQueue && activeJob?.status !== 'processing'`
+- When fully complete: show green success state, hide "Generate All", show reassuring auto-queue message
+- When pending queue exists: reword from "4015 auto-queued from new articles" to "X new articles ready to process" with clearer explanation underneath
+- When job completed with failures: show inline retry, hide "Generate All"
+- Move "Generate All" and "Force Re-embed" into the advanced settings section when fully complete (they become maintenance tools, not primary actions)
+- Update button labels: "Generate All" becomes "Generate Missing" to clarify it only processes new/unembedded articles
+- Add permanent footnote under Step 1: "New articles are automatically queued when published -- just come back and tap Process."
 
 ## Scope
-- 1 file modified (`src/hooks/useSemanticLinkScan.ts`)
-- No database or edge function changes needed
+- 1 file modified: `src/components/admin/seo/links/SemanticScanPanel.tsx`
+- No backend or database changes
 
