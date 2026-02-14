@@ -67,6 +67,12 @@ const PILLAR_TITLE_PATTERNS: Array<(topic: string) => string> = [
   (t) => `${t} Explained: Your Rights and Options`,
   (t) => `How to Handle a ${t}`,
   (t) => `${t}: A Step-by-Step Guide`,
+  (t) => `Everything You Need to Know About ${t}`,
+  (t) => `Your Complete Rights and Options for ${t}`,
+  (t) => `${t}: What Consumers Should Know`,
+  (t) => `A Consumer's Guide to ${t}`,
+  (t) => `${t}: Know Your Rights`,
+  (t) => `What to Do About ${t}`,
 ];
 
 function simpleHash(str: string): number {
