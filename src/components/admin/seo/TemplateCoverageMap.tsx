@@ -163,6 +163,52 @@ export default function TemplateCoverageMap() {
     },
   });
   
+  // Create missing plans mutation
+  const createMissingPlansMutation = useMutation({
+    mutationFn: async () => {
+      // Get all existing plan slugs from DB
+      const { data: existingPlans } = await supabase
+        .from('content_plans')
+        .select('template_slug');
+      
+      const existingSlugs = new Set(existingPlans?.map(p => p.template_slug) || []);
+      
+      // Find templates without plans
+      const missing = allTemplates.filter(t => !existingSlugs.has(t.slug));
+      if (missing.length === 0) return { created: 0 };
+
+      // Build insert rows
+      const rows = missing.map(t => {
+        const categoryId = getCategoryIdFromName(t.category);
+        const tier = getTierForCategory(categoryId);
+        const tierConfig = VALUE_TIERS[tier];
+        return {
+          template_slug: t.slug,
+          template_name: t.title,
+          category_id: categoryId,
+          subcategory_slug: t.subcategorySlug || null,
+          value_tier: tier,
+          target_article_count: tierConfig.articleCount,
+        };
+      });
+
+      const { error } = await supabase.from('content_plans').insert(rows);
+      if (error) throw error;
+      return { created: rows.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['content-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['template-progress'] });
+      toast({
+        title: 'Missing plans created',
+        description: `${data.created} content plans added`,
+      });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    },
+  });
+
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -320,10 +366,24 @@ export default function TemplateCoverageMap() {
         <div>
           <h3 className="text-lg font-semibold">Template Coverage</h3>
           <p className="text-sm text-muted-foreground">
-            {plans?.length || 0} templates with content plans • {allTemplates.length} total templates
+            {plans?.length || 0} of {allTemplates.length} templates with content plans
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {plans && plans.length < allTemplates.length && (
+            <Button
+              onClick={() => createMissingPlansMutation.mutate()}
+              disabled={createMissingPlansMutation.isPending}
+              size="sm"
+              variant="default"
+            >
+              {createMissingPlansMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Creating...</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-1.5" /> Create {allTemplates.length - plans.length} Missing Plans</>
+              )}
+            </Button>
+          )}
           <Button
             onClick={() => createAllPillarsMutation.mutate()}
             disabled={createAllPillarsMutation.isPending || !plans || plans.length === 0}
