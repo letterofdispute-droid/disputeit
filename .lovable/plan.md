@@ -1,64 +1,46 @@
 
-# Smart Pillar Publishing: Auto-Interleave with Clusters
 
-## The Problem
+# Fix: Auto-Create Missing Content Plans
 
-Right now, when you select pillar drafts and click "Publish Selected", they all get `published_at = now()`. This means:
-- All 500+ pillars appear with today's date
-- They don't sit alongside their cluster articles in the timeline
-- It looks unnatural -- a hub article appearing weeks after its supporting articles
+## What's Happening
 
-## The Solution
+Your codebase now has **550 templates** but only **547 content plans** exist in the database. Three templates were added to the code without running "Plan All" for their category, so they show as uncovered -- dropping you from 100% to 99%.
 
-Modify the bulk publish logic so that **pillar articles automatically get a backdated `published_at`** that places them just before their cluster articles. No manual work needed -- you just select drafts and click "Publish Selected" as usual.
+## The Fix
 
-### How it works
+Run a one-time database operation to create content plans for the 3 missing templates. This requires:
 
-1. When you click "Publish Selected", the system checks if any of the selected posts are pillar articles (via `article_type = 'pillar'`)
-2. For each pillar, it looks up the **earliest published cluster article** in the same content plan
-3. It sets the pillar's `published_at` to **1 hour before** that earliest cluster article
-4. Non-pillar articles publish normally with `now()`
+1. Identifying which 3 template slugs in code don't have matching `content_plans` rows
+2. Inserting content plans for them with the correct category and tier
 
-### Example timeline result
+## Technical Approach
 
-```text
-Before (current behavior):
-  Feb 13 10:05  - Cluster: "Unpacking Cooling-Off Periods..."
-  Feb 13 10:05  - Cluster: "Four Steps to Avoid..."
-  Feb 13 10:05  - Cluster: "Common Blunders That Sink..."
-  Feb 14 15:30  - Pillar: "Refund Cooling Off: Know Your Rights"  <-- appears days later
+**Step 1**: Query the database to find which slugs are missing plans (we'll cross-reference against the code's template list at runtime).
 
-After (new behavior):
-  Feb 13 09:05  - Pillar: "Refund Cooling Off: Know Your Rights"  <-- 1 hour before clusters
-  Feb 13 10:05  - Cluster: "Unpacking Cooling-Off Periods..."
-  Feb 13 10:05  - Cluster: "Four Steps to Avoid..."
-  Feb 13 10:05  - Cluster: "Common Blunders That Sink..."
-```
+**Step 2**: Add a small helper in `TemplateCoverageMap.tsx` -- inside the existing "Plan All" per-category button flow, it already handles templates without plans. So the simplest path is:
 
-## What You Do
+- Open each category in the Coverage Map
+- Find the 3 uncovered templates (they'll show a "+" icon)
+- Click "Plan All" on that category -- it only creates plans for templates that don't have one
 
-Nothing different. Same workflow:
-1. Go to Admin Blog
-2. Filter by Draft
-3. Select pillar articles
-4. Click "Publish Selected"
+Alternatively, I can write a one-time SQL migration that inserts the 3 missing plans directly, but I'd need to know their exact slugs. I can do this by adding a quick diagnostic: temporarily log `allTemplates` slugs vs `content_plans` slugs in the browser console.
 
-The system handles the date placement automatically.
+**Recommended approach**: Add a "Create Missing Plans" button next to "Create All Pillars" that automatically finds templates in `allTemplates` without a matching plan and bulk-creates them. This prevents the problem from recurring whenever new templates are added to code.
 
-## Technical Changes
+## Changes
 
-**File: `src/pages/admin/AdminBlog.tsx`**
+**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
 
-Modify `handleBulkPublish` to:
-1. Fetch the selected posts to identify which are pillars (have `article_type = 'pillar'` and `content_plan_id`)
-2. For pillar posts, query the earliest `published_at` from sibling blog posts in the same `content_plan_id`
-3. Set each pillar's `published_at` to 1 hour before that earliest sibling
-4. If no published siblings exist, fall back to `now()` (normal behavior)
-5. Non-pillar posts continue to use `now()` as before
+- Add a `createMissingPlansMutation` that:
+  1. Gets all template slugs from `allTemplates` (code)
+  2. Gets all template slugs from `content_plans` (database)
+  3. Finds the difference (templates without plans)
+  4. For each missing template, inserts a content plan with the appropriate category tier
+- Show a "Create Missing Plans" button (only visible when there are uncovered templates) next to "Create All Pillars"
 
-The content_queue sync logic remains the same -- it mirrors whatever `published_at` the blog post gets.
+This ensures that any time new templates are added to the code, you can one-click sync them to 100% coverage.
 
 ## Scope
-- 1 file modified (`AdminBlog.tsx`)
-- No database changes
+- 1 file modified (`TemplateCoverageMap.tsx`)
+- No database schema changes
 - No edge function changes
