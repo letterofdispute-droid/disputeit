@@ -208,6 +208,13 @@ serve(async (req) => {
                 })
                 .eq('id', suggestion.id);
 
+              // ── UPDATE INBOUND/OUTBOUND COUNTERS ──
+              // Increment outbound count on source article
+              await supabaseAdmin.rpc('increment_link_counters', {
+                p_source_post_id: postId,
+                p_target_embedding_id: suggestion.target_embedding_id,
+              }).catch(err => console.warn(`Counter update failed for ${suggestion.id}:`, err));
+
               appliedCount++;
               results.push({ suggestionId: suggestion.id, success: true });
             } else {
