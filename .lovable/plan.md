@@ -1,71 +1,44 @@
 
 
-# Cleaner Step 1 UI with Smart State Communication
+# Fix Stale Queue & Clarify Step 1 Communication
 
-## Problem
+## The Real Problem
 
-After completing Step 1 (4626/4626 embeddings), the panel is cluttered and confusing:
-- "Generate All" button is still prominent even though everything is done
-- "4015 auto-queued from new articles" is unclear -- what are these? Why 4015?
-- "Last job: 4626 processed, 1 failed" + Retry button coexists with the queue alert
-- No guidance on what happens when you publish new articles
+The `embedding_queue` table has **4,015 stale entries** -- articles that were queued by a database trigger but already received embeddings through the bulk job. The queue was never cleaned up, so the UI incorrectly shows "4,015 new articles ready to process" even though all 4,627 articles are already embedded.
 
-## Solution
+This is a data hygiene issue, not just a UI issue.
 
-Redesign Step 1 to show **contextual states** instead of dumping everything at once.
+## Fix (2 parts)
 
-### State 1: All Done (current situation -- 4626/4626, no pending queue)
-- Show a green success banner: "All 4,626 articles embedded"
-- Replace "Generate All" with a subtle "Re-check" or hide it entirely
-- Keep "Force Re-embed" as an advanced option only
-- Add a note: "New articles are automatically queued when published"
+### Part 1: Clean up stale queue entries (database)
 
-### State 2: New Articles Pending (queue has items)
-- Show an actionable alert: "12 new articles need embeddings" with a "Process Now" button
-- Explain: "These were auto-queued when you published new articles"
+Run a one-time SQL migration to mark queue entries as processed when the article already has an embedding. This immediately resolves the "4015 pending" ghost.
 
-### State 3: In Progress (job running)
-- Keep current progress bar (no changes needed)
+### Part 2: Make queue count smarter (code)
 
-### State 4: Has Failures
-- Show retry prompt with count
+Update the pending queue display logic so it cross-references against actual missing embeddings. If `embeddingProgress` is already 100%, the pending queue banner should not appear regardless of stale queue rows. This prevents the problem from recurring.
 
-### Specific UI changes:
+**Changes in `SemanticScanPanel.tsx`:**
+- Only show the "X new articles ready to process" banner when embeddings are actually incomplete (`embeddingProgress < 100`)
+- When progress is 100% but queue has stale items, silently ignore them (the success state handles it)
+- This is a one-line condition change
 
-**When 100% complete and no pending queue:**
-```
-[checkmark] All 4,626 articles embedded
-New articles are automatically queued when published.
+## Technical Details
 
-[Force Re-embed]  (outline, small)
+**Migration SQL:**
+```sql
+UPDATE embedding_queue eq
+SET processed_at = NOW()
+FROM article_embeddings ae
+WHERE eq.content_id = ae.article_id
+  AND eq.processed_at IS NULL;
 ```
 
-**When queue has pending items:**
-```
-[checkmark] 4,626 / 4,638 articles embedded
-[info] 12 new articles ready to process  [Process Now]
-These were auto-queued when you published new content.
-```
-
-**When job just completed with failures:**
-```
-[checkmark] 4,626 / 4,627 embedded (1 failed)
-[Retry Failed]
-```
-
-## Technical Changes
-
-**File: `src/components/admin/seo/links/SemanticScanPanel.tsx`**
-
-- Add `isFullyComplete` computed flag: `embeddingProgress === 100 && !hasPendingQueue && activeJob?.status !== 'processing'`
-- When fully complete: show green success state, hide "Generate All", show reassuring auto-queue message
-- When pending queue exists: reword from "4015 auto-queued from new articles" to "X new articles ready to process" with clearer explanation underneath
-- When job completed with failures: show inline retry, hide "Generate All"
-- Move "Generate All" and "Force Re-embed" into the advanced settings section when fully complete (they become maintenance tools, not primary actions)
-- Update button labels: "Generate All" becomes "Generate Missing" to clarify it only processes new/unembedded articles
-- Add permanent footnote under Step 1: "New articles are automatically queued when published -- just come back and tap Process."
+**Code change** (`src/components/admin/seo/links/SemanticScanPanel.tsx`):
+- Change `hasPendingQueue` usage: only show the pending queue banner when `embeddingProgress < 100 && hasPendingQueue`
+- This ensures the "all done" state takes priority over stale queue entries
 
 ## Scope
-- 1 file modified: `src/components/admin/seo/links/SemanticScanPanel.tsx`
-- No backend or database changes
+- 1 database migration (cleanup stale queue)
+- 1 file modified: `SemanticScanPanel.tsx` (minor condition tweak)
 
