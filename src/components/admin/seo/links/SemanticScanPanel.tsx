@@ -194,7 +194,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               )}
 
               {/* === STATE: New Articles Pending === */}
-              {hasPendingQueue && !isJobProcessing && (
+              {hasPendingQueue && !isJobProcessing && embeddingProgress < 100 && (
                 <div className="mt-2 p-2 bg-accent/50 border border-accent rounded-md">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
