@@ -157,21 +157,103 @@ function tryNaturalPhraseMatch(
   return null;
 }
 
-/** Bridge sentence templates for fallback insertion */
-const BRIDGE_TEMPLATES = [
-  (url: string, anchor: string, title: string) =>
-    ` For more details, see our guide on <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
-  (url: string, anchor: string, title: string) =>
-    ` You may also want to explore <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
-  (url: string, anchor: string, title: string) =>
-    ` This relates closely to <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
-  (url: string, anchor: string, title: string) =>
-    ` Learn more about <a href="${url}" title="${escapeHtml(title)}">${anchor}</a> for additional guidance.`,
-];
+/**
+ * AI-generated contextual sentence for natural link insertion.
+ * Calls Lovable AI (Gemini Flash Lite) to write ONE sentence that continues
+ * the paragraph naturally and contains a short anchor phrase for linking.
+ */
+async function generateContextualSentence(
+  paragraphText: string,
+  targetTitle: string,
+  targetKeywords: string[],
+  targetUrl: string,
+): Promise<{ sentence: string; anchorPhrase: string } | null> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    console.warn('LOVABLE_API_KEY not configured, skipping AI sentence generation');
+    return null;
+  }
 
-function getBridgeSentence(suggestionId: string, url: string, anchor: string, title: string): string {
-  const idx = suggestionId.charCodeAt(0) % BRIDGE_TEMPLATES.length;
-  return BRIDGE_TEMPLATES[idx](url, anchor, title);
+  // Strip HTML for clean context
+  const cleanText = paragraphText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (cleanText.length < 30) return null;
+
+  const keywordList = targetKeywords.filter(k => k && k.length > 0).join(', ');
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an SEO content editor. Your job is to write ONE sentence that naturally continues a given paragraph. The sentence must:
+- Feel like the original author wrote it — same tone, same topic flow
+- Contain a short phrase (2-5 words) related to the target topic that works as anchor text
+- NOT use generic phrases like "learn more", "check out", "see our guide", "for more details", "explore our", "read about"
+- Be informative and add value to the paragraph
+- Flow seamlessly from the last sentence
+
+Return ONLY valid JSON: {"sentence": "your sentence here", "anchorPhrase": "the 2-5 word phrase"}
+The anchorPhrase MUST appear exactly as-is within the sentence.`,
+          },
+          {
+            role: 'user',
+            content: `Paragraph context: "${cleanText}"
+
+Target article title: "${targetTitle}"
+Target keywords: ${keywordList}
+
+Write one natural continuation sentence containing anchor text related to the target topic.`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      }),
+    });
+
+    if (!response.ok) {
+      const status = response.status;
+      console.warn(`AI gateway returned ${status} for contextual sentence`);
+      if (status === 429 || status === 402) {
+        // Rate limited or out of credits — don't retry
+        return null;
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) return null;
+
+    // Parse JSON from response (handle markdown code blocks)
+    let jsonStr = content;
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed.sentence || !parsed.anchorPhrase) return null;
+
+    // Validate anchor phrase exists in sentence
+    if (!parsed.sentence.includes(parsed.anchorPhrase)) {
+      console.warn('AI anchor phrase not found in sentence, skipping');
+      return null;
+    }
+
+    // Validate anchor phrase length (2-5 words)
+    const wordCount = parsed.anchorPhrase.trim().split(/\s+/).length;
+    if (wordCount < 2 || wordCount > 6) return null;
+
+    return { sentence: parsed.sentence, anchorPhrase: parsed.anchorPhrase };
+  } catch (error) {
+    console.warn('AI contextual sentence generation failed:', error);
+    return null;
+  }
 }
 
 function escapeHtml(str: string): string {
@@ -188,13 +270,13 @@ function escapeRegExp(string: string): string {
  * 2. Try natural phrase match in best paragraph
  * 3. Fallback: append bridge sentence
  */
-function insertLinkContextually(
+async function insertLinkContextually(
   content: string,
   suggestion: { id: string; anchor_text: string; target_title: string },
   targetUrl: string,
   targetPrimaryKeyword: string | null,
   targetSecondaryKeywords: string[] | null,
-): string | null {
+): Promise<string | null> {
   const paragraphs = parseParagraphs(content);
   if (paragraphs.length < 3) return null; // Too short to safely link
 
@@ -220,11 +302,31 @@ function insertLinkContextually(
     }
   }
 
-  // Fallback: append bridge sentence to the best paragraph
+  // Fallback: AI-generated contextual sentence
   const bestPara = scored[0].para;
-  const bridge = getBridgeSentence(suggestion.id, targetUrl, suggestion.anchor_text, suggestion.target_title);
-  const modifiedPara = bestPara.html.replace(/<\/p>$/i, `${bridge}</p>`);
-  return content.replace(bestPara.html, modifiedPara);
+  const allKeywords = [
+    ...(targetPrimaryKeyword ? [targetPrimaryKeyword] : []),
+    ...(targetSecondaryKeywords || []),
+  ];
+
+  const aiResult = await generateContextualSentence(
+    bestPara.html,
+    suggestion.target_title,
+    allKeywords,
+    targetUrl,
+  );
+
+  if (aiResult) {
+    // Wrap the anchor phrase in a link within the AI sentence
+    const linkedSentence = aiResult.sentence.replace(
+      aiResult.anchorPhrase,
+      `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${aiResult.anchorPhrase}</a>`,
+    );
+    const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
+    return content.replace(bestPara.html, modifiedPara);
+  }
+
+  return null; // No AI result — skip rather than insert generic text
 }
 
 // ── Build target URL from suggestion ──
@@ -407,7 +509,7 @@ serve(async (req) => {
             const targetPrimaryKeyword = targetEmbed?.primary_keyword || null;
             const targetSecondaryKeywords = targetEmbed?.secondary_keywords || null;
 
-            const result = insertLinkContextually(
+            const result = await insertLinkContextually(
               updatedContent,
               suggestion,
               targetUrl,
