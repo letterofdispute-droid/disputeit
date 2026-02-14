@@ -10,6 +10,7 @@ interface ApplyLinksRequest {
   suggestionIds?: string[];
   categorySlug?: string;
   autoApproveThreshold?: number;
+  maxOutboundPerArticle?: number;
 }
 
 serve(async (req) => {
@@ -55,7 +56,8 @@ serve(async (req) => {
       });
     }
 
-    const { suggestionIds, categorySlug, autoApproveThreshold } = await req.json() as ApplyLinksRequest;
+    const { suggestionIds, categorySlug, autoApproveThreshold, maxOutboundPerArticle } = await req.json() as ApplyLinksRequest;
+    const MAX_OUTBOUND = maxOutboundPerArticle || 8;
 
     // Auto-approve high-relevance suggestions if threshold provided
     if (autoApproveThreshold && autoApproveThreshold > 0) {
@@ -114,6 +116,28 @@ serve(async (req) => {
     // Process each post
     for (const [postId, postSuggestions] of suggestionsByPost) {
       try {
+        // ── OUTBOUND CAP ENFORCEMENT ──
+        const { count: alreadyApplied } = await supabaseAdmin
+          .from('link_suggestions')
+          .select('id', { count: 'exact', head: true })
+          .eq('source_post_id', postId)
+          .eq('status', 'applied');
+
+        const remainingSlots = MAX_OUTBOUND - (alreadyApplied || 0);
+
+        if (remainingSlots <= 0) {
+          // Reject all suggestions for this post — cap already reached
+          for (const s of postSuggestions) {
+            await supabaseAdmin
+              .from('link_suggestions')
+              .update({ status: 'rejected', hierarchy_violation: 'Outbound cap reached' })
+              .eq('id', s.id);
+            results.push({ suggestionId: s.id, success: false, error: 'Outbound cap reached' });
+            failedCount++;
+          }
+          continue;
+        }
+
         const { data: post, error: postError } = await supabaseAdmin
           .from('blog_posts')
           .select('content, article_type, content_plan_id')
@@ -126,12 +150,29 @@ serve(async (req) => {
 
         let updatedContent = post.content;
 
-        // Sort suggestions by insert position (descending) to avoid position shifts
+        // Sort suggestions by relevance (highest first), then cap to remaining slots
         const sortedSuggestions = postSuggestions
           .filter(s => s.insert_position !== null)
+          .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
+
+        // Only process up to remainingSlots; reject the rest
+        const cappedSuggestions = sortedSuggestions.slice(0, remainingSlots);
+        const excessSuggestions = sortedSuggestions.slice(remainingSlots);
+
+        for (const s of excessSuggestions) {
+          await supabaseAdmin
+            .from('link_suggestions')
+            .update({ status: 'rejected', hierarchy_violation: 'Outbound cap reached' })
+            .eq('id', s.id);
+          results.push({ suggestionId: s.id, success: false, error: 'Outbound cap reached' });
+          failedCount++;
+        }
+
+        // Sort capped suggestions by insert position (descending) to avoid position shifts
+        const orderedForInsert = cappedSuggestions
           .sort((a, b) => (b.insert_position || 0) - (a.insert_position || 0));
 
-        for (const suggestion of sortedSuggestions) {
+        for (const suggestion of orderedForInsert) {
           try {
             let targetUrl: string;
             switch (suggestion.target_type) {

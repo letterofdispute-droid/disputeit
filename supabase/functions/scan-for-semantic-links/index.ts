@@ -295,6 +295,15 @@ async function processOneArticle(
 
         if (!candidateEmbed?.content_id) continue;
 
+        // Check candidate's outbound cap before creating reverse suggestion
+        const { count: candidateOutbound } = await supabaseAdmin
+          .from('link_suggestions')
+          .select('id', { count: 'exact', head: true })
+          .eq('source_post_id', candidateEmbed.content_id)
+          .in('status', ['approved', 'applied', 'pending']);
+
+        if ((candidateOutbound || 0) >= maxLinksPerArticle) continue;
+
         // Check if reverse suggestion already exists
         const { data: existing } = await supabaseAdmin
           .from('link_suggestions')
