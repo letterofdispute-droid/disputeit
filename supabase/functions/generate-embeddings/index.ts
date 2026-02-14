@@ -1016,7 +1016,7 @@ serve(async (req) => {
         embedding_status: "completed",
         content_hash: newHash,
         last_embedded_at: new Date().toISOString(),
-        max_inbound: 50,
+        max_inbound: 20,
       };
 
       if (existing) {

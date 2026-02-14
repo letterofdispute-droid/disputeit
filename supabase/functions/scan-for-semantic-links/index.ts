@@ -163,6 +163,23 @@ async function processOneArticle(
 ): Promise<number> {
   let suggestions = 0;
 
+  // ── CUMULATIVE OUTBOUND CAP: Check existing approved/applied links ──
+  if (source.content_id) {
+    const { count: existingOutbound } = await supabaseAdmin
+      .from('link_suggestions')
+      .select('id', { count: 'exact', head: true })
+      .eq('source_post_id', source.content_id)
+      .in('status', ['approved', 'applied']);
+
+    const remainingSlots = maxLinksPerArticle - (existingOutbound || 0);
+    if (remainingSlots <= 0) {
+      console.log(`[SCAN] Skipping "${source.title}" — already at outbound cap (${existingOutbound}/${maxLinksPerArticle})`);
+      return 0;
+    }
+    // Use remainingSlots as the effective limit for this article
+    maxLinksPerArticle = remainingSlots;
+  }
+
   // ── FORWARD: Find articles this source should link TO ──
   const { data: matches, error: matchError } = await supabaseAdmin.rpc('match_semantic_links', {
     query_embedding: source.embedding,
