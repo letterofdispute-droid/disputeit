@@ -1,44 +1,62 @@
 
 
-# Fix Stale Queue & Clarify Step 1 Communication
+# Make Step 2 (Discover Links) a True Fire-and-Forget Background Job
 
-## The Real Problem
+## Problem
 
-The `embedding_queue` table has **4,015 stale entries** -- articles that were queued by a database trigger but already received embeddings through the bulk job. The queue was never cleaned up, so the UI incorrectly shows "4,015 new articles ready to process" even though all 4,627 articles are already embedded.
+Step 2 currently processes only 10 articles per click. With 4,627 articles, you'd need to click "Scan for Links" ~463 times. There's no self-chaining like Step 1 has.
 
-This is a data hygiene issue, not just a UI issue.
+## Solution
 
-## Fix (2 parts)
+Add self-chaining to the `scan-for-semantic-links` edge function (same pattern as `generate-embeddings`) so one click processes ALL articles automatically.
 
-### Part 1: Clean up stale queue entries (database)
+## Changes
 
-Run a one-time SQL migration to mark queue entries as processed when the article already has an embedding. This immediately resolves the "4015 pending" ghost.
+### 1. Edge Function: `supabase/functions/scan-for-semantic-links/index.ts`
 
-### Part 2: Make queue count smarter (code)
+Add self-chaining after each batch completes:
+- After processing the batch of 10 articles, check if more articles need scanning (`next_scan_due_at` still in the past)
+- If yes, fire-and-forget invoke itself with the same parameters (using the AbortController pattern from the existing codebase)
+- If no more articles to process, stop and return final results
+- Add a `jobId` tracking parameter so the UI can poll for progress (reuse or create a lightweight tracking row)
 
-Update the pending queue display logic so it cross-references against actual missing embeddings. If `embeddingProgress` is already 100%, the pending queue banner should not appear regardless of stale queue rows. This prevents the problem from recurring.
+### 2. Database: Add a `semantic_scan_jobs` table (or reuse `embedding_jobs` with a different `content_type`)
 
-**Changes in `SemanticScanPanel.tsx`:**
-- Only show the "X new articles ready to process" banner when embeddings are actually incomplete (`embeddingProgress < 100`)
-- When progress is 100% but queue has stale items, silently ignore them (the success state handles it)
-- This is a one-line condition change
+Track scan progress so the UI can show a real progress bar:
+- `id`, `status` (processing/completed/failed), `total_items`, `processed_items`, `created_at`, `completed_at`
+- The edge function creates a job row on first invocation, updates `processed_items` atomically on each batch
 
-## Technical Details
+### 3. UI: `src/components/admin/seo/links/SemanticScanPanel.tsx`
 
-**Migration SQL:**
-```sql
-UPDATE embedding_queue eq
-SET processed_at = NOW()
-FROM article_embeddings ae
-WHERE eq.content_id = ae.article_id
-  AND eq.processed_at IS NULL;
+- Replace the instant "Scanning..." state with a real progress bar (poll the job table, same pattern as Step 1)
+- Show: "Scanning 120 / 4,627 articles..." with a progress bar
+- Add a cancel button
+- When complete, show: "Scan complete -- found X link suggestions"
+- Rename button from "Scan for Links" to "Discover All Links" to clarify it's comprehensive
+
+### 4. Hook: `src/hooks/useSemanticLinkScan.ts`
+
+- Add a query for the active scan job (poll every 2s while processing, same as embedding job)
+- Track scan job progress for the UI
+
+## How it works after the fix
+
+```text
+User clicks "Discover All Links"
+  --> Edge function creates scan job (total: 4,627)
+  --> Processes batch of 10, updates job (processed: 10)
+  --> Self-chains to process next batch
+  --> ... repeats until all done ...
+  --> Marks job complete
+  
+UI polls job every 2s, shows progress bar
+User can leave and come back -- job continues server-side
 ```
 
-**Code change** (`src/components/admin/seo/links/SemanticScanPanel.tsx`):
-- Change `hasPendingQueue` usage: only show the pending queue banner when `embeddingProgress < 100 && hasPendingQueue`
-- This ensures the "all done" state takes priority over stale queue entries
+## Files changed
 
-## Scope
-- 1 database migration (cleanup stale queue)
-- 1 file modified: `SemanticScanPanel.tsx` (minor condition tweak)
+- `supabase/functions/scan-for-semantic-links/index.ts` -- add self-chaining + job tracking
+- `src/hooks/useSemanticLinkScan.ts` -- add scan job polling query
+- `src/components/admin/seo/links/SemanticScanPanel.tsx` -- progress bar + clearer labels
+- Database migration: create `semantic_scan_jobs` table (or add scan tracking to existing structure)
 
