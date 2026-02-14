@@ -564,19 +564,47 @@ Return JSON:
     };
     });
 
-    // Add a pillar article as the first item in the queue (highest priority)
+    // Pillar title patterns (must match frontend)
+    const PILLAR_PATTERNS = [
+      (t: string) => `The Complete Guide to ${t}`,
+      (t: string) => `${t}: What You Need to Know`,
+      (t: string) => `Understanding ${t}: A Consumer's Guide`,
+      (t: string) => `${t} Explained: Your Rights and Options`,
+      (t: string) => `How to Handle ${t}`,
+      (t: string) => `${t}: A Step-by-Step Guide`,
+    ];
+    function simpleHash(str: string): number {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+    function cleanName(name: string): string {
+      return name
+        .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
+        .replace(/\s*(Complaint|Dispute|Claim)\s*$/i, '')
+        .replace(/\//g, ' and ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    }
+    const cleanedPillarName = cleanName(templateName);
+    const pillarIdx = simpleHash(templateSlug) % PILLAR_PATTERNS.length;
+
+    // Add pillar as LAST item (lowest priority) so clusters generate first
     const pillarItem = {
       plan_id: plan.id,
       article_type: 'pillar',
-      suggested_title: `The Complete Guide to ${templateName}`,
+      suggested_title: PILLAR_PATTERNS[pillarIdx](cleanedPillarName),
       suggested_keywords: [
-        templateName.toLowerCase(),
-        `${templateName.toLowerCase()} guide`,
-        `how to ${templateName.toLowerCase()}`,
+        cleanedPillarName.toLowerCase(),
+        `${cleanedPillarName.toLowerCase()} guide`,
+        `how to ${cleanedPillarName.toLowerCase()}`,
         'consumer rights',
         'dispute letter',
       ],
-      priority: 200,
+      priority: 1,
       status: 'queued',
     };
 
