@@ -39,13 +39,25 @@ interface CategoryGroup {
   }>;
 }
 
+// Acronyms that should be uppercased
+const ACRONYMS = new Set(['atm', 'hoa', 'mot', 'sms', 'pcp', 'fscs', 'hvac', 'hr', 'nhs', 'fca', 'dpa', 'gdpr', 'ccpa', 'ftc', 'p45', 'p60', 'gap']);
+
 function cleanTemplateName(name: string): string {
-  return name
-    .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
-    .replace(/\s*(Complaint|Dispute|Claim)\s*$/i, '')
+  let cleaned = name
+    // Only strip "Letter", "Template", and compound suffixes — keep Dispute/Complaint/Claim
+    .replace(/\s*(Complaint Letter|Dispute Letter|Claim Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
+    // Convert slashes to "and"
     .replace(/\//g, ' and ')
     .replace(/\s{2,}/g, ' ')
     .trim();
+
+  // Fix acronym casing: "Atm" → "ATM", "Hoa" → "HOA"
+  cleaned = cleaned.replace(/\b\w+\b/g, (word) => {
+    if (ACRONYMS.has(word.toLowerCase())) return word.toUpperCase();
+    return word;
+  });
+
+  return cleaned;
 }
 
 const PILLAR_TITLE_PATTERNS: Array<(topic: string) => string> = [
@@ -53,7 +65,7 @@ const PILLAR_TITLE_PATTERNS: Array<(topic: string) => string> = [
   (t) => `${t}: What You Need to Know`,
   (t) => `Understanding ${t}: A Consumer's Guide`,
   (t) => `${t} Explained: Your Rights and Options`,
-  (t) => `How to Handle ${t}`,
+  (t) => `How to Handle a ${t}`,
   (t) => `${t}: A Step-by-Step Guide`,
 ];
 

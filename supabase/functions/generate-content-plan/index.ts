@@ -570,7 +570,7 @@ Return JSON:
       (t: string) => `${t}: What You Need to Know`,
       (t: string) => `Understanding ${t}: A Consumer's Guide`,
       (t: string) => `${t} Explained: Your Rights and Options`,
-      (t: string) => `How to Handle ${t}`,
+      (t: string) => `How to Handle a ${t}`,
       (t: string) => `${t}: A Step-by-Step Guide`,
     ];
     function simpleHash(str: string): number {
@@ -581,13 +581,18 @@ Return JSON:
       }
       return Math.abs(hash);
     }
+    const ACRONYMS = new Set(['atm', 'hoa', 'mot', 'sms', 'pcp', 'fscs', 'hvac', 'hr', 'nhs', 'fca', 'dpa', 'gdpr', 'ccpa', 'ftc', 'p45', 'p60', 'gap']);
     function cleanName(name: string): string {
-      return name
-        .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
-        .replace(/\s*(Complaint|Dispute|Claim)\s*$/i, '')
+      let cleaned = name
+        .replace(/\s*(Complaint Letter|Dispute Letter|Claim Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
         .replace(/\//g, ' and ')
         .replace(/\s{2,}/g, ' ')
         .trim();
+      cleaned = cleaned.replace(/\b\w+\b/g, (word: string) => {
+        if (ACRONYMS.has(word.toLowerCase())) return word.toUpperCase();
+        return word;
+      });
+      return cleaned;
     }
     const cleanedPillarName = cleanName(templateName);
     const pillarIdx = simpleHash(templateSlug) % PILLAR_PATTERNS.length;
