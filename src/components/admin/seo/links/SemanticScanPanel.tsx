@@ -28,6 +28,11 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     semanticScan,
     isSemanticScanning,
     lastScanResults,
+    activeScanJob,
+    isScanJobRunning,
+    scanJobProgress,
+    cancelScanJob,
+    isCancellingScan,
     startBulkEmbedding,
     isStartingBulk,
     activeJob,
@@ -98,6 +103,11 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const hasEnoughEmbeddings = (embeddingStats?.completed ?? 0) >= 2;
   const isFullyComplete = embeddingProgress === 100 && !hasPendingQueue && !isJobProcessing;
   const hasFailures = (activeJob?.status === 'completed' || activeJob?.status === 'failed') && (activeJob?.failed_items ?? 0) > 0;
+
+  // Scan job states
+  const scanJobRecentlyCompleted = activeScanJob?.status === 'completed' && 
+    activeScanJob.completed_at && 
+    (Date.now() - new Date(activeScanJob.completed_at).getTime()) < 60 * 60 * 1000; // within 1 hour
 
   return (
     <TooltipProvider>
@@ -210,7 +220,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </div>
               )}
 
-              {/* === Primary actions: only when embeddings are incomplete and no queue/failures handling it === */}
+              {/* === Primary actions: only when embeddings are incomplete === */}
               {!isFullyComplete && !isJobProcessing && !hasFailures && !hasPendingQueue && embeddingProgress < 100 && (
                 <div className="flex gap-2 mt-2">
                   <Button
@@ -246,7 +256,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
                 </PopoverTrigger>
                 <PopoverContent className="max-w-xs text-sm">
-                  <p>Compares article embeddings to find semantically related content, then generates linking suggestions with anchor text. Uses bidirectional scanning - finds both outbound and inbound links.</p>
+                  <p>Compares all article embeddings to find semantically related content, then generates linking suggestions with anchor text. Runs fully in the background — you can leave and come back.</p>
                 </PopoverContent>
               </Popover>
             </div>
@@ -258,30 +268,58 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </p>
               )}
 
-              <Button
-                onClick={handleSemanticScan}
-                disabled={isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
-                size="sm"
-              >
-                {isSemanticScanning ? (
-                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Scanning...</>
-                ) : (
-                  <><Search className="h-3.5 w-3.5 mr-1.5" /> Scan for Links</>
-                )}
-              </Button>
-
-              {isSemanticScanning && (
-                <div className="bg-primary/5 rounded-md p-2 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                    <span className="text-xs font-medium">Finding bidirectional connections...</span>
+              {/* === Scan Job In Progress === */}
+              {isScanJobRunning && activeScanJob && (
+                <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      <span className="text-xs font-medium">Discovering links...</span>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => cancelScanJob(activeScanJob.id)} disabled={isCancellingScan}>
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
-                  <Progress value={undefined} className="h-1.5" />
+                  <Progress value={scanJobProgress} className="h-1.5" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{activeScanJob.processed_items.toLocaleString()} / {activeScanJob.total_items.toLocaleString()} articles</span>
+                    <span>{activeScanJob.total_suggestions.toLocaleString()} suggestions found</span>
+                  </div>
                 </div>
               )}
 
-              {/* Scan Results */}
-              {lastScanResults.length > 0 && (
+              {/* === Scan Job Recently Completed === */}
+              {scanJobRecentlyCompleted && !isScanJobRunning && activeScanJob && (
+                <div className="flex items-center gap-2 text-xs p-2 bg-primary/10 rounded-md">
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <span className="font-medium text-primary">
+                      Scan complete — {activeScanJob.total_suggestions.toLocaleString()} link suggestions found
+                    </span>
+                    <p className="text-muted-foreground mt-0.5">
+                      Scanned {activeScanJob.processed_items.toLocaleString()} articles. Review them in the Link Review tab.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* === Scan Button (not running) === */}
+              {!isScanJobRunning && (
+                <Button
+                  onClick={handleSemanticScan}
+                  disabled={isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
+                  size="sm"
+                >
+                  {isSemanticScanning ? (
+                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
+                  ) : (
+                    <><Search className="h-3.5 w-3.5 mr-1.5" /> Discover All Links</>
+                  )}
+                </Button>
+              )}
+
+              {/* Legacy scan results (kept for single-post scans) */}
+              {lastScanResults.length > 0 && !isScanJobRunning && (
                 <Collapsible open={showResults} onOpenChange={setShowResults}>
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-7">
