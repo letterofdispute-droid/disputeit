@@ -119,6 +119,78 @@ function calculateContentHash(content: string): string {
   return Math.abs(hash).toString(16);
 }
 
+// ── Keyword extraction from content ──
+// Extracts primary + secondary keywords when blog_posts fields are NULL
+function extractKeywordsFromContent(
+  title: string,
+  rawContent?: string,
+): { primary: string; secondary: string[] } {
+  // Extract headings
+  const headings = (rawContent?.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || [])
+    .map(h => h.replace(/<[^>]+>/g, '').trim())
+    .filter(h => h.length > 5 && h.length < 80);
+
+  // Clean title: strip generic starters
+  let cleanedTitle = title;
+  for (const starter of GENERIC_STARTERS) {
+    if (cleanedTitle.toLowerCase().startsWith(starter)) {
+      cleanedTitle = cleanedTitle.slice(starter.length).trim();
+      break;
+    }
+  }
+
+  // Split title on separators, pick best segment as primary
+  const titleSegments = cleanedTitle.split(/[-–—:|,;]/)
+    .map(s => s.trim().replace(/[.!?'"]+$/g, '').trim())
+    .filter(s => {
+      const words = s.split(/\s+/);
+      return words.length >= 2 && words.length <= 6;
+    });
+
+  // Primary: best title segment (shortest meaningful one) or cleaned title
+  const primary = titleSegments.sort((a, b) => a.split(/\s+/).length - b.split(/\s+/).length)[0]
+    || cleanedTitle.split(/\s+/).slice(0, 5).join(' ');
+
+  // Secondary: other title segments + heading-derived keywords (deduplicated)
+  const seen = new Set<string>([primary.toLowerCase()]);
+  const secondary: string[] = [];
+
+  // Add remaining title segments
+  for (const seg of titleSegments) {
+    const lower = seg.toLowerCase();
+    if (!seen.has(lower) && !isStopWordHeavy(seg)) {
+      seen.add(lower);
+      secondary.push(seg);
+    }
+  }
+
+  // Add heading-derived keywords (2-5 word phrases from headings)
+  for (const heading of headings.slice(0, 8)) {
+    let cleaned = heading;
+    for (const starter of GENERIC_STARTERS) {
+      if (cleaned.toLowerCase().startsWith(starter)) {
+        cleaned = cleaned.slice(starter.length).trim();
+        break;
+      }
+    }
+    const hSegments = cleaned.split(/[-–—:|,;]/)
+      .map(s => s.trim().replace(/[.!?'"]+$/g, '').trim())
+      .filter(s => {
+        const words = s.split(/\s+/);
+        return words.length >= 2 && words.length <= 5 && !isStopWordHeavy(s);
+      });
+    for (const seg of hSegments) {
+      const lower = seg.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        secondary.push(seg);
+      }
+    }
+  }
+
+  return { primary, secondary: secondary.slice(0, 6) };
+}
+
 // ── Anchor text quality constants ──
 const STOP_WORDS = new Set([
   'the','a','an','is','are','was','were','be','been','to','of','in',
@@ -301,51 +373,66 @@ async function processNextBatch(
   const newFailedIds: string[] = [];
   const errorMessages: Record<string, string> = {};
 
-  for (const post of posts) {
-    try {
-      // Determine article role
-      let articleRole: "super-pillar" | "pillar" | "cluster" = "cluster";
-      if (post.article_type === "pillar") {
-        articleRole = "pillar";
-      } else if (post.article_type === "category-guide" || post.article_type === "category_guide") {
-        articleRole = "super-pillar";
-      }
+    for (const post of posts) {
+      try {
+        // Determine article role
+        let articleRole: "super-pillar" | "pillar" | "cluster" = "cluster";
+        if (post.article_type === "pillar") {
+          articleRole = "pillar";
+        } else if (post.article_type === "category-guide" || post.article_type === "category_guide") {
+          articleRole = "super-pillar";
+        }
 
-      // Check if embedding exists
-      const { data: existing } = await supabase
-        .from("article_embeddings")
-        .select("id, content_hash")
-        .eq("content_id", post.id)
-        .eq("content_type", "article")
-        .single();
+        // ── KEYWORD EXTRACTION: fill in if missing ──
+        let primaryKeyword = post.primary_keyword;
+        let secondaryKeywords = post.secondary_keywords;
+        if (!primaryKeyword) {
+          const extracted = extractKeywordsFromContent(post.title, post.content);
+          primaryKeyword = extracted.primary;
+          secondaryKeywords = extracted.secondary;
+          // Write back to blog_posts for future use
+          await supabase
+            .from('blog_posts')
+            .update({ primary_keyword: primaryKeyword, secondary_keywords: secondaryKeywords })
+            .eq('id', post.id);
+          console.log(`[EMBEDDINGS] Extracted keywords for "${post.slug}": "${primaryKeyword}" + ${secondaryKeywords?.length || 0} secondary`);
+        }
 
-      const embeddingText = extractEmbeddingText({
-        id: post.id,
-        slug: post.slug,
-        title: post.title,
-        category_id: post.category_slug,
-        primary_keyword: post.primary_keyword,
-        secondary_keywords: post.secondary_keywords,
-        article_type: post.article_type,
-        article_role: articleRole,
-      }, post.content);
+        // Check if embedding exists
+        const { data: existing } = await supabase
+          .from("article_embeddings")
+          .select("id, content_hash")
+          .eq("content_id", post.id)
+          .eq("content_type", "article")
+          .single();
 
-      const newHash = calculateContentHash(embeddingText);
+        const embeddingText = extractEmbeddingText({
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          category_id: post.category_slug,
+          primary_keyword: primaryKeyword,
+          secondary_keywords: secondaryKeywords,
+          article_type: post.article_type,
+          article_role: articleRole,
+        }, post.content);
 
-      // Skip if unchanged
-      if (existing?.content_hash === newHash) {
-        console.log(`[EMBEDDINGS] Skipping unchanged: ${post.slug}`);
-        batchProcessed++;
-        continue;
-      }
+        const newHash = calculateContentHash(embeddingText);
 
-      // Generate embedding
-      const embedding = await generateEmbedding(embeddingText, openaiKey);
-      const anchorVariants = generateAnchorVariants(
-        post.title,
-        post.primary_keyword,
-        post.secondary_keywords
-      );
+        // Skip if unchanged (but NOT if we just extracted keywords — force re-embed)
+        if (existing?.content_hash === newHash && post.primary_keyword) {
+          console.log(`[EMBEDDINGS] Skipping unchanged: ${post.slug}`);
+          batchProcessed++;
+          continue;
+        }
+
+        // Generate embedding
+        const embedding = await generateEmbedding(embeddingText, openaiKey);
+        const anchorVariants = generateAnchorVariants(
+          post.title,
+          primaryKeyword,
+          secondaryKeywords
+        );
 
       const headingsMatch = post.content?.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || [];
       const headingsText = headingsMatch
@@ -362,8 +449,8 @@ async function processNextBatch(
         subcategory_slug: null,
         article_role: articleRole,
         article_type: post.article_type,
-        primary_keyword: post.primary_keyword,
-        secondary_keywords: post.secondary_keywords,
+        primary_keyword: primaryKeyword,
+        secondary_keywords: secondaryKeywords,
         anchor_variants: anchorVariants,
         headings_text: headingsText,
         embedding: JSON.stringify(embedding),
@@ -830,6 +917,15 @@ serve(async (req) => {
         articleRole = "super-pillar";
       }
 
+      // ── KEYWORD EXTRACTION: fill in if missing ──
+      let primaryKeyword = post.primary_keyword;
+      let secondaryKeywords = post.secondary_keywords;
+      if (!primaryKeyword) {
+        const extracted = extractKeywordsFromContent(post.title, post.content);
+        primaryKeyword = extracted.primary;
+        secondaryKeywords = extracted.secondary;
+      }
+
       const { data: existing } = await supabase
         .from("article_embeddings")
         .select("id, content_hash")
@@ -842,15 +938,15 @@ serve(async (req) => {
         slug: post.slug,
         title: post.title,
         category_id: post.category_slug,
-        primary_keyword: post.primary_keyword,
-        secondary_keywords: post.secondary_keywords,
+        primary_keyword: primaryKeyword,
+        secondary_keywords: secondaryKeywords,
         article_type: post.article_type,
         article_role: articleRole,
       }, post.content);
 
       const newHash = calculateContentHash(embeddingText);
 
-      if (existing?.content_hash === newHash) {
+      if (existing?.content_hash === newHash && post.primary_keyword) {
         return new Response(JSON.stringify({
           success: true,
           message: "Content unchanged, skipping embedding generation",
@@ -863,8 +959,8 @@ serve(async (req) => {
       const embedding = await generateEmbedding(embeddingText, OPENAI_API_KEY);
       const anchorVariants = generateAnchorVariants(
         post.title,
-        post.primary_keyword,
-        post.secondary_keywords
+        primaryKeyword,
+        secondaryKeywords
       );
 
       const headingsMatch = post.content?.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || [];
@@ -882,8 +978,8 @@ serve(async (req) => {
         subcategory_slug: null,
         article_role: articleRole,
         article_type: post.article_type,
-        primary_keyword: post.primary_keyword,
-        secondary_keywords: post.secondary_keywords,
+        primary_keyword: primaryKeyword,
+        secondary_keywords: secondaryKeywords,
         anchor_variants: anchorVariants,
         headings_text: headingsText,
         embedding: JSON.stringify(embedding),
@@ -910,7 +1006,7 @@ serve(async (req) => {
 
       await supabase
         .from("blog_posts")
-        .update({ content_hash: newHash })
+        .update({ content_hash: newHash, primary_keyword: primaryKeyword, secondary_keywords: secondaryKeywords })
         .eq("id", post.id);
 
       return new Response(JSON.stringify({

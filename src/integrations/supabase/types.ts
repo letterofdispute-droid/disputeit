@@ -1411,6 +1411,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      increment_link_counters: {
+        Args: { p_source_post_id: string; p_target_embedding_id: string }
+        Returns: undefined
+      }
       increment_optimization_progress:
         | {
             Args: {
