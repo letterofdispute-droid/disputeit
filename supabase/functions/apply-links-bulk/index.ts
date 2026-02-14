@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface ApplyLinksRequest {
@@ -12,6 +12,237 @@ interface ApplyLinksRequest {
   autoApproveThreshold?: number;
   maxOutboundPerArticle?: number;
 }
+
+// ── Smart Link Insertion Helpers ──
+
+interface Paragraph {
+  index: number;
+  html: string;
+  textLower: string;
+  linkCount: number;
+}
+
+/** Parse HTML content into paragraph blocks */
+function parseParagraphs(content: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const regex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let match: RegExpExecArray | null;
+  let idx = 0;
+  while ((match = regex.exec(content)) !== null) {
+    const html = match[0];
+    const inner = match[1];
+    // Strip tags for text scoring
+    const textLower = inner.replace(/<[^>]+>/g, ' ').replace(/&[^;]+;/g, ' ').toLowerCase();
+    // Count existing links
+    const linkCount = (inner.match(/<a\s/gi) || []).length;
+    paragraphs.push({ index: idx++, html, textLower, linkCount });
+  }
+  return paragraphs;
+}
+
+/** Score a paragraph for relevance to target keywords */
+function scoreParagraph(
+  para: Paragraph,
+  targetWords: string[],
+  totalParagraphs: number,
+): number {
+  if (para.textLower.trim().length < 40) return -1; // Skip very short paragraphs
+  // Skip first and last paragraphs (intro/conclusion)
+  if (para.index === 0 || para.index === totalParagraphs - 1) return -1;
+  // Penalize paragraphs with 2+ existing links
+  if (para.linkCount >= 2) return -1;
+
+  let score = 0;
+  for (const word of targetWords) {
+    if (word.length < 3) continue;
+    // Count occurrences of keyword word in paragraph text
+    const wordRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
+    const matches = para.textLower.match(wordRegex);
+    if (matches) score += matches.length;
+  }
+
+  // Light penalty for already having 1 link
+  if (para.linkCount === 1) score *= 0.7;
+
+  return score;
+}
+
+/** Extract target keyword words from primary + secondary keywords */
+function getTargetWords(primaryKeyword: string | null, secondaryKeywords: string[] | null): string[] {
+  const words = new Set<string>();
+  if (primaryKeyword) {
+    for (const w of primaryKeyword.toLowerCase().split(/\s+/)) {
+      if (w.length >= 3) words.add(w);
+    }
+  }
+  if (secondaryKeywords) {
+    for (const kw of secondaryKeywords) {
+      for (const w of kw.toLowerCase().split(/\s+/)) {
+        if (w.length >= 3) words.add(w);
+      }
+    }
+  }
+  // Filter out very common stop words
+  const stopWords = new Set(['the', 'and', 'for', 'with', 'your', 'that', 'this', 'from', 'have', 'has', 'are', 'was', 'were', 'been', 'will', 'can', 'how', 'what', 'when', 'where', 'which', 'who', 'why', 'not', 'but', 'all', 'also', 'than', 'them', 'then', 'its', 'into', 'about', 'more', 'some', 'may', 'our', 'out', 'you']);
+  return [...words].filter(w => !stopWords.has(w));
+}
+
+/**
+ * Try to find a natural phrase (2-5 words) in the paragraph that contains 
+ * at least one target keyword word, and wrap it as a link.
+ * Returns the modified paragraph HTML or null if no match found.
+ */
+function tryNaturalPhraseMatch(
+  paraHtml: string,
+  targetWords: string[],
+  targetUrl: string,
+  targetTitle: string,
+): string | null {
+  // Get the inner content of the <p> tag
+  const innerMatch = paraHtml.match(/^(<p[^>]*>)([\s\S]*?)(<\/p>)$/i);
+  if (!innerMatch) return null;
+  const [, openTag, inner, closeTag] = innerMatch;
+
+  // Don't match inside existing <a> tags
+  // Split content by <a>...</a> segments and only search in text segments
+  const segments = inner.split(/(<a\s[\s\S]*?<\/a>)/gi);
+  
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    // Skip <a> tag segments
+    if (seg.match(/^<a\s/i)) continue;
+    // Skip segments that are just HTML tags
+    if (seg.match(/^<[^>]+>$/)) continue;
+    
+    const plainText = seg.replace(/<[^>]+>/g, '');
+    if (plainText.trim().length < 5) continue;
+
+    // Try to find a 2-5 word phrase containing a target keyword
+    for (const targetWord of targetWords) {
+      // Build regex to find the target word within a natural phrase context
+      // Match 0-2 words before + target word + 0-2 words after
+      const phraseRegex = new RegExp(
+        `(?<![<\\/a-zA-Z])` + // not inside a tag
+        `((?:[a-zA-Z'-]+\\s+){0,2})` + // 0-2 words before
+        `(${escapeRegExp(targetWord)}(?:s|ed|ing|tion|ment|er|ly)?)` + // target word with optional suffix
+        `((?:\\s+[a-zA-Z'-]+){0,2})` + // 0-2 words after
+        `(?![^<]*>)`, // not inside a tag
+        'i'
+      );
+      
+      const phraseMatch = plainText.match(phraseRegex);
+      if (!phraseMatch) continue;
+      
+      const fullPhrase = (phraseMatch[1] + phraseMatch[2] + phraseMatch[3]).trim();
+      // Require at least 2 words for a natural-looking anchor
+      const wordCount = fullPhrase.split(/\s+/).length;
+      if (wordCount < 2 || wordCount > 5) continue;
+      // Don't use phrases that are too short
+      if (fullPhrase.length < 5) continue;
+      
+      // Now replace the first occurrence of this phrase in the segment
+      const escPhrase = escapeRegExp(fullPhrase);
+      const replaceRegex = new RegExp(`(?<!<a[^>]*>)\\b(${escPhrase})\\b(?![^<]*<\\/a>)`, 'i');
+      
+      if (replaceRegex.test(seg)) {
+        segments[i] = seg.replace(
+          replaceRegex,
+          `<a href="${targetUrl}" title="${escapeHtml(targetTitle)}">$1</a>`
+        );
+        return openTag + segments.join('') + closeTag;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/** Bridge sentence templates for fallback insertion */
+const BRIDGE_TEMPLATES = [
+  (url: string, anchor: string, title: string) =>
+    ` For more details, see our guide on <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
+  (url: string, anchor: string, title: string) =>
+    ` You may also want to explore <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
+  (url: string, anchor: string, title: string) =>
+    ` This relates closely to <a href="${url}" title="${escapeHtml(title)}">${anchor}</a>.`,
+  (url: string, anchor: string, title: string) =>
+    ` Learn more about <a href="${url}" title="${escapeHtml(title)}">${anchor}</a> for additional guidance.`,
+];
+
+function getBridgeSentence(suggestionId: string, url: string, anchor: string, title: string): string {
+  const idx = suggestionId.charCodeAt(0) % BRIDGE_TEMPLATES.length;
+  return BRIDGE_TEMPLATES[idx](url, anchor, title);
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Smart contextual link insertion:
+ * 1. Parse paragraphs, score by keyword relevance
+ * 2. Try natural phrase match in best paragraph
+ * 3. Fallback: append bridge sentence
+ */
+function insertLinkContextually(
+  content: string,
+  suggestion: { id: string; anchor_text: string; target_title: string },
+  targetUrl: string,
+  targetPrimaryKeyword: string | null,
+  targetSecondaryKeywords: string[] | null,
+): string | null {
+  const paragraphs = parseParagraphs(content);
+  if (paragraphs.length < 3) return null; // Too short to safely link
+
+  // Check if this target URL is already linked
+  if (content.includes(`href="${targetUrl}"`)) return null;
+
+  const targetWords = getTargetWords(targetPrimaryKeyword, targetSecondaryKeywords);
+  if (targetWords.length === 0) return null;
+
+  // Score paragraphs
+  const scored = paragraphs
+    .map(p => ({ para: p, score: scoreParagraph(p, targetWords, paragraphs.length) }))
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+
+  // Try natural phrase match in top 3 scoring paragraphs
+  for (const { para } of scored.slice(0, 3)) {
+    const modified = tryNaturalPhraseMatch(para.html, targetWords, targetUrl, suggestion.target_title);
+    if (modified) {
+      return content.replace(para.html, modified);
+    }
+  }
+
+  // Fallback: append bridge sentence to the best paragraph
+  const bestPara = scored[0].para;
+  const bridge = getBridgeSentence(suggestion.id, targetUrl, suggestion.anchor_text, suggestion.target_title);
+  const modifiedPara = bestPara.html.replace(/<\/p>$/i, `${bridge}</p>`);
+  return content.replace(bestPara.html, modifiedPara);
+}
+
+// ── Build target URL from suggestion ──
+
+function buildTargetUrl(suggestion: { target_type: string; target_slug: string }, categorySlug?: string): string {
+  switch (suggestion.target_type) {
+    case 'template':
+      return `/templates/${suggestion.target_slug}`;
+    case 'article':
+      return `/articles/${categorySlug || 'general'}/${suggestion.target_slug}`;
+    case 'guide':
+      return `/guides/${suggestion.target_slug}`;
+    default:
+      return `/${suggestion.target_slug}`;
+  }
+}
+
+// ── Main handler ──
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -68,12 +299,13 @@ serve(async (req) => {
         .gte('relevance_score', autoApproveThreshold);
     }
 
-    // Build query for approved suggestions
+    // Build query for approved suggestions — fetch target embedding data too
     let query = supabaseAdmin
       .from('link_suggestions')
       .select(`
         *,
-        blog_posts!inner(id, content, slug, category_slug)
+        blog_posts!inner(id, content, slug, category_slug),
+        article_embeddings:target_embedding_id(primary_keyword, secondary_keywords)
       `)
       .eq('status', 'approved');
 
@@ -126,7 +358,6 @@ serve(async (req) => {
         const remainingSlots = MAX_OUTBOUND - (alreadyApplied || 0);
 
         if (remainingSlots <= 0) {
-          // Reject all suggestions for this post — cap already reached
           for (const s of postSuggestions) {
             await supabaseAdmin
               .from('link_suggestions')
@@ -152,10 +383,8 @@ serve(async (req) => {
 
         // Sort suggestions by relevance (highest first), then cap to remaining slots
         const sortedSuggestions = postSuggestions
-          .filter(s => s.insert_position !== null)
           .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
 
-        // Only process up to remainingSlots; reject the rest
         const cappedSuggestions = sortedSuggestions.slice(0, remainingSlots);
         const excessSuggestions = sortedSuggestions.slice(remainingSlots);
 
@@ -168,37 +397,26 @@ serve(async (req) => {
           failedCount++;
         }
 
-        // Sort capped suggestions by insert position (descending) to avoid position shifts
-        const orderedForInsert = cappedSuggestions
-          .sort((a, b) => (b.insert_position || 0) - (a.insert_position || 0));
-
-        for (const suggestion of orderedForInsert) {
+        // Process each suggestion with smart contextual insertion
+        for (const suggestion of cappedSuggestions) {
           try {
-            let targetUrl: string;
-            switch (suggestion.target_type) {
-              case 'template':
-                targetUrl = `/templates/${suggestion.target_slug}`;
-                break;
-              case 'article':
-                targetUrl = `/articles/${suggestion.blog_posts?.category_slug || 'general'}/${suggestion.target_slug}`;
-                break;
-              case 'guide':
-                targetUrl = `/guides/${suggestion.target_slug}`;
-                break;
-              default:
-                targetUrl = `/${suggestion.target_slug}`;
-            }
+            const targetUrl = buildTargetUrl(suggestion, suggestion.blog_posts?.category_slug);
 
-            const anchorRegex = new RegExp(
-              `(?<!<a[^>]*>)\\b(${escapeRegExp(suggestion.anchor_text)})\\b(?![^<]*<\\/a>)`,
-              'i'
+            // Get target keywords from the joined embedding data
+            const targetEmbed = (suggestion as any).article_embeddings;
+            const targetPrimaryKeyword = targetEmbed?.primary_keyword || null;
+            const targetSecondaryKeywords = targetEmbed?.secondary_keywords || null;
+
+            const result = insertLinkContextually(
+              updatedContent,
+              suggestion,
+              targetUrl,
+              targetPrimaryKeyword,
+              targetSecondaryKeywords,
             );
 
-            if (anchorRegex.test(updatedContent)) {
-              updatedContent = updatedContent.replace(
-                anchorRegex,
-                `<a href="${targetUrl}" title="${suggestion.target_title}">$1</a>`
-              );
+            if (result) {
+              updatedContent = result;
 
               await supabaseAdmin
                 .from('link_suggestions')
@@ -208,8 +426,7 @@ serve(async (req) => {
                 })
                 .eq('id', suggestion.id);
 
-              // ── UPDATE INBOUND/OUTBOUND COUNTERS ──
-              // Increment outbound count on source article
+              // Update inbound/outbound counters
               await supabaseAdmin.rpc('increment_link_counters', {
                 p_source_post_id: postId,
                 p_target_embedding_id: suggestion.target_embedding_id,
@@ -221,7 +438,7 @@ serve(async (req) => {
               results.push({ 
                 suggestionId: suggestion.id, 
                 success: false, 
-                error: 'Anchor text not found in content' 
+                error: 'No suitable paragraph found for link insertion' 
               });
               failedCount++;
             }
@@ -238,7 +455,6 @@ serve(async (req) => {
         }
 
         // === PILLAR-AWARE LINKING ===
-        // If this is a pillar article, add link to the template page
         if (post.article_type === 'pillar' && post.content_plan_id) {
           const { data: plan } = await supabaseAdmin
             .from('content_plans')
@@ -250,7 +466,6 @@ serve(async (req) => {
             const templateUrl = `/templates/${plan.template_slug}`;
             const templateLinkHtml = `<p class="cta-link"><strong>Ready to take action?</strong> Use our <a href="${templateUrl}" title="${plan.template_name}">${plan.template_name}</a> template to create your dispute letter now.</p>`;
             
-            // Add template CTA before the last closing tag if not already present
             if (!updatedContent.includes(templateUrl)) {
               updatedContent = updatedContent.replace(
                 /(<\/[^>]+>)\s*$/,
@@ -301,8 +516,3 @@ serve(async (req) => {
     });
   }
 });
-
-// Helper function to escape special regex characters
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
