@@ -84,7 +84,7 @@ export default function TemplateCoverageMap() {
           'consumer rights',
           'dispute letter',
         ],
-        priority: 200,
+        priority: 100,
         status: 'queued' as const,
       }));
 
