@@ -210,8 +210,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </div>
               )}
 
-              {/* === Primary actions: only when NOT fully complete === */}
-              {!isFullyComplete && !isJobProcessing && !hasFailures && (
+              {/* === Primary actions: only when embeddings are incomplete and no queue/failures handling it === */}
+              {!isFullyComplete && !isJobProcessing && !hasFailures && !hasPendingQueue && embeddingProgress < 100 && (
                 <div className="flex gap-2 mt-2">
                   <Button
                     onClick={() => handleStartBulkEmbedding(false)}
