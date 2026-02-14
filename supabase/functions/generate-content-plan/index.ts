@@ -572,6 +572,12 @@ Return JSON:
       (t: string) => `${t} Explained: Your Rights and Options`,
       (t: string) => `How to Handle a ${t}`,
       (t: string) => `${t}: A Step-by-Step Guide`,
+      (t: string) => `Everything You Need to Know About ${t}`,
+      (t: string) => `Your Complete Rights and Options for ${t}`,
+      (t: string) => `${t}: What Consumers Should Know`,
+      (t: string) => `A Consumer's Guide to ${t}`,
+      (t: string) => `${t}: Know Your Rights`,
+      (t: string) => `What to Do About ${t}`,
     ];
     function simpleHash(str: string): number {
       let hash = 0;
