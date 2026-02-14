@@ -1,90 +1,63 @@
 
 
-# Fix: Smart Contextual Link Insertion (SEO-Expert Quality)
+# AI-Generated Contextual Sentences for Link Insertion
 
-## The Problem
+## What Changes
 
-The entire link application pipeline is broken at three levels:
+Replace the static bridge sentence templates ("For more details, see our guide on...") with AI-generated sentences that read like a natural part of the article.
 
-1. `insert_position` is never populated by the scanner, but `apply-links-bulk` requires it -- so zero links would ever be applied
-2. Anchor text comes from the target article's keywords, but the system tries to regex-match it in the source article's body -- these phrases rarely exist there
-3. No contextual awareness: the system doesn't read the source article to find the right place for links
+## How It Works
 
-## The Solution: AI-Powered Contextual Link Placement
+When the system can't find an existing phrase in a paragraph to wrap as a link, instead of appending a canned template, it will:
 
-Replace the naive regex approach with a two-phase system that mimics how SEO experts actually insert links:
+1. Send the surrounding paragraph text + the target article's title/keywords to Lovable AI (Gemini Flash -- fast and cheap)
+2. Ask the AI to write ONE sentence that:
+   - Continues the paragraph's topic naturally
+   - Contains a 2-5 word phrase suitable as anchor text for the target article
+   - Reads like the original author wrote it
+3. The AI returns the sentence with the anchor phrase marked
+4. The system wraps the anchor phrase in an `<a>` tag and appends the sentence to the paragraph
 
-### Phase 1: Smart Paragraph Matching (in `apply-links-bulk`)
+## Example
 
-When applying a link, instead of searching for exact anchor text:
+**Paragraph**: "Before heading out on the water, make sure your equipment is in good condition. Check for cracks in the hull and ensure your life jacket fits properly."
 
-1. **Parse** the source article into paragraphs (split by `<p>` tags)
-2. **Score** each paragraph for relevance to the target article's topic using keyword overlap (target's `primary_keyword` + `secondary_keywords` vs paragraph text)
-3. **Select** the highest-scoring paragraph that doesn't already contain a link
-4. **Within that paragraph**, either:
-   - **Match Mode**: Find an existing phrase (2-4 words) that overlaps with the target's keywords and wrap it in a link
-   - **Insert Mode** (fallback): Append a short contextual bridge sentence at the end of the paragraph, e.g., `Learn more about <a href="...">wooden paddle selection</a> to improve your technique.`
+**Target article**: "Choosing the Right Wooden Paddle for Your Kayak"
 
-### Phase 2: Remove the `insert_position` Gate
+**AI generates**: "Equally important is selecting a paddle that matches your height and paddling style, as the wrong size can lead to fatigue and poor control."
 
-The `insert_position` filter in `apply-links-bulk` (line 155-156) will be removed since the system now dynamically determines placement.
+**Result**: "...life jacket fits properly. Equally important is [selecting a paddle that matches your height](link) and paddling style, as the wrong size can lead to fatigue and poor control."
 
-## Detailed Changes
+## Technical Details
 
-### 1. `supabase/functions/apply-links-bulk/index.ts` -- Major Rewrite
+### File: `supabase/functions/apply-links-bulk/index.ts`
 
-Replace the current per-suggestion loop (lines 175-227) with:
+**Remove**: The `BRIDGE_TEMPLATES` array and `getBridgeSentence` function (lines 160-175)
+
+**Add**: An `generateContextualSentence` async function that calls Lovable AI:
 
 ```text
-For each suggestion in orderedForInsert:
-  1. Parse source article HTML into paragraph blocks
-  2. Skip paragraphs that already contain <a> tags pointing to the target
-  3. Score each paragraph against target keywords:
-     - Count matches of target primary_keyword words
-     - Count matches of target secondary_keywords words
-     - Penalize paragraphs that already have 2+ outbound links
-  4. Pick the top-scoring paragraph
-  5. Within that paragraph:
-     a. Try to find a 2-5 word phrase containing target keyword words
-     b. If found: wrap that phrase in <a href="...">phrase</a>
-     c. If not found: append a bridge sentence before the closing </p>
-  6. Mark suggestion as 'applied'
-  7. Increment link counters
+async function generateContextualSentence(
+  paragraphText: string,       // the surrounding context
+  targetTitle: string,         // what the target article is about
+  targetKeywords: string[],    // target's primary + secondary keywords
+  targetUrl: string            // the link URL
+): Promise<{ sentence: string, anchorPhrase: string } | null>
 ```
 
-**Bridge sentence templates** (randomly selected for variety):
-- `For more details, see our guide on <a href="URL">ANCHOR</a>.`
-- `You may also want to explore <a href="URL">ANCHOR</a>.`
-- `This relates closely to <a href="URL">ANCHOR</a>.`
+The AI prompt will be:
+- System: "You are an SEO content editor. Write ONE sentence that naturally continues the given paragraph and contains a short phrase (2-5 words) related to the target topic. Return JSON: {sentence, anchorPhrase}. The sentence must feel like the original author wrote it. Do not use phrases like 'learn more', 'check out', 'see our guide'."
+- User: the paragraph text + target title + keywords
 
-### 2. `supabase/functions/scan-for-semantic-links/index.ts` -- Minor Update
+**Update** `insertLinkContextually` to be `async` and call `generateContextualSentence` as the fallback instead of `getBridgeSentence`.
 
-- Remove the `insert_position` field from generated suggestions (it's no longer needed)
-- Keep all existing logic (similarity scoring, hierarchy validation, bidirectional discovery)
+### Rate Limiting Consideration
 
-### 3. No Database Changes Required
+Since this runs during bulk application (potentially 100 suggestions at once), the function will:
+- Process suggestions sequentially (not in parallel) to avoid hitting AI rate limits
+- Use `google/gemini-2.5-flash-lite` (cheapest/fastest model) since this is a simple writing task
+- Add a 200ms delay between AI calls if processing more than 10 suggestions
 
-The `insert_position` column can remain (nullable), it just won't be used as a gate anymore.
+### No Other Files Change
 
-## How It Works End-to-End (Example)
-
-**Source article**: "Top 5 Kayaking Safety Tips for Beginners"
-**Target article**: "Choosing the Right Wooden Paddle for Your Kayak"
-**Target keywords**: "wooden paddle", "paddle selection", "kayak paddle"
-
-1. Scanner finds these articles are semantically related (similarity 0.82)
-2. Scanner creates a suggestion with anchor_text = "wooden paddle selection"
-3. When applying, the system parses the kayaking article's paragraphs
-4. It finds: `<p>Before heading out, make sure your equipment is in good condition. Your paddle should be the right length for your height and kayaking style.</p>`
-5. It scores this paragraph highly because it contains "paddle" and "kayaking"
-6. It wraps the natural phrase: `Your <a href="/articles/...">paddle should be the right length</a> for your height...`
-7. If no natural match exists, it appends: `...kayaking style. For guidance, see our tips on <a href="/articles/...">wooden paddle selection</a>.</p>`
-
-## Technical Notes
-
-- **Paragraph scoring** uses simple word-level matching (no AI calls needed), keeping it fast and free
-- **Link density limit**: Skip paragraphs with 2+ existing `<a>` tags to avoid over-linking
-- **First/last paragraph skip**: Never link in the intro or conclusion paragraphs (SEO best practice)
-- **The `insert_position !== null` filter on line 155-156 of apply-links-bulk is removed** since placement is now dynamic
-- Bridge sentences use 4 templates, selected by `suggestion.id.charCodeAt(0) % 4` for deterministic variety
-
+The rest of the pipeline (scanning, UI, paragraph scoring, natural phrase matching) stays the same. The AI fallback only triggers when no existing phrase can be found in the article.
