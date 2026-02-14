@@ -23,6 +23,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showOrphans, setShowOrphans] = useState(false);
+  const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
 
   const {
     semanticScan,
@@ -63,6 +64,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
       categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
       batchSize,
       similarityThreshold: similarityThreshold / 100,
+      maxLinksPerArticle: maxOutboundLinks,
     });
   };
 
@@ -438,6 +440,21 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   max={50}
                   step={5}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Max Outbound Links Per Article</Label>
+                  <span className="text-sm font-medium">{maxOutboundLinks} links</span>
+                </div>
+                <Slider
+                  value={[maxOutboundLinks]}
+                  onValueChange={([v]) => setMaxOutboundLinks(v)}
+                  min={3}
+                  max={15}
+                  step={1}
+                />
+                <p className="text-xs text-muted-foreground">Cumulative cap — articles at this limit are skipped during scans</p>
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t">
