@@ -1,61 +1,69 @@
-
-# Improve Pillar Title Generation
+# Vary Pillar Titles and Fix Publish Ordering
 
 ## Problem
 
-Pillar titles are generated verbatim from `template_name`, producing awkward titles like:
-- "The Complete Guide to Contractor No-Show/Abandonment Letter"
-- "The Complete Guide to Defective Product Return Letter"
+1. **Monotonous titles**: All 547 pillar articles use "The Complete Guide to {Topic}" -- looks spammy and unnatural for SEO.
+2. **Publish ordering**: When articles are bulk-published, all pillars would appear first (or all together), creating an unnatural publication timeline. Pillars should appear just before their cluster articles.
 
 ## Solution
 
-Add a `cleanTemplateName` helper function that:
-1. Strips common suffixes: "Letter", "Complaint", "Dispute", "Template"
-2. Removes trailing slashes and cleans up punctuation artifacts
-3. Produces natural titles like "The Complete Guide to Contractor No-Shows"
+### 1. Varied Title Patterns
 
-## Changes
+Introduce a set of 6-8 rotating title templates that are assigned based on a hash of the template slug (deterministic, so re-running produces the same title). Examples:
 
-**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
 
-Add a helper function before the component:
+| Pattern                                    | Example                                                |
+| ------------------------------------------ | ------------------------------------------------------ |
+| The Complete Guide to {Topic}              | The Complete Guide to Bank Fee Disputes                |
+| {Topic}: What You Need to Know             | Insurance Premium Disputes: What You Need to Know      |
+| Understanding {Topic}: A Consumer's Guide  | Understanding Contractor No-Shows: A Consumer's Guide  |
+| {Topic} Explained: Your Rights and Options | Sewerage Complaints Explained: Your Rights and Options |
+| How to Handle {Topic}                      | How to Handle Electronics Malfunction                  |
+| {Topic}: A Step-by-Step Guide              | Late Payment Removal: A Step-by-Step Guide             |
 
-```typescript
-function cleanTemplateName(name: string): string {
-  return name
-    .replace(/\s*(Letter|Complaint Letter|Dispute Letter|Template)\s*$/i, '')
-    .replace(/\/+$/, '')
-    .trim();
-}
+
+The pattern selection will use a simple hash of the slug modulo the number of patterns, ensuring consistent distribution.
+
+### 2. Pillar Priority Reordering
+
+Currently pillars have `priority: 200` (highest), so they get generated first. Instead, set pillar priority to **-1** (lowest), so cluster articles generate first and the pillar generates last for each template. This is better because:
+
+- Pillars reference cluster articles in their content (the code at line 809 already fetches sibling clusters)
+- When published chronologically, the pillar appears after its clusters -- acting as the hub that links them together
+
+### Changes
+
+**File: `src/components/admin/seo/TemplateCoverageMap.tsx**`
+
+- Add a `getPillarTitle(name, slug)` function with 6+ title patterns
+- Update the bulk "Create All Pillars" mutation to use varied titles and low priority
+- Update keyword seeds to use cleaned name
+
+**File: `supabase/functions/generate-content-plan/index.ts**`
+
+- Update pillar item creation (lines 568-581) to use the same varied title patterns
+- Change pillar priority from `200` to `-1`
+- Apply `cleanTemplateName` to the title
+
+**Database update (existing queued pillars)**
+
+- Run an UPDATE on the 547 existing queued pillar items to:
+  - Assign varied titles based on their template slug
+  - Set priority to -1 so they generate after clusters
+
+## Technical Details
+
+```text
+Title pattern selection:
+  hash = simple string hash of template_slug
+  patternIndex = hash % patterns.length
+  title = patterns[patternIndex](cleanedName)
 ```
 
-Update line 80 to use it:
-
-```typescript
-suggested_title: `The Complete Guide to ${cleanTemplateName(plan.template_name)}`,
-```
-
-Also update the keyword seeds (lines 82-83) to use the cleaned name:
-
-```typescript
-suggested_keywords: [
-  cleanTemplateName(plan.template_name).toLowerCase(),
-  `${cleanTemplateName(plan.template_name).toLowerCase()} guide`,
-  'consumer rights',
-  'dispute letter',
-],
-```
-
-## Examples
-
-| Before | After |
-|--------|-------|
-| The Complete Guide to Contractor No-Show/Abandonment Letter | The Complete Guide to Contractor No-Show/Abandonment |
-| The Complete Guide to Defective Product Return Letter | The Complete Guide to Defective Product Return |
-| The Complete Guide to Bank Fee Dispute Letter | The Complete Guide to Bank Fee Dispute |
-| The Complete Guide to HOA Fine Complaint Letter | The Complete Guide to HOA Fine |
+The same `cleanTemplateName` helper already exists and will be reused. The pattern function will be shared between the frontend component and the edge function (duplicated in both since they run in different environments).
 
 ## Scope
 
-- 1 file modified
-- No database changes
+- 2 files modified (TemplateCoverageMap.tsx, generate-content-plan/index.ts)
+- 1 database data update (rewrite existing queued pillar titles + priorities)
+- No schema changes
