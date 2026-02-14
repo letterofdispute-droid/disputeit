@@ -1,94 +1,44 @@
 
 
-# Fix Remaining Outbound Cap Bypass Issues
+# Reject All Pending Suggestions + Add Select All Buttons
 
-## Issues Found
+## Step 1: Reject all 3,415 pending suggestions via database
 
-### Issue 1: Reverse suggestions ignore the outbound cap
-When Article A is scanned, the bidirectional logic creates reverse suggestions where OTHER articles (B, C, D) become the source. But it never checks if B, C, or D are already at their outbound cap. This is already happening -- one article has 10 pending suggestions (8 forward + 2 reverse), exceeding the configured cap of 8.
+Run a direct update to reject all current pending suggestions since they were generated with bad anchor text logic:
 
-### Issue 2: apply-links-bulk has no cap enforcement
-The bulk apply function inserts all approved links without checking if a post already has too many applied links. If an admin approves 12 suggestions for one article, all 12 get applied.
-
-## Fix 1: Add outbound cap check to reverse suggestions
-
-In `scan-for-semantic-links/index.ts`, before inserting a reverse suggestion, check how many approved/applied/pending outbound links the candidate article already has. Skip if at or above the cap.
-
-```text
-Location: Lines 288-327, inside the reverse loop
-
-Before creating the reverse suggestion for candidateEmbed.content_id:
-1. Count existing link_suggestions where source_post_id = candidateEmbed.content_id 
-   AND status IN ('approved', 'applied', 'pending')
-2. If count >= maxLinksPerArticle, skip this candidate
+```sql
+UPDATE link_suggestions SET status = 'rejected', hierarchy_violation = 'Pre-anchor-overhaul cleanup' WHERE status = 'pending';
 ```
 
-Including 'pending' in the reverse check prevents over-generation even before approval.
+## Step 2: Add "Reject All" and "Approve All" buttons to the Links UI
 
-## Fix 2: Add outbound cap to apply-links-bulk
+Add two new buttons to the `LinkActions` component that operate on ALL visible/filtered suggestions (not just manually selected ones):
 
-In `apply-links-bulk/index.ts`, when processing each post's suggestions, limit how many actually get applied so the total (already-applied + new) does not exceed the cap.
+- **Approve All** -- approves every suggestion currently shown in the filtered view
+- **Reject All** -- rejects every suggestion currently shown in the filtered view
 
-```text
-Location: Lines 115-234, inside the per-post loop
-
-Before applying suggestions for a post:
-1. Count existing applied links for that post (status = 'applied')
-2. Calculate remaining slots = MAX_OUTBOUND (8) - existing applied count
-3. Only process up to remainingSlots suggestions for that post
-4. Mark excess suggestions as 'rejected' with a reason
-```
-
-The cap value (8) should be stored in site_settings so both functions read the same value, or passed as a parameter. Since the edge function already receives parameters, we'll accept an optional `maxOutboundPerArticle` parameter with a default of 8.
+Both buttons will show a count and use the existing `bulkUpdateStatus` mutation.
 
 ## Files Changed
 
-- `supabase/functions/scan-for-semantic-links/index.ts` -- add outbound cap check in the reverse suggestion loop
-- `supabase/functions/apply-links-bulk/index.ts` -- add outbound cap enforcement before inserting links
-
-No database migrations needed.
+- `src/components/admin/seo/links/LinkActions.tsx` -- add `onApproveAll` and `onRejectAll` props and buttons
+- `src/components/admin/seo/LinkSuggestions.tsx` -- add handler functions that collect all filtered suggestion IDs and call `bulkUpdateStatus`
+- Database: one-time UPDATE to reject all pending suggestions
 
 ## Technical Details
 
-### scan-for-semantic-links change (reverse loop):
+### LinkActions.tsx
 
-```typescript
-// Before creating reverse suggestion, check candidate's outbound count
-const { count: candidateOutbound } = await supabaseAdmin
-  .from('link_suggestions')
-  .select('id', { count: 'exact', head: true })
-  .eq('source_post_id', candidateEmbed.content_id)
-  .in('status', ['approved', 'applied', 'pending']);
+Add two new props: `onApproveAll` and `onRejectAll`, plus `filteredCount` to show how many will be affected. Render "Approve All (N)" and "Reject All (N)" buttons when there are filtered suggestions visible.
 
-if ((candidateOutbound || 0) >= maxLinksPerArticle) continue;
+### LinkSuggestions.tsx
+
+Add two new handlers:
+
+```text
+handleApproveAll: collect all filteredSuggestions IDs -> bulkUpdateStatus('approved')
+handleRejectAll: collect all filteredSuggestions IDs -> bulkUpdateStatus('rejected')
 ```
 
-### apply-links-bulk change:
+Note: The bulk update mutation already handles arrays of IDs, so no hook changes are needed. The 200-item query limit in the hook is sufficient since the UI already caps at 200 suggestions per view.
 
-```typescript
-// At start of per-post processing loop:
-const { count: alreadyApplied } = await supabaseAdmin
-  .from('link_suggestions')
-  .select('id', { count: 'exact', head: true })
-  .eq('source_post_id', postId)
-  .eq('status', 'applied');
-
-const MAX_OUTBOUND = maxOutboundPerArticle || 8;
-const remainingSlots = MAX_OUTBOUND - (alreadyApplied || 0);
-
-if (remainingSlots <= 0) {
-  // Mark all as rejected
-  for (const s of postSuggestions) {
-    await supabaseAdmin
-      .from('link_suggestions')
-      .update({ status: 'rejected', hierarchy_violation: 'Outbound cap reached' })
-      .eq('id', s.id);
-  }
-  continue;
-}
-
-// Only process up to remainingSlots suggestions (sorted by relevance_score desc)
-const cappedSuggestions = postSuggestions
-  .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
-  .slice(0, remainingSlots);
-```
