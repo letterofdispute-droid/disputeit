@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSemanticLinkScan, EmbeddingStats, ScanResult, EmbeddingJob } from '@/hooks/useSemanticLinkScan';
 
 interface SemanticScanPanelProps {
@@ -122,14 +123,14 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 embeddingProgress === 100 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}>1</div>
               <h4 className="font-semibold text-sm">Generate Embeddings</h4>
-              <Tooltip>
-                <TooltipTrigger>
+              <Popover>
+                <PopoverTrigger>
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs text-sm">
                   <p>Creates a vector profile for each article using OpenAI. This captures the article's meaning so we can find related content. Takes ~20 mins for 2,000 articles.</p>
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-3 space-y-2 ml-8">
@@ -266,14 +267,14 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 hasEnoughEmbeddings ? 'bg-muted text-muted-foreground' : 'bg-muted/50 text-muted-foreground/50'
               }`}>2</div>
               <h4 className={`font-semibold text-sm ${!hasEnoughEmbeddings ? 'text-muted-foreground/50' : ''}`}>Discover Links</h4>
-              <Tooltip>
-                <TooltipTrigger>
+              <Popover>
+                <PopoverTrigger>
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs text-sm">
                   <p>Compares article embeddings to find semantically related content, then generates linking suggestions with anchor text. Uses bidirectional scanning - finds both outbound and inbound links.</p>
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className={`ml-8 space-y-2 ${!hasEnoughEmbeddings ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -336,14 +337,14 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold bg-muted text-muted-foreground">3</div>
               <h4 className="font-semibold text-sm">Review & Apply</h4>
-              <Tooltip>
-                <TooltipTrigger>
+              <Popover>
+                <PopoverTrigger>
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs text-sm">
                   <p>Review the link suggestions in the "Link Review" tab. Approve or reject each one, then click "Apply Approved" to insert the links into your article HTML.</p>
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="ml-8">
               <p className="text-xs text-muted-foreground">
