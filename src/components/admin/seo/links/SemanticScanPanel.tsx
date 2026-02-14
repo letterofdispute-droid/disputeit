@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Clock, ArrowRightLeft, Search, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -96,6 +96,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const hasOrphans = orphanArticles.length > 0;
   const hasPendingQueue = queueStats.pending > 0;
   const hasEnoughEmbeddings = (embeddingStats?.completed ?? 0) >= 2;
+  const isFullyComplete = embeddingProgress === 100 && !hasPendingQueue && !isJobProcessing;
+  const hasFailures = (activeJob?.status === 'completed' || activeJob?.status === 'failed') && (activeJob?.failed_items ?? 0) > 0;
 
   return (
     <TooltipProvider>
@@ -134,6 +136,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
             </div>
 
             <div className="bg-muted/50 rounded-lg p-3 space-y-2 ml-8">
+              {/* Progress bar - always visible */}
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   <Database className="h-4 w-4 text-muted-foreground" />
@@ -144,15 +147,33 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </span>
               </div>
               <Progress value={embeddingProgress} className="h-2" />
-              <div className="flex gap-3 text-xs text-muted-foreground">
-                <span className="text-primary">✓ {embeddingStats?.completed ?? 0} ready</span>
-                <span>◷ {embeddingStats?.pending ?? 0} pending</span>
-                {(embeddingStats?.failed ?? 0) > 0 && (
-                  <span className="text-destructive">✗ {embeddingStats?.failed} failed</span>
-                )}
-              </div>
 
-              {/* Active Job Progress */}
+              {/* === STATE: Fully Complete === */}
+              {isFullyComplete && !hasFailures && (
+                <div className="flex items-center gap-2 text-xs p-2 bg-primary/10 rounded-md mt-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <span className="font-medium text-primary">All {embeddingStats?.completed?.toLocaleString()} articles embedded</span>
+                    <p className="text-muted-foreground mt-0.5">New articles are automatically queued when published.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* === STATE: Has Failures === */}
+              {hasFailures && !isJobProcessing && (
+                <div className="flex items-center justify-between text-xs mt-2 p-2 bg-destructive/10 rounded-md">
+                  <span className="flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                    <span>{embeddingStats?.completed?.toLocaleString()} embedded, {activeJob?.failed_items} failed</span>
+                  </span>
+                  <Button variant="outline" size="sm" className="h-6 text-xs" onClick={handleRetryFailed} disabled={isRetrying}>
+                    {isRetrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                    Retry Failed
+                  </Button>
+                </div>
+              )}
+
+              {/* === STATE: Job In Progress === */}
               {isJobProcessing && activeJob && (
                 <div className="bg-primary/5 rounded-md p-2 border border-primary/20 space-y-1.5 mt-2">
                   <div className="flex items-center justify-between">
@@ -172,91 +193,44 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </div>
               )}
 
-              {/* Completed Job */}
-              {activeJob?.status === 'completed' && (
-                <div className="flex items-center justify-between text-xs mt-2 p-2 bg-primary/5 rounded-md">
-                  <span className="text-primary">✓ Last job: {activeJob.processed_items} processed{activeJob.failed_items > 0 ? `, ${activeJob.failed_items} failed` : ''}</span>
-                  {activeJob.failed_items > 0 && (
-                    <Button variant="outline" size="sm" className="h-6 text-xs" onClick={handleRetryFailed} disabled={isRetrying}>
-                      {isRetrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                      Retry
+              {/* === STATE: New Articles Pending === */}
+              {hasPendingQueue && !isJobProcessing && (
+                <div className="mt-2 p-2 bg-accent/50 border border-accent rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-medium">{queueStats.pending} new article{queueStats.pending !== 1 ? 's' : ''} ready to process</span>
+                    </div>
+                    <Button variant="default" size="sm" className="h-6 text-xs" onClick={() => processQueue()} disabled={isProcessingQueue}>
+                      {isProcessingQueue ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
+                      Process Now
                     </Button>
-                  )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 ml-5">Auto-queued when you published new content.</p>
                 </div>
               )}
 
-              {/* Failed Job */}
-              {activeJob?.status === 'failed' && (
-                <div className="flex items-center justify-between text-xs mt-2 p-2 bg-destructive/10 rounded-md">
-                  <span className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3 text-destructive" />
-                    Job failed: {activeJob.processed_items} done, {activeJob.failed_items} failed
-                  </span>
-                  <Button variant="outline" size="sm" className="h-6 text-xs" onClick={handleRetryFailed} disabled={isRetrying}>
-                    {isRetrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                    Retry
+              {/* === Primary actions: only when NOT fully complete === */}
+              {!isFullyComplete && !isJobProcessing && !hasFailures && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    onClick={() => handleStartBulkEmbedding(false)}
+                    disabled={isStartingBulk || isJobProcessing}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {isStartingBulk ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
+                    ) : (
+                      <><Database className="h-3.5 w-3.5 mr-1.5" /> Generate Missing</>
+                    )}
                   </Button>
                 </div>
               )}
 
-              {/* Embedding Queue Alert */}
-              {hasPendingQueue && (
-                <div className="flex items-center justify-between text-xs mt-2 p-2 bg-blue-500/10 rounded-md">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-blue-600" />
-                    {queueStats.pending} auto-queued from new articles
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => processQueue()} disabled={isProcessingQueue}>
-                        {isProcessingQueue ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
-                        Process
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Process queued items with self-chaining (will process all automatically)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => handleStartBulkEmbedding(false)}
-                      disabled={isStartingBulk || isJobProcessing}
-                      size="sm"
-                      className="flex-1"
-                    >
-                      {isStartingBulk ? (
-                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
-                      ) : (
-                        <><Database className="h-3.5 w-3.5 mr-1.5" /> Generate All</>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Create vector embeddings for all articles that don't have one yet</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => handleStartBulkEmbedding(true)}
-                      disabled={isStartingBulk || isJobProcessing}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <Zap className="h-3.5 w-3.5 mr-1.5" />
-                      Force Re-embed
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Re-create embeddings for ALL articles, even if they haven't changed</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+              <p className="text-xs text-muted-foreground mt-2 border-t pt-2">
+                💡 New articles are automatically queued when published — just come back and tap <strong>Process Now</strong>.
+              </p>
             </div>
           </div>
 
@@ -429,6 +403,40 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleStartBulkEmbedding(false)}
+                      disabled={isStartingBulk || isJobProcessing}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isStartingBulk ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Database className="h-3.5 w-3.5 mr-1.5" />}
+                      Generate Missing
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Create embeddings for articles that don't have one yet</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleStartBulkEmbedding(true)}
+                      disabled={isStartingBulk || isJobProcessing}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Zap className="h-3.5 w-3.5 mr-1.5" />
+                      Force Re-embed
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Re-create embeddings for ALL articles, even if unchanged</p>
+                  </TooltipContent>
+                </Tooltip>
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button onClick={() => runMaintenance(['process_queue', 'rescan_stale', 'detect_orphans'])} disabled={isRunningMaintenance || isJobProcessing} variant="outline" size="sm">
