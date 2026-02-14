@@ -28,6 +28,8 @@ export default function LinkSuggestions() {
     getStats,
     getHighRelevanceIds,
     getApprovedIds,
+    bulkUpdateAllByStatus,
+    isBulkUpdatingAll,
   } = useLinkSuggestions(statusFilter === 'all' ? undefined : statusFilter);
 
   const stats = getStats();
@@ -98,17 +100,19 @@ export default function LinkSuggestions() {
   };
 
   const handleApproveAll = () => {
-    const ids = filteredSuggestions.map(s => s.id);
-    if (ids.length > 0) {
-      bulkUpdateStatus({ ids, status: 'approved' });
-    }
+    bulkUpdateAllByStatus({
+      currentStatus: statusFilter === 'all' ? 'pending' : statusFilter,
+      newStatus: 'approved',
+      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
+    });
   };
 
   const handleRejectAll = () => {
-    const ids = filteredSuggestions.map(s => s.id);
-    if (ids.length > 0) {
-      bulkUpdateStatus({ ids, status: 'rejected' });
-    }
+    bulkUpdateAllByStatus({
+      currentStatus: statusFilter === 'all' ? 'pending' : statusFilter,
+      newStatus: 'rejected',
+      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
+    });
   };
 
   const handleScan = () => {
@@ -157,6 +161,7 @@ export default function LinkSuggestions() {
           filteredCount={filteredSuggestions.length}
           isScanning={isScanning}
           isApplying={isApplyingLinks}
+          isBulkUpdating={isBulkUpdatingAll}
           onScan={handleScan}
           onApproveHighRelevance={handleApproveHighRelevance}
           onApproveSelected={handleApproveSelected}

@@ -1313,6 +1313,14 @@ export type Database = {
         }
         Returns: string
       }
+      bulk_update_link_status: {
+        Args: {
+          p_category_slug?: string
+          p_current_status: string
+          p_new_status: string
+        }
+        Returns: number
+      }
       calculate_keyword_overlap: {
         Args: { keywords_a: string[]; keywords_b: string[] }
         Returns: number
