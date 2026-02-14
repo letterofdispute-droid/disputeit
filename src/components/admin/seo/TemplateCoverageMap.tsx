@@ -41,8 +41,13 @@ interface CategoryGroup {
 
 function cleanTemplateName(name: string): string {
   return name
-    .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)\s*$/i, '')
-    .replace(/\/+$/, '')
+    // Strip trailing suffixes: "Letter (GDPR/CCPA)", "Complaint Letter", "Dispute", etc.
+    .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
+    .replace(/\s*(Complaint|Dispute|Claim)\s*$/i, '')
+    // Convert slashes to "and" (e.g. "No-Show/Abandonment" → "No-Show and Abandonment")
+    .replace(/\//g, ' and ')
+    // Clean up double spaces and trailing punctuation
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
