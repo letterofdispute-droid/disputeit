@@ -194,47 +194,99 @@ const AdminBlog = () => {
     
     setIsBulkPublishing(true);
     const idsArray = Array.from(selectedIds);
-    const BATCH_SIZE = 50;
     let successCount = 0;
     let errorOccurred = false;
-    
-    // Process in batches to prevent timeout
-    for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
-      const batch = idsArray.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase
+    let pillarDateMap = new Map<string, string>();
+
+    try {
+      // Fetch selected posts to identify pillars
+      const { data: selectedPosts } = await supabase
         .from('blog_posts')
-        .update({ 
-          status: 'published', 
-          published_at: new Date().toISOString() 
-        })
-        .in('id', batch);
+        .select('id, article_type, content_plan_id')
+        .in('id', idsArray);
+
+      const pillarPosts = (selectedPosts || []).filter(
+        p => p.article_type === 'pillar' && p.content_plan_id
+      );
+      const pillarIds = new Set(pillarPosts.map(p => p.id));
+      const nonPillarIds = idsArray.filter(id => !pillarIds.has(id));
+
+      // For pillars, compute backdated published_at per content_plan
       
-      if (error) {
-        errorOccurred = true;
-        toast({
-          title: 'Error publishing posts',
-          description: error.message,
-          variant: 'destructive',
-        });
-        break;
+
+      if (pillarPosts.length > 0) {
+        const planIds = [...new Set(pillarPosts.map(p => p.content_plan_id!))];
+        
+        // For each plan, find the earliest published cluster's published_at
+        for (const planId of planIds) {
+          const { data: earliestCluster } = await supabase
+            .from('blog_posts')
+            .select('published_at')
+            .eq('content_plan_id', planId)
+            .eq('status', 'published')
+            .not('published_at', 'is', null)
+            .neq('article_type', 'pillar')
+            .order('published_at', { ascending: true })
+            .limit(1);
+
+          const earliestDate = earliestCluster?.[0]?.published_at;
+          const pillarDate = earliestDate
+            ? new Date(new Date(earliestDate).getTime() - 60 * 60 * 1000).toISOString()
+            : new Date().toISOString();
+
+          // Assign this date to all pillars in this plan
+          for (const p of pillarPosts.filter(pp => pp.content_plan_id === planId)) {
+            pillarDateMap.set(p.id, pillarDate);
+          }
+        }
       }
+
+      // Publish non-pillar posts in batches
+      const BATCH_SIZE = 50;
+      const now = new Date().toISOString();
       
-      // Also update content_queue status for synced items
-      await supabase
-        .from('content_queue')
-        .update({ 
-          status: 'published', 
-          published_at: new Date().toISOString() 
-        })
-        .in('blog_post_id', batch);
-      
-      successCount += batch.length;
+      for (let i = 0; i < nonPillarIds.length; i += BATCH_SIZE) {
+        const batch = nonPillarIds.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase
+          .from('blog_posts')
+          .update({ status: 'published', published_at: now })
+          .in('id', batch);
+        
+        if (error) {
+          errorOccurred = true;
+          toast({ title: 'Error publishing posts', description: error.message, variant: 'destructive' });
+          break;
+        }
+        await supabase.from('content_queue').update({ status: 'published', published_at: now }).in('blog_post_id', batch);
+        successCount += batch.length;
+      }
+
+      // Publish pillar posts individually with their backdated timestamps
+      if (!errorOccurred) {
+        for (const [postId, pubDate] of pillarDateMap.entries()) {
+          const { error } = await supabase
+            .from('blog_posts')
+            .update({ status: 'published', published_at: pubDate })
+            .eq('id', postId);
+          
+          if (error) {
+            errorOccurred = true;
+            toast({ title: 'Error publishing pillar', description: error.message, variant: 'destructive' });
+            break;
+          }
+          await supabase.from('content_queue').update({ status: 'published', published_at: pubDate }).in('blog_post_id', [postId]);
+          successCount++;
+        }
+      }
+    } catch (e: any) {
+      errorOccurred = true;
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
-    
+
     if (!errorOccurred) {
       toast({
         title: 'Posts published',
-        description: `Successfully published ${successCount} posts.`,
+        description: `Successfully published ${successCount} posts.${pillarDateMap.size > 0 ? ` ${pillarDateMap.size} pillar(s) backdated to sit before their clusters.` : ''}`,
       });
     } else if (successCount > 0) {
       toast({
@@ -246,6 +298,7 @@ const AdminBlog = () => {
     setSelectedIds(new Set());
     fetchPosts();
     fetchDraftCount();
+    fetchPublishedCount();
     setIsBulkPublishing(false);
   };
 
