@@ -162,12 +162,24 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
               {/* === STATE: Fully Complete === */}
               {isFullyComplete && !hasFailures && (
-                <div className="flex items-center gap-2 text-xs p-2 bg-primary/10 rounded-md mt-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                  <div>
-                    <span className="font-medium text-primary">All {embeddingStats?.completed?.toLocaleString()} articles embedded</span>
-                    <p className="text-muted-foreground mt-0.5">New articles are automatically queued when published.</p>
+                <div className="flex items-center justify-between text-xs p-2 bg-primary/10 rounded-md mt-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <span className="font-medium text-primary">All {embeddingStats?.completed?.toLocaleString()} articles embedded</span>
+                      <p className="text-muted-foreground mt-0.5">New articles are automatically queued when published.</p>
+                    </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs shrink-0"
+                    onClick={() => handleStartBulkEmbedding(true)}
+                    disabled={isStartingBulk || isJobProcessing}
+                  >
+                    {isStartingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3 mr-1" />}
+                    Force Re-embed All
+                  </Button>
                 </div>
               )}
 

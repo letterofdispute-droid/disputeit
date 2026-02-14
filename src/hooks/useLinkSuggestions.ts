@@ -182,6 +182,33 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     },
   });
 
+  // Bulk update all by status (server-side, no row limit)
+  const bulkUpdateAllByStatusMutation = useMutation({
+    mutationFn: async ({ currentStatus, newStatus, categorySlug }: { currentStatus: string; newStatus: string; categorySlug?: string }) => {
+      const { data, error } = await supabase.rpc('bulk_update_link_status', {
+        p_current_status: currentStatus,
+        p_new_status: newStatus,
+        p_category_slug: categorySlug || null,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (count, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({
+        title: 'Bulk update complete',
+        description: `${count} suggestions marked as ${variables.newStatus}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Bulk update failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Delete suggestions
   const deleteSuggestionsMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -234,6 +261,8 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     bulkUpdateStatus: bulkUpdateStatusMutation.mutate,
     applyLinks: applyLinksMutation.mutate,
     isApplyingLinks: applyLinksMutation.isPending,
+    bulkUpdateAllByStatus: bulkUpdateAllByStatusMutation.mutate,
+    isBulkUpdatingAll: bulkUpdateAllByStatusMutation.isPending,
     deleteSuggestions: deleteSuggestionsMutation.mutate,
     getStats,
     getHighRelevanceIds,
