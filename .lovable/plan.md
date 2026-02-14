@@ -1,51 +1,57 @@
 
 
-# Fix: Embedding Job Crashes After ~380 Articles
+# Fix: Embedding Stats Showing 1000/1000
 
 ## Problem
 
-The "Generate All" embedding job failed after processing 380 out of 4,627 articles. The root cause is a **URL length overflow**.
-
-The function excludes already-processed articles using a `NOT IN (uuid1, uuid2, ...)` filter in the query string. After ~380 articles, the list of UUIDs exceeds the maximum URL length, causing a network-level `TypeError`.
+The "Articles with embeddings" counter shows **1000/1000** because the stats query fetches all rows from `article_embeddings` and counts them client-side. The database API has a default limit of 1,000 rows per request, so the count is capped at 1,000 regardless of how many embeddings actually exist.
 
 ## Solution
 
-Replace the growing exclusion list approach with an **offset-based approach** using `processed_items` as a cursor. Instead of tracking every processed ID in an array and excluding them via URL params, we'll:
-
-1. Query articles ordered deterministically (by `id`)
-2. Use `.range(offset, offset + BATCH_SIZE - 1)` to paginate through them
-3. Track progress via the existing `processed_items` counter instead of the `processed_ids` array
-
-This keeps the query URL constant-size regardless of how many articles have been processed.
+Replace the client-side counting approach with **server-side aggregation** using `count: 'exact'` and `head: true` -- the same pattern already used throughout the project for accurate reporting.
 
 ## Technical Changes
 
-**File: `supabase/functions/generate-embeddings/index.ts`**
+**File: `src/hooks/useSemanticLinkScan.ts`**
 
-In the `processNextBatch` function (around line 200-394):
-
-- Remove the `processed_ids` / `failed_ids` array-based exclusion logic
-- Add deterministic ordering: `.order('id', { ascending: true })`
-- Use `.range(job.processed_items, job.processed_items + BATCH_SIZE - 1)` for pagination
-- Track failed articles separately (keep failed_ids for retry, but don't use it in the query filter)
-- Update progress by incrementing `processed_items` and `failed_items` counters atomically
-
-**Key change in query logic:**
-
-```text
-BEFORE (breaks at ~380 items):
-  query.not('id', 'in', `(${hugeListOfIds})`)
-
-AFTER (works for any volume):
-  query.order('id', { ascending: true })
-       .range(offset, offset + BATCH_SIZE - 1)
+Replace `fetchEmbeddingStats` (currently around lines 197-211) which does:
+```
+// CURRENT (broken at 1000+)
+const { data } = await supabase.from('article_embeddings').select('embedding_status');
+return { total: data.length, completed: data.filter(...).length, ... };
 ```
 
-- The `failed_ids` array is still maintained for the retry feature, but is no longer used in the main query filter
-- The completion check becomes: `processed_items + failed_items >= total_items`
+With three separate `count: 'exact', head: true` queries:
+```
+// NEW (accurate at any scale)
+const { count: total } = await supabase
+  .from('article_embeddings')
+  .select('*', { count: 'exact', head: true });
+
+const { count: completed } = await supabase
+  .from('article_embeddings')
+  .select('*', { count: 'exact', head: true })
+  .eq('embedding_status', 'completed');
+
+const { count: failed } = await supabase
+  .from('article_embeddings')
+  .select('*', { count: 'exact', head: true })
+  .eq('embedding_status', 'failed');
+
+return {
+  total: total || 0,
+  completed: completed || 0,
+  pending: (total || 0) - (completed || 0) - (failed || 0),
+  failed: failed || 0,
+};
+```
+
+This approach:
+- Returns accurate counts regardless of table size
+- Transfers zero row data (head-only requests)
+- Is consistent with the project's existing reporting pattern
 
 ## Scope
-- 1 edge function modified (`generate-embeddings/index.ts`)
-- No database schema changes needed
-- Existing retry logic continues to work unchanged
+- 1 file modified (`src/hooks/useSemanticLinkScan.ts`)
+- No database or edge function changes needed
 
