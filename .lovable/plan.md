@@ -1,63 +1,94 @@
 
 
-# Fix Self-Link Bug in Link Discovery
+# Fix Remaining Outbound Cap Bypass Issues
 
-## Problem
+## Issues Found
 
-The screenshot shows an article ("The Urgent Note That Prompted My Landlord to Replace Our Drafty Window") suggesting a link to **itself**. This is a self-link that should never be generated.
+### Issue 1: Reverse suggestions ignore the outbound cap
+When Article A is scanned, the bidirectional logic creates reverse suggestions where OTHER articles (B, C, D) become the source. But it never checks if B, C, or D are already at their outbound cap. This is already happening -- one article has 10 pending suggestions (8 forward + 2 reverse), exceeding the configured cap of 8.
 
-The anchor text is also the article's own title, which is bad for SEO and confirms the self-link went undetected.
+### Issue 2: apply-links-bulk has no cap enforcement
+The bulk apply function inserts all approved links without checking if a post already has too many applied links. If an admin approves 12 suggestions for one article, all 12 get applied.
 
-## Root Cause
+## Fix 1: Add outbound cap check to reverse suggestions
 
-The `match_semantic_links` SQL function does not exclude the source article from results. It returns the source article as its own highest match (near-100% similarity). A JavaScript filter (`m.id !== source.id`) exists but is failing -- likely due to a type mismatch between the UUID returned by the RPC and the source object's `id` field.
-
-## Fix (2 changes)
-
-### 1. Exclude self at the database level (primary fix)
-
-Add a `source_content_id` parameter to the `match_semantic_links` function. Add a WHERE clause: `AND ae.content_id != source_content_id`. This guarantees self-matches never leave Postgres regardless of any JS-level bugs.
-
-### 2. Strengthen the JS-level self-link filter (safety net)
-
-Update the filter in `processOneArticle()` to also compare by `content_id` and `slug`, not just `id`. Add explicit string casting to avoid type mismatches.
+In `scan-for-semantic-links/index.ts`, before inserting a reverse suggestion, check how many approved/applied/pending outbound links the candidate article already has. Skip if at or above the cap.
 
 ```text
-BEFORE (line 202):
-  filter(m => m.id !== source.id && m.slug !== source.slug)
+Location: Lines 288-327, inside the reverse loop
 
-AFTER:
-  filter(m => String(m.id) !== String(source.id) 
-           && m.slug !== source.slug)
+Before creating the reverse suggestion for candidateEmbed.content_id:
+1. Count existing link_suggestions where source_post_id = candidateEmbed.content_id 
+   AND status IN ('approved', 'applied', 'pending')
+2. If count >= maxLinksPerArticle, skip this candidate
 ```
 
-Also filter the reverse matches the same way (line 282).
+Including 'pending' in the reverse check prevents over-generation even before approval.
 
-### 3. Clean up existing self-link suggestions
+## Fix 2: Add outbound cap to apply-links-bulk
 
-Run a one-time migration to delete any existing self-link suggestions already in the database.
+In `apply-links-bulk/index.ts`, when processing each post's suggestions, limit how many actually get applied so the total (already-applied + new) does not exceed the cap.
 
-```sql
-DELETE FROM link_suggestions ls
-USING blog_posts bp
-WHERE ls.source_post_id = bp.id
-  AND ls.target_slug = bp.slug;
+```text
+Location: Lines 115-234, inside the per-post loop
+
+Before applying suggestions for a post:
+1. Count existing applied links for that post (status = 'applied')
+2. Calculate remaining slots = MAX_OUTBOUND (8) - existing applied count
+3. Only process up to remainingSlots suggestions for that post
+4. Mark excess suggestions as 'rejected' with a reason
 ```
+
+The cap value (8) should be stored in site_settings so both functions read the same value, or passed as a parameter. Since the edge function already receives parameters, we'll accept an optional `maxOutboundPerArticle` parameter with a default of 8.
+
+## Files Changed
+
+- `supabase/functions/scan-for-semantic-links/index.ts` -- add outbound cap check in the reverse suggestion loop
+- `supabase/functions/apply-links-bulk/index.ts` -- add outbound cap enforcement before inserting links
+
+No database migrations needed.
 
 ## Technical Details
 
-### Database migration
+### scan-for-semantic-links change (reverse loop):
 
-1. Replace `match_semantic_links` function with a new version that accepts an optional `exclude_content_id UUID DEFAULT NULL` parameter and adds `AND (exclude_content_id IS NULL OR ae.content_id != exclude_content_id)` to the WHERE clause
-2. Delete existing self-link suggestions
+```typescript
+// Before creating reverse suggestion, check candidate's outbound count
+const { count: candidateOutbound } = await supabaseAdmin
+  .from('link_suggestions')
+  .select('id', { count: 'exact', head: true })
+  .eq('source_post_id', candidateEmbed.content_id)
+  .in('status', ['approved', 'applied', 'pending']);
 
-### Edge function (`scan-for-semantic-links/index.ts`)
+if ((candidateOutbound || 0) >= maxLinksPerArticle) continue;
+```
 
-- Pass `source.content_id` as the new `exclude_content_id` parameter in both forward and reverse RPC calls
-- Add `String()` casting to the JS-level self-link filters as a safety net
+### apply-links-bulk change:
 
-## Files changed
+```typescript
+// At start of per-post processing loop:
+const { count: alreadyApplied } = await supabaseAdmin
+  .from('link_suggestions')
+  .select('id', { count: 'exact', head: true })
+  .eq('source_post_id', postId)
+  .eq('status', 'applied');
 
-- `supabase/functions/scan-for-semantic-links/index.ts` -- pass exclude parameter, strengthen JS filter
-- 1 database migration (update RPC function + clean up self-links)
+const MAX_OUTBOUND = maxOutboundPerArticle || 8;
+const remainingSlots = MAX_OUTBOUND - (alreadyApplied || 0);
 
+if (remainingSlots <= 0) {
+  // Mark all as rejected
+  for (const s of postSuggestions) {
+    await supabaseAdmin
+      .from('link_suggestions')
+      .update({ status: 'rejected', hierarchy_violation: 'Outbound cap reached' })
+      .eq('id', s.id);
+  }
+  continue;
+}
+
+// Only process up to remainingSlots suggestions (sorted by relevance_score desc)
+const cappedSuggestions = postSuggestions
+  .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
+  .slice(0, remainingSlots);
+```
