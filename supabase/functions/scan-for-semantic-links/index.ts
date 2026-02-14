@@ -114,24 +114,58 @@ async function verifyAdmin(req: Request): Promise<string | null> {
   return isAdmin ? userId : null;
 }
 
+const GENERIC_ANCHOR_STARTERS = [
+  'how to handle','how to write','how to dispute','how to file',
+  'how to get','how to deal','how to respond',
+  'what to do about','what to do when','what to do if',
+  'a guide to','your complete','the ultimate',
+  'everything you need','a comprehensive',
+  'understanding your','here is how','steps to',
+];
+
 function selectAnchorText(
   anchorVariants: string[],
   primaryKeyword: string | null,
   title: string,
   sourceKeyword: string | null,
 ): string {
-  if (anchorVariants.length > 0 && sourceKeyword) {
+  // Filter to quality variants only — never use full title
+  const quality = (anchorVariants || []).filter(a => {
+    if (a.length > 60) return false;
+    if (a === title) return false;
+    const lower = a.toLowerCase();
+    if (GENERIC_ANCHOR_STARTERS.some(s => lower.startsWith(s))) return false;
+    return true;
+  });
+
+  // Prefer non-overlapping with source keyword for diversity
+  if (quality.length > 0 && sourceKeyword) {
     const sourceWords = new Set(sourceKeyword.toLowerCase().split(/\s+/));
-    const nonOverlapping = anchorVariants.find(anchor => {
+    const nonOverlapping = quality.find(anchor => {
       const anchorWords = anchor.toLowerCase().split(/\s+/);
       return !anchorWords.some(word => sourceWords.has(word));
     });
     if (nonOverlapping) return nonOverlapping;
   }
-  if (anchorVariants.length > 0) return anchorVariants[0];
-  if (primaryKeyword) return primaryKeyword;
-  const words = title.split(/\s+/);
-  return words.length > 6 ? words.slice(0, 5).join(' ') + '...' : title;
+
+  if (quality.length > 0) return quality[0];
+  if (primaryKeyword && primaryKeyword.length <= 60) return primaryKeyword;
+
+  // Last resort: extract best segment from title
+  let cleaned = title;
+  cleaned = cleaned.replace(/^From\s+['"].+?['"]\s+to\s+['"].+?['"]\s*[:–—-]\s*/i, '');
+  for (const s of GENERIC_ANCHOR_STARTERS) {
+    if (cleaned.toLowerCase().startsWith(s)) {
+      cleaned = cleaned.slice(s.length).trim();
+      break;
+    }
+  }
+  const segments = cleaned.split(/[-–—:|,;]/).map(s => s.trim());
+  const best = segments.find(s => {
+    const words = s.split(/\s+/);
+    return words.length >= 2 && words.length <= 5;
+  });
+  return best || cleaned.split(/\s+/).slice(0, 4).join(' ');
 }
 
 function calculateKeywordOverlap(keywordsA: string[], keywordsB: string[]): number {
@@ -322,7 +356,7 @@ async function processOneArticle(
             target_slug: source.slug,
             target_title: source.title,
             target_embedding_id: source.id,
-            anchor_text: source.primary_keyword || source.title.slice(0, 50),
+            anchor_text: selectAnchorText(source.anchor_variants || [], source.primary_keyword, source.title, null),
             anchor_source: 'semantic-reverse',
             semantic_score: candidate.similarity,
             relevance_score: Math.round(candidate.similarity * 100),

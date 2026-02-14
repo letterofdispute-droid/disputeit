@@ -119,31 +119,87 @@ function calculateContentHash(content: string): string {
   return Math.abs(hash).toString(16);
 }
 
-// Generate anchor text variants for the article
-function generateAnchorVariants(title: string, primaryKeyword?: string, secondaryKeywords?: string[]): string[] {
+// ── Anchor text quality constants ──
+const STOP_WORDS = new Set([
+  'the','a','an','is','are','was','were','be','been','to','of','in',
+  'for','on','with','at','by','from','and','or','but','not','your',
+  'you','my','our','how','what','when','why','this','that','it','its',
+  'do','does','did','has','have','had','can','could','will','would',
+  'should','shall','may','might','about','into','through','during',
+  'before','after','just','also','very','here','there','then','than',
+  'these','those','such','only','one','so','if','all','no','get',
+]);
+
+const GENERIC_STARTERS = [
+  'how to handle','how to write','how to dispute','how to file',
+  'how to get','how to deal','how to respond','how to challenge',
+  'what to do about','what to do when','what to do if',
+  'what happens when','what happens if',
+  'a guide to','your complete','everything you need',
+  'the ultimate','a comprehensive','understanding your',
+  'here is how','here is why','tips for','steps to',
+  'from ','when your','when a','when the',
+];
+
+function isStopWordHeavy(phrase: string): boolean {
+  const words = phrase.toLowerCase().split(/\s+/);
+  if (words.length === 0) return true;
+  const stopCount = words.filter(w => STOP_WORDS.has(w)).length;
+  return stopCount / words.length > 0.5;
+}
+
+// Generate anchor text variants — NO headings, NO full titles
+function generateAnchorVariants(
+  title: string,
+  primaryKeyword?: string,
+  secondaryKeywords?: string[],
+): string[] {
   const variants: string[] = [];
-  
-  variants.push(title);
-  if (title.length > 50) {
-    const shortened = title.split(/[-–—:|]/).shift()?.trim();
-    if (shortened && shortened.length > 10) {
-      variants.push(shortened);
+
+  // 1. Primary keyword (best anchor candidate)
+  if (primaryKeyword) {
+    const words = primaryKeyword.split(/\s+/);
+    if (words.length >= 2 && words.length <= 6 && !isStopWordHeavy(primaryKeyword)) {
+      variants.push(primaryKeyword);
     }
   }
-  
-  if (primaryKeyword) {
-    variants.push(primaryKeyword);
-    variants.push(`${primaryKeyword} guide`);
-    variants.push(`about ${primaryKeyword}`);
-  }
-  
+
+  // 2. Secondary keywords (2-6 words, non-stop-word-heavy)
   if (secondaryKeywords?.length) {
-    secondaryKeywords.slice(0, 3).forEach(kw => {
-      variants.push(kw);
-    });
+    for (const kw of secondaryKeywords.slice(0, 4)) {
+      const words = kw.split(/\s+/);
+      if (words.length >= 2 && words.length <= 6 && !isStopWordHeavy(kw)) {
+        variants.push(kw);
+      }
+    }
   }
-  
-  return [...new Set(variants.filter(v => v && v.length > 3))].slice(0, 8);
+
+  // 3. Extract meaningful segments from the title (NOT headings)
+  let cleaned = title;
+  // Strip "From 'X' to 'Y': " patterns
+  cleaned = cleaned.replace(/^From\s+['"].+?['"]\s+to\s+['"].+?['"]\s*[:–—-]\s*/i, '');
+  // Strip generic starters
+  for (const starter of GENERIC_STARTERS) {
+    if (cleaned.toLowerCase().startsWith(starter)) {
+      cleaned = cleaned.slice(starter.length).trim();
+      break;
+    }
+  }
+
+  const segments = cleaned.split(/[-–—:|,;]/)
+    .map(s => s.trim().replace(/[.!?'"]+$/g, '').trim())
+    .filter(s => {
+      const words = s.split(/\s+/);
+      return words.length >= 2 && words.length <= 6 && !isStopWordHeavy(s) && s !== title;
+    });
+  variants.push(...segments);
+
+  // Deduplicate, filter length, never include full title, cap at 8
+  return [...new Set(
+    variants
+      .filter(v => v && v.length >= 8 && v.length <= 60 && v !== title)
+      .map(v => v.replace(/[.!?]+$/, '').trim())
+  )].slice(0, 8);
 }
 
 /**
