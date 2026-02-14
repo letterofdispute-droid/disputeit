@@ -197,26 +197,20 @@ async function processNextBatch(
     return { complete: true, processed: 0, failed: 0 };
   }
 
-  // Get unprocessed articles
+  // Get articles using offset-based pagination (avoids URL length overflow)
+  const offset = job.processed_items + job.failed_items;
+  
   let query = supabase
     .from('blog_posts')
     .select('id, slug, title, content, category_slug, primary_keyword, secondary_keywords, article_type')
-    .eq('status', 'published');
+    .eq('status', 'published')
+    .order('id', { ascending: true });
 
   if (job.category_filter) {
     query = query.eq('category_slug', job.category_filter);
   }
 
-  // Exclude already processed
-  const processedIds = job.processed_ids || [];
-  const failedIds = job.failed_ids || [];
-  const excludeIds = [...processedIds, ...failedIds];
-  
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-  }
-
-  const { data: posts, error: postsError } = await query.limit(BATCH_SIZE);
+  const { data: posts, error: postsError } = await query.range(offset, offset + BATCH_SIZE - 1);
 
   if (postsError) {
     console.error(`[EMBEDDINGS] Failed to fetch posts:`, postsError);
@@ -248,7 +242,6 @@ async function processNextBatch(
 
   let batchProcessed = 0;
   let batchFailed = 0;
-  const newProcessedIds: string[] = [];
   const newFailedIds: string[] = [];
   const errorMessages: Record<string, string> = {};
 
@@ -286,7 +279,6 @@ async function processNextBatch(
       // Skip if unchanged
       if (existing?.content_hash === newHash) {
         console.log(`[EMBEDDINGS] Skipping unchanged: ${post.slug}`);
-        newProcessedIds.push(post.id);
         batchProcessed++;
         continue;
       }
@@ -340,7 +332,6 @@ async function processNextBatch(
         .update({ content_hash: newHash })
         .eq("id", post.id);
 
-      newProcessedIds.push(post.id);
       batchProcessed++;
       console.log(`[EMBEDDINGS] Generated: ${post.slug}`);
 
@@ -356,25 +347,25 @@ async function processNextBatch(
     }
   }
 
-  // Update job progress
-  const updatedProcessedIds = [...processedIds, ...newProcessedIds];
-  const updatedFailedIds = [...failedIds, ...newFailedIds];
+  // Update job progress atomically
+  const updatedProcessedItems = job.processed_items + batchProcessed;
+  const existingFailedIds = job.failed_ids || [];
+  const updatedFailedIds = [...existingFailedIds, ...newFailedIds];
   const updatedErrors = { ...(job.error_messages || {}), ...errorMessages };
 
   await supabase
     .from('embedding_jobs')
     .update({
-      processed_items: updatedProcessedIds.length,
+      processed_items: updatedProcessedItems,
       failed_items: updatedFailedIds.length,
-      processed_ids: updatedProcessedIds,
       failed_ids: updatedFailedIds,
       error_messages: updatedErrors,
     })
     .eq('id', jobId);
 
   // Check if more to process
-  const totalProcessed = updatedProcessedIds.length + updatedFailedIds.length;
-  const complete = totalProcessed >= job.total_items;
+  const totalHandled = updatedProcessedItems + updatedFailedIds.length;
+  const complete = totalHandled >= job.total_items;
 
   if (complete) {
     await supabase
@@ -384,7 +375,7 @@ async function processNextBatch(
         completed_at: new Date().toISOString(),
       })
       .eq('id', jobId);
-    console.log(`[EMBEDDINGS] Job ${jobId} completed. Processed: ${updatedProcessedIds.length}, Failed: ${updatedFailedIds.length}`);
+    console.log(`[EMBEDDINGS] Job ${jobId} completed. Processed: ${updatedProcessedItems}, Failed: ${updatedFailedIds.length}`);
   } else {
     // Continue with next batch
     invokeSelf(jobId, authToken);
