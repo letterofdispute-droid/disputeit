@@ -39,7 +39,8 @@ export function getCategoryIdFromName(categoryName: string): string {
   return categoryNameToId[categoryName] || categoryName.toLowerCase().replace(/\s+/g, '-');
 }
 
-export const allTemplates: LetterTemplate[] = [
+// Deduplicate by slug (later entries win) to prevent count mismatches
+const rawTemplates: LetterTemplate[] = [
   ...refundsTemplates,
   ...housingTemplates,
   ...travelTemplates,
@@ -53,6 +54,10 @@ export const allTemplates: LetterTemplate[] = [
   ...ecommerceTemplates,
   ...hoaTemplates,
   ...contractorsTemplates,
+];
+
+export const allTemplates: LetterTemplate[] = [
+  ...new Map(rawTemplates.map(t => [t.slug, t])).values(),
 ];
 
 export function getTemplateBySlug(slug: string): LetterTemplate | undefined {
