@@ -1,71 +1,63 @@
 
 
-# Add Outbound Link Cap Per Article
+# Fix Self-Link Bug in Link Discovery
 
 ## Problem
 
-There is no cumulative outbound link cap. The `maxLinksPerArticle = 5` parameter only limits suggestions per scan batch. Running the scan multiple times stacks suggestions without checking how many links an article already has. SEO best practice recommends keeping internal links at roughly 5-10 per article for blog-length content.
+The screenshot shows an article ("The Urgent Note That Prompted My Landlord to Replace Our Drafty Window") suggesting a link to **itself**. This is a self-link that should never be generated.
 
-## Solution
+The anchor text is also the article's own title, which is bad for SEO and confirms the self-link went undetected.
 
-### 1. Add `max_outbound` enforcement in the edge function
+## Root Cause
 
-Before generating suggestions for a source article, count its existing approved + applied links. If already at or above the cap, skip it entirely.
+The `match_semantic_links` SQL function does not exclude the source article from results. It returns the source article as its own highest match (near-100% similarity). A JavaScript filter (`m.id !== source.id`) exists but is failing -- likely due to a type mismatch between the UUID returned by the RPC and the source object's `id` field.
 
-**In `scan-for-semantic-links/index.ts`, inside `processOneArticle()`:**
-- Query `link_suggestions` for the source article where `status IN ('approved', 'applied')`
-- If count >= `maxLinksPerArticle`, return 0 (skip)
-- Otherwise, generate only `maxLinksPerArticle - existingCount` new suggestions
+## Fix (2 changes)
 
-This makes the cap cumulative across scan runs.
+### 1. Exclude self at the database level (primary fix)
 
-### 2. Normalize inbound cap
+Add a `source_content_id` parameter to the `match_semantic_links` function. Add a WHERE clause: `AND ae.content_id != source_content_id`. This guarantees self-matches never leave Postgres regardless of any JS-level bugs.
 
-The table default is `max_inbound = 20`, but `generate-embeddings` sets it to `50`. We should align these. Recommended: set both to `20` (SEO best practice -- too many inbound links dilute link equity).
+### 2. Strengthen the JS-level self-link filter (safety net)
 
-**Database migration:**
-- Update all `article_embeddings` rows where `max_inbound = 50` back to `20`
-- Fix the `generate-embeddings` function to use `20` instead of `50`
+Update the filter in `processOneArticle()` to also compare by `content_id` and `slug`, not just `id`. Add explicit string casting to avoid type mismatches.
 
-### 3. Make the outbound cap configurable in Advanced Settings
+```text
+BEFORE (line 202):
+  filter(m => m.id !== source.id && m.slug !== source.slug)
 
-The UI already has an "Advanced Settings" section in `SemanticScanPanel.tsx`. Add a slider for "Max outbound links per article" (range 3-15, default 8) that gets passed to the edge function.
+AFTER:
+  filter(m => String(m.id) !== String(source.id) 
+           && m.slug !== source.slug)
+```
+
+Also filter the reverse matches the same way (line 282).
+
+### 3. Clean up existing self-link suggestions
+
+Run a one-time migration to delete any existing self-link suggestions already in the database.
+
+```sql
+DELETE FROM link_suggestions ls
+USING blog_posts bp
+WHERE ls.source_post_id = bp.id
+  AND ls.target_slug = bp.slug;
+```
 
 ## Technical Details
 
-### Edge function change (`scan-for-semantic-links/index.ts`):
+### Database migration
 
-```typescript
-// At the start of processOneArticle():
-const { count: existingOutbound } = await supabaseAdmin
-  .from('link_suggestions')
-  .select('id', { count: 'exact', head: true })
-  .eq('source_post_id', source.content_id)
-  .in('status', ['approved', 'applied']);
+1. Replace `match_semantic_links` function with a new version that accepts an optional `exclude_content_id UUID DEFAULT NULL` parameter and adds `AND (exclude_content_id IS NULL OR ae.content_id != exclude_content_id)` to the WHERE clause
+2. Delete existing self-link suggestions
 
-const remainingSlots = maxLinksPerArticle - (existingOutbound || 0);
-if (remainingSlots <= 0) return 0;
+### Edge function (`scan-for-semantic-links/index.ts`)
 
-// Then use remainingSlots instead of maxLinksPerArticle for .slice()
-```
-
-### Edge function change (`generate-embeddings/index.ts`):
-
-Change `max_inbound: 50` to `max_inbound: 20` (line ~1019).
-
-### Database migration:
-
-```sql
-UPDATE article_embeddings SET max_inbound = 20 WHERE max_inbound = 50;
-```
-
-### UI change (`SemanticScanPanel.tsx`):
-
-Add a "Max outbound links" slider in the Advanced Settings section (default 8, range 3-15). Pass the value to the edge function call.
+- Pass `source.content_id` as the new `exclude_content_id` parameter in both forward and reverse RPC calls
+- Add `String()` casting to the JS-level self-link filters as a safety net
 
 ## Files changed
 
-- `supabase/functions/scan-for-semantic-links/index.ts` -- add cumulative outbound cap check
-- `supabase/functions/generate-embeddings/index.ts` -- fix max_inbound from 50 to 20
-- `src/components/admin/seo/links/SemanticScanPanel.tsx` -- add outbound cap slider
-- 1 database migration (normalize inbound caps)
+- `supabase/functions/scan-for-semantic-links/index.ts` -- pass exclude parameter, strengthen JS filter
+- 1 database migration (update RPC function + clean up self-links)
+
