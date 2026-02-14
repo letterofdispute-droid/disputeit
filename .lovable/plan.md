@@ -1,46 +1,51 @@
 
 
-# Fix: Auto-Create Missing Content Plans
+# Fix: Embedding Job Crashes After ~380 Articles
 
-## What's Happening
+## Problem
 
-Your codebase now has **550 templates** but only **547 content plans** exist in the database. Three templates were added to the code without running "Plan All" for their category, so they show as uncovered -- dropping you from 100% to 99%.
+The "Generate All" embedding job failed after processing 380 out of 4,627 articles. The root cause is a **URL length overflow**.
 
-## The Fix
+The function excludes already-processed articles using a `NOT IN (uuid1, uuid2, ...)` filter in the query string. After ~380 articles, the list of UUIDs exceeds the maximum URL length, causing a network-level `TypeError`.
 
-Run a one-time database operation to create content plans for the 3 missing templates. This requires:
+## Solution
 
-1. Identifying which 3 template slugs in code don't have matching `content_plans` rows
-2. Inserting content plans for them with the correct category and tier
+Replace the growing exclusion list approach with an **offset-based approach** using `processed_items` as a cursor. Instead of tracking every processed ID in an array and excluding them via URL params, we'll:
 
-## Technical Approach
+1. Query articles ordered deterministically (by `id`)
+2. Use `.range(offset, offset + BATCH_SIZE - 1)` to paginate through them
+3. Track progress via the existing `processed_items` counter instead of the `processed_ids` array
 
-**Step 1**: Query the database to find which slugs are missing plans (we'll cross-reference against the code's template list at runtime).
+This keeps the query URL constant-size regardless of how many articles have been processed.
 
-**Step 2**: Add a small helper in `TemplateCoverageMap.tsx` -- inside the existing "Plan All" per-category button flow, it already handles templates without plans. So the simplest path is:
+## Technical Changes
 
-- Open each category in the Coverage Map
-- Find the 3 uncovered templates (they'll show a "+" icon)
-- Click "Plan All" on that category -- it only creates plans for templates that don't have one
+**File: `supabase/functions/generate-embeddings/index.ts`**
 
-Alternatively, I can write a one-time SQL migration that inserts the 3 missing plans directly, but I'd need to know their exact slugs. I can do this by adding a quick diagnostic: temporarily log `allTemplates` slugs vs `content_plans` slugs in the browser console.
+In the `processNextBatch` function (around line 200-394):
 
-**Recommended approach**: Add a "Create Missing Plans" button next to "Create All Pillars" that automatically finds templates in `allTemplates` without a matching plan and bulk-creates them. This prevents the problem from recurring whenever new templates are added to code.
+- Remove the `processed_ids` / `failed_ids` array-based exclusion logic
+- Add deterministic ordering: `.order('id', { ascending: true })`
+- Use `.range(job.processed_items, job.processed_items + BATCH_SIZE - 1)` for pagination
+- Track failed articles separately (keep failed_ids for retry, but don't use it in the query filter)
+- Update progress by incrementing `processed_items` and `failed_items` counters atomically
 
-## Changes
+**Key change in query logic:**
 
-**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
+```text
+BEFORE (breaks at ~380 items):
+  query.not('id', 'in', `(${hugeListOfIds})`)
 
-- Add a `createMissingPlansMutation` that:
-  1. Gets all template slugs from `allTemplates` (code)
-  2. Gets all template slugs from `content_plans` (database)
-  3. Finds the difference (templates without plans)
-  4. For each missing template, inserts a content plan with the appropriate category tier
-- Show a "Create Missing Plans" button (only visible when there are uncovered templates) next to "Create All Pillars"
+AFTER (works for any volume):
+  query.order('id', { ascending: true })
+       .range(offset, offset + BATCH_SIZE - 1)
+```
 
-This ensures that any time new templates are added to the code, you can one-click sync them to 100% coverage.
+- The `failed_ids` array is still maintained for the retry feature, but is no longer used in the main query filter
+- The completion check becomes: `processed_items + failed_items >= total_items`
 
 ## Scope
-- 1 file modified (`TemplateCoverageMap.tsx`)
-- No database schema changes
-- No edge function changes
+- 1 edge function modified (`generate-embeddings/index.ts`)
+- No database schema changes needed
+- Existing retry logic continues to work unchanged
+
