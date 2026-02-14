@@ -23,7 +23,7 @@ import { templateCategories } from '@/data/templateCategories';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ClusterPlanner from './ClusterPlanner';
 import BulkPlanConfirmDialog from './BulkPlanConfirmDialog';
 import BulkPlanningProgress from './BulkPlanningProgress';
@@ -104,6 +104,21 @@ export default function TemplateCoverageMap() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Count plans missing pillar articles in the queue
+  const { data: missingPillarCount } = useQuery({
+    queryKey: ['missing-pillar-count'],
+    queryFn: async () => {
+      const { count: totalPlans } = await supabase
+        .from('content_plans')
+        .select('id', { count: 'exact', head: true });
+      const { count: pillarCount } = await supabase
+        .from('content_queue')
+        .select('id', { count: 'exact', head: true })
+        .eq('article_type', 'pillar');
+      return Math.max(0, (totalPlans || 0) - (pillarCount || 0));
+    },
+  });
+
   // Bulk pillar creation mutation
   const createAllPillarsMutation = useMutation({
     mutationFn: async () => {
@@ -147,6 +162,7 @@ export default function TemplateCoverageMap() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['template-progress'] });
       queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['missing-pillar-count'] });
       toast({
         title: 'Pillar articles queued',
         description: data.queued > 0
@@ -384,18 +400,20 @@ export default function TemplateCoverageMap() {
               )}
             </Button>
           )}
-          <Button
-            onClick={() => createAllPillarsMutation.mutate()}
-            disabled={createAllPillarsMutation.isPending || !plans || plans.length === 0}
-            size="sm"
-            variant="outline"
-          >
-            {createAllPillarsMutation.isPending ? (
-              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Queuing...</>
-            ) : (
-              <><Crown className="h-4 w-4 mr-1.5" /> Create All Pillars</>
-            )}
-          </Button>
+          {(missingPillarCount ?? 0) > 0 && (
+            <Button
+              onClick={() => createAllPillarsMutation.mutate()}
+              disabled={createAllPillarsMutation.isPending || !plans || plans.length === 0}
+              size="sm"
+              variant="outline"
+            >
+              {createAllPillarsMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Queuing...</>
+              ) : (
+                <><Crown className="h-4 w-4 mr-1.5" /> Create {missingPillarCount} Missing Pillars</>
+              )}
+            </Button>
+          )}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by category" />
