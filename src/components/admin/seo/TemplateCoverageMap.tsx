@@ -41,14 +41,35 @@ interface CategoryGroup {
 
 function cleanTemplateName(name: string): string {
   return name
-    // Strip trailing suffixes: "Letter (GDPR/CCPA)", "Complaint Letter", "Dispute", etc.
     .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
     .replace(/\s*(Complaint|Dispute|Claim)\s*$/i, '')
-    // Convert slashes to "and" (e.g. "No-Show/Abandonment" → "No-Show and Abandonment")
     .replace(/\//g, ' and ')
-    // Clean up double spaces and trailing punctuation
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+const PILLAR_TITLE_PATTERNS: Array<(topic: string) => string> = [
+  (t) => `The Complete Guide to ${t}`,
+  (t) => `${t}: What You Need to Know`,
+  (t) => `Understanding ${t}: A Consumer's Guide`,
+  (t) => `${t} Explained: Your Rights and Options`,
+  (t) => `How to Handle ${t}`,
+  (t) => `${t}: A Step-by-Step Guide`,
+];
+
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getPillarTitle(templateName: string, templateSlug: string): string {
+  const cleaned = cleanTemplateName(templateName);
+  const idx = simpleHash(templateSlug) % PILLAR_TITLE_PATTERNS.length;
+  return PILLAR_TITLE_PATTERNS[idx](cleaned);
 }
 
 interface BulkPlanState {
@@ -89,14 +110,14 @@ export default function TemplateCoverageMap() {
       const pillarItems = plansWithoutPillar.map(plan => ({
         plan_id: plan.id,
         article_type: 'pillar' as const,
-        suggested_title: `The Complete Guide to ${cleanTemplateName(plan.template_name)}`,
+        suggested_title: getPillarTitle(plan.template_name, plan.template_slug),
         suggested_keywords: [
           cleanTemplateName(plan.template_name).toLowerCase(),
           `${cleanTemplateName(plan.template_name).toLowerCase()} guide`,
           'consumer rights',
           'dispute letter',
         ],
-        priority: 100,
+        priority: 1,
         status: 'queued' as const,
       }));
 
