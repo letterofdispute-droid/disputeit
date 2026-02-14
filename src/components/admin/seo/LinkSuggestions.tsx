@@ -97,6 +97,20 @@ export default function LinkSuggestions() {
     }
   };
 
+  const handleApproveAll = () => {
+    const ids = filteredSuggestions.map(s => s.id);
+    if (ids.length > 0) {
+      bulkUpdateStatus({ ids, status: 'approved' });
+    }
+  };
+
+  const handleRejectAll = () => {
+    const ids = filteredSuggestions.map(s => s.id);
+    if (ids.length > 0) {
+      bulkUpdateStatus({ ids, status: 'rejected' });
+    }
+  };
+
   const handleScan = () => {
     const params: { categorySlug?: string } = {};
     if (categoryFilter !== 'all') {
@@ -140,6 +154,7 @@ export default function LinkSuggestions() {
           selectedCount={selectedIds.size}
           pendingCount={stats.pending}
           approvedCount={stats.approved}
+          filteredCount={filteredSuggestions.length}
           isScanning={isScanning}
           isApplying={isApplyingLinks}
           onScan={handleScan}
@@ -147,6 +162,8 @@ export default function LinkSuggestions() {
           onApproveSelected={handleApproveSelected}
           onRejectSelected={handleRejectSelected}
           onApplyApproved={handleApplyApproved}
+          onApproveAll={handleApproveAll}
+          onRejectAll={handleRejectAll}
         />
       </div>
 

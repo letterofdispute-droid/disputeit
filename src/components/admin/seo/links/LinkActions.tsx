@@ -1,10 +1,11 @@
-import { Loader2, Search, Zap, CheckCheck, X } from 'lucide-react';
+import { Loader2, Search, Zap, CheckCheck, X, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface LinkActionsProps {
   selectedCount: number;
   pendingCount: number;
   approvedCount: number;
+  filteredCount: number;
   isScanning: boolean;
   isApplying: boolean;
   onScan: () => void;
@@ -12,12 +13,15 @@ interface LinkActionsProps {
   onApproveSelected: () => void;
   onRejectSelected: () => void;
   onApplyApproved: () => void;
+  onApproveAll: () => void;
+  onRejectAll: () => void;
 }
 
 export default function LinkActions({
   selectedCount,
   pendingCount,
   approvedCount,
+  filteredCount,
   isScanning,
   isApplying,
   onScan,
@@ -25,6 +29,8 @@ export default function LinkActions({
   onApproveSelected,
   onRejectSelected,
   onApplyApproved,
+  onApproveAll,
+  onRejectAll,
 }: LinkActionsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
@@ -88,6 +94,31 @@ export default function LinkActions({
             <><span className="hidden sm:inline">Apply Approved ({approvedCount})</span><span className="sm:hidden">Apply ({approvedCount})</span></>
           )}
         </Button>
+      )}
+
+      {filteredCount > 0 && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onApproveAll}
+            className="border-green-600/30 text-green-700 hover:bg-green-50"
+          >
+            <CheckCircle2 className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Approve All ({filteredCount})</span>
+            <span className="sm:hidden">All ✓ ({filteredCount})</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRejectAll}
+            className="border-red-600/30 text-red-700 hover:bg-red-50"
+          >
+            <XCircle className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Reject All ({filteredCount})</span>
+            <span className="sm:hidden">All ✗ ({filteredCount})</span>
+          </Button>
+        </>
       )}
     </div>
   );
