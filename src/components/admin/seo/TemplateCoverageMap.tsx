@@ -39,6 +39,13 @@ interface CategoryGroup {
   }>;
 }
 
+function cleanTemplateName(name: string): string {
+  return name
+    .replace(/\s*(Complaint Letter|Dispute Letter|Letter|Template)\s*$/i, '')
+    .replace(/\/+$/, '')
+    .trim();
+}
+
 interface BulkPlanState {
   categoryId: string;
   categoryName: string;
@@ -77,10 +84,10 @@ export default function TemplateCoverageMap() {
       const pillarItems = plansWithoutPillar.map(plan => ({
         plan_id: plan.id,
         article_type: 'pillar' as const,
-        suggested_title: `The Complete Guide to ${plan.template_name}`,
+        suggested_title: `The Complete Guide to ${cleanTemplateName(plan.template_name)}`,
         suggested_keywords: [
-          plan.template_name.toLowerCase(),
-          `${plan.template_name.toLowerCase()} guide`,
+          cleanTemplateName(plan.template_name).toLowerCase(),
+          `${cleanTemplateName(plan.template_name).toLowerCase()} guide`,
           'consumer rights',
           'dispute letter',
         ],
