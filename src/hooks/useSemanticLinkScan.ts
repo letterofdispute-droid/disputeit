@@ -278,21 +278,22 @@ export function useSemanticLinkScan() {
 
   // Fetch embedding stats
   const fetchEmbeddingStats = useCallback(async (): Promise<EmbeddingStats> => {
-    const { data, error } = await supabase
-      .from('article_embeddings')
-      .select('embedding_status');
+    try {
+      const [totalRes, completedRes, failedRes] = await Promise.all([
+        supabase.from('article_embeddings').select('*', { count: 'exact', head: true }),
+        supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'completed'),
+        supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'failed'),
+      ]);
 
-    if (error) {
+      const total = totalRes.count || 0;
+      const completed = completedRes.count || 0;
+      const failed = failedRes.count || 0;
+
+      return { total, completed, pending: total - completed - failed, failed };
+    } catch (error) {
       console.error('Failed to fetch embedding stats:', error);
       return { total: 0, completed: 0, pending: 0, failed: 0 };
     }
-
-    return {
-      total: data.length,
-      completed: data.filter(e => e.embedding_status === 'completed').length,
-      pending: data.filter(e => e.embedding_status === 'pending').length,
-      failed: data.filter(e => e.embedding_status === 'failed').length,
-    };
   }, []);
 
   // Get job progress percentage
