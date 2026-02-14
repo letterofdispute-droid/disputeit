@@ -1439,31 +1439,58 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
       make_user_admin: { Args: { user_email: string }; Returns: string }
-      match_semantic_links: {
-        Args: {
-          max_results?: number
-          query_embedding: string
-          similarity_threshold?: number
-          source_category: string
-          source_role: string
-        }
-        Returns: {
-          article_role: string
-          category_id: string
-          content_type: string
-          hierarchy_note: string
-          hierarchy_valid: boolean
-          id: string
-          inbound_count: number
-          max_inbound: number
-          primary_keyword: string
-          secondary_keywords: string[]
-          similarity: number
-          slug: string
-          subcategory_slug: string
-          title: string
-        }[]
-      }
+      match_semantic_links:
+        | {
+            Args: {
+              max_results?: number
+              query_embedding: string
+              similarity_threshold?: number
+              source_category: string
+              source_role: string
+            }
+            Returns: {
+              article_role: string
+              category_id: string
+              content_type: string
+              hierarchy_note: string
+              hierarchy_valid: boolean
+              id: string
+              inbound_count: number
+              max_inbound: number
+              primary_keyword: string
+              secondary_keywords: string[]
+              similarity: number
+              slug: string
+              subcategory_slug: string
+              title: string
+            }[]
+          }
+        | {
+            Args: {
+              exclude_content_id?: string
+              max_results?: number
+              query_embedding: string
+              similarity_threshold?: number
+              source_category: string
+              source_role: string
+            }
+            Returns: {
+              article_role: string
+              category_id: string
+              content_type: string
+              hierarchy_note: string
+              hierarchy_valid: boolean
+              id: string
+              inbound_count: number
+              max_inbound: number
+              primary_keyword: string
+              secondary_keywords: string[]
+              similarity: number
+              slug: string
+              subcategory_slug: string
+              title: string
+            }[]
+          }
       recover_stale_backfill_jobs: { Args: never; Returns: undefined }
       recover_stale_generating_items: { Args: never; Returns: undefined }
       recover_stale_generation_jobs: { Args: never; Returns: undefined }

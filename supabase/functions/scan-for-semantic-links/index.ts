@@ -187,6 +187,7 @@ async function processOneArticle(
     source_role: source.article_role,
     similarity_threshold: similarityThreshold,
     max_results: 30,
+    exclude_content_id: source.content_id || undefined,
   });
 
   if (matchError) {
@@ -200,7 +201,7 @@ async function processOneArticle(
 
   // Filter out self-links
   const validMatches = (matches as SemanticMatch[]).filter(m =>
-    m.id !== source.id && m.slug !== source.slug,
+    String(m.id) !== String(source.id) && m.slug !== source.slug,
   );
 
   // Delete existing pending suggestions for this source to prevent duplicates on re-runs
@@ -276,11 +277,12 @@ async function processOneArticle(
       source_role: source.article_role,
       similarity_threshold: similarityThreshold,
       max_results: 15,
+      exclude_content_id: source.content_id || undefined,
     });
 
     if (!reverseError && reverseMatches) {
       const reverseValid = (reverseMatches as SemanticMatch[]).filter(m =>
-        m.id !== source.id && m.slug !== source.slug,
+        String(m.id) !== String(source.id) && m.slug !== source.slug,
       );
 
       for (const candidate of reverseValid.slice(0, maxLinksPerArticle)) {
