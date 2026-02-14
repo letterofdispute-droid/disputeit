@@ -1,69 +1,64 @@
-# Vary Pillar Titles and Fix Publish Ordering
 
-## Problem
+# Smart Pillar Publishing: Auto-Interleave with Clusters
 
-1. **Monotonous titles**: All 547 pillar articles use "The Complete Guide to {Topic}" -- looks spammy and unnatural for SEO.
-2. **Publish ordering**: When articles are bulk-published, all pillars would appear first (or all together), creating an unnatural publication timeline. Pillars should appear just before their cluster articles.
+## The Problem
 
-## Solution
+Right now, when you select pillar drafts and click "Publish Selected", they all get `published_at = now()`. This means:
+- All 500+ pillars appear with today's date
+- They don't sit alongside their cluster articles in the timeline
+- It looks unnatural -- a hub article appearing weeks after its supporting articles
 
-### 1. Varied Title Patterns
+## The Solution
 
-Introduce a set of 6-8 rotating title templates that are assigned based on a hash of the template slug (deterministic, so re-running produces the same title). Examples:
+Modify the bulk publish logic so that **pillar articles automatically get a backdated `published_at`** that places them just before their cluster articles. No manual work needed -- you just select drafts and click "Publish Selected" as usual.
 
+### How it works
 
-| Pattern                                    | Example                                                |
-| ------------------------------------------ | ------------------------------------------------------ |
-| The Complete Guide to {Topic}              | The Complete Guide to Bank Fee Disputes                |
-| {Topic}: What You Need to Know             | Insurance Premium Disputes: What You Need to Know      |
-| Understanding {Topic}: A Consumer's Guide  | Understanding Contractor No-Shows: A Consumer's Guide  |
-| {Topic} Explained: Your Rights and Options | Sewerage Complaints Explained: Your Rights and Options |
-| How to Handle {Topic}                      | How to Handle Electronics Malfunction                  |
-| {Topic}: A Step-by-Step Guide              | Late Payment Removal: A Step-by-Step Guide             |
+1. When you click "Publish Selected", the system checks if any of the selected posts are pillar articles (via `article_type = 'pillar'`)
+2. For each pillar, it looks up the **earliest published cluster article** in the same content plan
+3. It sets the pillar's `published_at` to **1 hour before** that earliest cluster article
+4. Non-pillar articles publish normally with `now()`
 
-
-The pattern selection will use a simple hash of the slug modulo the number of patterns, ensuring consistent distribution.
-
-### 2. Pillar Priority Reordering
-
-Currently pillars have `priority: 200` (highest), so they get generated first. Instead, set pillar priority to **-1** (lowest), so cluster articles generate first and the pillar generates last for each template. This is better because:
-
-- Pillars reference cluster articles in their content (the code at line 809 already fetches sibling clusters)
-- When published chronologically, the pillar appears after its clusters -- acting as the hub that links them together
-
-### Changes
-
-**File: `src/components/admin/seo/TemplateCoverageMap.tsx**`
-
-- Add a `getPillarTitle(name, slug)` function with 6+ title patterns
-- Update the bulk "Create All Pillars" mutation to use varied titles and low priority
-- Update keyword seeds to use cleaned name
-
-**File: `supabase/functions/generate-content-plan/index.ts**`
-
-- Update pillar item creation (lines 568-581) to use the same varied title patterns
-- Change pillar priority from `200` to `-1`
-- Apply `cleanTemplateName` to the title
-
-**Database update (existing queued pillars)**
-
-- Run an UPDATE on the 547 existing queued pillar items to:
-  - Assign varied titles based on their template slug
-  - Set priority to -1 so they generate after clusters
-
-## Technical Details
+### Example timeline result
 
 ```text
-Title pattern selection:
-  hash = simple string hash of template_slug
-  patternIndex = hash % patterns.length
-  title = patterns[patternIndex](cleanedName)
+Before (current behavior):
+  Feb 13 10:05  - Cluster: "Unpacking Cooling-Off Periods..."
+  Feb 13 10:05  - Cluster: "Four Steps to Avoid..."
+  Feb 13 10:05  - Cluster: "Common Blunders That Sink..."
+  Feb 14 15:30  - Pillar: "Refund Cooling Off: Know Your Rights"  <-- appears days later
+
+After (new behavior):
+  Feb 13 09:05  - Pillar: "Refund Cooling Off: Know Your Rights"  <-- 1 hour before clusters
+  Feb 13 10:05  - Cluster: "Unpacking Cooling-Off Periods..."
+  Feb 13 10:05  - Cluster: "Four Steps to Avoid..."
+  Feb 13 10:05  - Cluster: "Common Blunders That Sink..."
 ```
 
-The same `cleanTemplateName` helper already exists and will be reused. The pattern function will be shared between the frontend component and the edge function (duplicated in both since they run in different environments).
+## What You Do
+
+Nothing different. Same workflow:
+1. Go to Admin Blog
+2. Filter by Draft
+3. Select pillar articles
+4. Click "Publish Selected"
+
+The system handles the date placement automatically.
+
+## Technical Changes
+
+**File: `src/pages/admin/AdminBlog.tsx`**
+
+Modify `handleBulkPublish` to:
+1. Fetch the selected posts to identify which are pillars (have `article_type = 'pillar'` and `content_plan_id`)
+2. For pillar posts, query the earliest `published_at` from sibling blog posts in the same `content_plan_id`
+3. Set each pillar's `published_at` to 1 hour before that earliest sibling
+4. If no published siblings exist, fall back to `now()` (normal behavior)
+5. Non-pillar posts continue to use `now()` as before
+
+The content_queue sync logic remains the same -- it mirrors whatever `published_at` the blog post gets.
 
 ## Scope
-
-- 2 files modified (TemplateCoverageMap.tsx, generate-content-plan/index.ts)
-- 1 database data update (rewrite existing queued pillar titles + priorities)
-- No schema changes
+- 1 file modified (`AdminBlog.tsx`)
+- No database changes
+- No edge function changes
