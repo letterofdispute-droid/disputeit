@@ -1,62 +1,105 @@
 
 
-# Make Step 2 (Discover Links) a True Fire-and-Forget Background Job
+# Bulletproof Link Discovery (scan-for-semantic-links)
 
-## Problem
+## Issues Found (5 critical, 2 moderate)
 
-Step 2 currently processes only 10 articles per click. With 4,627 articles, you'd need to click "Scan for Links" ~463 times. There's no self-chaining like Step 1 has.
+### CRITICAL
 
-## Solution
+1. **Bidirectional scan fetches ALL 4,627 embeddings into memory** (lines 306-311). Each article pulls the entire table including 1536-dimension vectors, then loops through each one making individual DB queries. This is ~46,000 DB round-trips per batch of 10. Guaranteed timeout.
 
-Add self-chaining to the `scan-for-semantic-links` edge function (same pattern as `generate-embeddings`) so one click processes ALL articles automatically.
+2. **Self-chain is NOT in a try/finally block**. If the processing loop throws, the self-chain on line 382 never fires and the job stalls permanently with no way to resume.
 
-## Changes
+3. **Auth uses `getUser()` (line 75)** which is incompatible with this environment. Must use `getClaims()` + `sub` field (the established pattern).
 
-### 1. Edge Function: `supabase/functions/scan-for-semantic-links/index.ts`
+4. **`anchor_source` constraint violation**. The code inserts `'semantic'` and `'semantic-reverse'` but the database CHECK constraint only allows: `primary_keyword`, `secondary_keyword`, `contextual`, `ai_suggested`, `mandatory`. Every insert with these values fails silently. This is already visible in the edge function logs.
 
-Add self-chaining after each batch completes:
-- After processing the batch of 10 articles, check if more articles need scanning (`next_scan_due_at` still in the past)
-- If yes, fire-and-forget invoke itself with the same parameters (using the AbortController pattern from the existing codebase)
-- If no more articles to process, stop and return final results
-- Add a `jobId` tracking parameter so the UI can poll for progress (reuse or create a lightweight tracking row)
+5. **No pg_cron recovery**. If the self-chain fails (network blip, cold start timeout), the job sits in "processing" forever. Every other bulk job in the system has a cron-based safety net.
 
-### 2. Database: Add a `semantic_scan_jobs` table (or reuse `embedding_jobs` with a different `content_type`)
+### MODERATE
 
-Track scan progress so the UI can show a real progress bar:
-- `id`, `status` (processing/completed/failed), `total_items`, `processed_items`, `created_at`, `completed_at`
-- The edge function creates a job row on first invocation, updates `processed_items` atomically on each batch
+6. **No per-article timeout**. A single slow `match_semantic_links` RPC call could consume the entire function timeout.
 
-### 3. UI: `src/components/admin/seo/links/SemanticScanPanel.tsx`
+7. **Duplicate suggestion inserts not handled gracefully**. Re-running a scan on already-scanned articles will attempt duplicate inserts.
 
-- Replace the instant "Scanning..." state with a real progress bar (poll the job table, same pattern as Step 1)
-- Show: "Scanning 120 / 4,627 articles..." with a progress bar
-- Add a cancel button
-- When complete, show: "Scan complete -- found X link suggestions"
-- Rename button from "Scan for Links" to "Discover All Links" to clarify it's comprehensive
+## Fixes
 
-### 4. Hook: `src/hooks/useSemanticLinkScan.ts`
+### Fix 1: Replace bidirectional with reverse RPC call
 
-- Add a query for the active scan job (poll every 2s while processing, same as embedding job)
-- Track scan job progress for the UI
-
-## How it works after the fix
+Instead of fetching all embeddings and computing cosine similarity in JavaScript, call `match_semantic_links` with the source article's embedding but searching for articles that should link TO it. One RPC call replaces 4,627 individual queries.
 
 ```text
-User clicks "Discover All Links"
-  --> Edge function creates scan job (total: 4,627)
-  --> Processes batch of 10, updates job (processed: 10)
-  --> Self-chains to process next batch
-  --> ... repeats until all done ...
-  --> Marks job complete
-  
-UI polls job every 2s, shows progress bar
-User can leave and come back -- job continues server-side
+BEFORE: fetch all 4,627 rows with vectors -> loop -> individual query each -> cosine in JS
+AFTER:  1 RPC call per source article (runs in Postgres using pgvector index)
+```
+
+### Fix 2: try/finally for self-chain
+
+Wrap the entire batch processing in try/finally so the self-chain ALWAYS fires, even if an article crashes the batch.
+
+### Fix 3: Fix auth to use getClaims()
+
+Replace `getUser()` with `getClaims(token)` and extract user ID from `claims.sub`.
+
+### Fix 4: Fix anchor_source values
+
+Add `'semantic'` and `'semantic-reverse'` to the database CHECK constraint via migration. This matches what the code actually produces.
+
+### Fix 5: Add pg_cron recovery
+
+Create `recover_stale_semantic_scan_jobs()` function (same pattern as `recover_stale_generation_jobs`). Schedule via pg_cron every 2 minutes. Detects jobs stuck in "processing" for 5+ minutes and re-invokes the edge function.
+
+### Fix 6: Per-article timeout wrapper
+
+Add a `withTimeout()` helper (same pattern as `optimize-storage-images`). Each article gets max 30 seconds; if it times out, skip it and continue the batch.
+
+### Fix 7: Upsert-style duplicate prevention
+
+Before inserting suggestions, delete any existing pending suggestions for the same source+target pair. This makes re-runs safe.
+
+### Fix 8: Use proven selfChainWithRetry pattern
+
+Replace the current self-chain code with the `selfChainWithRetry` pattern used by `bulk-generate-articles` and `optimize-storage-images` (2 attempts, 3s delay, treats 504 and AbortError as success).
+
+## Technical Details
+
+### Edge Function rewrite: `supabase/functions/scan-for-semantic-links/index.ts`
+
+- Replace `getUser()` with `getClaims()` auth
+- Add `selfChainWithRetry()` helper (copy from bulk-generate-articles)
+- Add `withTimeout()` helper (copy from optimize-storage-images)
+- Wrap batch loop in `try/finally` with self-chain in `finally`
+- Replace bidirectional block (lines 300-359) with single reverse `match_semantic_links` RPC call per source article
+- Use `anchor_source: 'ai_suggested'` instead of `'semantic'` / `'semantic-reverse'` (valid constraint value)
+- Add duplicate check before insert: delete existing pending suggestions for same source+target
+- Add individual try/catch per article so one failure does not abort the batch
+- Cap each article's processing at 30 seconds via `withTimeout`
+
+### Database migration
+
+1. Update CHECK constraint to also allow `'semantic'` and `'semantic-reverse'` as valid `anchor_source` values (future-proofing)
+2. Create `recover_stale_semantic_scan_jobs()` function that:
+   - Finds scan jobs with `status = 'processing'` and `updated_at < NOW() - 5 minutes`
+   - Re-invokes `scan-for-semantic-links` via `pg_net.http_post` with the stalled `jobId`
+   - Marks jobs older than 30 minutes as failed
+3. Schedule via pg_cron every 2 minutes
+
+### No UI changes needed
+
+The UI already handles job polling, progress display, and cancellation correctly.
+
+## Reliability layers (after fix)
+
+```text
+Layer 1: try/finally           -- self-chain fires even if batch crashes
+Layer 2: selfChainWithRetry    -- 2 attempts with 3s delay for network flakes
+Layer 3: pg_cron recovery      -- auto-resumes jobs stuck for 5+ minutes
+Layer 4: per-article timeout   -- skip slow articles, don't block the batch
+Layer 5: constraint handling   -- valid anchor_source values prevent silent failures
 ```
 
 ## Files changed
 
-- `supabase/functions/scan-for-semantic-links/index.ts` -- add self-chaining + job tracking
-- `src/hooks/useSemanticLinkScan.ts` -- add scan job polling query
-- `src/components/admin/seo/links/SemanticScanPanel.tsx` -- progress bar + clearer labels
-- Database migration: create `semantic_scan_jobs` table (or add scan tracking to existing structure)
+- `supabase/functions/scan-for-semantic-links/index.ts` -- full rewrite for reliability
+- 1 database migration (constraint update + recovery function + cron schedule)
 
