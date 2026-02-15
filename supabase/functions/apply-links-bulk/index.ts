@@ -241,13 +241,63 @@ function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Insert a pre-generated sentence containing a linked anchor into the best paragraph.
+ */
+function insertGeneratedSentence(
+  content: string,
+  targetUrl: string,
+  targetTitle: string,
+  anchorText: string,
+  generatedSentence: string,
+): string | null {
+  const paragraphs = parseParagraphs(content);
+  if (paragraphs.length < 3) return null;
+  if (content.includes(`href="${targetUrl}"`)) return null;
+
+  // Find a suitable paragraph (not first, not last, not too many links)
+  const eligible = paragraphs.filter(p =>
+    p.index > 0 &&
+    p.index < paragraphs.length - 1 &&
+    p.linkCount < 2 &&
+    p.textLower.trim().length >= 40
+  );
+
+  if (eligible.length === 0) return null;
+
+  // Pick a paragraph in the middle-ish area
+  const midIndex = Math.floor(eligible.length / 2);
+  const bestPara = eligible[midIndex];
+
+  // Build the linked sentence
+  const linkedSentence = generatedSentence.replace(
+    anchorText,
+    `<a href="${targetUrl}" title="${escapeHtml(targetTitle)}">${anchorText}</a>`,
+  );
+
+  const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
+  return content.replace(bestPara.html, modifiedPara);
+}
+
 async function insertLinkContextually(
   content: string,
-  suggestion: { id: string; anchor_text: string; target_title: string },
+  suggestion: { id: string; anchor_text: string; target_title: string; generated_sentence?: string | null },
   targetUrl: string,
   targetPrimaryKeyword: string | null,
   targetSecondaryKeywords: string[] | null,
 ): Promise<string | null> {
+  // If we have a pre-generated sentence from discovery, use it directly
+  if (suggestion.generated_sentence) {
+    return insertGeneratedSentence(
+      content,
+      targetUrl,
+      suggestion.target_title,
+      suggestion.anchor_text,
+      suggestion.generated_sentence,
+    );
+  }
+
+  // Otherwise, use existing phrase-matching logic
   const paragraphs = parseParagraphs(content);
   if (paragraphs.length < 3) return null;
   if (content.includes(`href="${targetUrl}"`)) return null;
@@ -269,6 +319,7 @@ async function insertLinkContextually(
     }
   }
 
+  // Fallback: AI-generated sentence (only for suggestions without pre-generated ones)
   const bestPara = scored[0].para;
   const allKeywords = [
     ...(targetPrimaryKeyword ? [targetPrimaryKeyword] : []),
@@ -603,8 +654,7 @@ serve(async (req) => {
       });
     }
 
-    // Create a tracking job using semantic_scan_jobs table
-    // Use category_filter = '__apply_links__' as a marker to distinguish from scan jobs
+    // Create a tracking job
     const { data: newJob, error: jobError } = await supabaseAdmin
       .from('semantic_scan_jobs')
       .insert({

@@ -25,6 +25,8 @@ interface AISuggestion {
   section_heading: string;
   reasoning: string;
   confidence?: number;
+  mode?: 'existing' | 'generated';
+  generated_sentence?: string;
 }
 
 interface ParsedSection {
@@ -196,21 +198,34 @@ async function callAI(
     .map(c => `${c.index}. [${c.role}] "${c.title}" (slug: ${c.slug})`)
     .join('\n');
 
-  const systemPrompt = `You are an internal linking specialist for a consumer rights blog. Analyze the article body text and find 7-10 natural phrases that could become anchor text for internal links.
+  const systemPrompt = `You are an internal linking specialist for a consumer rights blog. Analyze the article body text and find 12-15 link opportunities to the candidate targets below.
+
+You have TWO strategies:
+
+**Strategy A — Existing Phrase (preferred):**
+Find a 2-6 word phrase that already exists VERBATIM in the article body text that naturally relates to a target article.
+
+**Strategy B — Generated Sentence (fallback):**
+When no good verbatim phrase exists for an important target, write ONE short natural sentence (15-30 words) that continues a relevant paragraph's topic. The sentence must contain a 2-5 word anchor phrase related to the target. The sentence must feel like the original author wrote it — same tone, same topic flow.
 
 STRICT RULES:
-1. Each anchor MUST be an exact phrase (2-6 words, 8-60 characters) that already exists VERBATIM in the article body text below
-2. NEVER use text from H2/H3 headings or the first paragraph
-3. Distribute links across different sections — max 2 links per section
-4. Each target can only be linked once
-5. Anchors must NOT be the target's exact title or start with the same first 4+ words
-6. Prefer phrases that naturally relate to the target article's topic
-7. Return ONLY valid JSON — no markdown, no explanation
-8. Anchors must be SPECIFIC to the target — avoid vague phrases like "insurance coverage" or "repair services" that could match multiple targets. Include at least one distinguishing word unique to that specific target.
-9. Return a "confidence" score (1-100) for each suggestion indicating how uniquely the anchor matches this specific target vs other targets in the list. High confidence (85+) means the anchor clearly points to ONE target. Low confidence (<70) means it's generic.
+1. For "existing" mode: anchor MUST appear VERBATIM in the body text below
+2. For "generated" mode: the generated_sentence MUST contain the anchor_text exactly as written
+3. NEVER use text from H2/H3 headings or the first paragraph as anchors
+4. Distribute links across different sections — max 2 links per section
+5. Each target can only be linked once
+6. Anchors must NOT be the target's exact title or start with the same first 4+ words
+7. Prefer Strategy A when possible. Use Strategy B for important targets (pillars, templates) where no verbatim match exists
+8. Anchors must be SPECIFIC — avoid vague 2-word phrases like "insurance coverage"
+9. Return a "confidence" score (1-100) for how well the anchor matches the specific target
+10. For "generated" mode, do NOT use generic phrases like "learn more", "check out", "see our guide", "explore our", "read about", "for more details"
+11. Return ONLY valid JSON — no markdown, no explanation
 
 Return a JSON array:
-[{"anchor_text":"exact phrase from body","target_index":1,"section_heading":"section name","reasoning":"brief reason","confidence":85}]`;
+[
+  {"anchor_text":"exact phrase from body","target_index":1,"section_heading":"section name","reasoning":"brief reason","confidence":85,"mode":"existing"},
+  {"anchor_text":"specific anchor phrase","target_index":3,"section_heading":"section name","reasoning":"brief reason","confidence":80,"mode":"generated","generated_sentence":"One natural continuation sentence with the anchor phrase embedded naturally."}
+]`;
 
   const userPrompt = `Article Title: "${articleTitle}"
 Article Role: ${articleRole}
@@ -223,7 +238,7 @@ ${bodyText}
 --- CANDIDATE TARGETS (link to these) ---
 ${candidateList}
 
-Find 7-10 natural anchor phrases in the body text above that link to the most relevant targets. ${articleRole === 'cluster' && pillarInfo ? 'IMPORTANT: You MUST include at least 1 link to the pillar article (marked above).' : ''}`;
+Find 12-15 link opportunities using BOTH strategies. Use "existing" mode when a good verbatim phrase exists, and "generated" mode when you need to create a sentence for an important target. ${articleRole === 'cluster' && pillarInfo ? 'IMPORTANT: You MUST include at least 1 link to the pillar article (marked above).' : ''}`;
 
   const response = await fetch(AI_GATEWAY_URL, {
     method: 'POST',
@@ -281,6 +296,8 @@ function validateSuggestion(
   const anchor = suggestion.anchor_text?.trim();
   if (!anchor) return false;
 
+  const isGenerated = suggestion.mode === 'generated';
+
   // Word count check (2-6 words)
   const words = anchor.split(/\s+/);
   if (words.length < 2 || words.length > 6) return false;
@@ -299,15 +316,24 @@ function validateSuggestion(
   if (target.title.toLowerCase().startsWith(anchorLower)) return false;
   if (articleTitle.toLowerCase().startsWith(anchorLower)) return false;
 
-  // Anchor exists in body text (not just in headings or intro)
-  if (!bodyTextLower.includes(anchorLower)) return false;
+  if (isGenerated) {
+    // For generated mode: validate that generated_sentence contains the anchor
+    if (!suggestion.generated_sentence) return false;
+    if (!suggestion.generated_sentence.includes(anchor)) return false;
+    // generated_sentence should be reasonable length (15-80 words)
+    const sentenceWords = suggestion.generated_sentence.split(/\s+/).length;
+    if (sentenceWords < 8 || sentenceWords > 80) return false;
+  } else {
+    // For existing mode: anchor must exist in body text (not just in headings or intro)
+    if (!bodyTextLower.includes(anchorLower)) return false;
 
-  // Not in any heading
-  const inHeading = headings.some(h => h.toLowerCase().includes(anchorLower));
-  if (inHeading) return false;
+    // Not in any heading
+    const inHeading = headings.some(h => h.toLowerCase().includes(anchorLower));
+    if (inHeading) return false;
 
-  // Not in intro paragraph
-  if (introText.toLowerCase().includes(anchorLower)) return false;
+    // Not in intro paragraph
+    if (introText.toLowerCase().includes(anchorLower)) return false;
+  }
 
   // Reject anchors composed entirely of generic/vague words
   const GENERIC_WORDS = new Set(['insurance','dispute','complaint','repair','service','services',
@@ -316,7 +342,7 @@ function validateSuggestion(
   const STOP_WORDS = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','your','our','their','this','that','these','those','my','his','her','its','we','they','you','i','me','him','us','them','it','no','not','nor','so','too','very','just','about','more','most','some','any','all','each','every','both','few','many','much','own','other','another','such','what','which','who','whom','how','when','where','why','if','then','than','because','while','although','though','after','before','until','unless','since','during','into','through','between','against','above','below','over','under','out','up','down','off','only','also','still','already','even','now','here','there','well','back','also','robust','comprehensive','effective','strong','solid','proper','good','great','full','total','complete','general','basic','simple','common','standard','regular','normal','typical','usual','main','major','key','important','significant','critical','essential','necessary','relevant','appropriate','suitable','adequate']);
   const meaningfulWords = words.filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()));
   const allGeneric = meaningfulWords.length > 0 && meaningfulWords.every(w => GENERIC_WORDS.has(w.toLowerCase()));
-  if (allGeneric && words.length <= 3) return false;
+  if (allGeneric && words.length <= 2) return false;
 
   return true;
 }
@@ -458,7 +484,7 @@ async function processOneArticle(
 
   // Validate and deduplicate
   const usedTargets = new Set<number>();
-  const validSuggestions: { candidate: CandidateTarget; anchor: string; confidence: number }[] = [];
+  const validSuggestions: { candidate: CandidateTarget; anchor: string; confidence: number; generatedSentence: string | null }[] = [];
 
   for (const suggestion of aiSuggestions) {
     if (validSuggestions.length >= Math.min(remainingSlots, 10)) break;
@@ -469,7 +495,12 @@ async function processOneArticle(
 
     const target = candidates[suggestion.target_index - 1];
     usedTargets.add(suggestion.target_index);
-    validSuggestions.push({ candidate: target, anchor: suggestion.anchor_text.trim(), confidence: suggestion.confidence || 75 });
+    validSuggestions.push({
+      candidate: target,
+      anchor: suggestion.anchor_text.trim(),
+      confidence: suggestion.confidence || 75,
+      generatedSentence: suggestion.mode === 'generated' ? (suggestion.generated_sentence || null) : null,
+    });
   }
 
   if (!validSuggestions.length) {
@@ -486,7 +517,7 @@ async function processOneArticle(
     .eq('anchor_source', 'ai_suggested');
 
   // Insert validated suggestions
-  const rows = validSuggestions.map(({ candidate, anchor, confidence }) => ({
+  const rows = validSuggestions.map(({ candidate, anchor, confidence, generatedSentence }) => ({
     source_post_id: article.id,
     target_type: candidate.contentType,
     target_slug: candidate.slug,
@@ -497,6 +528,7 @@ async function processOneArticle(
     relevance_score: Math.max(55, Math.min(95, confidence)),
     hierarchy_valid: true,
     status: 'pending',
+    generated_sentence: generatedSentence,
   }));
 
   const { error: insertError } = await supabaseAdmin
@@ -508,7 +540,9 @@ async function processOneArticle(
     return 0;
   }
 
-  console.log(`[SMART] "${article.title}": ${validSuggestions.length} AI links (${aiSuggestions.length} raw, ${validSuggestions.length} valid)`);
+  const existingCount = validSuggestions.filter(s => !s.generatedSentence).length;
+  const generatedCount = validSuggestions.filter(s => s.generatedSentence).length;
+  console.log(`[SMART] "${article.title}": ${validSuggestions.length} AI links (${existingCount} existing, ${generatedCount} generated, ${aiSuggestions.length} raw)`);
   return validSuggestions.length;
 }
 
@@ -591,7 +625,6 @@ serve(async (req) => {
     }
 
     // ── Fetch batch of articles that haven't been smart-scanned yet ──
-    // Use next_scan_due_at on embeddings to track which articles have been processed
     let articleQuery = supabaseAdmin
       .from('article_embeddings')
       .select('id, content_id, slug, title, category_id, article_role, embedding, parent_pillar_id')
@@ -635,7 +668,6 @@ serve(async (req) => {
     let batchProcessed = 0;
 
     try {
-      // Process all articles in the batch concurrently for speed
       const processArticle = async (emb: any): Promise<{ suggestions: number; error?: string }> => {
         if (!emb.content_id) return { suggestions: 0 };
 
