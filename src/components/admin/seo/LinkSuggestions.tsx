@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
 import { useSemanticLinkScan } from '@/hooks/useSemanticLinkScan';
@@ -8,19 +8,31 @@ import LinkActions from './links/LinkActions';
 import LinkCard from './links/LinkCard';
 import ScanProgress from './links/ScanProgress';
 import SemanticScanPanel from './links/SemanticScanPanel';
+import QueuePagination from './queue/QueuePagination';
+
+const PAGE_SIZE = 50;
 
 export default function LinkSuggestions() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { isScanJobRunning } = useSemanticLinkScan();
 
-  const { 
-    suggestions, 
-    isLoading, 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedIds(new Set());
+  }, [statusFilter, categoryFilter, targetTypeFilter]);
+
+  const {
+    suggestions,
+    isLoading,
     refetch,
+    totalCount,
+    totalPages,
     scan,
     isScanning,
     updateStatus,
@@ -36,24 +48,16 @@ export default function LinkSuggestions() {
     isBulkUpdatingAll,
     bulkDeleteByStatus,
     isBulkDeleting,
-  } = useLinkSuggestions(statusFilter === 'all' ? undefined : statusFilter, undefined, isScanJobRunning);
+  } = useLinkSuggestions(
+    statusFilter === 'all' ? undefined : statusFilter,
+    categoryFilter !== 'all' ? categoryFilter : undefined,
+    targetTypeFilter !== 'all' ? targetTypeFilter : undefined,
+    currentPage,
+    PAGE_SIZE,
+    isScanJobRunning,
+  );
 
   const stats = getStats();
-
-  // Filter suggestions
-  const filteredSuggestions = useMemo(() => {
-    if (!suggestions) return [];
-    
-    return suggestions.filter(s => {
-      if (categoryFilter !== 'all' && s.blog_posts?.category_slug !== categoryFilter) {
-        return false;
-      }
-      if (targetTypeFilter !== 'all' && s.target_type !== targetTypeFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [suggestions, categoryFilter, targetTypeFilter]);
 
   const toggleSelection = (id: string) => {
     const newSelected = new Set(selectedIds);
@@ -63,6 +67,11 @@ export default function LinkSuggestions() {
       newSelected.add(id);
     }
     setSelectedIds(newSelected);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedIds(new Set());
   };
 
   const handleApprove = (id: string) => {
@@ -135,14 +144,6 @@ export default function LinkSuggestions() {
     }
   };
 
-  const handleScan = () => {
-    const params: { categorySlug?: string } = {};
-    if (categoryFilter !== 'all') {
-      params.categorySlug = categoryFilter;
-    }
-    scan(params);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -178,7 +179,7 @@ export default function LinkSuggestions() {
           selectedCount={selectedIds.size}
           pendingCount={stats.pending}
           approvedCount={stats.approved}
-          filteredCount={filteredSuggestions.length}
+          filteredCount={totalCount}
           statusFilter={statusFilter}
           totalForStatus={statusFilter === 'all' ? (stats.pending + stats.approved + stats.rejected + stats.applied) : (stats as any)[statusFilter] || 0}
           isApplying={isApplyingLinks}
@@ -196,15 +197,15 @@ export default function LinkSuggestions() {
       </div>
 
       {/* Suggestions List */}
-      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-        {filteredSuggestions.length === 0 ? (
+      <div className="space-y-3">
+        {(!suggestions || suggestions.length === 0) ? (
           <div className="text-center py-12 text-muted-foreground">
             <Search className="h-12 w-12 mx-auto mb-4 opacity-20" />
             <p>No link suggestions found</p>
             <p className="text-sm mt-1">Scan articles to find linking opportunities</p>
           </div>
         ) : (
-          filteredSuggestions.map(suggestion => (
+          suggestions.map(suggestion => (
             <LinkCard
               key={suggestion.id}
               suggestion={suggestion}
@@ -217,6 +218,15 @@ export default function LinkSuggestions() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <QueuePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        totalItems={totalCount}
+        itemsPerPage={PAGE_SIZE}
+      />
     </div>
   );
 }

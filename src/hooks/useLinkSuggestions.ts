@@ -31,32 +31,38 @@ export interface LinkStatsFromDB {
   applied: number;
 }
 
-export function useLinkSuggestions(status?: string, categorySlug?: string, isScanRunning?: boolean) {
+export function useLinkSuggestions(
+  status?: string,
+  categorySlug?: string,
+  targetType?: string,
+  page = 1,
+  pageSize = 50,
+  isScanRunning?: boolean,
+) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch link suggestions
-  const { data: suggestions, isLoading, error, refetch } = useQuery({
-    queryKey: ['link-suggestions', status, categorySlug],
+  // Fetch paginated link suggestions
+  const { data: queryResult, isLoading, error, refetch } = useQuery({
+    queryKey: ['link-suggestions', status, categorySlug, targetType, page, pageSize],
     queryFn: async () => {
+      const offset = (page - 1) * pageSize;
+
       let query = supabase
         .from('link_suggestions')
-        .select(`
-          *,
-          blog_posts(title, slug, category_slug)
-        `)
+        .select('*, blog_posts!inner(title, slug, category_slug)', { count: 'exact' })
         .order('relevance_score', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
 
-      if (status) {
-        query = query.eq('status', status);
-      }
+      if (status) query = query.eq('status', status);
+      if (categorySlug) query = query.eq('blog_posts.category_slug', categorySlug);
+      if (targetType) query = query.eq('target_type', targetType);
 
-      const { data, error } = await query.limit(200);
-      
+      const { data, error, count } = await query;
       if (error) throw error;
 
-      // Fetch outbound counts for source articles
+      // Fetch outbound counts for this page's source articles
       const sourceIds = [...new Set((data || []).map((s: any) => s.source_post_id))];
       let outboundMap: Record<string, number> = {};
       if (sourceIds.length > 0) {
@@ -71,22 +77,21 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
         }
       }
 
-      let results = (data || []).map((s: any) => ({
+      const suggestions = (data || []).map((s: any) => ({
         ...s,
         source_outbound_count: outboundMap[s.source_post_id] ?? null,
       })) as LinkSuggestion[];
 
-      // Filter by category if specified
-      if (categorySlug) {
-        results = results.filter(item => item.blog_posts?.category_slug === categorySlug);
-      }
-
-      return results;
+      return { suggestions, totalCount: count || 0 };
     },
     refetchInterval: isScanRunning ? 10000 : false,
   });
 
-  // Fetch accurate stats from DB (not limited by 200-row display cap)
+  const suggestions = queryResult?.suggestions;
+  const totalCount = queryResult?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Fetch accurate stats from DB (not limited by pagination)
   const { data: dbStats } = useQuery({
     queryKey: ['link-suggestions-stats'],
     queryFn: async (): Promise<LinkStatsFromDB> => {
@@ -115,7 +120,6 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
       const { data, error } = await supabase.functions.invoke('scan-for-links', {
         body: params,
       });
-
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Scan failed');
       return data;
@@ -143,7 +147,6 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
         .from('link_suggestions')
         .update({ status })
         .eq('id', id);
-      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -158,7 +161,6 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
         .from('link_suggestions')
         .update({ anchor_text })
         .eq('id', id);
-      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -181,12 +183,11 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
         .from('link_suggestions')
         .update({ status })
         .in('id', ids);
-      
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
-      toast({ 
+      toast({
         title: 'Suggestions updated',
         description: `${variables.ids.length} suggestions marked as ${variables.status}`,
       });
@@ -202,15 +203,14 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
 
   // Apply links
   const applyLinksMutation = useMutation({
-    mutationFn: async (params: { 
-      suggestionIds?: string[]; 
-      categorySlug?: string; 
-      autoApproveThreshold?: number 
+    mutationFn: async (params: {
+      suggestionIds?: string[];
+      categorySlug?: string;
+      autoApproveThreshold?: number;
     }) => {
       const { data, error } = await supabase.functions.invoke('apply-links-bulk', {
         body: params,
       });
-
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Apply failed');
       return data;
@@ -266,7 +266,6 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
         .from('link_suggestions')
         .delete()
         .in('id', ids);
-      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -302,27 +301,20 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
     },
   });
 
-  // Get stats - use DB counts when available, fallback to array counts
+  // Get stats - use DB counts when available
   const getStats = useCallback(() => {
     if (dbStats) return dbStats;
-    if (!suggestions) return { pending: 0, approved: 0, rejected: 0, applied: 0 };
-    
-    return {
-      pending: suggestions.filter(s => s.status === 'pending').length,
-      approved: suggestions.filter(s => s.status === 'approved').length,
-      rejected: suggestions.filter(s => s.status === 'rejected').length,
-      applied: suggestions.filter(s => s.status === 'applied').length,
-    };
-  }, [suggestions, dbStats]);
+    return { pending: 0, approved: 0, rejected: 0, applied: 0 };
+  }, [dbStats]);
 
-  // Get high-relevance pending IDs
+  // Get high-relevance pending IDs (from current page only)
   const getHighRelevanceIds = useCallback((threshold = 85) => {
-    return suggestions?.filter(s => 
+    return suggestions?.filter(s =>
       s.status === 'pending' && (s.relevance_score || 0) >= threshold
     ).map(s => s.id) || [];
   }, [suggestions]);
 
-  // Get approved IDs
+  // Get approved IDs (from current page only)
   const getApprovedIds = useCallback(() => {
     return suggestions?.filter(s => s.status === 'approved').map(s => s.id) || [];
   }, [suggestions]);
@@ -332,6 +324,8 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
     isLoading,
     error,
     refetch,
+    totalCount,
+    totalPages,
     scan: scanMutation.mutate,
     isScanning: scanMutation.isPending,
     updateStatus: updateStatusMutation.mutate,
