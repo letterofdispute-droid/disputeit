@@ -114,6 +114,20 @@ export default function LinkCard({
               <span className="text-sm font-medium line-clamp-2 sm:truncate">
                 {suggestion.blog_posts?.title || 'Unknown article'}
               </span>
+              {suggestion.source_outbound_count != null && (
+                <Badge 
+                  variant="outline" 
+                  className={`shrink-0 text-xs ${
+                    suggestion.source_outbound_count >= 8 
+                      ? 'border-destructive/50 text-destructive' 
+                      : suggestion.source_outbound_count >= 6 
+                        ? 'border-yellow-500/50 text-yellow-700' 
+                        : ''
+                  }`}
+                >
+                  {suggestion.source_outbound_count}/8 links
+                </Badge>
+              )}
             </div>
 
             {/* Link Target */}

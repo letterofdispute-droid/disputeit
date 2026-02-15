@@ -16,6 +16,7 @@ export interface LinkSuggestion {
   status: string;
   applied_at: string | null;
   created_at: string;
+  source_outbound_count?: number;
   blog_posts?: {
     title: string;
     slug: string;
@@ -55,14 +56,32 @@ export function useLinkSuggestions(status?: string, categorySlug?: string, isSca
       
       if (error) throw error;
 
-      // Filter by category if specified
-      if (categorySlug && data) {
-        return data.filter((item: any) => 
-          item.blog_posts?.category_slug === categorySlug
-        ) as LinkSuggestion[];
+      // Fetch outbound counts for source articles
+      const sourceIds = [...new Set((data || []).map((s: any) => s.source_post_id))];
+      let outboundMap: Record<string, number> = {};
+      if (sourceIds.length > 0) {
+        const { data: embeddings } = await supabase
+          .from('article_embeddings')
+          .select('content_id, outbound_count')
+          .in('content_id', sourceIds);
+        if (embeddings) {
+          outboundMap = Object.fromEntries(
+            embeddings.map((e: any) => [e.content_id, e.outbound_count || 0])
+          );
+        }
       }
 
-      return data as LinkSuggestion[];
+      let results = (data || []).map((s: any) => ({
+        ...s,
+        source_outbound_count: outboundMap[s.source_post_id] ?? null,
+      })) as LinkSuggestion[];
+
+      // Filter by category if specified
+      if (categorySlug) {
+        results = results.filter(item => item.blog_posts?.category_slug === categorySlug);
+      }
+
+      return results;
     },
     refetchInterval: isScanRunning ? 10000 : false,
   });
