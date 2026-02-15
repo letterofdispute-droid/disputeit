@@ -1,60 +1,32 @@
 
-
-# Fix: Allow Scan to Resume Instead of Always Restarting
+# Fix: Sync Link Suggestion Counts
 
 ## Problem
 
-The recent fix (auto-reset `next_scan_due_at` before every scan) means clicking Smart Scan always restarts from the beginning instead of continuing from where it stopped. Your 2,095 suggestions are safe, but a new scan would re-process all articles unnecessarily.
+Two different numbers are displayed:
+- **"4,233 link suggestions found"** -- from the last scan job's `total_suggestions` field (only counts what that one job discovered)
+- **"Pending: 6,344"** -- the actual database count of all pending suggestions across all scan jobs
+
+Both numbers are technically correct, but they represent different things. This is confusing.
 
 ## Solution
 
-Add a "Force Re-scan" checkbox (default OFF) so that:
-- **OFF (default)**: Scan picks up only unprocessed articles -- perfect for resuming after a credit interruption
-- **ON**: Resets all timestamps first, re-scanning everything from scratch
+Update the scan completion message to clarify it shows the job-specific count, and also display the total pending count for context.
 
 ## Changes
 
 ### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
 
-1. Add a `forceRescan` state variable (default `false`)
-2. Add a checkbox labeled "Force re-scan (ignore cooldown)" below the category dropdown
-3. Update `handleSmartScan` and `handleSemanticScan` to only call `resetScanTimestamps` when `forceRescan` is `true`
+Update the scan completion banner (around line 368) from:
 
-**Before:**
-```typescript
-const handleSmartScan = async () => {
-  const cat = scanCategory !== 'all' ? scanCategory : undefined;
-  await resetScanTimestamps(cat);  // Always resets
-  smartScan({ categorySlug: cat, maxLinksPerArticle: maxOutboundLinks });
-};
+```
+Scan complete — 4,233 link suggestions found
 ```
 
-**After:**
-```typescript
-const handleSmartScan = async () => {
-  const cat = scanCategory !== 'all' ? scanCategory : undefined;
-  if (forceRescan) {
-    await resetScanTimestamps(cat);
-  }
-  smartScan({ categorySlug: cat, maxLinksPerArticle: maxOutboundLinks });
-};
+To:
+
+```
+Scan complete — 4,233 new suggestions from this scan
 ```
 
-Same change for `handleSemanticScan`.
-
-4. Add a small checkbox UI element:
-```tsx
-<div className="flex items-center gap-2 mt-2">
-  <Checkbox checked={forceRescan} onCheckedChange={setForceRescan} />
-  <label className="text-sm text-muted-foreground">
-    Force re-scan (ignore 7-day cooldown)
-  </label>
-</div>
-```
-
-## What This Means for You
-
-- **Right now**: Leave the checkbox OFF, select your category, click Smart Scan -- it will resume from where it stopped and only process the remaining articles
-- **Later**: If you want to re-scan everything fresh, check the box first
-- Your existing 2,095 suggestions are safe in the database regardless
-
+This makes it clear that the number refers to the output of the specific scan job, not the total across all scans. The "Pending: 6,344" stat bar below already shows the true total.
