@@ -232,11 +232,11 @@ const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: Global
                 key={category.id}
                 value={`cat-${category.id}`}
                 onSelect={() => handleSelect(`/templates/${category.id}`, 'category', category.id, category.name, idx + 1)}
-                className="flex items-center gap-3 cursor-pointer"
+                className="flex items-center gap-4 cursor-pointer"
               >
                 <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="font-medium">{category.name}</span>
+                  <span className="font-medium text-[15px]">{category.name}</span>
                 </div>
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               </CommandItem>
@@ -252,11 +252,11 @@ const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: Global
                 key={template.slug}
                 value={`tmpl-${template.slug}`}
                 onSelect={() => handleSelect(getTemplateUrl(template), 'template', template.slug, template.title, idx + 1)}
-                className="flex items-center gap-3 cursor-pointer"
+                className="flex items-center gap-4 cursor-pointer"
               >
                 <FileText className="h-4 w-4 text-primary flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="block truncate font-medium">{template.title}</span>
+                  <span className="block truncate font-medium text-[15px]">{template.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">{template.shortDescription}</span>
                 </div>
                 <Badge variant="secondary" className="text-[10px] flex-shrink-0">
@@ -277,10 +277,10 @@ const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: Global
                   key={category.id}
                   value={`cat-${category.id}`}
                   onSelect={() => handleSelect(`/templates/${category.id}`, 'category', category.id, category.name, filteredTemplates.length + idx + 1)}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
+                className="flex items-center gap-4 cursor-pointer"
+              >
                   <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="font-medium">{category.name}</span>
+                  <span className="font-medium text-[15px]">{category.name}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground ml-auto" />
                 </CommandItem>
               ))}
@@ -298,11 +298,11 @@ const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: Global
                   key={article.slug}
                   value={`art-${article.slug}`}
                   onSelect={() => handleSelect(`/articles/${article.category_slug}/${article.slug}`, 'article', article.slug, article.title, filteredTemplates.length + filteredCategories.length + idx + 1)}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
+                className="flex items-center gap-4 cursor-pointer"
+              >
                   <Newspaper className="h-4 w-4 text-accent flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="block truncate font-medium">{article.title}</span>
+                    <span className="block truncate font-medium text-[15px]">{article.title}</span>
                     {article.excerpt && (
                       <span className="block truncate text-xs text-muted-foreground">
                         {article.excerpt.slice(0, 80)}…
@@ -321,7 +321,7 @@ const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: Global
           </div>
         )}
       </CommandList>
-      <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
+      <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground flex items-center justify-between">
         <span>
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
             ⌘K
