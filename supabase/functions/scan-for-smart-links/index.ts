@@ -17,7 +17,6 @@ interface SmartScanRequest {
   jobId?: string;
   categorySlug?: string;
   maxLinksPerArticle?: number;
-  maxArticles?: number;
 }
 
 interface AISuggestion {
@@ -521,7 +520,7 @@ serve(async (req) => {
   }
 
   try {
-    const { jobId, categorySlug, maxLinksPerArticle = 10, maxArticles } = await req.json() as SmartScanRequest;
+    const { jobId, categorySlug, maxLinksPerArticle = 10 } = await req.json() as SmartScanRequest;
 
     // Auth check
     const isSelfChain = req.headers.get('Authorization')?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -535,7 +534,7 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    console.log('[SMART] Starting', { jobId, categorySlug, maxLinksPerArticle, maxArticles });
+    console.log('[SMART] Starting', { jobId, categorySlug, maxLinksPerArticle });
 
     // ── Job tracking ──
     let currentJobId = jobId;
@@ -552,13 +551,10 @@ serve(async (req) => {
 
       const { count: totalCount } = await countQuery;
 
-      // Cap total_items at maxArticles if provided
-      const effectiveTotal = maxArticles ? Math.min(totalCount || 0, maxArticles) : (totalCount || 0);
-
       const { data: newJob, error: jobError } = await supabaseAdmin
         .from('semantic_scan_jobs')
         .insert({
-          total_items: effectiveTotal,
+          total_items: totalCount || 0,
           similarity_threshold: 0.70,
           category_filter: categorySlug || null,
         })
@@ -584,7 +580,7 @@ serve(async (req) => {
       });
     }
 
-    // Completion guard (also respects maxArticles limit via total_items cap)
+    // Completion guard
     if (jobRow && jobRow.processed_items >= jobRow.total_items) {
       await supabaseAdmin.from('semantic_scan_jobs').update({
         status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -719,10 +715,10 @@ serve(async (req) => {
         if (freshJob?.status === 'cancelled' || freshJob?.status === 'failed') {
           console.log(`[SMART] Job ${freshJob.status}, stopping chain`);
         } else {
-          await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle, maxArticles });
+          await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle });
         }
       } catch (_) {
-        await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle, maxArticles });
+        await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle });
       }
     }
 

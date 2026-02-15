@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock, DollarSign } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +15,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSemanticLinkScan, EmbeddingStats, ScanResult, EmbeddingJob } from '@/hooks/useSemanticLinkScan';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 
 interface SemanticScanPanelProps {
   categoryFilter?: string;
@@ -30,43 +29,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [showOrphans, setShowOrphans] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
-  const [blogCategories, setBlogCategories] = useState<{ id: string; label: string; count: number }[]>([]);
+  const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
   const [scanCategory, setScanCategory] = useState<string>('all');
   const [forceRescan, setForceRescan] = useState(false);
-  const [maxArticles, setMaxArticles] = useState(100);
-  const [showSmartScanConfirm, setShowSmartScanConfirm] = useState(false);
-
-  // Fetch blog categories with article counts
-  const { data: categoriesWithCounts } = useQuery({
-    queryKey: ['blog-categories-with-counts'],
-    queryFn: async () => {
-      const [{ data: cats }, { data: counts }] = await Promise.all([
-        supabase.from('blog_categories').select('slug, name').order('name'),
-        supabase.from('blog_posts').select('category_slug').eq('status', 'published'),
-      ]);
-      const countMap: Record<string, number> = {};
-      (counts || []).forEach(r => {
-        countMap[r.category_slug] = (countMap[r.category_slug] || 0) + 1;
-      });
-      return (cats || []).map(c => ({ id: c.slug, label: c.name, count: countMap[c.slug] || 0 }));
-    },
-    staleTime: 60 * 1000,
-  });
-
-  useEffect(() => {
-    if (categoriesWithCounts) setBlogCategories(categoriesWithCounts);
-  }, [categoriesWithCounts]);
-
-  const selectedCategoryCount = scanCategory === 'all'
-    ? blogCategories.reduce((sum, c) => sum + c.count, 0)
-    : blogCategories.find(c => c.id === scanCategory)?.count || 0;
-
-  // Auto-update maxArticles when category changes
-  useEffect(() => {
-    if (selectedCategoryCount > 0) {
-      setMaxArticles(selectedCategoryCount);
-    }
-  }, [selectedCategoryCount, scanCategory]);
 
   const {
     semanticScan,
@@ -106,6 +71,19 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     fetchEmbeddingStats().then(setEmbeddingStats);
   }, [fetchEmbeddingStats, activeJob?.status]);
 
+  // Fetch blog categories from dedicated table
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('blog_categories')
+        .select('slug, name')
+        .order('name');
+      if (data) {
+        setBlogCategories(data.map(c => ({ id: c.slug, label: c.name })));
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Fetch scan history (last 10 completed jobs)
   const { data: scanHistory } = useQuery({
@@ -144,12 +122,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     smartScan({
       categorySlug: cat,
       maxLinksPerArticle: maxOutboundLinks,
-      maxArticles: maxArticles > 0 ? maxArticles : undefined,
     });
-    setShowSmartScanConfirm(false);
   };
-
-  const estimatedCost = (maxArticles || 0) * 0.002; // ~$0.002 per article with Gemini 2.5 Flash
 
   const handleStartBulkEmbedding = (forceReembed = false) => {
     startBulkEmbedding({
@@ -408,9 +382,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories ({blogCategories.reduce((s, c) => s + c.count, 0).toLocaleString()})</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {blogCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.label} ({cat.count.toLocaleString()})</SelectItem>
+                      <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -428,60 +402,20 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 </label>
               </div>
 
-              {/* Max articles limit */}
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  Max articles to process
-                  <span className="ml-1 text-muted-foreground/70">({selectedCategoryCount.toLocaleString()} available)</span>
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10000}
-                    value={maxArticles}
-                    onChange={(e) => setMaxArticles(parseInt(e.target.value) || 100)}
-                    className="h-8 text-xs w-24"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    ~${(maxArticles * 0.002).toFixed(2)} estimated AI cost
-                  </span>
-                </div>
-              </div>
-
-              {/* === Scan Buttons (not running) === */}
+              {/* === Scan Button (not running) === */}
               {!isScanJobRunning && (
                 <div className="flex gap-2">
-                  <AlertDialog open={showSmartScanConfirm} onOpenChange={setShowSmartScanConfirm}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={isSmartScanning || isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
-                        size="sm"
-                      >
-                        <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Smart Scan (AI)
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5 text-amber-500" />
-                          Confirm AI Smart Scan
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
-                          <p>This will use AI to analyze up to <strong>{maxArticles.toLocaleString()} articles</strong>{scanCategory !== 'all' ? ` in the "${blogCategories.find(c => c.id === scanCategory)?.label}" category` : ' across all categories'}.</p>
-                          <p className="text-amber-600 font-medium">Estimated cost: ~${estimatedCost.toFixed(2)} (using Gemini 2.5 Flash)</p>
-                          <p className="text-xs">Each article makes one AI call. You can adjust the limit above to control costs.</p>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleSmartScan}>
-                          {isSmartScanning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
-                          Start Scan (~${estimatedCost.toFixed(2)})
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    onClick={handleSmartScan}
+                    disabled={isSmartScanning || isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
+                    size="sm"
+                  >
+                    {isSmartScanning ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
+                    ) : (
+                      <><Wand2 className="h-3.5 w-3.5 mr-1.5" /> Smart Scan (AI)</>
+                    )}
+                  </Button>
                   <Button
                     onClick={handleSemanticScan}
                     disabled={isSemanticScanning || isSmartScanning || !hasEnoughEmbeddings || isJobProcessing}

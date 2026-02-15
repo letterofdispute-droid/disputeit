@@ -475,7 +475,6 @@ export function useSemanticLinkScan() {
     mutationFn: async (params: {
       categorySlug?: string;
       maxLinksPerArticle?: number;
-      maxArticles?: number;
     }) => {
       const { data, error } = await supabase.functions.invoke('scan-for-smart-links', {
         body: params,
