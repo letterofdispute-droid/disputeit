@@ -1,0 +1,1 @@
+ALTER TABLE link_suggestions ADD COLUMN IF NOT EXISTS generated_sentence TEXT;

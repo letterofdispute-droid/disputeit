@@ -882,6 +882,7 @@ export type Database = {
           applied_at: string | null
           context_snippet: string | null
           created_at: string
+          generated_sentence: string | null
           hierarchy_valid: boolean | null
           hierarchy_violation: string | null
           id: string
@@ -902,6 +903,7 @@ export type Database = {
           applied_at?: string | null
           context_snippet?: string | null
           created_at?: string
+          generated_sentence?: string | null
           hierarchy_valid?: boolean | null
           hierarchy_violation?: string | null
           id?: string
@@ -922,6 +924,7 @@ export type Database = {
           applied_at?: string | null
           context_snippet?: string | null
           created_at?: string
+          generated_sentence?: string | null
           hierarchy_valid?: boolean | null
           hierarchy_violation?: string | null
           id?: string
