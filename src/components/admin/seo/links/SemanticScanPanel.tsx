@@ -30,35 +30,43 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [showOrphans, setShowOrphans] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
-  const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
+  const [blogCategories, setBlogCategories] = useState<{ id: string; label: string; count: number }[]>([]);
   const [scanCategory, setScanCategory] = useState<string>('all');
   const [forceRescan, setForceRescan] = useState(false);
   const [maxArticles, setMaxArticles] = useState(100);
   const [showSmartScanConfirm, setShowSmartScanConfirm] = useState(false);
 
-  // Query actual published article count for selected category
-  const { data: categoryArticleCount } = useQuery({
-    queryKey: ['category-article-count', scanCategory],
+  // Fetch blog categories with article counts
+  const { data: categoriesWithCounts } = useQuery({
+    queryKey: ['blog-categories-with-counts'],
     queryFn: async () => {
-      let query = supabase
-        .from('blog_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'published');
-      if (scanCategory !== 'all') {
-        query = query.eq('category_slug', scanCategory);
-      }
-      const { count } = await query;
-      return count || 0;
+      const [{ data: cats }, { data: counts }] = await Promise.all([
+        supabase.from('blog_categories').select('slug, name').order('name'),
+        supabase.from('blog_posts').select('category_slug').eq('status', 'published'),
+      ]);
+      const countMap: Record<string, number> = {};
+      (counts || []).forEach(r => {
+        countMap[r.category_slug] = (countMap[r.category_slug] || 0) + 1;
+      });
+      return (cats || []).map(c => ({ id: c.slug, label: c.name, count: countMap[c.slug] || 0 }));
     },
     staleTime: 60 * 1000,
   });
 
+  useEffect(() => {
+    if (categoriesWithCounts) setBlogCategories(categoriesWithCounts);
+  }, [categoriesWithCounts]);
+
+  const selectedCategoryCount = scanCategory === 'all'
+    ? blogCategories.reduce((sum, c) => sum + c.count, 0)
+    : blogCategories.find(c => c.id === scanCategory)?.count || 0;
+
   // Auto-update maxArticles when category changes
   useEffect(() => {
-    if (categoryArticleCount !== undefined && categoryArticleCount > 0) {
-      setMaxArticles(categoryArticleCount);
+    if (selectedCategoryCount > 0) {
+      setMaxArticles(selectedCategoryCount);
     }
-  }, [categoryArticleCount, scanCategory]);
+  }, [selectedCategoryCount, scanCategory]);
 
   const {
     semanticScan,
@@ -98,19 +106,6 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     fetchEmbeddingStats().then(setEmbeddingStats);
   }, [fetchEmbeddingStats, activeJob?.status]);
 
-  // Fetch blog categories from dedicated table
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('blog_categories')
-        .select('slug, name')
-        .order('name');
-      if (data) {
-        setBlogCategories(data.map(c => ({ id: c.slug, label: c.name })));
-      }
-    };
-    fetchCategories();
-  }, []);
 
   // Fetch scan history (last 10 completed jobs)
   const { data: scanHistory } = useQuery({
@@ -413,9 +408,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories ({blogCategories.reduce((s, c) => s + c.count, 0).toLocaleString()})</SelectItem>
                     {blogCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.id}>{cat.label} ({cat.count.toLocaleString()})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -437,9 +432,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
                   Max articles to process
-                  {categoryArticleCount !== undefined && (
-                    <span className="ml-1 text-muted-foreground/70">({categoryArticleCount.toLocaleString()} available)</span>
-                  )}
+                  <span className="ml-1 text-muted-foreground/70">({selectedCategoryCount.toLocaleString()} available)</span>
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
