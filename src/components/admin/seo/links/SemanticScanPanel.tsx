@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2 } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +29,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     semanticScan,
     isSemanticScanning,
     lastScanResults,
+    smartScan,
+    isSmartScanning,
     activeScanJob,
     isScanJobRunning,
     scanJobProgress,
@@ -64,6 +66,13 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
       categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
       batchSize,
       similarityThreshold: similarityThreshold / 100,
+      maxLinksPerArticle: maxOutboundLinks,
+    });
+  };
+
+  const handleSmartScan = () => {
+    smartScan({
+      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
       maxLinksPerArticle: maxOutboundLinks,
     });
   };
@@ -270,7 +279,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   <Badge variant="outline" className="text-xs cursor-help">?</Badge>
                 </PopoverTrigger>
                 <PopoverContent className="max-w-xs text-sm">
-                  <p>Compares all article embeddings to find semantically related content, then generates linking suggestions with anchor text. Runs fully in the background — you can leave and come back.</p>
+                  <p>Uses AI (Gemini Flash) to read each article and find natural anchor phrases in the body text. <strong>Smart Scan</strong> is more accurate but slower (~3 articles/batch). <strong>Vector Scan</strong> uses pre-generated anchors and is faster but less precise.</p>
                 </PopoverContent>
               </Popover>
             </div>
@@ -319,17 +328,31 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
               {/* === Scan Button (not running) === */}
               {!isScanJobRunning && (
-                <Button
-                  onClick={handleSemanticScan}
-                  disabled={isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
-                  size="sm"
-                >
-                  {isSemanticScanning ? (
-                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
-                  ) : (
-                    <><Search className="h-3.5 w-3.5 mr-1.5" /> Discover All Links</>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSmartScan}
+                    disabled={isSmartScanning || isSemanticScanning || !hasEnoughEmbeddings || isJobProcessing}
+                    size="sm"
+                  >
+                    {isSmartScanning ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
+                    ) : (
+                      <><Wand2 className="h-3.5 w-3.5 mr-1.5" /> Smart Scan (AI)</>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSemanticScan}
+                    disabled={isSemanticScanning || isSmartScanning || !hasEnoughEmbeddings || isJobProcessing}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isSemanticScanning ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Starting...</>
+                    ) : (
+                      <><Search className="h-3.5 w-3.5 mr-1.5" /> Vector Scan</>
+                    )}
+                  </Button>
+                </div>
               )}
 
               {/* Legacy scan results (kept for single-post scans) */}
