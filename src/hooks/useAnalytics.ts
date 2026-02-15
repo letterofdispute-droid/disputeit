@@ -14,7 +14,9 @@ type EventType =
   | 'checkout_completed'
   | 'credit_redeemed'
   | 'category_view'
-  | 'site_search';
+  | 'site_search'
+  | 'search_click'
+  | 'search_exit';
 
 interface TrackEventParams {
   eventType: EventType;
