@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -51,7 +46,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect immediate action to resolve these dangerous conditions.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'electrician-overcharge',
@@ -91,7 +85,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect a fair resolution to this billing dispute.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'electrician-code-violation',
@@ -131,7 +124,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect prompt action to bring this work into full compliance.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'electrician-panel-upgrade',
@@ -171,7 +163,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect this matter to be resolved promptly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'electrician-lighting-installation',
@@ -210,7 +201,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect prompt resolution of this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'electrician-ev-charger',
@@ -250,6 +240,6 @@ export const electricalTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect prompt resolution so I can use my electric vehicle as intended.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

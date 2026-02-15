@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -56,7 +51,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect immediate action to resolve this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'hvac-repair-ineffective',
@@ -97,7 +91,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect immediate action on this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'hvac-overcharge',
@@ -139,7 +132,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect a fair resolution to this billing dispute.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'hvac-warranty-denial',
@@ -182,7 +174,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect you to honor your warranty obligations.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'hvac-maintenance-contract',
@@ -223,7 +214,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect you to honor your contractual obligations.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'hvac-wrong-size-unit',
@@ -265,6 +255,6 @@ export const hvacTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect a properly functioning HVAC system as I paid for.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

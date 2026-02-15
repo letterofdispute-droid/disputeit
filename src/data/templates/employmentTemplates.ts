@@ -5,11 +5,6 @@ import { workplaceConditionsTemplates } from './employment/workplaceConditionsTe
 import { benefitsDocumentationTemplates } from './employment/benefitsDocumentationTemplates';
 import { additionalEmploymentTemplates } from './employment/additionalEmploymentTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'Fair Labor Standards Act', approvedPhrases: ['Under the FLSA', 'In accordance with federal employment law'] },
@@ -52,7 +47,6 @@ const coreEmploymentTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Please send payment immediately to my registered bank account.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'wrongful-termination', 
@@ -87,7 +81,6 @@ const coreEmploymentTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I have sought legal advice and will pursue all available remedies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'employment-discrimination-complaint',
@@ -145,7 +138,7 @@ const coreEmploymentTemplates: LetterTemplate[] = [
       { code: 'EU', name: 'European Union', legalReference: 'Equal Treatment Directive 2006/54/EC', approvedPhrases: ['Under the EU Equal Treatment Directive', 'In accordance with EU anti-discrimination law', 'The burden of proof shifts to the employer to disprove discrimination'] },
       { code: 'INTL', name: 'International / Other', approvedPhrases: ['In accordance with applicable employment and anti-discrimination laws'] },
     ],
-    pricing: standardPricing,
+    
   },
 ];
 

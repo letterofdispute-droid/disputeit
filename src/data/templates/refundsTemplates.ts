@@ -5,11 +5,6 @@ import { serviceRefundTemplates } from './refunds/serviceRefundTemplates';
 import { billingDisputeTemplates } from './refunds/billingDisputeTemplates';
 import { specialPurchaseTemplates } from './refunds/specialPurchaseTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   {
@@ -78,7 +73,6 @@ This template helps you communicate professionally and increases your chances of
       { id: 'closing', name: 'Closing', template: 'I trust this matter can be resolved amicably. I look forward to your prompt response.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-online-purchase',
@@ -121,7 +115,6 @@ Online purchases often have additional protections, including cooling-off period
       { id: 'closing', name: 'Closing', template: 'I have retained all packaging and evidence related to this order.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-subscription',
@@ -163,7 +156,6 @@ Document all cancellation attempts before sending this letter.`,
       { id: 'closing', name: 'Closing', template: 'Please also confirm that no further charges will be made to my account.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-after-return',
@@ -204,7 +196,6 @@ Always include tracking numbers and proof of return.`,
       { id: 'closing', name: 'Closing', template: 'I have proof of return and will escalate this matter if not resolved promptly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-service-not-rendered',
@@ -246,7 +237,6 @@ Document all agreements, invoices, and communications.`,
       { id: 'closing', name: 'Closing', template: 'I have retained copies of all agreements and payment records.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-overcharge',
@@ -288,7 +278,6 @@ Keep screenshots of advertised prices and written quotes.`,
       { id: 'closing', name: 'Closing', template: 'I have retained evidence of the original advertised price.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-double-charge',
@@ -329,7 +318,6 @@ Check your bank statement carefully and document both charges.`,
       { id: 'closing', name: 'Closing', template: 'I have attached bank statements showing both charges.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-gym-membership',
@@ -371,7 +359,6 @@ Check your contract terms and local consumer laws.`,
       { id: 'closing', name: 'Closing', template: 'Please confirm in writing that no further payments will be taken.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-event-cancelled',
@@ -412,7 +399,6 @@ Refund rights vary by jurisdiction and ticket terms.`,
       { id: 'closing', name: 'Closing', template: 'I do not wish to accept vouchers or rescheduled tickets as an alternative to refund.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-course-training',
@@ -452,7 +438,6 @@ Many courses offer satisfaction guarantees—check the terms.`,
       { id: 'closing', name: 'Closing', template: 'The course has not delivered the value promised in the sales materials.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-deposit',
@@ -492,7 +477,6 @@ Terms for deposit return vary—review your agreement carefully.`,
       { id: 'closing', name: 'Closing', template: 'Please confirm receipt and expected refund date.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-cooling-off',
@@ -534,7 +518,6 @@ Exceptions include custom-made items, perishables, sealed hygiene products, and 
       { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Contracts Regulations 2013', approvedPhrases: ['Under the Consumer Contracts Regulations 2013, I have 14 days to cancel this contract'] },
       { code: 'EU', name: 'European Union', legalReference: 'Consumer Rights Directive 2011/83/EU', approvedPhrases: ['Under the Consumer Rights Directive, I have 14 days to withdraw from this contract'] },
     ],
-    pricing: standardPricing,
   },
   {
     id: 'refund-gift-card',
@@ -572,7 +555,6 @@ Check local laws and company policies.`,
       { id: 'closing', name: 'Closing', template: 'I am happy to return the physical card if required.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-pre-order',
@@ -613,7 +595,6 @@ Act quickly before the item ships.`,
       { id: 'closing', name: 'Closing', template: 'Please ensure no shipment is made and process the refund promptly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'refund-trial-conversion',
@@ -654,7 +635,7 @@ Document any attempts to cancel before the trial ended.`,
       { id: 'closing', name: 'Closing', template: 'If not resolved, I will dispute this charge with my bank.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];
 

@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -49,7 +44,6 @@ export const flooringPaintingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I trust this matter can be resolved promptly and satisfactorily.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'flooring-moisture-damage',
@@ -84,7 +78,6 @@ export const flooringPaintingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond satisfactorily will result in escalation to appropriate regulatory bodies and legal action.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'painter-poor-quality',
@@ -120,7 +113,6 @@ export const flooringPaintingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond will result in escalation to appropriate consumer protection agencies and potential legal action.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'paint-color-mismatch',
@@ -154,7 +146,6 @@ export const flooringPaintingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to resolve this matter will result in formal complaint to relevant consumer protection bodies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'wallpaper-installation-failure',
@@ -189,6 +180,6 @@ export const flooringPaintingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond satisfactorily will result in escalation to consumer protection agencies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

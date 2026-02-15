@@ -5,11 +5,6 @@ import { safetyComplianceTemplates } from './housing/safetyComplianceTemplates';
 import { lettingAgentTemplates } from './housing/lettingAgentTemplates';
 import { neighborHousingDisputeTemplates } from './housing/neighborDisputeTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'Fair Housing Act', approvedPhrases: ['Under the implied warranty of habitability', 'In accordance with applicable housing laws'] },
@@ -42,7 +37,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If I do not receive a response, I may escalate to housing authorities.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I look forward to your prompt response.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'landlord-heating', slug: 'landlord-heating-complaint', category: 'Housing', title: 'Heating System Complaint Letter',
@@ -67,7 +62,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Failure to address this may result in contacting environmental health.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Please contact me immediately.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'deposit-return', slug: 'deposit-return-request', category: 'Housing', title: 'Deposit Return Request Letter',
@@ -92,7 +87,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If not returned, I will pursue adjudication through the deposit scheme.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Please confirm when the deposit will be returned.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'deposit-deduction-dispute', slug: 'deposit-deduction-dispute', category: 'Housing', title: 'Deposit Deduction Dispute Letter',
@@ -118,7 +113,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If not resolved, I will escalate to the deposit scheme.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have photographic evidence to support my dispute.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'rent-increase-dispute', slug: 'rent-increase-dispute', category: 'Housing', title: 'Rent Increase Dispute Letter',
@@ -143,7 +138,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I am open to reasonable discussion.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'landlord-harassment', slug: 'landlord-harassment-complaint', category: 'Housing', title: 'Landlord Harassment Complaint Letter',
@@ -168,7 +163,7 @@ const coreHousingTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If this continues, I will report to police and housing authority.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have kept records of all incidents.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];
 

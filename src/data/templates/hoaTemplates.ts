@@ -5,11 +5,6 @@ import { governanceTemplates } from './hoa/governanceTemplates';
 import { maintenanceTemplates } from './hoa/maintenanceTemplates';
 import { violationTemplates } from './hoa/violationTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
@@ -41,7 +36,7 @@ const coreHoaTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect this matter to be resolved promptly.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-architectural-request', slug: 'hoa-architectural-request', category: 'HOA & Property', title: 'HOA Architectural Change Request',
@@ -65,7 +60,7 @@ const coreHoaTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 30 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I am committed to completing this in compliance with HOA guidelines.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];
 

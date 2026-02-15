@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -49,7 +44,6 @@ export const kitchenBathTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond will result in formal complaints to licensing boards and consumer protection agencies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'bathroom-remodel-dispute',
@@ -86,7 +80,6 @@ export const kitchenBathTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond will result in formal complaints to licensing authorities and legal action for damages.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'cabinet-installation-dispute',
@@ -123,7 +116,6 @@ export const kitchenBathTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond satisfactorily will result in escalation to consumer protection agencies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'countertop-installation-dispute',
@@ -160,7 +152,6 @@ export const kitchenBathTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond will result in escalation to appropriate consumer protection bodies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'tile-installation-failure',
@@ -198,6 +189,6 @@ export const kitchenBathTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Failure to respond will result in escalation to trade associations and consumer protection agencies.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

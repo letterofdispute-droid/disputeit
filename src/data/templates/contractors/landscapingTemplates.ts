@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -55,7 +50,6 @@ export const landscapingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect the landscaping to be completed to a professional standard.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'landscaper-drainage-issue',
@@ -98,7 +92,6 @@ export const landscapingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This matter requires urgent attention to prevent further damage.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'landscaper-hardscape-failure',
@@ -141,7 +134,6 @@ export const landscapingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect durable hardscape work as I paid for.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'landscaper-irrigation-problem',
@@ -182,7 +174,6 @@ export const landscapingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect a properly functioning irrigation system as I paid for.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'tree-service-damage',
@@ -226,6 +217,6 @@ export const landscapingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect prompt resolution of this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];
