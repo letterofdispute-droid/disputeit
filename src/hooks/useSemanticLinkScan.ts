@@ -446,6 +446,23 @@ export function useSemanticLinkScan() {
     },
   });
 
+  // Reset scan timestamps to force re-scan
+  const resetScanTimestampsMutation = useMutation({
+    mutationFn: async (categorySlug?: string) => {
+      let query = supabase
+        .from('article_embeddings')
+        .update({ next_scan_due_at: null })
+        .eq('embedding_status', 'completed');
+      
+      if (categorySlug) {
+        query = query.eq('category_id', categorySlug);
+      }
+      
+      const { error } = await query;
+      if (error) throw error;
+    },
+  });
+
   // Scan job progress
   const scanJobProgress = activeScanJob && activeScanJob.total_items > 0
     ? Math.min(100, Math.round((activeScanJob.processed_items / activeScanJob.total_items) * 100))
@@ -549,5 +566,9 @@ export function useSemanticLinkScan() {
     // Maintenance
     runMaintenance: runMaintenanceMutation.mutate,
     isRunningMaintenance: runMaintenanceMutation.isPending,
+    
+    // Reset scan timestamps
+    resetScanTimestamps: resetScanTimestampsMutation.mutateAsync,
+    isResettingScanTimestamps: resetScanTimestampsMutation.isPending,
   };
 }
