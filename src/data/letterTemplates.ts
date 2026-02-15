@@ -43,7 +43,7 @@ export interface LetterTemplate {
   fields: TemplateField[];
   sections: TemplateSection[];
   jurisdictions: JurisdictionConfig[];
-  pricing?: PricingTier[]; // Optional - pricing is now global
+  pricing?: any[]; // Legacy - unused, being removed from template files
 }
 
 export interface TemplateField {
@@ -78,14 +78,6 @@ export interface JurisdictionConfig {
   approvedPhrases: string[];
 }
 
-export interface PricingTier {
-  id: string;
-  name: string;
-  price: number;
-  currency: string;
-  features: string[];
-  popular?: boolean;
-}
 
 // Master Templates - Human-written, legally cautious
 export const letterTemplates: LetterTemplate[] = [
@@ -174,11 +166,6 @@ This template helps you communicate professionally and increases your chances of
         approvedPhrases: ['In accordance with applicable consumer protection standards'],
       },
     ],
-    pricing: [
-      { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-      { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-      { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-    ],
   },
   {
     id: 'landlord-repairs',
@@ -265,11 +252,6 @@ Documenting your repair requests in writing is essential for protecting your rig
         approvedPhrases: ['Under your responsibilities as landlord'],
       },
     ],
-    pricing: [
-      { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-      { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-      { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-    ],
   },
   {
     id: 'damaged-goods',
@@ -355,11 +337,6 @@ Always document damage with photographs before contacting the seller.`,
         name: 'International / Other',
         approvedPhrases: ['Products should be delivered in satisfactory condition'],
       },
-    ],
-    pricing: [
-      { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-      { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-      { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
     ],
   },
 ];

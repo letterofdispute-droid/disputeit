@@ -6,11 +6,6 @@ import { lifeInsuranceTemplates } from './insurance/lifeInsuranceTemplates';
 import { travelInsuranceTemplates, petInsuranceTemplates, businessInsuranceTemplates } from './insurance/travelPetBusinessTemplates';
 import { additionalInsuranceTemplates } from './insurance/additionalInsuranceTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Insurance Regulations', approvedPhrases: ['Under applicable state insurance law', 'In accordance with insurance regulations'] },
@@ -71,7 +66,6 @@ const coreInsuranceTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I have enclosed the following supporting documentation: {supportingDocuments}', placeholders: ['supportingDocuments'] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'insurance-underpayment', 
@@ -121,7 +115,6 @@ const coreInsuranceTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I have enclosed the following evidence supporting the higher valuation: {evidenceProvided}', placeholders: ['evidenceProvided'] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'insurance-delay-complaint', 
@@ -162,7 +155,6 @@ const coreInsuranceTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Please contact me at {policyholderPhone} or {policyholderEmail} to confirm receipt and next steps.', placeholders: ['policyholderPhone', 'policyholderEmail'] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'insurance-cancellation-refund', 
@@ -205,7 +197,7 @@ const coreInsuranceTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Please confirm the refund amount and processing date in writing.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
+    
   },
 ];
 

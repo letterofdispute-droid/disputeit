@@ -5,11 +5,6 @@ import { warrantyRepairTemplates } from './damagedGoods/warrantyRepairTemplates'
 import { misrepresentationTemplates } from './damagedGoods/misrepresentationTemplates';
 import { returnRefundTemplates } from './damagedGoods/returnRefundTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'Magnuson-Moss Warranty Act', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
@@ -49,7 +44,6 @@ const coreDamagedGoodsTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I have attached photos of the damage and packaging.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'defective-product',
@@ -79,7 +73,7 @@ const coreDamagedGoodsTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I look forward to a prompt resolution of this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];
 

@@ -39,7 +39,7 @@ const SEOHead = ({
   templateName,
   templateCategory,
   price = 9.99,
-  currency = 'EUR',
+  currency = 'USD',
   faqItems,
   breadcrumbs,
   ogImage,

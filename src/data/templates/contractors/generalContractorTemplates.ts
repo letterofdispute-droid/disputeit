@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -53,7 +48,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect a prompt and satisfactory resolution to this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-abandonment',
@@ -91,7 +85,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This matter requires your immediate attention.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'solar-panel-dispute',
@@ -132,7 +125,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I look forward to your prompt response.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'renovation-cost-overrun',
@@ -172,7 +164,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I trust this matter can be resolved without further escalation.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'delayed-completion',
@@ -211,7 +202,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect an immediate improvement in progress on this project.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'deposit-dispute',
@@ -249,7 +239,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect immediate action on this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'unlicensed-work',
@@ -287,7 +276,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This is a serious matter that I expect to be resolved promptly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   // ========== NEW TEMPLATES (Phase 1) ==========
   {
@@ -326,7 +314,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect the warranty to be honored promptly and professionally.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-permit-issue',
@@ -365,7 +352,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This is a serious matter requiring immediate attention.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-subcontractor-damage',
@@ -403,7 +389,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect prompt action to resolve this matter.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-cleanup-failure',
@@ -439,7 +424,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Please attend to this matter immediately.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-communication-failure',
@@ -477,7 +461,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This situation is unacceptable and requires your immediate attention.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-insurance-claim',
@@ -517,7 +500,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect this claim to be processed promptly and fairly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'contractor-material-substitution',
@@ -557,6 +539,6 @@ export const generalContractorTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect this matter to be taken seriously and resolved promptly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

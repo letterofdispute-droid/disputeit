@@ -1,10 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable state consumer protection laws', 'In accordance with the FTC Act'] },
@@ -56,7 +51,6 @@ export const roofingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect immediate action to stop the ongoing damage to my property.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'roofer-material-quality',
@@ -95,7 +89,6 @@ export const roofingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect you to honor your contractual obligations.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'roofer-incomplete-work',
@@ -139,7 +132,6 @@ export const roofingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This matter requires your immediate attention.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'roofer-storm-damage-repair',
@@ -180,7 +172,6 @@ export const roofingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect the repairs to be completed properly and professionally.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
   },
   {
     id: 'roofer-gutter-installation',
@@ -220,6 +211,6 @@ export const roofingTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I expect the gutters to be installed correctly and to function properly.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions,
-    pricing: standardPricing,
+    
   },
 ];

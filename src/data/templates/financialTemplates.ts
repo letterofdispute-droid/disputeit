@@ -5,11 +5,6 @@ import { loanDisputeTemplates } from './financial/loanDisputeTemplates';
 import { investmentDisputeTemplates } from './financial/investmentDisputeTemplates';
 import { scamFraudTemplates } from './financial/scamFraudTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'Fair Credit Reporting Act, FDCPA', approvedPhrases: ['Under the FCRA', 'In accordance with applicable financial laws'] },
@@ -50,7 +45,6 @@ const coreFinancialTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I look forward to your positive response.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'credit-card-dispute', 
@@ -81,7 +75,6 @@ const coreFinancialTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'Please keep me informed of the investigation progress.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'debt-collection-dispute', 
@@ -109,7 +102,6 @@ const coreFinancialTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'This letter should not be construed as acknowledgment of any debt.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
   },
   {
     id: 'credit-report-error', 
@@ -138,7 +130,7 @@ const coreFinancialTemplates: LetterTemplate[] = [
       { id: 'closing', name: 'Closing', template: 'I have attached supporting documentation.', placeholders: [] },
     ],
     jurisdictions: standardJurisdictions, 
-    pricing: standardPricing,
+    
   },
 ];
 

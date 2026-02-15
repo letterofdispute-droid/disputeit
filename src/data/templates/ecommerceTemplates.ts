@@ -5,11 +5,6 @@ import { privacyDataTemplates } from './ecommerce/privacyDataTemplates';
 import { deliveryShippingTemplates } from './ecommerce/deliveryShippingTemplates';
 import { paymentRefundTemplates } from './ecommerce/paymentRefundTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
 
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'FTC Act', approvedPhrases: ['Under FTC regulations', 'In accordance with consumer protection laws'] },
@@ -43,7 +38,7 @@ const coreEcommerceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please resolve this within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect this seller to be held accountable under your buyer protection policy.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'data-privacy-request', slug: 'data-privacy-request', category: 'E-commerce', title: 'Data Privacy Request Letter (GDPR/CCPA)',
@@ -64,7 +59,7 @@ const coreEcommerceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Under {regulation}, you must respond within the statutory timeframe.', placeholders: ['regulation'] },
       { id: 'closing', name: 'Closing', template: 'Please confirm completion of this request in writing to {accountEmail}.', placeholders: ['accountEmail'] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];
 
