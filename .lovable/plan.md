@@ -1,77 +1,65 @@
 
 
-# Improve Anchor Text Specificity in Smart Scan
+# Add "Clear All" Button to Link Suggestions
 
-## Problem
+## What You See Now
 
-The Smart Scan AI generates anchors like "robust insurance" that are too vague -- they could apply to multiple targets equally. Two root causes:
+- 6,250 rejected link suggestions cluttering the review list
+- No way to delete/clear them from the UI
+- The scan category dropdown already shows all 4 blog categories correctly (consumer-rights, complaint-guides, legal-tips, contractors)
 
-1. **Hardcoded relevance score**: Every suggestion gets `relevance_score: 80` (line 486 of `scan-for-smart-links/index.ts`), so there's no way to distinguish high-quality from low-quality anchors in the review UI.
+## Changes
 
-2. **No specificity guidance in the AI prompt**: The system prompt asks for "natural phrases" but doesn't instruct the AI to prefer specific, distinguishing language over generic terms.
+### 1. Add a "Clear All" / "Delete" button to `LinkActions.tsx`
 
-## Solution
+Add a destructive "Clear All" button (with a trash icon) that appears when there are any suggestions displayed. This will call a new handler to delete suggestions.
 
-### 1. Enhance the AI prompt to demand specificity
+### 2. Wire up delete functionality in `LinkSuggestions.tsx`
 
-Update the system prompt in `scan-for-smart-links/index.ts` to:
-- Explicitly forbid generic/vague anchors (e.g., "insurance coverage", "repair services")
-- Require anchors to contain at least one word that distinguishes the target from other targets in the list
-- Ask the AI to return a `confidence` score (1-100) per suggestion indicating how specific the anchor-to-target match is
+Add two delete options:
+- **Clear Filtered**: Deletes all suggestions matching the current status/category filters (uses server-side RPC to bypass the 200-row display limit)
+- **Clear Selected**: Deletes only checkbox-selected suggestions (already wired via `deleteSuggestions` in the hook)
 
-### 2. Use AI confidence for relevance_score
+### 3. Add server-side RPC for bulk delete
 
-Instead of hardcoding `relevance_score: 80`, use the AI's returned confidence value (clamped to 55-95 range) so the review UI shows meaningful differentiation.
+Create a database function `bulk_delete_link_suggestions` that accepts a status filter and optional category slug, similar to the existing `bulk_update_link_status` RPC. This ensures all matching rows are deleted, not just the 200 visible in the UI.
 
-### 3. Add a generic anchor filter in validation
+## Technical Details
 
-Add a server-side check in `validateSuggestion()` that rejects anchors composed entirely of common/generic words. A small blocklist of overly broad terms (e.g., just "insurance", "dispute", "complaint", "repair", "service") will catch the worst offenders when they appear as the only meaningful word in a 2-word anchor.
+### New migration: `bulk_delete_link_suggestions` RPC
 
-## Technical Changes
-
-### File: `supabase/functions/scan-for-smart-links/index.ts`
-
-**A. Update AI prompt** (around line 198-210):
-
-Add to the STRICT RULES section:
-```
-8. Anchors must be SPECIFIC to the target — avoid vague phrases like "insurance coverage" or "repair services" that could match multiple targets. Include at least one distinguishing word.
-9. Return a "confidence" score (1-100) for each suggestion indicating how uniquely the anchor matches this specific target vs other targets.
-```
-
-Update the return format:
-```
-[{"anchor_text":"exact phrase","target_index":1,"section_heading":"section","reasoning":"brief reason","confidence":85}]
-```
-
-**B. Update AISuggestion interface** (line 22-27):
-
-Add `confidence?: number` field.
-
-**C. Update relevance scoring** (around line 477-488):
-
-Replace hardcoded `80` with:
-```typescript
-relevance_score: Math.max(55, Math.min(95, suggestion.confidence || 75)),
+```sql
+CREATE OR REPLACE FUNCTION public.bulk_delete_link_suggestions(
+  p_status text DEFAULT NULL,
+  p_category_slug text DEFAULT NULL
+) RETURNS bigint AS $$
+DECLARE
+  deleted_count bigint;
+BEGIN
+  IF p_category_slug IS NOT NULL THEN
+    DELETE FROM link_suggestions
+    WHERE (p_status IS NULL OR status = p_status)
+      AND source_post_id IN (
+        SELECT id FROM blog_posts WHERE category_slug = p_category_slug
+      );
+  ELSE
+    DELETE FROM link_suggestions
+    WHERE (p_status IS NULL OR status = p_status);
+  END IF;
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-**D. Add generic anchor filter** in `validateSuggestion()` (around line 269):
+### File: `src/hooks/useLinkSuggestions.ts`
 
-```typescript
-// Reject 2-word anchors where one word is a stop word and the other is generic
-const GENERIC_WORDS = new Set(['insurance','dispute','complaint','repair','service','services',
-  'coverage','letter','rights','issue','issues','problem','problems','help','support']);
-const meaningful = words.filter(w => w.length > 3 && !STOP_WORDS.has(w));
-const allGeneric = meaningful.every(w => GENERIC_WORDS.has(w.toLowerCase()));
-if (allGeneric && words.length <= 3) return false;
-```
+Add a new `bulkDeleteByStatus` mutation that calls the RPC.
 
-This will reject anchors like "robust insurance" (where "robust" is a vague modifier and "insurance" is generic) while keeping specific phrases like "homeowners insurance deductible" or "auto insurance fraud claim".
+### File: `src/components/admin/seo/links/LinkActions.tsx`
 
-## Expected Impact
+Add a "Clear All" button with an `AlertDialog` confirmation (to prevent accidental deletion). Shows the current filter context in the confirmation message (e.g., "Delete all 6,250 rejected suggestions?").
 
-- Anchors will be more specific and distinguishing per target
-- Relevance scores in the review UI will vary (55-95) instead of all showing 80%
-- Generic 2-3 word anchors will be auto-rejected before reaching the review queue
-- Better quality suggestions overall, reducing manual review time
+### File: `src/components/admin/seo/LinkSuggestions.tsx`
 
+Wire the new `bulkDeleteByStatus` to the LinkActions component, passing the current status and category filters.
