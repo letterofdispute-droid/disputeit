@@ -296,7 +296,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </div>
                   <Progress value={scanJobProgress} className="h-1.5" />
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{activeScanJob.processed_items.toLocaleString()} / {activeScanJob.total_items.toLocaleString()} articles</span>
+                    <span>{Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} / {activeScanJob.total_items.toLocaleString()} articles</span>
                     <span>{activeScanJob.total_suggestions.toLocaleString()} suggestions found</span>
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                       Scan complete — {activeScanJob.total_suggestions.toLocaleString()} link suggestions found
                     </span>
                     <p className="text-muted-foreground mt-0.5">
-                      Scanned {activeScanJob.processed_items.toLocaleString()} articles. Review them in the Link Review tab.
+                      Scanned {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} articles. Review them in the Link Review tab.
                     </p>
                   </div>
                 </div>

@@ -448,7 +448,7 @@ export function useSemanticLinkScan() {
 
   // Scan job progress
   const scanJobProgress = activeScanJob && activeScanJob.total_items > 0
-    ? Math.round((activeScanJob.processed_items / activeScanJob.total_items) * 100)
+    ? Math.min(100, Math.round((activeScanJob.processed_items / activeScanJob.total_items) * 100))
     : 0;
 
   const isScanJobRunning = activeScanJob?.status === 'processing';
