@@ -36,6 +36,30 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [maxArticles, setMaxArticles] = useState(100);
   const [showSmartScanConfirm, setShowSmartScanConfirm] = useState(false);
 
+  // Query actual published article count for selected category
+  const { data: categoryArticleCount } = useQuery({
+    queryKey: ['category-article-count', scanCategory],
+    queryFn: async () => {
+      let query = supabase
+        .from('blog_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'published');
+      if (scanCategory !== 'all') {
+        query = query.eq('category_slug', scanCategory);
+      }
+      const { count } = await query;
+      return count || 0;
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Auto-update maxArticles when category changes
+  useEffect(() => {
+    if (categoryArticleCount !== undefined && categoryArticleCount > 0) {
+      setMaxArticles(categoryArticleCount);
+    }
+  }, [categoryArticleCount, scanCategory]);
+
   const {
     semanticScan,
     isSemanticScanning,
@@ -411,11 +435,16 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
               {/* Max articles limit */}
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Max articles to process</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Max articles to process
+                  {categoryArticleCount !== undefined && (
+                    <span className="ml-1 text-muted-foreground/70">({categoryArticleCount.toLocaleString()} available)</span>
+                  )}
+                </Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
-                    min={10}
+                    min={1}
                     max={10000}
                     value={maxArticles}
                     onChange={(e) => setMaxArticles(parseInt(e.target.value) || 100)}
@@ -447,7 +476,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                         </AlertDialogTitle>
                         <AlertDialogDescription className="space-y-2">
                           <p>This will use AI to analyze up to <strong>{maxArticles.toLocaleString()} articles</strong>{scanCategory !== 'all' ? ` in the "${blogCategories.find(c => c.id === scanCategory)?.label}" category` : ' across all categories'}.</p>
-                          <p className="text-amber-600 font-medium">Estimated cost: ~${estimatedCost.toFixed(2)} (using Gemini Flash Lite)</p>
+                          <p className="text-amber-600 font-medium">Estimated cost: ~${estimatedCost.toFixed(2)} (using Gemini 2.5 Flash)</p>
                           <p className="text-xs">Each article makes one AI call. You can adjust the limit above to control costs.</p>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
