@@ -24,6 +24,7 @@ interface AISuggestion {
   target_index: number;
   section_heading: string;
   reasoning: string;
+  confidence?: number;
 }
 
 interface ParsedSection {
@@ -205,9 +206,11 @@ STRICT RULES:
 5. Anchors must NOT be the target's exact title or start with the same first 4+ words
 6. Prefer phrases that naturally relate to the target article's topic
 7. Return ONLY valid JSON — no markdown, no explanation
+8. Anchors must be SPECIFIC to the target — avoid vague phrases like "insurance coverage" or "repair services" that could match multiple targets. Include at least one distinguishing word unique to that specific target.
+9. Return a "confidence" score (1-100) for each suggestion indicating how uniquely the anchor matches this specific target vs other targets in the list. High confidence (85+) means the anchor clearly points to ONE target. Low confidence (<70) means it's generic.
 
 Return a JSON array:
-[{"anchor_text":"exact phrase from body","target_index":1,"section_heading":"section name","reasoning":"brief reason"}]`;
+[{"anchor_text":"exact phrase from body","target_index":1,"section_heading":"section name","reasoning":"brief reason","confidence":85}]`;
 
   const userPrompt = `Article Title: "${articleTitle}"
 Article Role: ${articleRole}
@@ -305,6 +308,15 @@ function validateSuggestion(
 
   // Not in intro paragraph
   if (introText.toLowerCase().includes(anchorLower)) return false;
+
+  // Reject anchors composed entirely of generic/vague words
+  const GENERIC_WORDS = new Set(['insurance','dispute','complaint','repair','service','services',
+    'coverage','letter','rights','issue','issues','problem','problems','help','support',
+    'claim','claims','process','policy','policies','damage','damages','contract','payment']);
+  const STOP_WORDS = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','your','our','their','this','that','these','those','my','his','her','its','we','they','you','i','me','him','us','them','it','no','not','nor','so','too','very','just','about','more','most','some','any','all','each','every','both','few','many','much','own','other','another','such','what','which','who','whom','how','when','where','why','if','then','than','because','while','although','though','after','before','until','unless','since','during','into','through','between','against','above','below','over','under','out','up','down','off','only','also','still','already','even','now','here','there','well','back','also','robust','comprehensive','effective','strong','solid','proper','good','great','full','total','complete','general','basic','simple','common','standard','regular','normal','typical','usual','main','major','key','important','significant','critical','essential','necessary','relevant','appropriate','suitable','adequate']);
+  const meaningfulWords = words.filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()));
+  const allGeneric = meaningfulWords.length > 0 && meaningfulWords.every(w => GENERIC_WORDS.has(w.toLowerCase()));
+  if (allGeneric && words.length <= 3) return false;
 
   return true;
 }
@@ -446,7 +458,7 @@ async function processOneArticle(
 
   // Validate and deduplicate
   const usedTargets = new Set<number>();
-  const validSuggestions: { candidate: CandidateTarget; anchor: string }[] = [];
+  const validSuggestions: { candidate: CandidateTarget; anchor: string; confidence: number }[] = [];
 
   for (const suggestion of aiSuggestions) {
     if (validSuggestions.length >= Math.min(remainingSlots, 10)) break;
@@ -457,7 +469,7 @@ async function processOneArticle(
 
     const target = candidates[suggestion.target_index - 1];
     usedTargets.add(suggestion.target_index);
-    validSuggestions.push({ candidate: target, anchor: suggestion.anchor_text.trim() });
+    validSuggestions.push({ candidate: target, anchor: suggestion.anchor_text.trim(), confidence: suggestion.confidence || 75 });
   }
 
   if (!validSuggestions.length) {
@@ -474,7 +486,7 @@ async function processOneArticle(
     .eq('anchor_source', 'ai_suggested');
 
   // Insert validated suggestions
-  const rows = validSuggestions.map(({ candidate, anchor }) => ({
+  const rows = validSuggestions.map(({ candidate, anchor, confidence }) => ({
     source_post_id: article.id,
     target_type: candidate.contentType,
     target_slug: candidate.slug,
@@ -482,7 +494,7 @@ async function processOneArticle(
     target_embedding_id: candidate.embeddingId,
     anchor_text: anchor,
     anchor_source: 'ai_suggested',
-    relevance_score: 80, // AI-curated, default high
+    relevance_score: Math.max(55, Math.min(95, confidence)),
     hierarchy_valid: true,
     status: 'pending',
   }));
