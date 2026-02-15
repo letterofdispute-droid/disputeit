@@ -59,6 +59,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     isProcessingQueue,
     runMaintenance,
     isRunningMaintenance,
+    resetScanTimestamps,
+    isResettingScanTimestamps,
   } = useSemanticLinkScan();
 
   useEffect(() => {
@@ -79,18 +81,22 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     fetchCategories();
   }, []);
 
-  const handleSemanticScan = () => {
+  const handleSemanticScan = async () => {
+    const cat = scanCategory !== 'all' ? scanCategory : undefined;
+    await resetScanTimestamps(cat);
     semanticScan({
-      categorySlug: scanCategory !== 'all' ? scanCategory : undefined,
+      categorySlug: cat,
       batchSize,
       similarityThreshold: similarityThreshold / 100,
       maxLinksPerArticle: maxOutboundLinks,
     });
   };
 
-  const handleSmartScan = () => {
+  const handleSmartScan = async () => {
+    const cat = scanCategory !== 'all' ? scanCategory : undefined;
+    await resetScanTimestamps(cat);
     smartScan({
-      categorySlug: scanCategory !== 'all' ? scanCategory : undefined,
+      categorySlug: cat,
       maxLinksPerArticle: maxOutboundLinks,
     });
   };
