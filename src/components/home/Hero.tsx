@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
+import GlobalSearch from '@/components/search/GlobalSearch';
 import { trackAIAssistantOpen, trackBrowseTemplatesClick, trackCTAClick } from '@/hooks/useGTM';
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleAssistantOpen = () => {
     trackAIAssistantOpen();
@@ -84,6 +86,12 @@ const Hero = () => {
                 AI Help
               </div>
             </button>
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="text-sm text-primary-foreground/50 hover:text-primary-foreground/80 transition-colors underline underline-offset-2"
+            >
+              or search templates & articles manually
+            </button>
           </div>
 
           {/* CTAs */}
@@ -120,6 +128,9 @@ const Hero = () => {
         isOpen={isAssistantOpen} 
         onClose={() => setIsAssistantOpen(false)} 
       />
+
+      {/* Global Search */}
+      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </section>
   );
 };
