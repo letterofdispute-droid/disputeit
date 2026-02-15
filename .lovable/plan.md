@@ -1,56 +1,66 @@
 
-
-# Simplify Link Actions Toolbar
+# Reduce Smart Scan AI Cost and Add Cost Warning
 
 ## Problem
 
-The actions toolbar shows too many buttons at once, making the workflow confusing. Currently visible simultaneously: "Scan for Links", "Apply Approved (6344)", "Approve All", "Reject All", "Clear All (6344)". The purpose of "Apply Approved" (which actually inserts links into article HTML) is unclear.
-
-## Explanation
-
-The workflow has 3 steps:
-1. **Scan** -- find link opportunities
-2. **Review** -- approve or reject suggestions
-3. **Apply** -- actually insert approved links into article content
-
-"Apply Approved" is the final step that modifies your articles. You probably do NOT want to click it on 6,344 low-quality suggestions.
+Smart Scan makes **one AI call per article**, which consumed $10+ of AI credits across ~4,800 articles. There is no cost estimate or warning before starting a scan, and no way to limit how many articles to process.
 
 ## Solution
 
-Simplify the toolbar by showing only contextually relevant buttons based on the current status filter, and group them more logically.
+Three changes to prevent surprise costs:
 
-## Changes
+### 1. Add a cost estimate before scanning
 
-### File: `src/components/admin/seo/links/LinkActions.tsx`
+**File: `src/components/admin/seo/links/SemanticScanPanel.tsx`**
 
-**Reduce button clutter with these rules:**
+Before the Smart Scan button triggers, show an estimate:
+- Query the count of scannable articles for the selected category
+- Display: "This will process ~X articles using AI. Estimated cost: ~$Y"
+- Add a confirmation dialog before starting
 
-1. Move "Scan for Links" out of the actions bar (it already exists in SemanticScanPanel)
-2. Show "Approve All" / "Reject All" only when viewing **pending** suggestions
-3. Show "Apply Approved" only when viewing **approved** suggestions  
-4. Always show "Clear All" as a subtle destructive option
-5. Hide selection-based buttons (Approve/Reject/Delete selected) when nothing is selected
-6. Add a small tooltip or subtitle to "Apply Approved" so it's clear what it does
+The estimate formula: each article uses roughly 2,000-4,000 tokens input + 500 output with Gemini 2.5 Flash. At current rates, that is approximately $0.001-0.002 per article. For 2,752 articles, that is ~$3-5.
 
-**Resulting toolbar by status filter:**
+### 2. Add a "max articles" limit option
 
-| Viewing | Buttons Shown |
-|---------|--------------|
-| Pending | Approve All, Reject All, Clear All |
-| Approved | Apply Approved (inserts links into articles), Clear All |
-| Rejected | Approve All (to recover), Clear All |
-| Applied | Clear All |
-| All Statuses | Apply Approved, Clear All |
+**File: `src/components/admin/seo/links/SemanticScanPanel.tsx`**
 
-When items are selected, selection-specific buttons (Approve, Reject, Delete) appear inline.
+Add an optional input field: "Max articles to process" (default: 100). This lets you test quality on a small batch before committing to a full category scan.
 
-### File: `src/components/admin/seo/LinkSuggestions.tsx`
+Pass this as a `limit` parameter to the edge function.
 
-- Remove the `onScan` prop passed to LinkActions (scan lives in SemanticScanPanel already)
-- Pass `statusFilter` so LinkActions can conditionally render
+**File: `supabase/functions/scan-for-smart-links/index.ts`**
+
+Accept a `maxArticles` parameter. When creating the scan job, set `total_items` to `min(available_articles, maxArticles)` and stop the batch chain once that limit is reached.
+
+### 3. Switch to a cheaper model for bulk scans
+
+**File: `supabase/functions/scan-for-smart-links/index.ts`**
+
+Change the model from `google/gemini-2.5-flash` to `google/gemini-2.5-flash-lite` for bulk scans. This is the cheapest model available and is well-suited for this classification/extraction task. The quality difference for link suggestion extraction is minimal.
+
+## Technical Details
+
+### SemanticScanPanel.tsx changes
+
+- Add a `maxArticles` number input (default 100) next to the category selector
+- Before starting Smart Scan, query `article_embeddings` count for the selected category (filtered by scannable status)
+- Show an `AlertDialog` confirmation: "Process up to X articles (~$Y estimated). Continue?"
+- Pass `maxArticles` to the `smartScan` mutation
+
+### scan-for-smart-links/index.ts changes
+
+- Accept `maxArticles` parameter in `SmartScanRequest`
+- When creating the job, cap `total_items` at `maxArticles`
+- In the batch loop, add a completion check: if `processed_items >= maxArticles`, finalize the job
+- Change model from `google/gemini-2.5-flash` to `google/gemini-2.5-flash-lite`
+
+### useSemanticLinkScan.ts changes
+
+- Update the `smartScanMutation` to accept and pass `maxArticles` parameter
 
 ## Result
 
-- Toolbar goes from 5-7 buttons down to 2-3 at most
-- Each button is relevant to the current view
-- "Apply Approved" only appears when you're looking at approved items, with clear labeling that it modifies articles
+- Users see cost estimates before scanning
+- Default limit of 100 articles prevents accidental $10 burns
+- Cheaper model reduces per-article cost by ~60-70%
+- Full category scans are still possible by increasing the limit manually
