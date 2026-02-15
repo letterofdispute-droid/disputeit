@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, User, LogOut, Settings, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, User, LogOut, Settings, LayoutDashboard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
 import UserAccountMenu from './UserAccountMenu';
+import GlobalSearch from '@/components/search/GlobalSearch';
 import { templateCategories } from '@/data/templateCategories';
 import { useAuth } from '@/hooks/useAuth';
 import { trackNavClick, trackCTAClick } from '@/hooks/useGTM';
@@ -24,6 +25,7 @@ import {
 
 const Header = () => {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user, isAdmin, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -52,6 +54,10 @@ const Header = () => {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="text-muted-foreground hover:text-foreground">
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+            </Button>
             {user ? (
               <UserAccountMenu />
             ) : (
@@ -71,6 +77,11 @@ const Header = () => {
 
           {/* Mobile menu */}
           <div className="flex items-center gap-2 lg:hidden">
+            {/* Mobile search button */}
+            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="text-muted-foreground hover:text-foreground">
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+            </Button>
             {/* Mobile user indicator - only when signed in */}
             {user && (
               <button 
@@ -276,6 +287,7 @@ const Header = () => {
           </div>
         </div>
       </div>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 };
