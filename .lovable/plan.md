@@ -1,53 +1,21 @@
 
+# Improve Global Search Layout and Spacing
 
-# Fix: Reset All Ghost "Applied" Suggestions (Take 3)
+## Problem
+The search dialog feels cramped -- items are edge-to-edge with minimal padding, and the overall layout lacks breathing room, especially on mobile.
 
-## The Root Cause
+## Changes
 
-The previous two migrations used a flawed strategy: counting total `<a href=` tags in the HTML and assuming the oldest N "applied" suggestions matched those links. But those existing links are pre-existing content links -- they have nothing to do with our link suggestions system.
+### 1. `src/components/ui/command.tsx` -- Better spacing throughout
+- **DialogContent**: Add horizontal padding (`p-2`) and rounded corners
+- **CommandInput**: Increase padding (`px-4` instead of `px-3`), make the input taller (`h-14`)
+- **CommandList**: Increase max height to `400px` for more visible results
+- **CommandGroup**: Increase internal padding (`p-2`) and group heading padding (`px-3`)
+- **CommandItem**: More generous padding (`px-3 py-2.5`) and larger rounded corners (`rounded-md`)
 
-**Verified data:**
-- Total "applied" suggestions: 8,740
-- Suggestions where the anchor text actually appears as a link (`>anchor</a>`): 583
-- Ghost suggestions (marked applied but link doesn't exist): 8,157
+### 2. `src/components/search/GlobalSearch.tsx` -- Refined result layout
+- Add more gap between icon, text, and badge in each result row
+- Increase the footer padding (`px-4 py-3`)
+- Slightly larger text for result titles
 
-## The Fix
-
-This time, the approach is definitive: check each "applied" suggestion individually to see if its specific anchor text exists as a clickable link in the source article's HTML. If not, reset it to "approved."
-
-### Database Migration
-
-```sql
--- Reset "applied" suggestions where the anchor text does NOT exist 
--- as a link in the source article's HTML content.
--- This is a direct verification: does ">anchor_text</a>" appear in the content?
-UPDATE link_suggestions ls
-SET status = 'approved', applied_at = NULL
-FROM blog_posts bp
-WHERE bp.id = ls.source_post_id
-  AND ls.status = 'applied'
-  AND bp.content NOT LIKE '%>' || ls.anchor_text || '</a>%';
-```
-
-This resets the 8,157 ghost suggestions back to "approved" and keeps only the 583 that are genuinely applied.
-
-### Expected Result After Migration
-
-- Applied: ~583 (only suggestions with verified links in the HTML)
-- Approved: ~28,334 (20,177 current + 8,157 recovered)
-- Rejected: 1,405 (unchanged)
-
-### No Code Changes Needed
-
-The `apply-links-bulk` edge function already has the race condition fixes from the previous edit. This is purely a data correction.
-
-## After Implementation
-
-1. Stats will show ~28k approved and ~583 applied
-2. Run "Apply to Articles" to process the recovered suggestions
-3. The existing error handling will prevent ghost applications going forward
-
-## Files
-
-- One database migration (SQL only)
-
+These are purely CSS/className changes -- no logic modifications.
