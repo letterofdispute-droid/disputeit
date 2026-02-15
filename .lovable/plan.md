@@ -1,66 +1,72 @@
 
 
-# Fix Link Stats Sync and Stale Job Issues
+# Add Scan Status Indicators to Category Selector
 
-## Problem Summary
+## What it does
 
-Three interconnected bugs on the Links tab:
+Adds a visual indicator next to each category in the "Scan Category" dropdown showing whether it has been scanned, partially scanned, or never scanned. This lets you instantly see which categories still need attention.
 
-1. **"Internal Links: 50"** in the top stats card -- counts only the 50 items on page 1 instead of querying the database for the real total
-2. **"Discovering links..." spinner stuck** -- the scan panel picks up the apply job (which uses the same `semantic_scan_jobs` table) and shows it as a discovery scan
-3. **Apply counter exceeds total (17501 / 14681)** -- the old apply job is stuck in `processing` status because the fix was deployed after it started looping
+## Visual Design
 
-## Changes
+Each category in the dropdown will show a status badge:
 
-### 1. CoverageStats.tsx -- Use DB counts instead of client-side counting
+- **Green checkmark + date**: Fully scanned (e.g., "Contractors ✓ Today")
+- **Orange warning**: Partially scanned / failed (e.g., "Consumer Rights ⚠ 1845/2752")
+- **No badge**: Never scanned
 
-**Current**: Calls `useLinkSuggestions()` with no params, gets 50 items, counts `.filter(s => s.status === 'applied').length` (max 50).
+## Technical Changes
 
-**Fix**: Replace the `useLinkSuggestions` import with a dedicated lightweight query that counts applied and pending links using `{ count: 'exact', head: true }`. This avoids loading any suggestion rows just for the stats card.
+### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
 
+1. **Add a query** to fetch the latest scan job per category from `semantic_scan_jobs` (grouped by `category_filter`, taking the most recent completed or failed job)
+
+2. **Update the category dropdown items** to render status indicators inline:
+   ```
+   Contractors                    ✓ scanned
+   Consumer Rights               ⚠ partial
+   Industry News                 — not scanned
+   ```
+
+3. **Show a summary below the dropdown** when a category is selected, e.g.:
+   - "Last scanned: Today at 14:45 — 21 suggestions found"
+   - "Never scanned" for unscanned categories
+   - "Scan failed at 1,845 / 2,752 articles" for partial scans
+
+### Query for scan history per category:
 ```typescript
-// Replace useLinkSuggestions() with a direct count query
-const { data: linkCounts } = useQuery({
-  queryKey: ['link-counts-overview'],
+const { data: categoryScanStatus } = useQuery({
+  queryKey: ['category-scan-status'],
   queryFn: async () => {
-    const [applied, pending] = await Promise.all([
-      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'applied'),
-      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-    ]);
-    return { applied: applied.count || 0, pending: pending.count || 0 };
+    const { data } = await supabase
+      .from('semantic_scan_jobs')
+      .select('category_filter, status, total_items, processed_items, total_suggestions, completed_at')
+      .neq('category_filter', '__apply_links__')
+      .not('category_filter', 'is', null)
+      .in('status', ['completed', 'failed'])
+      .order('created_at', { ascending: false });
+    
+    // Group by category, keep only the latest job per category
+    const statusMap = new Map();
+    for (const job of data || []) {
+      if (!statusMap.has(job.category_filter)) {
+        statusMap.set(job.category_filter, job);
+      }
+    }
+    return statusMap;
   },
   staleTime: 30000,
 });
 ```
 
-### 2. SemanticScanPanel.tsx -- Filter out apply jobs from scan display
+### Updated dropdown rendering:
+Each `SelectItem` will include a small status indicator (checkmark, warning, or dash) and a brief label like "scanned" or "partial" using muted text on the right side.
 
-**Current**: `activeScanJob` is the most recent job in `semantic_scan_jobs` regardless of type. If it's an apply job (`category_filter = '__apply_links__'`), the panel shows "Discovering links..." incorrectly.
-
-**Fix**: Add a condition to exclude apply jobs from the scan progress display. The `isScanJobRunning` and scan progress section should only show when `activeScanJob.category_filter !== '__apply_links__'`.
-
-### 3. useSemanticLinkScan.ts -- Exclude apply jobs from scan job query
-
-**Current**: The `activeScanJob` query (line 96-113) fetches the most recent `semantic_scan_jobs` row with no filter, so it can return an apply job.
-
-**Fix**: Add a filter to exclude apply jobs: `.neq('category_filter', '__apply_links__')`. This way `isScanJobRunning` only reflects actual discovery scans, not apply jobs. The apply job tracking is already handled separately in `LinkSuggestions.tsx` via a dedicated query or the existing `activeApplyJob` memo.
-
-But we also need a separate query for the apply job -- add a second query specifically for `category_filter = '__apply_links__'` jobs so `LinkSuggestions` can track apply progress independently.
-
-### 4. Clean up stale apply job
-
-The stuck job (17501/14681) needs to be marked as completed. Add a check: if an apply job has `processed_items > total_items`, treat it as completed in the UI. Also consider adding a one-time data fix to mark the stale job as completed.
-
-## Files to Edit
-
-- **src/components/admin/seo/CoverageStats.tsx** -- Replace `useLinkSuggestions` with direct DB count query
-- **src/hooks/useSemanticLinkScan.ts** -- Split `activeScanJob` into two queries: one for discovery scans (excluding apply), one for apply jobs; export both
-- **src/components/admin/seo/LinkSuggestions.tsx** -- Use the new dedicated apply job query from `useSemanticLinkScan` instead of deriving it from `activeScanJob`
-- **src/components/admin/seo/links/SemanticScanPanel.tsx** -- No changes needed if the hook is fixed (the scan panel already uses `isScanJobRunning` and `activeScanJob` from the hook)
+### Selected category info line:
+Below the dropdown, a single line of text shows the scan status for the currently selected category, so you don't have to open the dropdown to check.
 
 ## Result
 
-- "Internal Links" card shows real DB count (e.g., 4,883 applied)
-- Discover Links section only shows spinner for actual discovery scans
-- Apply job progress only appears in the toolbar area, not in the scan panel
-- Stale/overflowed apply jobs are treated as completed in the UI
+- At a glance, you can see which of your 6 categories have been scanned
+- The dropdown shows green checkmarks for completed scans, orange warnings for failed/partial ones
+- Selecting a category shows its last scan date and suggestion count
+- No new database tables or columns needed -- reads existing `semantic_scan_jobs` data
