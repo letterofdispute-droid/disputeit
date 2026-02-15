@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
 import { useSemanticLinkScan } from '@/hooks/useSemanticLinkScan';
@@ -19,7 +19,15 @@ export default function LinkSuggestions() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { isScanJobRunning } = useSemanticLinkScan();
+  const { isScanJobRunning, activeScanJob, cancelScanJob } = useSemanticLinkScan();
+
+  // Detect active apply job (category_filter === '__apply_links__')
+  const activeApplyJob = useMemo(() => {
+    if (activeScanJob?.category_filter === '__apply_links__' && activeScanJob.status === 'processing') {
+      return activeScanJob;
+    }
+    return null;
+  }, [activeScanJob]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -54,7 +62,7 @@ export default function LinkSuggestions() {
     targetTypeFilter !== 'all' ? targetTypeFilter : undefined,
     currentPage,
     PAGE_SIZE,
-    isScanJobRunning,
+    isScanJobRunning || !!activeApplyJob,
   );
 
   const stats = getStats();
@@ -108,10 +116,7 @@ export default function LinkSuggestions() {
   };
 
   const handleApplyApproved = () => {
-    const ids = getApprovedIds();
-    if (ids.length > 0) {
-      applyLinks({ suggestionIds: ids });
-    }
+    applyLinks();
   };
 
   const handleApproveAll = () => {
@@ -185,6 +190,7 @@ export default function LinkSuggestions() {
           isApplying={isApplyingLinks}
           isBulkUpdating={isBulkUpdatingAll}
           isBulkDeleting={isBulkDeleting}
+          activeApplyJob={activeApplyJob}
           onApproveHighRelevance={handleApproveHighRelevance}
           onApproveSelected={handleApproveSelected}
           onRejectSelected={handleRejectSelected}
@@ -193,6 +199,7 @@ export default function LinkSuggestions() {
           onRejectAll={handleRejectAll}
           onClearAll={handleClearAll}
           onDeleteSelected={handleDeleteSelected}
+          onCancelApplyJob={() => activeApplyJob && cancelScanJob(activeApplyJob.id)}
         />
       </div>
 

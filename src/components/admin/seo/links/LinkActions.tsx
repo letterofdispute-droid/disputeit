@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Loader2, CheckCheck, X, CheckCircle2, XCircle, Trash2, Upload } from 'lucide-react';
+import { Loader2, CheckCheck, X, CheckCircle2, XCircle, Trash2, Upload, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+interface ApplyJob {
+  id: string;
+  status: string;
+  total_items: number;
+  processed_items: number;
+  total_suggestions: number;
+}
+
 interface LinkActionsProps {
   selectedCount: number;
   pendingCount: number;
@@ -28,6 +37,7 @@ interface LinkActionsProps {
   isApplying: boolean;
   isBulkUpdating?: boolean;
   isBulkDeleting?: boolean;
+  activeApplyJob?: ApplyJob | null;
   onApproveHighRelevance: () => void;
   onApproveSelected: () => void;
   onRejectSelected: () => void;
@@ -36,6 +46,7 @@ interface LinkActionsProps {
   onRejectAll: () => void;
   onClearAll: () => void;
   onDeleteSelected: () => void;
+  onCancelApplyJob?: () => void;
 }
 
 export default function LinkActions({
@@ -48,6 +59,7 @@ export default function LinkActions({
   isApplying,
   isBulkUpdating = false,
   isBulkDeleting = false,
+  activeApplyJob,
   onApproveHighRelevance,
   onApproveSelected,
   onRejectSelected,
@@ -56,12 +68,39 @@ export default function LinkActions({
   onRejectAll,
   onClearAll,
   onDeleteSelected,
+  onCancelApplyJob,
 }: LinkActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isApplyJobRunning = activeApplyJob?.status === 'processing';
+  const applyProgress = isApplyJobRunning && activeApplyJob.total_items > 0
+    ? Math.min(100, Math.round((activeApplyJob.processed_items / activeApplyJob.total_items) * 100))
+    : 0;
 
   return (
     <TooltipProvider>
       <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+        {/* Apply job progress */}
+        {isApplyJobRunning && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex-1 min-w-[160px]">
+              <div className="text-xs text-muted-foreground mb-1">
+                Applied {activeApplyJob.processed_items} / {activeApplyJob.total_items}
+              </div>
+              <Progress value={applyProgress} className="h-2" />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCancelApplyJob}
+              className="border-red-600/30 text-red-700 hover:bg-red-50"
+            >
+              <Square className="h-3 w-3 sm:mr-1" />
+              <span className="hidden sm:inline">Cancel</span>
+            </Button>
+          </div>
+        )}
+
         {/* Selection-specific actions */}
         {selectedCount > 0 && (
           <>
@@ -121,8 +160,8 @@ export default function LinkActions({
           </>
         )}
 
-        {/* Approved view: Apply Approved */}
-        {(statusFilter === 'approved' || statusFilter === 'all') && approvedCount > 0 && selectedCount === 0 && (
+        {/* Approved view: Apply Approved (hide when apply job is running) */}
+        {!isApplyJobRunning && (statusFilter === 'approved' || statusFilter === 'all') && approvedCount > 0 && selectedCount === 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -131,14 +170,14 @@ export default function LinkActions({
                 disabled={isApplying}
               >
                 {isApplying ? (
-                  <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /><span className="hidden sm:inline">Applying...</span></>
+                  <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /><span className="hidden sm:inline">Starting...</span></>
                 ) : (
                   <><Upload className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Apply to Articles ({approvedCount})</span><span className="sm:hidden">Apply ({approvedCount})</span></>
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Inserts approved links into your article HTML</p>
+              <p>Inserts approved links into your article HTML (processes all in background)</p>
             </TooltipContent>
           </Tooltip>
         )}
