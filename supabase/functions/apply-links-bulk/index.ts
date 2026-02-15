@@ -514,10 +514,24 @@ async function processBatch(
       }
 
       if (updatedContent !== post.content) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('blog_posts')
           .update({ content: updatedContent })
           .eq('id', postId);
+
+        if (updateError) {
+          console.error(`Failed to save content for ${postId}:`, updateError);
+          // Revert applied statuses so they can be retried
+          for (const s of cappedSuggestions) {
+            await supabaseAdmin
+              .from('link_suggestions')
+              .update({ status: 'approved', applied_at: null })
+              .eq('id', s.id)
+              .eq('status', 'applied');
+          }
+          failedCount += cappedSuggestions.length;
+          appliedCount = Math.max(0, appliedCount - cappedSuggestions.length);
+        }
       }
     } catch (error) {
       console.error(`Failed to process post ${postId}:`, error);
@@ -636,6 +650,21 @@ serve(async (req) => {
         status: 403, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
+    }
+
+    // Cancel any stuck apply jobs before starting a new one
+    const { data: stuckJobs } = await supabaseAdmin
+      .from('semantic_scan_jobs')
+      .select('id')
+      .eq('category_filter', '__apply_links__')
+      .eq('status', 'processing');
+
+    for (const stuckJob of (stuckJobs || [])) {
+      await supabaseAdmin
+        .from('semantic_scan_jobs')
+        .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', stuckJob.id);
+      console.log(`[APPLY] Cancelled stuck job ${stuckJob.id}`);
     }
 
     // Count all approved suggestions

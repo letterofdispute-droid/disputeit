@@ -589,7 +589,7 @@ const ArticlePage = () => {
       {/* Article Content */}
       <section className="py-12 md:py-16 bg-background">
         <div className="container-wide">
-          <div className="flex gap-12">
+          <div className="lg:flex lg:gap-12">
             {/* Main Content */}
             <article className="flex-1 max-w-3xl mx-auto lg:mx-0">
               <div
