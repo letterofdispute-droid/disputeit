@@ -1,72 +1,52 @@
 
 
-# Add Scan Status Indicators to Category Selector
+# Fix Category Scan Status for Cooldown-Skipped Scans
 
-## What it does
+## What happened
 
-Adds a visual indicator next to each category in the "Scan Category" dropdown showing whether it has been scanned, partially scanned, or never scanned. This lets you instantly see which categories still need attention.
+Your Legal Tips scan **did run** -- it found 518 articles but processed 0 because all 518 were already scanned within the last 7 days (from an earlier "All Categories" run). The scan completed successfully but skipped everything due to the cooldown.
 
-## Visual Design
+The problem is the status indicator misclassifies this:
+- Status = "completed" + processed (0) < total (518) = shows as **"partial"** (orange warning) or **"—"** (if query hasn't refreshed)
+- It should show as **"scanned"** (green check) because these articles genuinely have been scanned already
 
-Each category in the dropdown will show a status badge:
+## Changes
 
-- **Green checkmark + date**: Fully scanned (e.g., "Contractors ✓ Today")
-- **Orange warning**: Partially scanned / failed (e.g., "Consumer Rights ⚠ 1845/2752")
-- **No badge**: Never scanned
+### 1. Fix status classification logic (`SemanticScanPanel.tsx`)
 
-## Technical Changes
-
-### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
-
-1. **Add a query** to fetch the latest scan job per category from `semantic_scan_jobs` (grouped by `category_filter`, taking the most recent completed or failed job)
-
-2. **Update the category dropdown items** to render status indicators inline:
-   ```
-   Contractors                    ✓ scanned
-   Consumer Rights               ⚠ partial
-   Industry News                 — not scanned
-   ```
-
-3. **Show a summary below the dropdown** when a category is selected, e.g.:
-   - "Last scanned: Today at 14:45 — 21 suggestions found"
-   - "Never scanned" for unscanned categories
-   - "Scan failed at 1,845 / 2,752 articles" for partial scans
-
-### Query for scan history per category:
-```typescript
-const { data: categoryScanStatus } = useQuery({
-  queryKey: ['category-scan-status'],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('semantic_scan_jobs')
-      .select('category_filter, status, total_items, processed_items, total_suggestions, completed_at')
-      .neq('category_filter', '__apply_links__')
-      .not('category_filter', 'is', null)
-      .in('status', ['completed', 'failed'])
-      .order('created_at', { ascending: false });
-    
-    // Group by category, keep only the latest job per category
-    const statusMap = new Map();
-    for (const job of data || []) {
-      if (!statusMap.has(job.category_filter)) {
-        statusMap.set(job.category_filter, job);
-      }
-    }
-    return statusMap;
-  },
-  staleTime: 30000,
-});
+**Current logic** (broken):
+```
+isComplete = status === 'completed'
+isPartial = status === 'failed' || processed_items < total_items
+isComplete = isComplete && !isPartial  // Always false when skipped!
 ```
 
-### Updated dropdown rendering:
-Each `SelectItem` will include a small status indicator (checkmark, warning, or dash) and a brief label like "scanned" or "partial" using muted text on the right side.
+**Fixed logic**: A completed job where items were skipped due to cooldown is still "complete" -- the articles were scanned previously. Only mark as "partial" if the job actually **failed**:
 
-### Selected category info line:
-Below the dropdown, a single line of text shows the scan status for the currently selected category, so you don't have to open the dropdown to check.
+```typescript
+const isComplete = job.status === 'completed';
+const isPartial = job.status === 'failed' && job.processed_items < job.total_items;
+```
 
-## Result
+This means:
+- Completed + 0 processed (cooldown skip) = green check "scanned"
+- Completed + all processed = green check "scanned"  
+- Failed + partial progress = orange warning "partial"
 
-- At a glance, you can see which of your 6 categories have been scanned
-- The dropdown shows green checkmarks for completed scans, orange warnings for failed/partial ones
-- Selecting a category shows its last scan date and suggestion count
-- No new database tables or columns needed -- reads existing `semantic_scan_jobs` data
+### 2. Show "skipped (cooldown)" in status summary
+
+When a completed scan processed 0 items but had total > 0, show a more informative message:
+> "All 518 articles skipped (within 7-day cooldown). Use Force re-scan to override."
+
+### 3. Better scan completion message
+
+When the "Scan complete" banner shows "0 new suggestions / Scanned 0 articles", clarify that articles were skipped:
+> "Scan complete -- all articles within cooldown period. Check Force re-scan to override."
+
+## Files to edit
+
+- **src/components/admin/seo/links/SemanticScanPanel.tsx** -- Fix `getCategoryScanInfo` classification, update status summary text, improve completion banner message
+
+## To actually scan Legal Tips
+
+You need to check the **"Force re-scan"** checkbox before clicking Smart Scan or Vector Scan. That resets the 7-day cooldown timestamps so the scan will process all 518 articles.
