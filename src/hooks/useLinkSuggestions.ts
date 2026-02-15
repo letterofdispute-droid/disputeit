@@ -201,34 +201,47 @@ export function useLinkSuggestions(
     },
   });
 
-  // Apply links
+  // Apply links (now starts a background job)
   const applyLinksMutation = useMutation({
-    mutationFn: async (params: {
-      suggestionIds?: string[];
-      categorySlug?: string;
-      autoApproveThreshold?: number;
-    }) => {
+    mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('apply-links-bulk', {
-        body: params,
+        body: {},
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Apply failed');
-      return data;
+      return data as { jobId?: string; totalItems?: number; applied?: number };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
-      queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
-      toast({
-        title: 'Links applied',
-        description: `Applied ${data.applied} links${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
-      });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+      if (data.jobId) {
+        toast({
+          title: 'Applying links in background',
+          description: `Processing ${data.totalItems} approved links...`,
+        });
+      } else {
+        toast({
+          title: 'No links to apply',
+          description: 'No approved suggestions found',
+        });
+      }
     },
     onError: (error) => {
-      toast({
-        title: 'Apply failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (msg.includes('Failed to send') || msg.includes('Failed to fetch')) {
+        queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+        toast({
+          title: 'Apply continues in background',
+          description: 'Links are being applied. Progress will update automatically.',
+        });
+      } else {
+        toast({
+          title: 'Apply failed',
+          description: msg,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
