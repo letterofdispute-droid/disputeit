@@ -424,10 +424,19 @@ async function processBatch(
 
             appliedCount++;
           } else {
+            await supabaseAdmin
+              .from('link_suggestions')
+              .update({ status: 'rejected', hierarchy_violation: 'Could not find suitable insertion point' })
+              .eq('id', suggestion.id);
             failedCount++;
           }
         } catch (error) {
           console.error(`Failed to apply suggestion ${suggestion.id}:`, error);
+          await supabaseAdmin
+            .from('link_suggestions')
+            .update({ status: 'rejected', hierarchy_violation: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` })
+            .eq('id', suggestion.id)
+            .catch(() => {});
           failedCount++;
         }
       }
