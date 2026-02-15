@@ -328,7 +328,7 @@
 
   /* Links */
   .prose a {
-    @apply text-primary font-medium underline-offset-2 hover:underline;
+    @apply text-blue-600 dark:text-blue-400 font-medium underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300;
   }
 
   /* Article middle image styling */
