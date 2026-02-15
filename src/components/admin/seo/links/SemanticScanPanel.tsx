@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2 } from 'lucide-react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showOrphans, setShowOrphans] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
   const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
   const [scanCategory, setScanCategory] = useState<string>('all');
@@ -80,6 +82,22 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     };
     fetchCategories();
   }, []);
+
+  // Fetch scan history (last 10 completed jobs)
+  const { data: scanHistory } = useQuery({
+    queryKey: ['scan-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('semantic_scan_jobs')
+        .select('id, status, total_items, processed_items, total_suggestions, similarity_threshold, category_filter, created_at, completed_at')
+        .in('status', ['completed', 'failed', 'cancelled'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+  });
 
   const handleSemanticScan = async () => {
     const cat = scanCategory !== 'all' ? scanCategory : undefined;
@@ -476,6 +494,63 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </p>
                 </CollapsibleContent>
               </div>
+            </Collapsible>
+          )}
+
+          {/* ===== Scan History ===== */}
+          {scanHistory && scanHistory.length > 0 && (
+            <Collapsible open={showHistory} onOpenChange={setShowHistory}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <History className="h-3.5 w-3.5" />
+                    Scan History ({scanHistory.length})
+                  </span>
+                  {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-1 mt-1">
+                  {scanHistory.map((job) => {
+                    const duration = job.completed_at && job.created_at
+                      ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
+                      : null;
+                    const formatDuration = (secs: number) => {
+                      if (secs < 60) return `${secs}s`;
+                      const mins = Math.floor(secs / 60);
+                      const rem = secs % 60;
+                      return rem > 0 ? `${mins}m ${rem}s` : `${mins}m`;
+                    };
+                    const catLabel = job.category_filter
+                      ? blogCategories.find(c => c.id === job.category_filter)?.label || job.category_filter
+                      : 'All';
+                    const dateStr = new Date(job.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                      <div key={job.id} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-muted/30">
+                        <Badge
+                          variant={job.status === 'completed' ? 'default' : job.status === 'cancelled' ? 'secondary' : 'destructive'}
+                          className="text-[10px] h-4 px-1 shrink-0"
+                        >
+                          {job.status === 'completed' ? '✓' : job.status === 'cancelled' ? '—' : '✗'}
+                        </Badge>
+                        <span className="text-muted-foreground shrink-0">{dateStr}</span>
+                        <span className="truncate flex-1" title={catLabel}>{catLabel}</span>
+                        <span className="shrink-0 text-muted-foreground">{job.processed_items} articles</span>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 shrink-0">
+                          {job.total_suggestions} links
+                        </Badge>
+                        {duration !== null && (
+                          <span className="flex items-center gap-0.5 text-muted-foreground shrink-0">
+                            <Clock className="h-3 w-3" />
+                            {formatDuration(duration)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
             </Collapsible>
           )}
 
