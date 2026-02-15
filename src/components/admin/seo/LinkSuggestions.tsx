@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
+import { useSemanticLinkScan } from '@/hooks/useSemanticLinkScan';
 import LinkStats from './links/LinkStats';
 import LinkFilters from './links/LinkFilters';
 import LinkActions from './links/LinkActions';
@@ -13,6 +14,8 @@ export default function LinkSuggestions() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const { isScanJobRunning } = useSemanticLinkScan();
 
   const { 
     suggestions, 
@@ -30,7 +33,7 @@ export default function LinkSuggestions() {
     getApprovedIds,
     bulkUpdateAllByStatus,
     isBulkUpdatingAll,
-  } = useLinkSuggestions(statusFilter === 'all' ? undefined : statusFilter);
+  } = useLinkSuggestions(statusFilter === 'all' ? undefined : statusFilter, undefined, isScanJobRunning);
 
   const stats = getStats();
 

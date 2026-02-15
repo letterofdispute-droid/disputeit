@@ -169,11 +169,23 @@ export function useSemanticLinkScan() {
       });
     },
     onError: (error) => {
-      toast({
-        title: 'Semantic scan failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
+      const isJobActive = activeScanJob?.status === 'processing';
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (isJobActive || msg.includes('Failed to send') || msg.includes('Failed to fetch')) {
+        queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+        queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+        queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+        toast({
+          title: 'Scan continues in background',
+          description: 'The link scan is still running. Suggestions will appear as they are found.',
+        });
+      } else {
+        toast({
+          title: 'Semantic scan failed',
+          description: msg,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
