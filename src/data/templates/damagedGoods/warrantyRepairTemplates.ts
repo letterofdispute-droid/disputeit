@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
@@ -42,7 +36,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days with a revised decision.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I reserve my consumer rights to escalate this matter if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'extended-warranty-dispute', slug: 'extended-warranty-dispute', category: 'Damaged Goods',
@@ -71,7 +65,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I will report this to consumer protection if not resolved.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'repair-not-completed', slug: 'repair-not-completed-complaint', category: 'Damaged Goods',
@@ -98,7 +92,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Multiple failed repairs indicate a fundamental issue.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'replacement-demand', slug: 'replacement-demand-letter', category: 'Damaged Goods',
@@ -125,7 +119,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please confirm replacement within 7 days or I will pursue a refund.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Consumer law entitles me to a replacement after reasonable repair attempts have failed.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'repair-delay-complaint', slug: 'repair-delay-complaint', category: 'Damaged Goods',
@@ -153,7 +147,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond immediately with a firm completion date.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'This delay is unacceptable and I expect immediate resolution.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'repair-damage-complaint', slug: 'repair-caused-damage', category: 'Damaged Goods',
@@ -181,7 +175,7 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I will pursue legal action if this is not resolved promptly.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'statutory-rights-refund', slug: 'statutory-rights-refund-demand', category: 'Damaged Goods',
@@ -208,6 +202,6 @@ export const warrantyRepairTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'My statutory rights cannot be excluded or limited by your terms and conditions.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

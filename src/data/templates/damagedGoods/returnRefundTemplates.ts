@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
@@ -40,7 +34,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I know my consumer rights and will escalate if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'refund-not-received', slug: 'refund-not-received', category: 'Damaged Goods',
@@ -68,7 +62,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please process within 48 hours or I will dispute with my card provider.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Further delay is unacceptable.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'partial-refund-dispute', slug: 'partial-refund-dispute', category: 'Damaged Goods',
@@ -95,7 +89,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please process within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I am entitled to a full refund and will pursue this further if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'restocking-fee-dispute', slug: 'restocking-fee-dispute', category: 'Damaged Goods',
@@ -121,7 +115,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Restocking fees should not apply when returning faulty goods.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'store-credit-instead-refund', slug: 'store-credit-refund-dispute', category: 'Damaged Goods',
@@ -147,7 +141,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please process within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Consumer law entitles me to a refund in the original payment method for faulty goods.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'chargeback-support-letter', slug: 'chargeback-support-letter', category: 'Damaged Goods',
@@ -174,7 +168,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please process this chargeback claim promptly.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'All supporting documentation is attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'gift-card-refund', slug: 'gift-card-refund-demand', category: 'Damaged Goods',
@@ -201,7 +195,7 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I believe I have legitimate grounds for this refund request.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'cooling-off-period-refund', slug: 'cooling-off-period-refund', category: 'Damaged Goods',
@@ -228,6 +222,6 @@ export const returnRefundTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Refund must be processed within 14 days as required by law.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'The goods are unused and in original packaging.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Leasehold Reform Act', approvedPhrases: ['Under leasehold regulations', 'In accordance with the lease terms'] },
@@ -36,7 +30,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please confirm the meeting date and provide proper notice to all members as required.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'We believe this matter is urgent and requires member input before any board action is taken.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-records-request', slug: 'hoa-records-request', category: 'HOA & Property', title: 'HOA Records Request Letter',
@@ -60,7 +54,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please confirm receipt of this request and the date when records will be available.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I understand I may be charged reasonable copying costs for paper documents.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-rule-change-proposal', slug: 'hoa-rule-change-proposal', category: 'HOA & Property', title: 'HOA Rule Change Proposal',
@@ -84,7 +78,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please acknowledge receipt and inform me of the timeline for consideration.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I believe this change will improve our community and am happy to present further at a meeting if helpful.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-board-recall', slug: 'hoa-board-recall-petition', category: 'HOA & Property', title: 'HOA Board Recall Petition',
@@ -108,7 +102,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'The meeting must be scheduled within the timeframe required by our governing documents.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Lead Petitioner: {petitionerName} (Member ID: {petitionerId}). Signature pages attached.', placeholders: ['petitionerName', 'petitionerId'] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-voting-dispute', slug: 'hoa-voting-dispute', category: 'HOA & Property', title: 'HOA Voting/Election Dispute',
@@ -133,7 +127,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. If not resolved, I will pursue remedies available under state law.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Fair elections are fundamental to our community governance.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-conflict-of-interest', slug: 'hoa-conflict-of-interest-complaint', category: 'HOA & Property', title: 'Board Conflict of Interest Complaint',
@@ -157,7 +151,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. This is a serious governance matter.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Board members have a fiduciary duty to act in the interests of all homeowners.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-vendor-contract-objection', slug: 'hoa-vendor-contract-objection', category: 'HOA & Property', title: 'Vendor Contract Objection Letter',
@@ -181,7 +175,7 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please do not finalize this contract until proper procedures are followed.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'The board has a duty to ensure the best value for homeowner dues.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-management-company-complaint', slug: 'hoa-management-company-complaint', category: 'HOA & Property', title: 'Management Company Complaint',
@@ -205,6 +199,6 @@ export const governanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days with the actions being taken.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Our dues fund management services, and we deserve responsive, professional management.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

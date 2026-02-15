@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
@@ -39,7 +33,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please process this claim within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have attached photos of the damaged package and contents.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'concealed-damage-claim', slug: 'concealed-damage-claim', category: 'Damaged Goods',
@@ -66,7 +60,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have preserved the packaging and documented the damage with photos.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'fragile-item-damage', slug: 'fragile-item-damage-complaint', category: 'Damaged Goods',
@@ -92,7 +86,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the packaging and damage are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'temperature-sensitive-damage', slug: 'temperature-sensitive-damage', category: 'Damaged Goods',
@@ -119,7 +113,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 48 hours given the nature of this issue.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the spoiled item and packaging are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'water-damaged-delivery', slug: 'water-damaged-delivery', category: 'Damaged Goods',
@@ -146,7 +140,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the wet packaging and damaged contents are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'crushed-package-complaint', slug: 'crushed-package-complaint', category: 'Damaged Goods',
@@ -172,7 +166,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the crushed package and damaged items are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'international-shipping-damage', slug: 'international-shipping-damage', category: 'Damaged Goods',
@@ -199,7 +193,7 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos and customs documentation are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'delivery-left-unsafe', slug: 'delivery-left-unsafe-location', category: 'Damaged Goods',
@@ -227,6 +221,6 @@ export const deliveryDamageTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'The delivery location was completely unsuitable and your driver did not follow instructions.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

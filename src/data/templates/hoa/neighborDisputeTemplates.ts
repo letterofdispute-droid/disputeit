@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Nuisance Laws', approvedPhrases: ['Under state nuisance regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Environmental Protection Act 1990', approvedPhrases: ['Under the Environmental Protection Act', 'In accordance with UK nuisance law'] },
@@ -39,7 +33,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If the issue continues, I will have no choice but to escalate this matter to the HOA, local council, or relevant authorities.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can resolve this amicably as neighbors. Please feel free to contact me to discuss this further.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-boundary-dispute', slug: 'neighbor-boundary-dispute', category: 'HOA & Property', title: 'Boundary Dispute Letter',
@@ -65,7 +59,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 21 days. If we cannot resolve this, I may need to seek legal advice or mediation.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can resolve this matter without formal legal proceedings.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-tree-dispute', slug: 'neighbor-tree-dispute', category: 'HOA & Property', title: 'Tree Dispute Letter',
@@ -90,7 +84,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I am willing to discuss a reasonable timeline for resolution.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can resolve this neighborly matter without formal action.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-parking-dispute', slug: 'neighbor-parking-dispute', category: 'HOA & Property', title: 'Parking Dispute Letter',
@@ -115,7 +109,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If this continues, I will escalate to the HOA or local parking enforcement.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can resolve this as good neighbors.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-pet-complaint', slug: 'neighbor-pet-complaint', category: 'HOA & Property', title: 'Pet Complaint Letter',
@@ -141,7 +135,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If the issue continues, I will need to report this to the HOA or local animal control.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can resolve this matter amicably.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-property-damage', slug: 'neighbor-property-damage-claim', category: 'HOA & Property', title: 'Property Damage Claim Letter',
@@ -168,7 +162,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. If I do not hear from you, I will pursue this through small claims court.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have enclosed copies of repair estimates and photographic evidence.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-harassment-complaint', slug: 'neighbor-harassment-complaint', category: 'HOA & Property', title: 'Neighbor Harassment Complaint',
@@ -193,7 +187,7 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'This letter serves as formal notice. I am documenting all incidents for potential legal proceedings.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect this behavior to stop immediately. A copy of this letter is being retained for my records.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'neighbor-light-pollution', slug: 'neighbor-light-pollution-complaint', category: 'HOA & Property', title: 'Light Pollution Complaint',
@@ -218,6 +212,6 @@ export const neighborDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. If unresolved, I may escalate to the HOA or local authorities.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I hope we can find a reasonable solution that addresses your security needs while respecting my right to enjoy my property.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

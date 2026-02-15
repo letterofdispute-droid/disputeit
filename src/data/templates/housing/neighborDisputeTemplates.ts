@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'Fair Housing Act', approvedPhrases: ['Under the implied warranty of habitability', 'In accordance with applicable housing laws'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Housing Act 2004', approvedPhrases: ['Under the Housing Act 2004', 'In accordance with UK housing law'] },
@@ -38,7 +32,7 @@ export const neighborHousingDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'This is affecting my quiet enjoyment of the property.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have kept a noise diary as evidence.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'antisocial-behavior-report', slug: 'antisocial-behavior-report', category: 'Housing', title: 'Antisocial Behavior Report Letter',
@@ -65,7 +59,7 @@ export const neighborHousingDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'I expect a response within 7 days outlining what action will be taken.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I am prepared to provide witness statements if required.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'shared-facilities-complaint', slug: 'shared-facilities-complaint', category: 'Housing', title: 'Shared Facilities Complaint Letter',
@@ -89,7 +83,7 @@ export const neighborHousingDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'I pay rent which includes access to properly maintained communal areas.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Please respond within 14 days.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'parking-dispute-landlord', slug: 'parking-dispute-to-landlord', category: 'Housing', title: 'Parking Dispute Letter to Landlord',
@@ -114,6 +108,6 @@ export const neighborHousingDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'I expect a resolution within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Parking was included as part of my tenancy.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

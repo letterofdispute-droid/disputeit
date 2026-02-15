@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Leasehold Reform Act', approvedPhrases: ['Under leasehold regulations', 'In accordance with the lease terms'] },
@@ -38,7 +32,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I will not pay the disputed amount until this matter is resolved.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I reserve all rights to challenge this assessment through the appropriate dispute resolution process.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-late-fee-waiver', slug: 'hoa-late-fee-waiver-request', category: 'HOA & Property', title: 'HOA Late Fee Waiver Request',
@@ -65,7 +59,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I have already made the underlying dues payment.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I appreciate your consideration and will ensure timely payments going forward.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-payment-plan-request', slug: 'hoa-payment-plan-request', category: 'HOA & Property', title: 'HOA Payment Plan Request',
@@ -91,7 +85,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I am committed to fulfilling this payment plan.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I appreciate your consideration during this difficult time and am committed to remaining a responsible member of our community.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-billing-error-dispute', slug: 'hoa-billing-error-dispute', category: 'HOA & Property', title: 'HOA Billing Error Dispute',
@@ -118,7 +112,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please correct this error within 14 days and confirm in writing.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect this matter to be resolved promptly as this is clearly an administrative error.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-reserve-fund-inquiry', slug: 'hoa-reserve-fund-inquiry', category: 'HOA & Property', title: 'HOA Reserve Fund Inquiry Letter',
@@ -141,7 +135,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please provide these documents within 30 days as required by law.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Transparency about our financial health is essential for all homeowners to make informed decisions.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-budget-objection', slug: 'hoa-budget-objection', category: 'HOA & Property', title: 'HOA Budget Objection Letter',
@@ -168,7 +162,7 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please acknowledge this objection before the budget vote and provide an opportunity for member input.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I urge the board to prioritize fiscal responsibility and homeowner affordability.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-audit-request', slug: 'hoa-audit-request', category: 'HOA & Property', title: 'HOA Financial Audit Request',
@@ -192,6 +186,6 @@ export const feeDisputeTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 30 days with a plan to conduct this audit or an explanation of why the board believes it is unnecessary.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Financial transparency and accountability are essential for member confidence in HOA governance.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];
