@@ -1,82 +1,90 @@
 
 
-# Global Search: Unified Content Discovery
+# Enhanced Global Search Analytics
 
-## What This Solves
+## The Gap
 
-Right now, visitors who want to quickly find a specific template or article have two options: browse through categories manually, or use the AI assistant (which feels heavyweight for a simple lookup). A search bar gives users instant access to all content -- templates, articles, and guides -- with just a few keystrokes.
+The new Global Search (Cmd+K) only pushes events to GTM via `trackSiteSearch`. It does **not** write to the `analytics_events` database table. The existing `SiteSearchReport` in the admin dashboard reads exclusively from `analytics_events` where `event_type = 'site_search'` -- so global search activity is invisible in your dashboard.
 
-## The Approach: Command Palette (Cmd+K) Style Search
+Meanwhile, `CategorySearch` correctly tracks to **both** GTM and the database. We need to bring GlobalSearch up to the same standard and then add richer tracking.
 
-Rather than cluttering the header with a full search bar, we'll add a compact search icon/trigger in the header that opens a full-screen command palette overlay. This is the pattern used by Stripe, Vercel, and most modern SaaS sites. It works beautifully on both desktop and mobile.
+## What Gets Tracked
 
-## How It Works
+Standard site search analytics track these key metrics:
 
-1. **Search trigger in the header** -- A small search icon (magnifying glass) next to the nav items on desktop, and in the mobile menu. Clicking it opens the search overlay.
+1. **Search queries** -- what users type (already tracked to GTM, missing from DB)
+2. **Results count** -- how many results were shown (already tracked to GTM)
+3. **Zero-result searches** -- queries that returned nothing (derivable from results count)
+4. **Search location** -- where the search was triggered from (hero link, header icon, Cmd+K)
+5. **Result clicks (click-through)** -- which result the user selected and its type (template/article/category)
+6. **Click position** -- rank of the clicked result (1st, 2nd, 3rd...)
+7. **Search refinements** -- when a user modifies their query within the same session
+8. **Search exits** -- when a user closes search without clicking any result (abandonment)
+9. **Time to click** -- how long between search and result selection
+10. **Result type distribution** -- breakdown of templates vs articles vs categories in results
 
-2. **Keyboard shortcut** -- Press `Cmd+K` (Mac) or `Ctrl+K` (Windows) anywhere on the site to open search instantly.
+## Implementation
 
-3. **Unified search overlay** -- Uses the existing `cmdk` library (already installed) to create a fast, filterable command palette that searches across:
-   - **Templates** (500+ static, instant client-side filtering by title, description, category)
-   - **Blog Articles** (database query with debounced server-side search on title/excerpt)
-   - **Category pages** (13 categories, instant match)
+### 1. Add Database Tracking to GlobalSearch (`src/components/search/GlobalSearch.tsx`)
 
-4. **Grouped results** -- Results are grouped by type (Templates, Articles, Categories) with icons and category badges so users can scan quickly.
+Import `useAnalytics` and fire `site_search` events to the database (matching the pattern in `CategorySearch`):
 
-5. **Direct navigation** -- Clicking a result navigates directly to the full hierarchical URL (e.g., `/templates/housing/repair-maintenance/damp-mould-complaint`).
+- **On search** (debounced): Track `site_search` with `search_term`, `results_count`, `search_location`, `result_breakdown` (templates/articles/categories counts), and `trigger_method` (keyboard shortcut, header icon, or hero link)
+- **On result click**: Track a new `search_click` event with the selected item's type, slug, position in the list, and time elapsed since search
+- **On close without click**: Track `search_exit` event with the last query and whether results were shown
 
-## What Gets Built
+### 2. New Event Types in `useAnalytics` (`src/hooks/useAnalytics.ts`)
 
-### 1. New Component: `GlobalSearch.tsx`
-A command palette component using `cmdk` (already installed) that:
-- Opens via search icon click or Cmd+K
-- Searches templates client-side (instant, no API calls)
-- Searches articles server-side with debounce (hits the `blog_posts` table)
-- Shows category quick-links as a default view when no query is typed
-- Tracks searches via existing `trackSiteSearch` analytics
+Add two new event types to the `EventType` union:
+- `search_click` -- fired when a user selects a search result
+- `search_exit` -- fired when search closes without a selection
 
-### 2. Header Updates
-- **Desktop**: Add a search icon button between the nav and CTA buttons
-- **Mobile**: Add a search icon in the mobile header bar (next to the hamburger menu)
-- Both trigger the same `GlobalSearch` overlay
+### 3. Enhanced SiteSearchReport (`src/components/admin/analytics/SiteSearchReport.tsx`)
 
-### 3. Hero Update (Optional Enhancement)
-Keep the existing AI assistant prompt as-is, but add a small "or search manually" text link below it that opens the same global search. This gives users who prefer a simple search an obvious path.
+Extend the existing report to display the new data:
 
-## Technical Details
+- **Click-through rate (CTR)**: Percentage of searches that led to a result click
+- **Popular clicked results**: Table showing which specific templates/articles get clicked most from search
+- **Result type breakdown**: Pie chart showing template vs article vs category clicks
+- **Search-to-click time**: Average time between query and selection
+- **Abandonment rate**: Percentage of searches closed without selecting a result
+- **Search trigger breakdown**: Where users open search from (header, hero, keyboard)
 
-### Template Search (Client-Side)
-Templates are already loaded as static data (`allTemplates` array, ~500 items). We filter in-memory using a simple lowercase includes match on `title` and `shortDescription`. Results are instant with zero latency.
+### 4. Pass Trigger Source Through GlobalSearch
 
-### Article Search (Server-Side, Debounced)
-Articles live in the database. We query with:
-```sql
-SELECT slug, title, excerpt, category_slug, featured_image_url
-FROM blog_posts
-WHERE status = 'published'
-AND (title ILIKE '%query%' OR excerpt ILIKE '%query%')
-ORDER BY views DESC
-LIMIT 5
+Update `GlobalSearchProps` to accept an optional `triggerSource` prop so the Header and Hero can pass context:
+- Header icon click: `trigger_source: 'header'`
+- Hero "search manually" link: `trigger_source: 'hero'`
+- Keyboard shortcut: `trigger_source: 'keyboard'`
+
+## Files to Edit
+
+1. **`src/hooks/useAnalytics.ts`** -- Add `search_click` and `search_exit` to EventType union
+2. **`src/components/search/GlobalSearch.tsx`** -- Add database tracking (site_search, search_click, search_exit events), pass trigger source, track timing
+3. **`src/components/admin/analytics/SiteSearchReport.tsx`** -- Add CTR, clicked results table, result type pie chart, abandonment rate, trigger breakdown
+4. **`src/components/layout/Header.tsx`** -- Pass `triggerSource="header"` to GlobalSearch
+5. **`src/components/home/Hero.tsx`** -- Pass `triggerSource="hero"` to GlobalSearch
+
+## Data Structure
+
+Events written to `analytics_events`:
+
 ```
-This runs after a 300ms debounce to avoid hammering the database on every keystroke.
+site_search: {
+  search_term, results_count, search_location: "global_search",
+  trigger_source: "header" | "hero" | "keyboard",
+  template_results: number, article_results: number, category_results: number
+}
 
-### Result Limits
-- Templates: Show top 5 matches (sorted by relevance -- exact title match first, then partial)
-- Articles: Show top 5 matches (sorted by views)
-- Categories: Show top 3 matching categories
-- Total max visible: ~13 results, keeping the overlay clean
+search_click: {
+  search_term, result_type: "template" | "article" | "category",
+  result_slug, result_title, click_position: number,
+  time_to_click_ms: number, total_results: number
+}
 
-### Component Structure
+search_exit: {
+  search_term, had_results: boolean, results_count: number,
+  trigger_source, session_duration_ms: number
+}
 ```
-src/components/search/
-  GlobalSearch.tsx       -- Main command palette with Dialog + Command
-```
-
-### Files to Edit
-1. **Create** `src/components/search/GlobalSearch.tsx` -- The command palette component
-2. **Edit** `src/components/layout/Header.tsx` -- Add search trigger (desktop + mobile)
-3. **Edit** `src/components/home/Hero.tsx` -- Add "or search manually" link below AI prompt
-
-### Analytics Integration
-Uses the existing `trackSiteSearch()` function from `useGTM.ts` and the Supabase `trackEvent` from `useAnalytics` -- same pattern as `CategorySearch` already does.
 
