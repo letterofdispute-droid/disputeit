@@ -181,11 +181,9 @@ export default function LinkSuggestions() {
           filteredCount={filteredSuggestions.length}
           statusFilter={statusFilter}
           totalForStatus={statusFilter === 'all' ? (stats.pending + stats.approved + stats.rejected + stats.applied) : (stats as any)[statusFilter] || 0}
-          isScanning={isScanning}
           isApplying={isApplyingLinks}
           isBulkUpdating={isBulkUpdatingAll}
           isBulkDeleting={isBulkDeleting}
-          onScan={handleScan}
           onApproveHighRelevance={handleApproveHighRelevance}
           onApproveSelected={handleApproveSelected}
           onRejectSelected={handleRejectSelected}
