@@ -131,8 +131,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
       const job = categoryScanStatus.get(catId);
       if (!job) return null;
       const isComplete = job.status === 'completed';
-      const isPartial = job.status === 'failed' || (job.processed_items < job.total_items);
-      return { ...job, isComplete: isComplete && !isPartial, isPartial };
+      const isPartial = job.status === 'failed' && job.processed_items < job.total_items;
+      const isSkippedCooldown = isComplete && job.processed_items === 0 && job.total_items > 0;
+      return { ...job, isComplete, isPartial, isSkippedCooldown };
     };
   }, [categoryScanStatus]);
 
@@ -399,12 +400,25 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                 <div className="flex items-center gap-2 text-xs p-2 bg-primary/10 rounded-md">
                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                   <div>
-                    <span className="font-medium text-primary">
-                      Scan complete — {activeScanJob.total_suggestions.toLocaleString()} new suggestions from this scan
-                    </span>
-                    <p className="text-muted-foreground mt-0.5">
-                      Scanned {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} articles. Review them in the Link Review tab.
-                    </p>
+                    {activeScanJob.processed_items === 0 && activeScanJob.total_items > 0 ? (
+                      <>
+                        <span className="font-medium text-primary">
+                          Scan complete — all {activeScanJob.total_items.toLocaleString()} articles within cooldown period
+                        </span>
+                        <p className="text-muted-foreground mt-0.5">
+                          Check <strong>Force re-scan</strong> to override the 7-day cooldown.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-medium text-primary">
+                          Scan complete — {activeScanJob.total_suggestions.toLocaleString()} new suggestions from this scan
+                        </span>
+                        <p className="text-muted-foreground mt-0.5">
+                          Scanned {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} articles. Review them in the Link Review tab.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -461,6 +475,13 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                         ? `Today at ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
                         : when.toLocaleDateString()
                     ) : 'Unknown';
+                    if (info.isSkippedCooldown) {
+                      return (
+                        <p className="text-[11px] text-emerald-600 ml-1">
+                          All {info.total_items.toLocaleString()} articles skipped (within 7-day cooldown). Use <strong>Force re-scan</strong> to override.
+                        </p>
+                      );
+                    }
                     return (
                       <p className="text-[11px] text-emerald-600 ml-1">
                         Last scanned: {dateStr} — {info.total_suggestions.toLocaleString()} suggestions found
