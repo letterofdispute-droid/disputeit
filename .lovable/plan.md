@@ -1,55 +1,57 @@
-# Fix: Category Scan Shows 0 Results (Already Scanned)
+
+
+# Speed Up Link Discovery Scans
 
 ## Problem
 
-The scan correctly filters by category, but all articles have already been scanned recently. Each scan sets `next_scan_due_at` to 7 days in the future, so subsequent scans find 0 eligible articles and immediately complete with "0 suggestions found."
-
-This is by design to prevent duplicate work, but there's no UI option to force a re-scan.
-
-## Solution
-
-Add a "Force Re-scan" option that resets `next_scan_due_at` for the selected category before starting the scan. This is similar to the existing "Force Re-embed All" button for embeddings.
+Both scan modes are slow because they process articles **sequentially** (one at a time within each batch) and use small batch sizes. The Smart Scan processes only 3 articles per invocation, and each AI call takes several seconds. The Vector Scan defaults to 10 but also processes them in a serial loop.
 
 ## Changes
 
-### 1. `SemanticScanPanel.tsx` - Add re-scan logic
+### 1. Smart Scan (`scan-for-smart-links/index.ts`) -- Parallel Processing + Larger Batch
 
-Before calling `smartScan()` or `semanticScan()`, reset the `next_scan_due_at` timestamps for the selected category (or all categories). Add a visual indicator showing how many articles are eligible vs already scanned.
+- Increase `BATCH_SIZE` from 3 to 5
+- Replace the serial `for` loop with `Promise.allSettled` to process all articles in the batch concurrently
+- This means 5 AI calls happen simultaneously instead of waiting for each one to finish before starting the next
+- Expected speedup: ~3-4x per batch (AI latency is the bottleneck and it parallelizes well)
 
-### 2. `useSemanticLinkScan.ts` - Add `resetScanTimestamps` mutation
+### 2. Vector Scan (`scan-for-semantic-links/index.ts`) -- Parallel Processing + Larger Batch
 
-New mutation that sets `next_scan_due_at = NULL` on `article_embeddings` for the given category filter, making all articles eligible for scanning again.
+- Increase `BATCH_SIZE_DEFAULT` from 10 to 20
+- Replace the serial `for` loop with `Promise.allSettled` to process articles concurrently
+- Expected speedup: ~3-5x per batch (DB calls parallelize efficiently)
 
-### 3. UI behavior
+### 3. UI Feedback Improvement (`SemanticScanPanel.tsx`)
 
-- Both "Smart Scan (AI)" and "Vector Scan" buttons will automatically reset scan timestamps before starting, so selecting a category and clicking scan always works.
-- A small info line will show "X articles eligible / Y total" for the selected category so you can see the scan scope.
+- Reduce the scan job polling interval from 10s (idle) to 3s while a job is running, so the progress bar updates more frequently and feels snappier
 
 ## Technical Details
 
-### File: `src/hooks/useSemanticLinkScan.ts`
+### Smart Scan Parallel Processing (lines 637-688)
 
-Add a new mutation:
+```text
+BEFORE (serial):
+  for (const emb of embeddings) {
+    const suggestions = await processOneArticle(...);
+    batchSuggestions += suggestions;
+    batchProcessed++;
+  }
 
-```typescript
-const resetScanTimestampsMutation = useMutation({
-  mutationFn: async (categorySlug?: string) => {
-    let query = supabase
-      .from('article_embeddings')
-      .update({ next_scan_due_at: null })
-      .eq('embedding_status', 'completed');
-    
-    if (categorySlug) {
-      query = query.eq('category_id', categorySlug);
-    }
-    
-    const { error } = await query;
-    if (error) throw error;
-  },
-});
+AFTER (parallel):
+  const results = await Promise.allSettled(
+    embeddings.map(emb => 
+      withTimeout(processOneArticle(...), ARTICLE_TIMEOUT_MS, emb.title)
+    )
+  );
+  for (const result of results) {
+    batchProcessed++;
+    if (result.status === 'fulfilled') batchSuggestions += result.value;
+  }
 ```
 
-### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
+Same pattern applied to the Vector Scan function.
 
-- Update `handleSmartScan` and `handleSemanticScan` to call `resetScanTimestamps` first (awaiting it) before triggering the scan.
-- Add a scannable articles count query that shows how many articles are in the selected category.
+### Polling Interval (`useSemanticLinkScan.ts`)
+
+Change the non-processing refetch interval for `semantic-scan-job-active` from 10000ms to `false` (stop polling when idle), and keep 2000ms during processing.
+
