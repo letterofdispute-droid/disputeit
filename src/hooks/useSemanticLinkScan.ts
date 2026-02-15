@@ -453,11 +453,55 @@ export function useSemanticLinkScan() {
 
   const isScanJobRunning = activeScanJob?.status === 'processing';
 
+  // Smart scan mutation (AI-powered)
+  const smartScanMutation = useMutation({
+    mutationFn: async (params: {
+      categorySlug?: string;
+      maxLinksPerArticle?: number;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('scan-for-smart-links', {
+        body: params,
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Smart scan failed');
+      return data as SemanticScanResponse;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({
+        title: 'Smart scan started',
+        description: 'AI is analyzing articles one-by-one in the background...',
+      });
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (msg.includes('Failed to send') || msg.includes('Failed to fetch')) {
+        queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+        toast({
+          title: 'Smart scan continues in background',
+          description: 'The AI scan is running. Suggestions will appear as they are found.',
+        });
+      } else {
+        toast({
+          title: 'Smart scan failed',
+          description: msg,
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
   return {
     // Semantic scan
     semanticScan: scanMutation.mutate,
     isSemanticScanning: scanMutation.isPending,
     lastScanResults,
+
+    // Smart scan (AI)
+    smartScan: smartScanMutation.mutate,
+    isSmartScanning: smartScanMutation.isPending,
     
     // Scan job tracking
     activeScanJob,
