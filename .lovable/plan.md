@@ -1,54 +1,55 @@
-
-
-# Fix: Show All Categories in Scan Dropdown
+# Fix: Category Scan Shows 0 Results (Already Scanned)
 
 ## Problem
 
-The "Scan Category" dropdown only shows "Complaint Rights" because the query fetches individual rows from `article_embeddings` (4,627 rows) but hits the default 1,000-row limit. Since rows are ordered alphabetically, only "complaint-guides" appears in the first 1,000 results.
+The scan correctly filters by category, but all articles have already been scanned recently. Each scan sets `next_scan_due_at` to 7 days in the future, so subsequent scans find 0 eligible articles and immediately complete with "0 suggestions found."
+
+This is by design to prevent duplicate work, but there's no UI option to force a re-scan.
 
 ## Solution
 
-Replace the client-side dedup approach with a direct query to the `blog_categories` table, which has exactly 4 clean rows with proper display names.
+Add a "Force Re-scan" option that resets `next_scan_due_at` for the selected category before starting the scan. This is similar to the existing "Force Re-embed All" button for embeddings.
 
-## Technical Change
+## Changes
+
+### 1. `SemanticScanPanel.tsx` - Add re-scan logic
+
+Before calling `smartScan()` or `semanticScan()`, reset the `next_scan_due_at` timestamps for the selected category (or all categories). Add a visual indicator showing how many articles are eligible vs already scanned.
+
+### 2. `useSemanticLinkScan.ts` - Add `resetScanTimestamps` mutation
+
+New mutation that sets `next_scan_due_at = NULL` on `article_embeddings` for the given category filter, making all articles eligible for scanning again.
+
+### 3. UI behavior
+
+- Both "Smart Scan (AI)" and "Vector Scan" buttons will automatically reset scan timestamps before starting, so selecting a category and clicking scan always works.
+- A small info line will show "X articles eligible / Y total" for the selected category so you can see the scan scope.
+
+## Technical Details
+
+### File: `src/hooks/useSemanticLinkScan.ts`
+
+Add a new mutation:
+
+```typescript
+const resetScanTimestampsMutation = useMutation({
+  mutationFn: async (categorySlug?: string) => {
+    let query = supabase
+      .from('article_embeddings')
+      .update({ next_scan_due_at: null })
+      .eq('embedding_status', 'completed');
+    
+    if (categorySlug) {
+      query = query.eq('category_id', categorySlug);
+    }
+    
+    const { error } = await query;
+    if (error) throw error;
+  },
+});
+```
 
 ### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
 
-Replace lines 68-81 (the `fetchCategories` effect):
-
-**Before:**
-```typescript
-// Fetch distinct blog categories from article_embeddings
-useEffect(() => {
-  const fetchCategories = async () => {
-    const { data } = await supabase
-      .from('article_embeddings')
-      .select('category_id')
-      .order('category_id');
-    if (data) {
-      const unique = [...new Set(data.map(d => d.category_id))];
-      setBlogCategories(unique.map(id => ({ id, label: id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })));
-    }
-  };
-  fetchCategories();
-}, []);
-```
-
-**After:**
-```typescript
-// Fetch blog categories from dedicated table
-useEffect(() => {
-  const fetchCategories = async () => {
-    const { data } = await supabase
-      .from('blog_categories')
-      .select('slug, name')
-      .order('name');
-    if (data) {
-      setBlogCategories(data.map(c => ({ id: c.slug, label: c.name })));
-    }
-  };
-  fetchCategories();
-}, []);
-```
-
-This will show all 4 categories (Complaint Guides, Consumer Rights, Contractors, Legal Tips) with their proper display names from the database.
+- Update `handleSmartScan` and `handleSemanticScan` to call `resetScanTimestamps` first (awaiting it) before triggering the scan.
+- Add a scannable articles count query that shows how many articles are in the selected category.
