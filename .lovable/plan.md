@@ -1,101 +1,67 @@
 
+# Automated Quality Gate for Link Suggestions
 
-# Emergency Fix: Runaway Semantic Scan + Duplicate Prevention
+## Problem Summary
 
-## Immediate Damage Control
+Of the ~23k pending suggestions:
+- **12,638** have anchor text that's just the beginning of the target article title (e.g., "Five Common Blunders When Addressing") -- poor SEO practice
+- **11,013** have relevance scores below 60 -- too low to be useful
+- **134** are self-links (article linking to itself)
+- Many anchors are 5+ words long and read like truncated headlines rather than natural link phrases
 
-### Step 1: Cancel the runaway job via database migration
-Update the active scan job to 'completed' status immediately to stop all self-chaining and pg_cron recovery attempts.
+You cannot review 23k items manually. The fix is a two-phase approach: (1) bulk-clean the bad ones now, (2) prevent them from being created in future scans.
 
-### Step 2: Delete duplicate link suggestions via database migration
-Remove 14,645+ duplicate rows, keeping only the oldest suggestion per (source_post_id, target_slug, status) combination.
+## Phase 1: Database Cleanup (immediate)
 
-## Root Cause Fix
+Run a single migration that:
+
+1. **Auto-reject self-links** (134 rows) -- set status to 'rejected'
+2. **Auto-reject relevance below 55** (~11k rows) -- these are noise
+3. **Auto-reject title-prefix anchors** (~12k rows) -- where the anchor text is just the start of the target title
+4. After cleanup, the remaining pending suggestions should be around 3-5k high-quality ones that are actually worth the "Approve All >= 85%" button
+
+## Phase 2: Stricter Quality Gates in Scan Function
 
 ### File: `supabase/functions/scan-for-semantic-links/index.ts`
 
-Three changes to prevent this from ever happening again:
+**1. Raise minimum relevance threshold from current similarity_threshold to 55 at score level**
 
-**1. Completion Guard (after checking job cancellation, ~line 456)**
+Add a filter after line 285 to skip suggestions with `relevance_score < 55`.
 
-Before fetching the next batch, check if `processed_items >= total_items`. If so, mark the job complete and stop. This prevents the runaway counter from going past the total.
+**2. Enforce anchor word count (2-6 words) at insert time**
 
-```text
-// After fetching jobRow status check:
-const { data: progressCheck } = await supabaseAdmin
-  .from('semantic_scan_jobs')
-  .select('processed_items, total_items')
-  .eq('id', currentJobId)
-  .single();
+After `selectAnchorText` returns, validate:
+- Word count between 2 and 6
+- Character length between 8 and 60
+- Anchor is NOT a prefix of the target title (first N words matching = bad)
+- If validation fails, skip this suggestion entirely rather than inserting bad data
 
-if (progressCheck && progressCheck.processed_items >= progressCheck.total_items) {
-  // Mark complete and stop
-  await supabaseAdmin.from('semantic_scan_jobs').update({
-    status: 'completed', completed_at: new Date().toISOString()
-  }).eq('id', currentJobId);
-  return Response with "Scan complete";
-}
-```
+**3. Explicitly exclude self-links**
 
-**2. Atomic Claim: Set `next_scan_due_at` BEFORE processing (move from line 530 to before line 519)**
+Add a check in both forward and reverse processing to skip when `source.content_id === match.content_id` or `source.slug === match.slug`.
 
-Currently, `next_scan_due_at` is set AFTER processing each article. This means two concurrent instances can both fetch the same article, both process it, and both create suggestions. Fix: Set `next_scan_due_at` immediately when fetching the batch, BEFORE processing, so concurrent instances get different articles.
+**4. Improve the title-segment fallback in `selectAnchorText`**
 
-```text
-// Right after fetching sourceArticles, claim them atomically:
-const articleIds = sourceArticles.map(a => a.id);
-await supabaseAdmin
-  .from('article_embeddings')
-  .update({ next_scan_due_at: getNextScanDate() })
-  .in('id', articleIds);
+The current "last resort" logic at line 154-168 extracts title segments, which produces poor anchors. Change it to:
+- If no quality anchor variant exists AND no primary keyword fits, return `null`
+- When `selectAnchorText` returns null, skip that suggestion instead of inserting with a bad anchor
+- This prevents the "title prefix as anchor" problem at the source
 
-// Then process them (remove the per-article next_scan_due_at update from lines 530 and 540)
-```
+## What This Means For You
 
-**3. Unique constraint on link_suggestions (database migration)**
+After Phase 1 runs, you'll have roughly 3-5k suggestions left that:
+- Have relevance scores above 55
+- Have proper 2-6 word anchor text (not truncated titles)
+- Are not self-links
 
-Add a unique index on `(source_post_id, target_slug)` WHERE `status = 'pending'` to prevent duplicate suggestions at the database level. The insert will use `ON CONFLICT DO NOTHING` to silently skip duplicates.
+You can then use the existing "Approve >= 85%" button to auto-approve the best ~2-4k, and "Reject All" the rest. No manual review of 23k items needed.
 
-Update the insert at line 293:
-```text
-const { error: insertError } = await supabaseAdmin
-  .from('link_suggestions')
-  .upsert(newSuggestions, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
-```
+## Technical Summary
 
-## UI Fix: Cap Progress Display
-
-### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
-
-Line 299 displays raw `processed_items / total_items` which shows "16,770 / 3,662". Cap the displayed processed count to never exceed total:
-
-```text
-<span>
-  {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} / {activeScanJob.total_items.toLocaleString()} articles
-</span>
-```
-
-Also cap `scanJobProgress` percentage to 100% max in the hook.
-
-### File: `src/hooks/useSemanticLinkScan.ts`
-
-Cap the progress calculation so it never exceeds 100:
-
-```text
-const scanJobProgress = activeScanJob
-  ? Math.min(100, Math.round((activeScanJob.processed_items / Math.max(activeScanJob.total_items, 1)) * 100))
-  : 0;
-```
-
-## Summary of All Changes
-
-| Change | Type | Purpose |
-|--------|------|---------|
-| Cancel runaway job | DB migration | Stop the current scan immediately |
-| Delete 14,645 duplicate suggestions | DB migration | Clean up duplicate data |
-| Add unique partial index on link_suggestions | DB migration | Prevent future duplicates at DB level |
-| Completion guard in edge function | Code change | Stop processing when done |
-| Atomic claim (set next_scan_due_at before processing) | Code change | Prevent concurrent double-processing |
-| Cap progress display in UI | Code change | Never show processed > total |
-| Cap progress percentage in hook | Code change | Never show > 100% |
-
+| Change | Type | Impact |
+|--------|------|--------|
+| Auto-reject self-links, low relevance, title-prefix anchors | DB migration | Cleans ~18k bad suggestions immediately |
+| Minimum relevance 55 filter at insert | Edge function | Prevents low-quality suggestions |
+| Anchor validation (2-6 words, no title prefix) | Edge function | Prevents bad anchor text |
+| Self-link exclusion | Edge function | Prevents self-referencing links |
+| selectAnchorText returns null instead of title fallback | Edge function | Stops generating title-based anchors |
