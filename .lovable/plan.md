@@ -1,65 +1,82 @@
 
 
-# Fix: Reset Remaining Ghost "Applied" Suggestions
+# Global Search: Unified Content Discovery
 
-## The Problem
+## What This Solves
 
-The previous migration only caught articles with **zero** links in the HTML. But 2,431 articles have exactly 1 link while 8 suggestions are marked "applied" — leaving **11,894 ghost suggestions** still incorrectly showing as "applied."
+Right now, visitors who want to quickly find a specific template or article have two options: browse through categories manually, or use the AI assistant (which feels heavyweight for a simple lookup). A search bar gives users instant access to all content -- templates, articles, and guides -- with just a few keystrokes.
 
-Current state: Applied: 20,749 / Approved: 8,168
-Expected after fix: Applied: ~8,855 / Approved: ~20,062
+## The Approach: Command Palette (Cmd+K) Style Search
 
-## The Fix
+Rather than cluttering the header with a full search bar, we'll add a compact search icon/trigger in the header that opens a full-screen command palette overlay. This is the pattern used by Stripe, Vercel, and most modern SaaS sites. It works beautifully on both desktop and mobile.
 
-Run a smarter migration that compares the number of "applied" suggestions per article against the actual count of `<a href=` tags in the HTML. Any suggestions exceeding the real link count get reset to "approved."
+## How It Works
 
-### Database Migration
+1. **Search trigger in the header** -- A small search icon (magnifying glass) next to the nav items on desktop, and in the mobile menu. Clicking it opens the search overlay.
 
+2. **Keyboard shortcut** -- Press `Cmd+K` (Mac) or `Ctrl+K` (Windows) anywhere on the site to open search instantly.
+
+3. **Unified search overlay** -- Uses the existing `cmdk` library (already installed) to create a fast, filterable command palette that searches across:
+   - **Templates** (500+ static, instant client-side filtering by title, description, category)
+   - **Blog Articles** (database query with debounced server-side search on title/excerpt)
+   - **Category pages** (13 categories, instant match)
+
+4. **Grouped results** -- Results are grouped by type (Templates, Articles, Categories) with icons and category badges so users can scan quickly.
+
+5. **Direct navigation** -- Clicking a result navigates directly to the full hierarchical URL (e.g., `/templates/housing/repair-maintenance/damp-mould-complaint`).
+
+## What Gets Built
+
+### 1. New Component: `GlobalSearch.tsx`
+A command palette component using `cmdk` (already installed) that:
+- Opens via search icon click or Cmd+K
+- Searches templates client-side (instant, no API calls)
+- Searches articles server-side with debounce (hits the `blog_posts` table)
+- Shows category quick-links as a default view when no query is typed
+- Tracks searches via existing `trackSiteSearch` analytics
+
+### 2. Header Updates
+- **Desktop**: Add a search icon button between the nav and CTA buttons
+- **Mobile**: Add a search icon in the mobile header bar (next to the hamburger menu)
+- Both trigger the same `GlobalSearch` overlay
+
+### 3. Hero Update (Optional Enhancement)
+Keep the existing AI assistant prompt as-is, but add a small "or search manually" text link below it that opens the same global search. This gives users who prefer a simple search an obvious path.
+
+## Technical Details
+
+### Template Search (Client-Side)
+Templates are already loaded as static data (`allTemplates` array, ~500 items). We filter in-memory using a simple lowercase includes match on `title` and `shortDescription`. Results are instant with zero latency.
+
+### Article Search (Server-Side, Debounced)
+Articles live in the database. We query with:
 ```sql
--- For each article, count actual <a href= tags in HTML vs applied suggestions.
--- Reset excess "applied" suggestions back to "approved" for re-processing.
--- Strategy: keep the OLDEST applied suggestions (they're likely the real ones),
--- reset the rest.
+SELECT slug, title, excerpt, category_slug, featured_image_url
+FROM blog_posts
+WHERE status = 'published'
+AND (title ILIKE '%query%' OR excerpt ILIKE '%query%')
+ORDER BY views DESC
+LIMIT 5
+```
+This runs after a 300ms debounce to avoid hammering the database on every keystroke.
 
-WITH article_link_counts AS (
-  SELECT 
-    bp.id as post_id,
-    GREATEST(0, (LENGTH(bp.content) - LENGTH(REPLACE(bp.content, '<a href=', ''))) / 8) as actual_links
-  FROM blog_posts bp
-),
-ranked_suggestions AS (
-  SELECT 
-    ls.id,
-    ls.source_post_id,
-    alc.actual_links,
-    ROW_NUMBER() OVER (
-      PARTITION BY ls.source_post_id 
-      ORDER BY ls.applied_at ASC NULLS LAST, ls.created_at ASC
-    ) as rn
-  FROM link_suggestions ls
-  JOIN article_link_counts alc ON alc.post_id = ls.source_post_id
-  WHERE ls.status = 'applied'
-)
-UPDATE link_suggestions 
-SET status = 'approved', applied_at = NULL
-WHERE id IN (
-  SELECT id FROM ranked_suggestions
-  WHERE rn > actual_links
-);
+### Result Limits
+- Templates: Show top 5 matches (sorted by relevance -- exact title match first, then partial)
+- Articles: Show top 5 matches (sorted by views)
+- Categories: Show top 3 matching categories
+- Total max visible: ~13 results, keeping the overlay clean
+
+### Component Structure
+```
+src/components/search/
+  GlobalSearch.tsx       -- Main command palette with Dialog + Command
 ```
 
-This keeps the N oldest "applied" suggestions (matching the N real links in the HTML) and resets the rest to "approved."
+### Files to Edit
+1. **Create** `src/components/search/GlobalSearch.tsx` -- The command palette component
+2. **Edit** `src/components/layout/Header.tsx` -- Add search trigger (desktop + mobile)
+3. **Edit** `src/components/home/Hero.tsx` -- Add "or search manually" link below AI prompt
 
-### No code changes needed
+### Analytics Integration
+Uses the existing `trackSiteSearch()` function from `useGTM.ts` and the Supabase `trackEvent` from `useAnalytics` -- same pattern as `CategorySearch` already does.
 
-The `apply-links-bulk` function already has the race condition fix from the previous edit. This is purely a data correction.
-
-## After Implementation
-
-1. Stats should show ~20,000 approved and ~9,000 applied
-2. Run "Apply to Articles" to process the recovered suggestions
-3. The error handling added in the previous fix will prevent this from happening again
-
-## Files
-
-- One database migration (SQL only, no code changes)
