@@ -1,62 +1,91 @@
 
-# Server-Side Pagination for Link Suggestions
+# Make "Apply to Articles" Process All Approved Links
 
 ## Problem
 
-Currently, link suggestions are fetched with a `.limit(200)` cap and rendered all at once in a scrollable div. At 20,000+ suggestions, this will freeze the browser and miss most results.
+The `apply-links-bulk` edge function has a hard `.limit(100)` on line 420. It fetches 100 approved suggestions, processes them, and returns. With 14,665 approved links, it only handles ~100 and stops.
 
 ## Solution
 
-Add server-side pagination using Supabase `.range()` and the existing `QueuePagination` component.
+Convert `apply-links-bulk` into a self-chaining background job using the same `semantic_scan_jobs` table already used by other scan functions. The UI will show a progress bar while it processes batches of 20 articles at a time.
 
 ## Changes
 
-### 1. Hook: `src/hooks/useLinkSuggestions.ts`
+### 1. Edge Function: `supabase/functions/apply-links-bulk/index.ts`
 
-- Add `page` and `pageSize` (default 50) parameters to the hook
-- Replace `.limit(200)` with `.range(offset, offset + pageSize - 1)`
-- Add a separate count query using `{ count: 'exact', head: true }` with the same status filter to get `totalCount`
-- Remove client-side category/targetType filtering (move to server-side `.eq()` filters)
-- Remove the outbound count join from the main query (fetch it only for the current page's source IDs to keep it fast)
-- Return `totalCount` and `totalPages` from the hook
+- Add a `selfChainWithRetry` function (same pattern as `scan-for-smart-links`)
+- On first call (no `jobId`): create a `semantic_scan_jobs` row with `scan_type: 'apply'`, count approved suggestions, set `total_items`
+- On chained calls (with `jobId`): fetch next batch of 20 approved suggestions, process them, update `processed_items`, then self-chain
+- Remove the `.limit(100)` cap -- use `.limit(20)` per batch instead (each suggestion may call AI, so keep batches small)
+- Mark job as `completed` when no more approved suggestions remain
+- Add `try/finally` to ensure self-chaining even on errors
+- Return immediately on first call with `{ jobId }` so the browser doesn't time out
 
-New hook signature:
-```typescript
-useLinkSuggestions(status?, categorySlug?, targetType?, page, pageSize, isScanRunning?)
+### 2. Hook: `src/hooks/useLinkSuggestions.ts`
+
+- Update `applyLinksMutation` to accept `{ jobId }` response and no longer expect all results inline
+- After mutation fires, the existing `isScanJobRunning` polling in `useSemanticLinkScan` will pick up the new job automatically (since it queries `semantic_scan_jobs` ordered by `created_at desc`)
+
+### 3. UI: `src/components/admin/seo/links/LinkActions.tsx`
+
+- While an apply job is running (detected via `activeScanJob` with `scan_type: 'apply'`), replace the "Apply to Articles" button with a progress bar showing processed/total
+- Add a "Cancel" button to stop the apply job mid-way
+
+### 4. Component: `src/components/admin/seo/LinkSuggestions.tsx`
+
+- Pass `activeScanJob` data down to `LinkActions` for progress display
+- Detect apply-type jobs vs scan-type jobs
+
+## Batch Flow
+
+```text
+Browser clicks "Apply to Articles"
+  |
+  v
+Edge Function (1st call):
+  - Creates job in semantic_scan_jobs (scan_type: 'apply')
+  - Returns { jobId } immediately
+  |
+  v
+Edge Function (self-chain, batch 1):
+  - Fetches 20 approved suggestions
+  - Processes each (insert links into HTML)
+  - Updates processed_items += batch size
+  - Self-chains to next batch
+  |
+  v
+Edge Function (self-chain, batch N):
+  - No more approved suggestions found
+  - Marks job as 'completed'
+  |
+Browser polls semantic_scan_jobs every 2s
+  - Shows progress bar: "Applied 240 / 14665"
+  - On completion: refreshes link suggestions list
 ```
 
-Query changes:
-```typescript
-const offset = (page - 1) * pageSize;
-let query = supabase
-  .from('link_suggestions')
-  .select('*, blog_posts(title, slug, category_slug)', { count: 'exact' })
-  .order('relevance_score', { ascending: false })
-  .range(offset, offset + pageSize - 1);
+## Technical Details
 
-if (status) query = query.eq('status', status);
-if (categorySlug) query = query.eq('blog_posts.category_slug', categorySlug);
-// targetType filter also server-side
-if (targetType) query = query.eq('target_type', targetType);
-```
+### Edge function batch processing (per chain):
+1. Check job status (stop if cancelled)
+2. Fetch next 20 approved suggestions with `blog_posts` and `article_embeddings` joins
+3. Group by post, process each post's suggestions (same logic as current)
+4. Atomically increment `processed_items` via `SET processed_items = processed_items + X`
+5. Self-chain with `{ jobId }` in `try/finally`
+6. If no suggestions remain, mark job completed
 
-### 2. Component: `src/components/admin/seo/LinkSuggestions.tsx`
+### Progress tracking:
+- Reuses the existing `semantic_scan_jobs` table and polling already in `useSemanticLinkScan`
+- A new `scan_type` field distinguishes apply jobs from scan jobs (or we use the existing `category_filter` field with a sentinel value like `__apply__`)
+- Actually simpler: just add a `job_type` column or use a convention in the existing `status` field
 
-- Add `currentPage` state (default 1)
-- Pass `categoryFilter` and `targetTypeFilter` directly to the hook instead of filtering client-side
-- Reset `currentPage` to 1 when any filter changes
-- Remove the `filteredSuggestions` useMemo (no longer needed -- server does filtering)
-- Remove `max-h-[600px] overflow-y-auto` from the list container (pagination handles the volume)
-- Import and render `QueuePagination` below the suggestions list
-- Clear selected IDs on page change
-
-### 3. No database changes needed
-
-The existing `link_suggestions` table already has indexes on `status` and `relevance_score`.
+### Alternative (no schema change):
+- Store job tracking in a simple convention: when `apply-links-bulk` creates a job, it sets `category_filter = '__apply_links__'` and `similarity_threshold = 0` as markers
+- The UI checks for this marker to show apply progress vs scan progress
 
 ## Result
 
-- Page loads 50 items at a time instead of 200+ in a scrollable div
-- Server-side filtering means accurate counts and no missing items
-- Scales to 20,000+ suggestions without browser lag
-- Reuses the existing `QueuePagination` component for consistent UI
+- All 14,665 approved links get processed reliably in batches of 20
+- Progress bar shows real-time status
+- Cancel button allows stopping mid-way
+- No browser timeouts -- fire-and-forget with polling
+- Same battle-tested self-chaining pattern used by scan functions
