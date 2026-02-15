@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSemanticLinkScan, EmbeddingStats, ScanResult, EmbeddingJob } from '@/hooks/useSemanticLinkScan';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface SemanticScanPanelProps {
   categoryFilter?: string;
@@ -30,6 +31,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
   const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
   const [scanCategory, setScanCategory] = useState<string>('all');
+  const [forceRescan, setForceRescan] = useState(false);
 
   const {
     semanticScan,
@@ -101,7 +103,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
   const handleSemanticScan = async () => {
     const cat = scanCategory !== 'all' ? scanCategory : undefined;
-    await resetScanTimestamps(cat);
+    if (forceRescan) {
+      await resetScanTimestamps(cat);
+    }
     semanticScan({
       categorySlug: cat,
       batchSize,
@@ -112,7 +116,9 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
   const handleSmartScan = async () => {
     const cat = scanCategory !== 'all' ? scanCategory : undefined;
-    await resetScanTimestamps(cat);
+    if (forceRescan) {
+      await resetScanTimestamps(cat);
+    }
     smartScan({
       categorySlug: cat,
       maxLinksPerArticle: maxOutboundLinks,
@@ -382,6 +388,18 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Force re-scan checkbox */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="force-rescan"
+                  checked={forceRescan}
+                  onCheckedChange={(checked) => setForceRescan(checked === true)}
+                />
+                <label htmlFor="force-rescan" className="text-xs text-muted-foreground cursor-pointer">
+                  Force re-scan (ignore 7-day cooldown)
+                </label>
               </div>
 
               {/* === Scan Button (not running) === */}
