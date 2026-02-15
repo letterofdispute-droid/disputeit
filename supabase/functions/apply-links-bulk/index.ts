@@ -448,8 +448,9 @@ async function processBatch(
 
       for (const suggestion of cappedSuggestions) {
         try {
-          const targetUrl = buildTargetUrl(suggestion, suggestion.blog_posts?.category_slug);
           const targetEmbed = (suggestion as any).article_embeddings;
+          const targetCategorySlug = targetEmbed?.category_id || suggestion.blog_posts?.category_slug || 'general';
+          const targetUrl = buildTargetUrl(suggestion, targetCategorySlug);
           const targetPrimaryKeyword = targetEmbed?.primary_keyword || null;
           const targetSecondaryKeywords = targetEmbed?.secondary_keywords || null;
 
