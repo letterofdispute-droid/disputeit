@@ -130,7 +130,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     setShowSmartScanConfirm(false);
   };
 
-  const estimatedCost = (maxArticles || 0) * 0.0015; // ~$0.0015 per article with flash-lite
+  const estimatedCost = (maxArticles || 0) * 0.002; // ~$0.002 per article with Gemini 2.5 Flash
 
   const handleStartBulkEmbedding = (forceReembed = false) => {
     startBulkEmbedding({
@@ -422,7 +422,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     className="h-8 text-xs w-24"
                   />
                   <span className="text-xs text-muted-foreground">
-                    ~${(maxArticles * 0.0015).toFixed(2)} estimated AI cost
+                    ~${(maxArticles * 0.002).toFixed(2)} estimated AI cost
                   </span>
                 </div>
               </div>
