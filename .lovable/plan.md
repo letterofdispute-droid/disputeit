@@ -1,69 +1,101 @@
 
 
-# Fix: Link Suggestions Not Populating During Active Scan
+# Emergency Fix: Runaway Semantic Scan + Duplicate Prevention
 
-## Root Cause
+## Immediate Damage Control
 
-Two issues combine to make it look broken:
+### Step 1: Cancel the runaway job via database migration
+Update the active scan job to 'completed' status immediately to stop all self-chaining and pg_cron recovery attempts.
 
-1. The scan mutation fires `onError` when the HTTP connection times out (expected with long-running edge functions). This shows a scary red error toast even though the scan continues in the background via self-chaining and pg_cron recovery.
+### Step 2: Delete duplicate link suggestions via database migration
+Remove 14,645+ duplicate rows, keeping only the oldest suggestion per (source_post_id, target_slug, status) combination.
 
-2. The `link-suggestions` query is only invalidated in the scan mutation's `onSuccess` handler. Since the frontend sees an error (not success), it never refetches. The 1,641 pending suggestions sitting in the database are invisible to the UI.
+## Root Cause Fix
 
-## Changes
+### File: `supabase/functions/scan-for-semantic-links/index.ts`
 
-### 1. `src/hooks/useLinkSuggestions.ts` -- Auto-refetch during active scan
+Three changes to prevent this from ever happening again:
 
-Add a `refetchInterval` to the suggestions query that activates when a scan job is running. This way, as the background scan creates suggestions, they appear in the UI automatically.
+**1. Completion Guard (after checking job cancellation, ~line 456)**
 
-- Accept an optional `isScanRunning` parameter
-- When true, refetch every 10 seconds so new suggestions appear progressively
-- When false, no auto-refetch (normal behavior)
+Before fetching the next batch, check if `processed_items >= total_items`. If so, mark the job complete and stop. This prevents the runaway counter from going past the total.
 
-### 2. `src/components/admin/seo/LinkSuggestions.tsx` -- Pass scan state to hook
-
-- Import `useSemanticLinkScan` to get `isScanJobRunning`
-- Pass it to `useLinkSuggestions` so the auto-refetch activates during scans
-
-### 3. `src/hooks/useSemanticLinkScan.ts` -- Suppress misleading error toast
-
-The scan mutation's `onError` handler currently shows "Semantic scan failed" for any error, including expected HTTP timeouts. Update it to:
-
-- Check if a scan job exists in `processing` state
-- If yes, show an info toast ("Scan continues in background...") instead of a destructive error
-- If no active job, show the error as before
-
-### 4. `src/hooks/useLinkSuggestions.ts` -- Fix stats to use DB counts
-
-The `getStats` function currently counts from the loaded 200-item array, which is misleading. Add a separate count query that fetches real totals from the database so the "Pending: X, Approved: Y" stats reflect actual numbers.
-
-## Technical Details
-
-### useLinkSuggestions changes:
 ```text
-- Add parameter: isScanRunning?: boolean
-- Add to useQuery options: refetchInterval: isScanRunning ? 10000 : false
-- Add a new useQuery for stats counts:
-    SELECT status, count(*) FROM link_suggestions GROUP BY status
-  This gives accurate totals independent of the 200-row display limit
-```
+// After fetching jobRow status check:
+const { data: progressCheck } = await supabaseAdmin
+  .from('semantic_scan_jobs')
+  .select('processed_items, total_items')
+  .eq('id', currentJobId)
+  .single();
 
-### useSemanticLinkScan onError change:
-```text
-onError: (error) => {
-  // Check if job is still running in background
-  const isJobActive = activeScanJob?.status === 'processing';
-  if (isJobActive || error.message?.includes('Failed to send') || error.message?.includes('Failed to fetch')) {
-    toast({ title: 'Scan continues in background', description: 'The link scan is still running...' });
-  } else {
-    toast({ title: 'Semantic scan failed', ... , variant: 'destructive' });
-  }
+if (progressCheck && progressCheck.processed_items >= progressCheck.total_items) {
+  // Mark complete and stop
+  await supabaseAdmin.from('semantic_scan_jobs').update({
+    status: 'completed', completed_at: new Date().toISOString()
+  }).eq('id', currentJobId);
+  return Response with "Scan complete";
 }
 ```
 
-### LinkSuggestions component:
+**2. Atomic Claim: Set `next_scan_due_at` BEFORE processing (move from line 530 to before line 519)**
+
+Currently, `next_scan_due_at` is set AFTER processing each article. This means two concurrent instances can both fetch the same article, both process it, and both create suggestions. Fix: Set `next_scan_due_at` immediately when fetching the batch, BEFORE processing, so concurrent instances get different articles.
+
 ```text
-- Import useSemanticLinkScan to get isScanJobRunning
-- Pass to useLinkSuggestions(statusFilter, undefined, isScanJobRunning)
-- Use DB-based stats instead of array-based stats
+// Right after fetching sourceArticles, claim them atomically:
+const articleIds = sourceArticles.map(a => a.id);
+await supabaseAdmin
+  .from('article_embeddings')
+  .update({ next_scan_due_at: getNextScanDate() })
+  .in('id', articleIds);
+
+// Then process them (remove the per-article next_scan_due_at update from lines 530 and 540)
 ```
+
+**3. Unique constraint on link_suggestions (database migration)**
+
+Add a unique index on `(source_post_id, target_slug)` WHERE `status = 'pending'` to prevent duplicate suggestions at the database level. The insert will use `ON CONFLICT DO NOTHING` to silently skip duplicates.
+
+Update the insert at line 293:
+```text
+const { error: insertError } = await supabaseAdmin
+  .from('link_suggestions')
+  .upsert(newSuggestions, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
+```
+
+## UI Fix: Cap Progress Display
+
+### File: `src/components/admin/seo/links/SemanticScanPanel.tsx`
+
+Line 299 displays raw `processed_items / total_items` which shows "16,770 / 3,662". Cap the displayed processed count to never exceed total:
+
+```text
+<span>
+  {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} / {activeScanJob.total_items.toLocaleString()} articles
+</span>
+```
+
+Also cap `scanJobProgress` percentage to 100% max in the hook.
+
+### File: `src/hooks/useSemanticLinkScan.ts`
+
+Cap the progress calculation so it never exceeds 100:
+
+```text
+const scanJobProgress = activeScanJob
+  ? Math.min(100, Math.round((activeScanJob.processed_items / Math.max(activeScanJob.total_items, 1)) * 100))
+  : 0;
+```
+
+## Summary of All Changes
+
+| Change | Type | Purpose |
+|--------|------|---------|
+| Cancel runaway job | DB migration | Stop the current scan immediately |
+| Delete 14,645 duplicate suggestions | DB migration | Clean up duplicate data |
+| Add unique partial index on link_suggestions | DB migration | Prevent future duplicates at DB level |
+| Completion guard in edge function | Code change | Stop processing when done |
+| Atomic claim (set next_scan_due_at before processing) | Code change | Prevent concurrent double-processing |
+| Cap progress display in UI | Code change | Never show processed > total |
+| Cap progress percentage in hook | Code change | Never show > 100% |
+
