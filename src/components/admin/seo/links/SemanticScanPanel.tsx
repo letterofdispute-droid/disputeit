@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -24,6 +26,8 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [showResults, setShowResults] = useState(false);
   const [showOrphans, setShowOrphans] = useState(false);
   const [maxOutboundLinks, setMaxOutboundLinks] = useState(8);
+  const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
+  const [scanCategory, setScanCategory] = useState<string>('all');
 
   const {
     semanticScan,
@@ -61,9 +65,24 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     fetchEmbeddingStats().then(setEmbeddingStats);
   }, [fetchEmbeddingStats, activeJob?.status]);
 
+  // Fetch distinct blog categories from article_embeddings
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('article_embeddings')
+        .select('category_id')
+        .order('category_id');
+      if (data) {
+        const unique = [...new Set(data.map(d => d.category_id))];
+        setBlogCategories(unique.map(id => ({ id, label: id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })));
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleSemanticScan = () => {
     semanticScan({
-      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
+      categorySlug: scanCategory !== 'all' ? scanCategory : undefined,
       batchSize,
       similarityThreshold: similarityThreshold / 100,
       maxLinksPerArticle: maxOutboundLinks,
@@ -72,14 +91,14 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
   const handleSmartScan = () => {
     smartScan({
-      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
+      categorySlug: scanCategory !== 'all' ? scanCategory : undefined,
       maxLinksPerArticle: maxOutboundLinks,
     });
   };
 
   const handleStartBulkEmbedding = (forceReembed = false) => {
     startBulkEmbedding({
-      category_filter: categoryFilter !== 'all' ? categoryFilter : undefined,
+      category_filter: scanCategory !== 'all' ? scanCategory : undefined,
       forceReembed,
     });
   };
@@ -92,7 +111,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
   const handleResetEmbeddings = () => {
     resetEmbeddings({
-      category_filter: categoryFilter !== 'all' ? categoryFilter : undefined,
+      category_filter: scanCategory !== 'all' ? scanCategory : undefined,
     });
   };
 
@@ -325,6 +344,22 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </div>
                 </div>
               )}
+
+              {/* Category selector for scans */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Scan Category</Label>
+                <Select value={scanCategory} onValueChange={setScanCategory}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {blogCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* === Scan Button (not running) === */}
               {!isScanJobRunning && (
