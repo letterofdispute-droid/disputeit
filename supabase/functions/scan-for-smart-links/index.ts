@@ -17,6 +17,7 @@ interface SmartScanRequest {
   jobId?: string;
   categorySlug?: string;
   maxLinksPerArticle?: number;
+  maxArticles?: number;
 }
 
 interface AISuggestion {
@@ -232,7 +233,7 @@ Find 7-10 natural anchor phrases in the body text above that link to the most re
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-2.5-flash-lite',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -520,7 +521,7 @@ serve(async (req) => {
   }
 
   try {
-    const { jobId, categorySlug, maxLinksPerArticle = 10 } = await req.json() as SmartScanRequest;
+    const { jobId, categorySlug, maxLinksPerArticle = 10, maxArticles } = await req.json() as SmartScanRequest;
 
     // Auth check
     const isSelfChain = req.headers.get('Authorization')?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -534,7 +535,7 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    console.log('[SMART] Starting', { jobId, categorySlug, maxLinksPerArticle });
+    console.log('[SMART] Starting', { jobId, categorySlug, maxLinksPerArticle, maxArticles });
 
     // ── Job tracking ──
     let currentJobId = jobId;
@@ -551,10 +552,13 @@ serve(async (req) => {
 
       const { count: totalCount } = await countQuery;
 
+      // Cap total_items at maxArticles if provided
+      const effectiveTotal = maxArticles ? Math.min(totalCount || 0, maxArticles) : (totalCount || 0);
+
       const { data: newJob, error: jobError } = await supabaseAdmin
         .from('semantic_scan_jobs')
         .insert({
-          total_items: totalCount || 0,
+          total_items: effectiveTotal,
           similarity_threshold: 0.70,
           category_filter: categorySlug || null,
         })
@@ -580,7 +584,7 @@ serve(async (req) => {
       });
     }
 
-    // Completion guard
+    // Completion guard (also respects maxArticles limit via total_items cap)
     if (jobRow && jobRow.processed_items >= jobRow.total_items) {
       await supabaseAdmin.from('semantic_scan_jobs').update({
         status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -715,10 +719,10 @@ serve(async (req) => {
         if (freshJob?.status === 'cancelled' || freshJob?.status === 'failed') {
           console.log(`[SMART] Job ${freshJob.status}, stopping chain`);
         } else {
-          await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle });
+          await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle, maxArticles });
         }
       } catch (_) {
-        await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle });
+        await selfChainWithRetry({ jobId: currentJobId, categorySlug, maxLinksPerArticle, maxArticles });
       }
     }
 
