@@ -1,34 +1,36 @@
 
+# Show Article Counts in Category Dropdown
 
-# Revert to Gemini 2.5 Flash and Fix Cost Estimate
-
-## Changes
-
-### 1. Revert model back to Gemini 2.5 Flash
-
-**File: `supabase/functions/scan-for-smart-links/index.ts`** (line 236)
-
-Change `google/gemini-2.5-flash-lite` back to `google/gemini-2.5-flash`.
-
-### 2. Update cost estimate on frontend
+## What changes
 
 **File: `src/components/admin/seo/links/SemanticScanPanel.tsx`**
 
-Update the per-article cost constant from `0.0015` to `0.002` (reflecting Flash pricing: ~2,000-4,000 input tokens + ~500 output tokens per article at Flash rates).
+### 1. Fetch counts per category in a single query
 
-Two locations:
-- Line 133: the `estimatedCost` variable
-- Line 425: the inline display text
+Replace the current category fetch (lines 102-113) with a query that fetches categories AND their published article counts together. Use a single aggregation query:
 
-Both will use `0.002` instead of `0.0015`.
+```sql
+SELECT category_slug, COUNT(*) as count 
+FROM blog_posts 
+WHERE status = 'published' 
+GROUP BY category_slug
+```
 
-### 3. Dynamic estimate when category is selected
+Then merge these counts into the `blogCategories` state so each entry has `{ id, label, count }`.
 
-The estimate already updates dynamically based on the `maxArticles` input value. No additional query is needed since the user manually sets how many articles to process, and the cost scales with that number. The formula `maxArticles * 0.002` gives a clear estimate (e.g., 3000 articles = ~$6.00).
+### 2. Show counts in the dropdown
 
-### Result
+Update the `SelectItem` rendering (line 418) to display:
+- "Contractors (8)" instead of just "Contractors"
+- "All Categories (4,789)" with the total sum
 
-- Model: Gemini 2.5 Flash (better quality anchors)
-- Cost display: ~$0.002 per article (accurate for Flash)
-- Example: 3000 articles shows ~$6.00 instead of ~$4.50
+### 3. Auto-set maxArticles on category change
 
+Keep the existing `useEffect` that sets `maxArticles` when category changes, but source the count from the category list data instead of a separate query. Remove the now-redundant `categoryArticleCount` query.
+
+### Technical detail
+
+- The category list state type changes from `{ id: string; label: string }[]` to `{ id: string; label: string; count: number }[]`
+- A single `useQuery` replaces both the manual `useEffect` fetch and the `categoryArticleCount` query
+- The "available" label next to "Max articles" still shows the count from the selected category
+- Cost estimate continues to use `maxArticles * 0.002`
