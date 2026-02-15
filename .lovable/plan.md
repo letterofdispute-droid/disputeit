@@ -1,90 +1,53 @@
 
 
-# Enhanced Global Search Analytics
+# Fix: Reset All Ghost "Applied" Suggestions (Take 3)
 
-## The Gap
+## The Root Cause
 
-The new Global Search (Cmd+K) only pushes events to GTM via `trackSiteSearch`. It does **not** write to the `analytics_events` database table. The existing `SiteSearchReport` in the admin dashboard reads exclusively from `analytics_events` where `event_type = 'site_search'` -- so global search activity is invisible in your dashboard.
+The previous two migrations used a flawed strategy: counting total `<a href=` tags in the HTML and assuming the oldest N "applied" suggestions matched those links. But those existing links are pre-existing content links -- they have nothing to do with our link suggestions system.
 
-Meanwhile, `CategorySearch` correctly tracks to **both** GTM and the database. We need to bring GlobalSearch up to the same standard and then add richer tracking.
+**Verified data:**
+- Total "applied" suggestions: 8,740
+- Suggestions where the anchor text actually appears as a link (`>anchor</a>`): 583
+- Ghost suggestions (marked applied but link doesn't exist): 8,157
 
-## What Gets Tracked
+## The Fix
 
-Standard site search analytics track these key metrics:
+This time, the approach is definitive: check each "applied" suggestion individually to see if its specific anchor text exists as a clickable link in the source article's HTML. If not, reset it to "approved."
 
-1. **Search queries** -- what users type (already tracked to GTM, missing from DB)
-2. **Results count** -- how many results were shown (already tracked to GTM)
-3. **Zero-result searches** -- queries that returned nothing (derivable from results count)
-4. **Search location** -- where the search was triggered from (hero link, header icon, Cmd+K)
-5. **Result clicks (click-through)** -- which result the user selected and its type (template/article/category)
-6. **Click position** -- rank of the clicked result (1st, 2nd, 3rd...)
-7. **Search refinements** -- when a user modifies their query within the same session
-8. **Search exits** -- when a user closes search without clicking any result (abandonment)
-9. **Time to click** -- how long between search and result selection
-10. **Result type distribution** -- breakdown of templates vs articles vs categories in results
+### Database Migration
 
-## Implementation
-
-### 1. Add Database Tracking to GlobalSearch (`src/components/search/GlobalSearch.tsx`)
-
-Import `useAnalytics` and fire `site_search` events to the database (matching the pattern in `CategorySearch`):
-
-- **On search** (debounced): Track `site_search` with `search_term`, `results_count`, `search_location`, `result_breakdown` (templates/articles/categories counts), and `trigger_method` (keyboard shortcut, header icon, or hero link)
-- **On result click**: Track a new `search_click` event with the selected item's type, slug, position in the list, and time elapsed since search
-- **On close without click**: Track `search_exit` event with the last query and whether results were shown
-
-### 2. New Event Types in `useAnalytics` (`src/hooks/useAnalytics.ts`)
-
-Add two new event types to the `EventType` union:
-- `search_click` -- fired when a user selects a search result
-- `search_exit` -- fired when search closes without a selection
-
-### 3. Enhanced SiteSearchReport (`src/components/admin/analytics/SiteSearchReport.tsx`)
-
-Extend the existing report to display the new data:
-
-- **Click-through rate (CTR)**: Percentage of searches that led to a result click
-- **Popular clicked results**: Table showing which specific templates/articles get clicked most from search
-- **Result type breakdown**: Pie chart showing template vs article vs category clicks
-- **Search-to-click time**: Average time between query and selection
-- **Abandonment rate**: Percentage of searches closed without selecting a result
-- **Search trigger breakdown**: Where users open search from (header, hero, keyboard)
-
-### 4. Pass Trigger Source Through GlobalSearch
-
-Update `GlobalSearchProps` to accept an optional `triggerSource` prop so the Header and Hero can pass context:
-- Header icon click: `trigger_source: 'header'`
-- Hero "search manually" link: `trigger_source: 'hero'`
-- Keyboard shortcut: `trigger_source: 'keyboard'`
-
-## Files to Edit
-
-1. **`src/hooks/useAnalytics.ts`** -- Add `search_click` and `search_exit` to EventType union
-2. **`src/components/search/GlobalSearch.tsx`** -- Add database tracking (site_search, search_click, search_exit events), pass trigger source, track timing
-3. **`src/components/admin/analytics/SiteSearchReport.tsx`** -- Add CTR, clicked results table, result type pie chart, abandonment rate, trigger breakdown
-4. **`src/components/layout/Header.tsx`** -- Pass `triggerSource="header"` to GlobalSearch
-5. **`src/components/home/Hero.tsx`** -- Pass `triggerSource="hero"` to GlobalSearch
-
-## Data Structure
-
-Events written to `analytics_events`:
-
+```sql
+-- Reset "applied" suggestions where the anchor text does NOT exist 
+-- as a link in the source article's HTML content.
+-- This is a direct verification: does ">anchor_text</a>" appear in the content?
+UPDATE link_suggestions ls
+SET status = 'approved', applied_at = NULL
+FROM blog_posts bp
+WHERE bp.id = ls.source_post_id
+  AND ls.status = 'applied'
+  AND bp.content NOT LIKE '%>' || ls.anchor_text || '</a>%';
 ```
-site_search: {
-  search_term, results_count, search_location: "global_search",
-  trigger_source: "header" | "hero" | "keyboard",
-  template_results: number, article_results: number, category_results: number
-}
 
-search_click: {
-  search_term, result_type: "template" | "article" | "category",
-  result_slug, result_title, click_position: number,
-  time_to_click_ms: number, total_results: number
-}
+This resets the 8,157 ghost suggestions back to "approved" and keeps only the 583 that are genuinely applied.
 
-search_exit: {
-  search_term, had_results: boolean, results_count: number,
-  trigger_source, session_duration_ms: number
-}
-```
+### Expected Result After Migration
+
+- Applied: ~583 (only suggestions with verified links in the HTML)
+- Approved: ~28,334 (20,177 current + 8,157 recovered)
+- Rejected: 1,405 (unchanged)
+
+### No Code Changes Needed
+
+The `apply-links-bulk` edge function already has the race condition fixes from the previous edit. This is purely a data correction.
+
+## After Implementation
+
+1. Stats will show ~28k approved and ~583 applied
+2. Run "Apply to Articles" to process the recovered suggestions
+3. The existing error handling will prevent ghost applications going forward
+
+## Files
+
+- One database migration (SQL only)
 
