@@ -130,7 +130,7 @@ const Hero = () => {
       />
 
       {/* Global Search */}
-      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} triggerSource="hero" />
     </section>
   );
 };

@@ -287,7 +287,7 @@ const Header = () => {
           </div>
         </div>
       </div>
-      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} triggerSource="header" />
     </header>
   );
 };

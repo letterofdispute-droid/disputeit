@@ -16,6 +16,7 @@ import { templateCategories } from '@/data/templateCategories';
 import { inferSubcategory } from '@/data/subcategoryMappings';
 import { supabase } from '@/integrations/supabase/client';
 import { trackSiteSearch } from '@/hooks/useGTM';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface ArticleResult {
   slug: string;
@@ -34,29 +35,65 @@ function getTemplateUrl(template: { slug: string; category: string; id: string }
 interface GlobalSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  triggerSource?: 'header' | 'hero' | 'keyboard';
 }
 
-const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
+const GlobalSearch = ({ open, onOpenChange, triggerSource = 'keyboard' }: GlobalSearchProps) => {
   const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
   const [query, setQuery] = useState('');
   const [articles, setArticles] = useState<ArticleResult[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const lastTrackedQuery = useRef('');
+  const openedAtRef = useRef<number>(0);
+  const searchTimestampRef = useRef<number>(0);
+  const didClickRef = useRef(false);
+  const activeTriggerRef = useRef<string>(triggerSource);
+  const lastQueryRef = useRef('');
+  const lastResultsCountRef = useRef(0);
 
-  // Reset on close
+  // Track the actual trigger source (keyboard shortcut overrides prop)
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      openedAtRef.current = Date.now();
+      didClickRef.current = false;
+      activeTriggerRef.current = triggerSource;
+    }
+  }, [open, triggerSource]);
+
+  // Reset on close + track exit
+  useEffect(() => {
+    if (!open && openedAtRef.current > 0) {
+      if (!didClickRef.current && lastQueryRef.current.length >= 2) {
+        trackEvent({
+          eventType: 'search_exit',
+          eventData: {
+            search_term: lastQueryRef.current,
+            had_results: lastResultsCountRef.current > 0,
+            results_count: lastResultsCountRef.current,
+            trigger_source: activeTriggerRef.current,
+            session_duration_ms: Date.now() - openedAtRef.current,
+            search_location: 'global_search',
+          },
+        });
+      }
+      openedAtRef.current = 0;
       setQuery('');
       setArticles([]);
+      lastQueryRef.current = '';
+      lastResultsCountRef.current = 0;
     }
-  }, [open]);
+  }, [open, trackEvent]);
 
   // Keyboard shortcut
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        if (!open) {
+          activeTriggerRef.current = 'keyboard';
+        }
         onOpenChange(!open);
       }
     };
@@ -64,7 +101,7 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
     return () => document.removeEventListener('keydown', down);
   }, [open, onOpenChange]);
 
-  // Debounced article search
+  // Debounced article search + analytics tracking
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -86,12 +123,32 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
       setArticles(data || []);
       setLoadingArticles(false);
 
-      // Track search
+      const templateResults = getFilteredTemplates(query);
+      const categoryResults = getFilteredCategories(query);
+      const totalResults = templateResults.length + (data?.length || 0) + categoryResults.length;
+
+      lastQueryRef.current = query;
+      lastResultsCountRef.current = totalResults;
+      searchTimestampRef.current = Date.now();
+
+      // Track search (debounced, deduplicated)
       if (query !== lastTrackedQuery.current && query.length >= 3) {
         lastTrackedQuery.current = query;
-        const templateCount = getFilteredTemplates(query).length;
-        const totalResults = templateCount + (data?.length || 0);
         trackSiteSearch(query, totalResults, 'global_search');
+
+        // Write to analytics_events DB
+        trackEvent({
+          eventType: 'site_search',
+          eventData: {
+            search_term: query,
+            results_count: totalResults,
+            search_location: 'global_search',
+            trigger_source: activeTriggerRef.current,
+            template_results: templateResults.length,
+            article_results: data?.length || 0,
+            category_results: categoryResults.length,
+          },
+        });
       }
     }, 300);
 
@@ -127,7 +184,25 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
       .slice(0, 3);
   }, []);
 
-  const handleSelect = (path: string) => {
+  const handleSelect = (path: string, resultType: 'template' | 'article' | 'category', slug: string, title: string, position: number) => {
+    didClickRef.current = true;
+    const timeToClick = searchTimestampRef.current > 0 ? Date.now() - searchTimestampRef.current : 0;
+
+    trackEvent({
+      eventType: 'search_click',
+      eventData: {
+        search_term: lastQueryRef.current,
+        result_type: resultType,
+        result_slug: slug,
+        result_title: title,
+        click_position: position,
+        time_to_click_ms: timeToClick,
+        total_results: lastResultsCountRef.current,
+        search_location: 'global_search',
+        trigger_source: activeTriggerRef.current,
+      },
+    });
+
     onOpenChange(false);
     navigate(path);
   };
@@ -152,11 +227,11 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
         {/* Default: show categories when no query */}
         {!hasQuery && (
           <CommandGroup heading="Browse Categories">
-            {templateCategories.map(category => (
+            {templateCategories.map((category, idx) => (
               <CommandItem
                 key={category.id}
                 value={`cat-${category.id}`}
-                onSelect={() => handleSelect(`/templates/${category.id}`)}
+                onSelect={() => handleSelect(`/templates/${category.id}`, 'category', category.id, category.name, idx + 1)}
                 className="flex items-center gap-3 cursor-pointer"
               >
                 <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -172,11 +247,11 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
         {/* Template results */}
         {filteredTemplates.length > 0 && (
           <CommandGroup heading="Letter Templates">
-            {filteredTemplates.map(template => (
+            {filteredTemplates.map((template, idx) => (
               <CommandItem
                 key={template.slug}
                 value={`tmpl-${template.slug}`}
-                onSelect={() => handleSelect(getTemplateUrl(template))}
+                onSelect={() => handleSelect(getTemplateUrl(template), 'template', template.slug, template.title, idx + 1)}
                 className="flex items-center gap-3 cursor-pointer"
               >
                 <FileText className="h-4 w-4 text-primary flex-shrink-0" />
@@ -197,11 +272,11 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
           <>
             <CommandSeparator />
             <CommandGroup heading="Categories">
-              {filteredCategories.map(category => (
+              {filteredCategories.map((category, idx) => (
                 <CommandItem
                   key={category.id}
                   value={`cat-${category.id}`}
-                  onSelect={() => handleSelect(`/templates/${category.id}`)}
+                  onSelect={() => handleSelect(`/templates/${category.id}`, 'category', category.id, category.name, filteredTemplates.length + idx + 1)}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -218,11 +293,11 @@ const GlobalSearch = ({ open, onOpenChange }: GlobalSearchProps) => {
           <>
             <CommandSeparator />
             <CommandGroup heading="Articles">
-              {articles.map(article => (
+              {articles.map((article, idx) => (
                 <CommandItem
                   key={article.slug}
                   value={`art-${article.slug}`}
-                  onSelect={() => handleSelect(`/articles/${article.category_slug}/${article.slug}`)}
+                  onSelect={() => handleSelect(`/articles/${article.category_slug}/${article.slug}`, 'article', article.slug, article.title, filteredTemplates.length + filteredCategories.length + idx + 1)}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <Newspaper className="h-4 w-4 text-accent flex-shrink-0" />
