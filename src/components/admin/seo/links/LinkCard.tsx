@@ -16,6 +16,26 @@ interface LinkCardProps {
   onUpdateAnchor: (id: string, anchor: string) => void;
 }
 
+function renderHighlightedSnippet(snippet: string, anchor: string) {
+  const lowerSnippet = snippet.toLowerCase();
+  const lowerAnchor = anchor.toLowerCase();
+  const idx = lowerSnippet.indexOf(lowerAnchor);
+  
+  if (idx === -1) {
+    return <span className="italic">"…{snippet}…"</span>;
+  }
+
+  const before = snippet.slice(0, idx);
+  const match = snippet.slice(idx, idx + anchor.length);
+  const after = snippet.slice(idx + anchor.length);
+
+  return (
+    <span className="italic">
+      "…{before}<mark className="bg-primary/20 text-primary font-medium px-0.5 rounded-sm not-italic">{match}</mark>{after}…"
+    </span>
+  );
+}
+
 export default function LinkCard({
   suggestion,
   isSelected,
@@ -149,11 +169,12 @@ export default function LinkCard({
               )}
             </div>
 
-            {/* Context */}
+            {/* Context Snippet with highlighted anchor */}
             {suggestion.context_snippet && (
-              <p className="text-sm text-muted-foreground italic line-clamp-2">
-                "...{suggestion.context_snippet}..."
-              </p>
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5 border border-border/50">
+                <span className="font-medium text-foreground/70 mr-1">Context:</span>
+                {renderHighlightedSnippet(suggestion.context_snippet, suggestion.anchor_text)}
+              </div>
             )}
 
             {/* Mobile: Actions at bottom */}
