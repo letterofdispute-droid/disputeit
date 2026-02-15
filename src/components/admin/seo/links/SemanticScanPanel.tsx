@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock, Check, Minus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,6 +100,41 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     },
     staleTime: 30 * 1000,
   });
+
+  // Fetch scan status per category (latest job per category)
+  const { data: categoryScanStatus } = useQuery({
+    queryKey: ['category-scan-status'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('semantic_scan_jobs')
+        .select('category_filter, status, total_items, processed_items, total_suggestions, completed_at')
+        .neq('category_filter', '__apply_links__')
+        .not('category_filter', 'is', null)
+        .in('status', ['completed', 'failed'])
+        .order('created_at', { ascending: false });
+      
+      const statusMap = new Map<string, { status: string; total_items: number; processed_items: number; total_suggestions: number; completed_at: string | null }>();
+      for (const job of data || []) {
+        if (job.category_filter && !statusMap.has(job.category_filter)) {
+          statusMap.set(job.category_filter, job);
+        }
+      }
+      return statusMap;
+    },
+    staleTime: 30000,
+  });
+
+  // Helper to get scan status label for a category
+  const getCategoryScanInfo = useMemo(() => {
+    return (catId: string) => {
+      if (!categoryScanStatus) return null;
+      const job = categoryScanStatus.get(catId);
+      if (!job) return null;
+      const isComplete = job.status === 'completed';
+      const isPartial = job.status === 'failed' || (job.processed_items < job.total_items);
+      return { ...job, isComplete: isComplete && !isPartial, isPartial };
+    };
+  }, [categoryScanStatus]);
 
   const handleSemanticScan = async () => {
     const cat = scanCategory !== 'all' ? scanCategory : undefined;
@@ -375,7 +410,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               )}
 
               {/* Category selector for scans */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Scan Category</Label>
                 <Select value={scanCategory} onValueChange={setScanCategory}>
                   <SelectTrigger className="h-8 text-xs">
@@ -383,11 +418,61 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {blogCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
-                    ))}
+                    {blogCategories.map(cat => {
+                      const info = getCategoryScanInfo(cat.id);
+                      return (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <span className="flex items-center justify-between w-full gap-3">
+                            <span>{cat.label}</span>
+                            {info?.isComplete && (
+                              <span className="flex items-center gap-1 text-[10px] text-emerald-600">
+                                <Check className="h-3 w-3" />
+                                scanned
+                              </span>
+                            )}
+                            {info?.isPartial && (
+                              <span className="flex items-center gap-1 text-[10px] text-orange-500">
+                                <AlertTriangle className="h-3 w-3" />
+                                partial
+                              </span>
+                            )}
+                            {!info && (
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <Minus className="h-3 w-3" />
+                              </span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+
+                {/* Selected category scan status summary */}
+                {scanCategory !== 'all' && (() => {
+                  const info = getCategoryScanInfo(scanCategory);
+                  if (!info) return (
+                    <p className="text-[11px] text-muted-foreground ml-1">Never scanned</p>
+                  );
+                  if (info.isComplete) {
+                    const when = info.completed_at ? new Date(info.completed_at) : null;
+                    const dateStr = when ? (
+                      (Date.now() - when.getTime()) < 86400000 
+                        ? `Today at ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                        : when.toLocaleDateString()
+                    ) : 'Unknown';
+                    return (
+                      <p className="text-[11px] text-emerald-600 ml-1">
+                        Last scanned: {dateStr} — {info.total_suggestions.toLocaleString()} suggestions found
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-[11px] text-orange-500 ml-1">
+                      Scan failed at {info.processed_items.toLocaleString()} / {info.total_items.toLocaleString()} articles
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Force re-scan checkbox */}
