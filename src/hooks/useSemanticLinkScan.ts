@@ -92,18 +92,44 @@ export function useSemanticLinkScan() {
     },
   });
 
-  // Fetch active semantic scan job (with polling while processing)
+  // Fetch active discovery scan job (exclude apply jobs)
   const { data: activeScanJob } = useQuery({
     queryKey: ['semantic-scan-job-active'],
     queryFn: async (): Promise<SemanticScanJob | null> => {
       const { data, error } = await supabase
         .from('semantic_scan_jobs')
         .select('*')
+        .neq('category_filter', '__apply_links__')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
+      return data as SemanticScanJob | null;
+    },
+    refetchInterval: (query) => {
+      const job = query.state.data as SemanticScanJob | null;
+      return job?.status === 'processing' ? 2000 : false;
+    },
+  });
+
+  // Fetch active apply job separately
+  const { data: activeApplyJob } = useQuery({
+    queryKey: ['apply-job-active'],
+    queryFn: async (): Promise<SemanticScanJob | null> => {
+      const { data, error } = await supabase
+        .from('semantic_scan_jobs')
+        .select('*')
+        .eq('category_filter', '__apply_links__')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      // Treat overflowed jobs as completed
+      if (data && data.status === 'processing' && data.processed_items > data.total_items) {
+        return { ...data, status: 'completed' } as SemanticScanJob;
+      }
       return data as SemanticScanJob | null;
     },
     refetchInterval: (query) => {
@@ -526,6 +552,10 @@ export function useSemanticLinkScan() {
     scanJobProgress,
     cancelScanJob: cancelScanJobMutation.mutate,
     isCancellingScan: cancelScanJobMutation.isPending,
+
+    // Apply job tracking
+    activeApplyJob,
+    isApplyJobRunning: activeApplyJob?.status === 'processing',
     
     // Bulk embedding
     startBulkEmbedding: bulkEmbeddingMutation.mutate,

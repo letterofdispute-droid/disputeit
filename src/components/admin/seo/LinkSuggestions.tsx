@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
 import { useSemanticLinkScan } from '@/hooks/useSemanticLinkScan';
@@ -19,15 +19,7 @@ export default function LinkSuggestions() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { isScanJobRunning, activeScanJob, cancelScanJob } = useSemanticLinkScan();
-
-  // Detect active apply job (category_filter === '__apply_links__')
-  const activeApplyJob = useMemo(() => {
-    if (activeScanJob?.category_filter === '__apply_links__' && activeScanJob.status === 'processing') {
-      return activeScanJob;
-    }
-    return null;
-  }, [activeScanJob]);
+  const { isScanJobRunning, activeApplyJob, cancelScanJob } = useSemanticLinkScan();
 
   // Reset page when filters change
   useEffect(() => {
