@@ -128,11 +128,15 @@ function selectAnchorText(
   primaryKeyword: string | null,
   title: string,
   sourceKeyword: string | null,
-): string {
+): string | null {
   // Filter to quality variants only — never use full title
   const quality = (anchorVariants || []).filter(a => {
-    if (a.length > 60) return false;
+    const words = a.split(/\s+/);
+    if (words.length < 2 || words.length > 6) return false;
+    if (a.length < 8 || a.length > 60) return false;
     if (a === title) return false;
+    // Reject if anchor is a prefix of the title
+    if (title.toLowerCase().startsWith(a.toLowerCase())) return false;
     const lower = a.toLowerCase();
     if (GENERIC_ANCHOR_STARTERS.some(s => lower.startsWith(s))) return false;
     return true;
@@ -149,23 +153,19 @@ function selectAnchorText(
   }
 
   if (quality.length > 0) return quality[0];
-  if (primaryKeyword && primaryKeyword.length <= 60) return primaryKeyword;
 
-  // Last resort: extract best segment from title
-  let cleaned = title;
-  cleaned = cleaned.replace(/^From\s+['"].+?['"]\s+to\s+['"].+?['"]\s*[:–—-]\s*/i, '');
-  for (const s of GENERIC_ANCHOR_STARTERS) {
-    if (cleaned.toLowerCase().startsWith(s)) {
-      cleaned = cleaned.slice(s.length).trim();
-      break;
+  // Validate primary keyword meets quality standards
+  if (primaryKeyword) {
+    const kwWords = primaryKeyword.split(/\s+/);
+    if (kwWords.length >= 2 && kwWords.length <= 6 && primaryKeyword.length >= 8 && primaryKeyword.length <= 60) {
+      if (!title.toLowerCase().startsWith(primaryKeyword.toLowerCase())) {
+        return primaryKeyword;
+      }
     }
   }
-  const segments = cleaned.split(/[-–—:|,;]/).map(s => s.trim());
-  const best = segments.find(s => {
-    const words = s.split(/\s+/);
-    return words.length >= 2 && words.length <= 5;
-  });
-  return best || cleaned.split(/\s+/).slice(0, 4).join(' ');
+
+  // No quality anchor available — return null to skip this suggestion
+  return null;
 }
 
 function calculateKeywordOverlap(keywordsA: string[], keywordsB: string[]): number {
@@ -233,9 +233,10 @@ async function processOneArticle(
     return 0;
   }
 
-  // Filter out self-links
+  // Filter out self-links (by embedding ID, slug, AND content_id)
   const validMatches = (matches as SemanticMatch[]).filter(m =>
-    String(m.id) !== String(source.id) && m.slug !== source.slug,
+    String(m.id) !== String(source.id) && m.slug !== source.slug &&
+    (!source.content_id || String(m.id) !== String(source.content_id)),
   );
 
   // Delete existing pending suggestions for this source to prevent duplicates on re-runs
@@ -267,10 +268,18 @@ async function processOneArticle(
       source.primary_keyword,
     );
 
+    // Skip if no quality anchor text available
+    if (!anchorText) continue;
+
     const keywordOverlap = calculateKeywordOverlap(
       source.secondary_keywords || [],
       match.secondary_keywords || [],
     );
+
+    const relevanceScore = Math.round((match.similarity * 0.7 + keywordOverlap * 0.3) * 100);
+
+    // Skip low-relevance suggestions
+    if (relevanceScore < 55) continue;
 
     newSuggestions.push({
       source_post_id: source.content_id || source.id,
@@ -282,7 +291,7 @@ async function processOneArticle(
       anchor_source: 'semantic',
       semantic_score: match.similarity,
       keyword_overlap_score: keywordOverlap,
-      relevance_score: Math.round((match.similarity * 0.7 + keywordOverlap * 0.3) * 100),
+      relevance_score: relevanceScore,
       hierarchy_valid: match.hierarchy_valid,
       hierarchy_violation: match.hierarchy_note,
       status: 'pending',
@@ -348,21 +357,27 @@ async function processOneArticle(
 
         if (existing) continue;
 
+        const reverseAnchor = selectAnchorText(source.anchor_variants || [], source.primary_keyword, source.title, null);
+        if (!reverseAnchor) continue; // Skip if no quality anchor
+
+        const reverseRelevance = Math.round(candidate.similarity * 100);
+        if (reverseRelevance < 55) continue; // Skip low relevance
+
         const { error: reverseInsertError } = await supabaseAdmin
           .from('link_suggestions')
-          .insert({
+          .upsert({
             source_post_id: candidateEmbed.content_id,
             target_type: 'article',
             target_slug: source.slug,
             target_title: source.title,
             target_embedding_id: source.id,
-            anchor_text: selectAnchorText(source.anchor_variants || [], source.primary_keyword, source.title, null),
+            anchor_text: reverseAnchor,
             anchor_source: 'semantic-reverse',
             semantic_score: candidate.similarity,
-            relevance_score: Math.round(candidate.similarity * 100),
+            relevance_score: reverseRelevance,
             hierarchy_valid: true,
             status: 'pending',
-          });
+          }, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
 
         if (!reverseInsertError) {
           suggestions++;
