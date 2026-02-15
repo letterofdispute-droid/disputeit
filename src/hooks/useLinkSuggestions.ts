@@ -23,7 +23,14 @@ export interface LinkSuggestion {
   };
 }
 
-export function useLinkSuggestions(status?: string, categorySlug?: string) {
+export interface LinkStatsFromDB {
+  pending: number;
+  approved: number;
+  rejected: number;
+  applied: number;
+}
+
+export function useLinkSuggestions(status?: string, categorySlug?: string, isScanRunning?: boolean) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -57,6 +64,30 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
 
       return data as LinkSuggestion[];
     },
+    refetchInterval: isScanRunning ? 10000 : false,
+  });
+
+  // Fetch accurate stats from DB (not limited by 200-row display cap)
+  const { data: dbStats } = useQuery({
+    queryKey: ['link-suggestions-stats'],
+    queryFn: async (): Promise<LinkStatsFromDB> => {
+      const statuses = ['pending', 'approved', 'rejected', 'applied'] as const;
+      const results = await Promise.all(
+        statuses.map(s =>
+          supabase
+            .from('link_suggestions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', s)
+        )
+      );
+      return {
+        pending: results[0].count || 0,
+        approved: results[1].count || 0,
+        rejected: results[2].count || 0,
+        applied: results[3].count || 0,
+      };
+    },
+    refetchInterval: isScanRunning ? 10000 : 30000,
   });
 
   // Scan for links
@@ -225,8 +256,9 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
     },
   });
 
-  // Get stats
+  // Get stats - use DB counts when available, fallback to array counts
   const getStats = useCallback(() => {
+    if (dbStats) return dbStats;
     if (!suggestions) return { pending: 0, approved: 0, rejected: 0, applied: 0 };
     
     return {
@@ -235,7 +267,7 @@ export function useLinkSuggestions(status?: string, categorySlug?: string) {
       rejected: suggestions.filter(s => s.status === 'rejected').length,
       applied: suggestions.filter(s => s.status === 'applied').length,
     };
-  }, [suggestions]);
+  }, [suggestions, dbStats]);
 
   // Get high-relevance pending IDs
   const getHighRelevanceIds = useCallback((threshold = 85) => {
