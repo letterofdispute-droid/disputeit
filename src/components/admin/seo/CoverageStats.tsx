@@ -1,16 +1,28 @@
 import { useMemo } from 'react';
 import { FileText, Link2, CheckCircle2, LayoutGrid, TrendingUp } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { useContentPlans } from '@/hooks/useContentPlans';
 import { useQueueStats } from '@/hooks/useQueueStats';
-import { useLinkSuggestions } from '@/hooks/useLinkSuggestions';
+import { supabase } from '@/integrations/supabase/client';
 import { allTemplates } from '@/data/allTemplates';
 import { VALUE_TIERS, ValueTier } from '@/config/articleTypes';
 
 export default function CoverageStats() {
   const { plans } = useContentPlans();
   const { data: queueStats } = useQueueStats();
-  const { suggestions } = useLinkSuggestions();
+
+  const { data: linkCounts } = useQuery({
+    queryKey: ['link-counts-overview'],
+    queryFn: async () => {
+      const [applied, pending] = await Promise.all([
+        supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'applied'),
+        supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      ]);
+      return { applied: applied.count || 0, pending: pending.count || 0 };
+    },
+    staleTime: 30000,
+  });
 
   const stats = useMemo(() => {
     const totalTemplates = allTemplates.length;
@@ -21,8 +33,8 @@ export default function CoverageStats() {
     const articlesPublished = queueStats?.blogPublished || 0;
     const articlesQueued = queueStats?.queued || 0;
 
-    const linksPending = suggestions?.filter(s => s.status === 'pending').length || 0;
-    const linksApplied = suggestions?.filter(s => s.status === 'applied').length || 0;
+    const linksPending = linkCounts?.pending || 0;
+    const linksApplied = linkCounts?.applied || 0;
 
     // Calculate tier distribution
     const tierCounts = {
@@ -59,7 +71,7 @@ export default function CoverageStats() {
       tierCounts,
       tierDistribution,
     };
-  }, [plans, queueStats, suggestions]);
+  }, [plans, queueStats, linkCounts]);
 
   const statCards = [
     {
