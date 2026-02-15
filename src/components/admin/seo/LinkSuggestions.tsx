@@ -28,11 +28,14 @@ export default function LinkSuggestions() {
     bulkUpdateStatus,
     applyLinks,
     isApplyingLinks,
+    deleteSuggestions,
     getStats,
     getHighRelevanceIds,
     getApprovedIds,
     bulkUpdateAllByStatus,
     isBulkUpdatingAll,
+    bulkDeleteByStatus,
+    isBulkDeleting,
   } = useLinkSuggestions(statusFilter === 'all' ? undefined : statusFilter, undefined, isScanJobRunning);
 
   const stats = getStats();
@@ -118,6 +121,20 @@ export default function LinkSuggestions() {
     });
   };
 
+  const handleClearAll = () => {
+    bulkDeleteByStatus({
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      categorySlug: categoryFilter !== 'all' ? categoryFilter : undefined,
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size > 0) {
+      deleteSuggestions(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    }
+  };
+
   const handleScan = () => {
     const params: { categorySlug?: string } = {};
     if (categoryFilter !== 'all') {
@@ -162,9 +179,12 @@ export default function LinkSuggestions() {
           pendingCount={stats.pending}
           approvedCount={stats.approved}
           filteredCount={filteredSuggestions.length}
+          statusFilter={statusFilter}
+          totalForStatus={statusFilter === 'all' ? (stats.pending + stats.approved + stats.rejected + stats.applied) : (stats as any)[statusFilter] || 0}
           isScanning={isScanning}
           isApplying={isApplyingLinks}
           isBulkUpdating={isBulkUpdatingAll}
+          isBulkDeleting={isBulkDeleting}
           onScan={handleScan}
           onApproveHighRelevance={handleApproveHighRelevance}
           onApproveSelected={handleApproveSelected}
@@ -172,6 +192,8 @@ export default function LinkSuggestions() {
           onApplyApproved={handleApplyApproved}
           onApproveAll={handleApproveAll}
           onRejectAll={handleRejectAll}
+          onClearAll={handleClearAll}
+          onDeleteSelected={handleDeleteSelected}
         />
       </div>
 

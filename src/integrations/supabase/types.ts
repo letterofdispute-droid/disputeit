@@ -1313,6 +1313,10 @@ export type Database = {
         }
         Returns: string
       }
+      bulk_delete_link_suggestions: {
+        Args: { p_category_slug?: string; p_status?: string }
+        Returns: number
+      }
       bulk_update_link_status: {
         Args: {
           p_category_slug?: string
