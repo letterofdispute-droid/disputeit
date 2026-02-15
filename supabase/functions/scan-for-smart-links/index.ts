@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // ── Constants ──
-const BATCH_SIZE = 3; // AI calls are heavier — 3 articles per invocation
+const BATCH_SIZE = 5; // Process 5 articles concurrently per invocation
 const ARTICLE_TIMEOUT_MS = 45_000; // 45s per article (AI call takes longer)
 const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
@@ -635,56 +635,57 @@ serve(async (req) => {
     let batchProcessed = 0;
 
     try {
-      for (const emb of embeddings as any[]) {
-        try {
-          if (!emb.content_id) {
-            batchProcessed++;
-            continue;
-          }
+      // Process all articles in the batch concurrently for speed
+      const processArticle = async (emb: any): Promise<{ suggestions: number; error?: string }> => {
+        if (!emb.content_id) return { suggestions: 0 };
 
-          // Fetch full article content
-          const { data: article } = await supabaseAdmin
-            .from('blog_posts')
-            .select('id, slug, title, content, category_slug, related_templates, content_plan_id')
-            .eq('id', emb.content_id)
-            .single();
+        const { data: article } = await supabaseAdmin
+          .from('blog_posts')
+          .select('id, slug, title, content, category_slug, related_templates, content_plan_id')
+          .eq('id', emb.content_id)
+          .single();
 
-          if (!article) {
-            batchProcessed++;
-            continue;
-          }
+        if (!article) return { suggestions: 0 };
 
-          const suggestions = await withTimeout(
-            processOneArticle(supabaseAdmin, article, emb, maxLinksPerArticle),
-            ARTICLE_TIMEOUT_MS,
-            article.title,
-          );
+        const suggestions = await withTimeout(
+          processOneArticle(supabaseAdmin, article, emb, maxLinksPerArticle),
+          ARTICLE_TIMEOUT_MS,
+          article.title,
+        );
+        return { suggestions };
+      };
 
-          batchSuggestions += suggestions;
-          batchProcessed++;
+      const results = await Promise.allSettled(
+        (embeddings as any[]).map(emb => processArticle(emb))
+      );
 
-        } catch (articleError) {
-          const msg = articleError instanceof Error ? articleError.message : 'Unknown';
+      let rateLimited = false;
+      let paymentRequired = false;
+
+      for (const result of results) {
+        batchProcessed++;
+        if (result.status === 'fulfilled') {
+          batchSuggestions += result.value.suggestions;
+        } else {
+          const msg = result.reason instanceof Error ? result.reason.message : 'Unknown';
           console.error(`[SMART] Article failed:`, msg);
-          
-          // If rate limited, stop and let self-chain retry later
-          if (msg.includes('RATE_LIMIT')) {
-            console.log('[SMART] Rate limited — pausing for 30s before self-chain');
-            await new Promise(r => setTimeout(r, 30_000));
-            break;
-          }
-          if (msg.includes('PAYMENT_REQUIRED')) {
-            // Stop the job entirely
-            await supabaseAdmin.from('semantic_scan_jobs').update({
-              status: 'failed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-            }).eq('id', currentJobId);
-            return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted', jobId: currentJobId }), {
-              status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          
-          batchProcessed++;
+          if (msg.includes('RATE_LIMIT')) rateLimited = true;
+          if (msg.includes('PAYMENT_REQUIRED')) paymentRequired = true;
         }
+      }
+
+      if (paymentRequired) {
+        await supabaseAdmin.from('semantic_scan_jobs').update({
+          status: 'failed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq('id', currentJobId);
+        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted', jobId: currentJobId }), {
+          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (rateLimited) {
+        console.log('[SMART] Rate limited — pausing 30s before self-chain');
+        await new Promise(r => setTimeout(r, 30_000));
       }
 
       // Update progress
