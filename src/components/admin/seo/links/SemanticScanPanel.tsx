@@ -365,7 +365,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                   <div>
                     <span className="font-medium text-primary">
-                      Scan complete — {activeScanJob.total_suggestions.toLocaleString()} link suggestions found
+                      Scan complete — {activeScanJob.total_suggestions.toLocaleString()} new suggestions from this scan
                     </span>
                     <p className="text-muted-foreground mt-0.5">
                       Scanned {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} articles. Review them in the Link Review tab.
