@@ -65,16 +65,15 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     fetchEmbeddingStats().then(setEmbeddingStats);
   }, [fetchEmbeddingStats, activeJob?.status]);
 
-  // Fetch distinct blog categories from article_embeddings
+  // Fetch blog categories from dedicated table
   useEffect(() => {
     const fetchCategories = async () => {
       const { data } = await supabase
-        .from('article_embeddings')
-        .select('category_id')
-        .order('category_id');
+        .from('blog_categories')
+        .select('slug, name')
+        .order('name');
       if (data) {
-        const unique = [...new Set(data.map(d => d.category_id))];
-        setBlogCategories(unique.map(id => ({ id, label: id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })));
+        setBlogCategories(data.map(c => ({ id: c.slug, label: c.name })));
       }
     };
     fetchCategories();
