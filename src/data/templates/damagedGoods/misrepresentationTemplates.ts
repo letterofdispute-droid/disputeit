@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
@@ -39,7 +33,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have saved the original listing and will report false advertising if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'fake-reviews-complaint', slug: 'fake-reviews-complaint', category: 'Damaged Goods',
@@ -67,7 +61,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I will report this to consumer protection authorities and review watchdogs.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'size-measurement-discrepancy', slug: 'size-measurement-discrepancy', category: 'Damaged Goods',
@@ -93,7 +87,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Products must match their stated specifications.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'material-misrepresentation', slug: 'material-misrepresentation', category: 'Damaged Goods',
@@ -119,7 +113,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Material misrepresentation may constitute fraud and I will report if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'country-origin-misrepresentation', slug: 'country-origin-misrepresentation', category: 'Damaged Goods',
@@ -145,7 +139,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'False origin claims violate trading standards and I will report if unresolved.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'organic-certification-fraud', slug: 'organic-certification-fraud', category: 'Damaged Goods',
@@ -171,7 +165,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I will report this to the relevant certification body and trading standards.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'secondhand-sold-as-new', slug: 'secondhand-sold-as-new', category: 'Damaged Goods',
@@ -196,7 +190,7 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Selling used goods as new is fraud and I will report if necessary.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'photo-real-product-mismatch', slug: 'photo-product-mismatch', category: 'Damaged Goods',
@@ -222,6 +216,6 @@ export const misrepresentationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have side-by-side photos showing the discrepancy.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Leasehold Reform Act', approvedPhrases: ['Under leasehold regulations', 'In accordance with the lease terms'] },
@@ -40,7 +34,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I request a hearing if this appeal is not granted.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect fair and consistent enforcement of community rules.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-selective-enforcement', slug: 'hoa-selective-enforcement-complaint', category: 'HOA & Property', title: 'Selective Enforcement Complaint',
@@ -66,7 +60,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. Selective enforcement is legally actionable.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect consistent, non-discriminatory enforcement of all community rules.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-reasonable-accommodation', slug: 'hoa-reasonable-accommodation-request', category: 'HOA & Property', title: 'Reasonable Accommodation Request',
@@ -92,7 +86,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. Under fair housing law, you must engage in an interactive process to consider this request.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Failure to provide reasonable accommodations may constitute housing discrimination.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-harassment-by-board', slug: 'hoa-board-harassment-complaint', category: 'HOA & Property', title: 'Board Harassment Complaint',
@@ -117,7 +111,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If harassment continues, I will pursue legal remedies including reporting to the state attorney general.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I am documenting all incidents and retaining legal counsel.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-rental-restriction-dispute', slug: 'hoa-rental-restriction-dispute', category: 'HOA & Property', title: 'Rental Restriction Dispute',
@@ -142,7 +136,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days. I may seek legal review of this restriction.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Property owners have fundamental rights that cannot be arbitrarily restricted.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-cease-desist-neighbor', slug: 'hoa-cease-desist-to-neighbor', category: 'HOA & Property', title: 'Cease and Desist Letter to Neighbor',
@@ -167,7 +161,7 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'If this behavior does not stop immediately, I will pursue legal action including seeking damages and injunctive relief.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'This letter is being sent via certified mail and a copy is being retained for legal proceedings.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-mediation-request', slug: 'hoa-mediation-request', category: 'HOA & Property', title: 'Mediation Request Letter',
@@ -191,6 +185,6 @@ export const violationTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days indicating your willingness to participate in mediation.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Mediation is a cost-effective alternative to litigation and I hope you will agree to participate in good faith.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

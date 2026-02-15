@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State Consumer Protection Laws', approvedPhrases: ['Under applicable consumer protection laws', 'In accordance with my consumer rights'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Consumer Rights Act 2015', approvedPhrases: ['Under the Consumer Rights Act 2015', 'In accordance with UK consumer law'] },
@@ -40,7 +34,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I reserve the right to report this to consumer safety authorities if unresolved.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'appliance-failure', slug: 'appliance-failure-complaint', category: 'Damaged Goods',
@@ -69,7 +63,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days to arrange repair or replacement.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'A major appliance should be expected to last for years of normal use.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'clothing-quality', slug: 'clothing-quality-complaint', category: 'Damaged Goods',
@@ -98,7 +92,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the quality issue are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'furniture-defect', slug: 'furniture-defect-complaint', category: 'Damaged Goods',
@@ -125,7 +119,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days to arrange inspection or collection.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Photos of the defect are attached.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'toy-safety-defect', slug: 'toy-safety-defect-complaint', category: 'Damaged Goods',
@@ -153,7 +147,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 7 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I will report this to consumer safety authorities if not addressed promptly.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'cosmetics-adverse-reaction', slug: 'cosmetics-adverse-reaction', category: 'Damaged Goods',
@@ -182,7 +176,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have preserved the product and will report this to health authorities if required.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'food-contamination', slug: 'food-contamination-complaint', category: 'Damaged Goods',
@@ -211,7 +205,7 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 48 hours given the public health implications.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I have preserved the product and packaging as evidence and will report to food safety authorities.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'electronics-malfunction', slug: 'electronics-malfunction-complaint', category: 'Damaged Goods',
@@ -240,6 +234,6 @@ export const defectiveProductTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please respond within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'I expect a quality product and this device has failed to meet that standard.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];

@@ -1,11 +1,5 @@
 import { LetterTemplate } from '../../letterTemplates';
 
-const standardPricing = [
-  { id: 'basic', name: 'Basic Letter', price: 9.99, currency: 'EUR', features: ['Professional formatting', 'Editable document', 'PDF download'] },
-  { id: 'legal', name: 'With Legal References', price: 19.99, currency: 'EUR', features: ['Everything in Basic', 'Jurisdiction-specific references', 'Stronger legal standing'], popular: true },
-  { id: 'final', name: 'Final Notice', price: 29.99, currency: 'EUR', features: ['Everything in Legal', 'Escalation language', 'Deadline enforcement'] },
-];
-
 const standardJurisdictions = [
   { code: 'US', name: 'United States', legalReference: 'State HOA Laws', approvedPhrases: ['Under state HOA regulations', 'In accordance with our CC&Rs'] },
   { code: 'UK', name: 'United Kingdom', legalReference: 'Leasehold Reform Act', approvedPhrases: ['Under leasehold regulations', 'In accordance with the lease terms'] },
@@ -37,7 +31,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Given the safety assessment ({safetyHazard}), please prioritize accordingly and provide a timeline for repairs.', placeholders: ['safetyHazard'] },
       { id: 'closing', name: 'Closing', template: 'Our dues fund the maintenance of common areas, and I expect these to be maintained properly.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-pest-control-request', slug: 'hoa-pest-control-request', category: 'HOA & Property', title: 'Pest Control Request',
@@ -62,7 +56,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Given the severity ({severityLevel}), please arrange treatment within 7 days.', placeholders: ['severityLevel'] },
       { id: 'closing', name: 'Closing', template: 'This is a health and habitability issue that must be addressed promptly.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-landscaping-complaint', slug: 'hoa-landscaping-complaint', category: 'HOA & Property', title: 'Landscaping Maintenance Complaint',
@@ -87,7 +81,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please ensure this is addressed within 14 days or provide an explanation for the delay.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Our dues include landscaping maintenance, and we expect it to be performed to a reasonable standard.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-pool-spa-complaint', slug: 'hoa-pool-spa-complaint', category: 'HOA & Property', title: 'Pool/Spa Maintenance Complaint',
@@ -111,7 +105,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Given the health/safety assessment ({healthSafetyConcern}), please prioritize this repair.', placeholders: ['healthSafetyConcern'] },
       { id: 'closing', name: 'Closing', template: 'Pool amenities are a key community feature and must be properly maintained.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-security-concern', slug: 'hoa-security-concern', category: 'HOA & Property', title: 'Security Concern Report',
@@ -136,7 +130,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please address this within 48 hours and confirm when repairs are complete.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'The security of our community and residents is paramount.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-parking-lot-repair', slug: 'hoa-parking-lot-repair-request', category: 'HOA & Property', title: 'Parking Lot Repair Request',
@@ -160,7 +154,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please provide a timeline for repairs within 14 days.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'If my vehicle is damaged due to neglected maintenance, I will hold the HOA responsible for repair costs.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-elevator-complaint', slug: 'hoa-elevator-complaint', category: 'HOA & Property', title: 'Elevator Maintenance Complaint',
@@ -185,7 +179,7 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Given the accessibility impact ({accessibilityImpact}), this is a priority safety issue.', placeholders: ['accessibilityImpact'] },
       { id: 'closing', name: 'Closing', template: 'Reliable elevator service is essential for building residents, especially those with mobility issues.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
   {
     id: 'hoa-trash-recycling-complaint', slug: 'hoa-trash-recycling-complaint', category: 'HOA & Property', title: 'Trash/Recycling Service Complaint',
@@ -209,6 +203,6 @@ export const maintenanceTemplates: LetterTemplate[] = [
       { id: 'deadline', name: 'Deadline', template: 'Please resolve this within 7 days to prevent health and sanitation issues.', placeholders: [] },
       { id: 'closing', name: 'Closing', template: 'Proper waste management is essential for community health and property values.', placeholders: [] },
     ],
-    jurisdictions: standardJurisdictions, pricing: standardPricing,
+    jurisdictions: standardJurisdictions,
   },
 ];
