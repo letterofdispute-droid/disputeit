@@ -108,7 +108,7 @@ export function useSemanticLinkScan() {
     },
     refetchInterval: (query) => {
       const job = query.state.data as SemanticScanJob | null;
-      return job?.status === 'processing' ? 2000 : 10000;
+      return job?.status === 'processing' ? 2000 : false;
     },
   });
 

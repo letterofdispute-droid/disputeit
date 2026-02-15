@@ -9,7 +9,7 @@ const corsHeaders = {
 
 // ── Constants ──
 const ARTICLE_TIMEOUT_MS = 30_000; // 30s max per article
-const BATCH_SIZE_DEFAULT = 10;
+const BATCH_SIZE_DEFAULT = 20;
 
 // ── Types ──
 interface ScanRequest {
@@ -556,21 +556,23 @@ serve(async (req) => {
     let batchProcessed = 0;
 
     try {
-      for (const source of sourceArticles as ArticleEmbedding[]) {
-        try {
-          const articleSuggestions = await withTimeout(
+      const results = await Promise.allSettled(
+        (sourceArticles as ArticleEmbedding[]).map(source =>
+          withTimeout(
             processOneArticle(supabaseAdmin, source, similarityThreshold, maxLinksPerArticle, includeBidirectional),
             ARTICLE_TIMEOUT_MS,
             source.title,
-          );
+          )
+        )
+      );
 
-          batchSuggestions += articleSuggestions;
-          batchProcessed++;
-
-        } catch (articleError) {
-          const msg = articleError instanceof Error ? articleError.message : 'Unknown error';
-          console.error(`[SCAN] Article failed "${source.title}": ${msg}`);
-          batchProcessed++; // Count as processed even if failed
+      for (const result of results) {
+        batchProcessed++;
+        if (result.status === 'fulfilled') {
+          batchSuggestions += result.value;
+        } else {
+          const msg = result.reason instanceof Error ? result.reason.message : 'Unknown error';
+          console.error(`[SCAN] Article failed: ${msg}`);
         }
       }
 
