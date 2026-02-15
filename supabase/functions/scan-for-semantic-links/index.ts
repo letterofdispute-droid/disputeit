@@ -301,7 +301,7 @@ async function processOneArticle(
   if (newSuggestions.length > 0) {
     const { error: insertError } = await supabaseAdmin
       .from('link_suggestions')
-      .upsert(newSuggestions, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
+      .insert(newSuggestions);
 
     if (!insertError) {
       suggestions += newSuggestions.length;
@@ -365,7 +365,7 @@ async function processOneArticle(
 
         const { error: reverseInsertError } = await supabaseAdmin
           .from('link_suggestions')
-          .upsert({
+          .insert({
             source_post_id: candidateEmbed.content_id,
             target_type: 'article',
             target_slug: source.slug,
@@ -377,7 +377,7 @@ async function processOneArticle(
             relevance_score: reverseRelevance,
             hierarchy_valid: true,
             status: 'pending',
-          }, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
+          });
 
         if (!reverseInsertError) {
           suggestions++;

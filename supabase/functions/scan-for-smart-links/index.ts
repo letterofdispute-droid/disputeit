@@ -489,7 +489,7 @@ async function processOneArticle(
 
   const { error: insertError } = await supabaseAdmin
     .from('link_suggestions')
-    .upsert(rows, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
+    .insert(rows);
 
   if (insertError) {
     console.error(`[SMART] Insert error for "${article.title}":`, insertError.message);
