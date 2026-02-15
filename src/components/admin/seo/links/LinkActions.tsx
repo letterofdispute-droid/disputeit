@@ -1,14 +1,28 @@
-import { Loader2, Search, Zap, CheckCheck, X, CheckCircle2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Search, Zap, CheckCheck, X, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface LinkActionsProps {
   selectedCount: number;
   pendingCount: number;
   approvedCount: number;
   filteredCount: number;
+  statusFilter: string;
+  totalForStatus: number;
   isScanning: boolean;
   isApplying: boolean;
   isBulkUpdating?: boolean;
+  isBulkDeleting?: boolean;
   onScan: () => void;
   onApproveHighRelevance: () => void;
   onApproveSelected: () => void;
@@ -16,6 +30,8 @@ interface LinkActionsProps {
   onApplyApproved: () => void;
   onApproveAll: () => void;
   onRejectAll: () => void;
+  onClearAll: () => void;
+  onDeleteSelected: () => void;
 }
 
 export default function LinkActions({
@@ -23,9 +39,12 @@ export default function LinkActions({
   pendingCount,
   approvedCount,
   filteredCount,
+  statusFilter,
+  totalForStatus,
   isScanning,
   isApplying,
   isBulkUpdating = false,
+  isBulkDeleting = false,
   onScan,
   onApproveHighRelevance,
   onApproveSelected,
@@ -33,7 +52,10 @@ export default function LinkActions({
   onApplyApproved,
   onApproveAll,
   onRejectAll,
+  onClearAll,
+  onDeleteSelected,
 }: LinkActionsProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
       <Button
@@ -124,6 +146,55 @@ export default function LinkActions({
           </Button>
         </>
       )}
+
+      {/* Delete actions */}
+      {selectedCount > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onDeleteSelected}
+          className="border-red-600/30 text-red-700 hover:bg-red-50"
+        >
+          <Trash2 className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">Delete ({selectedCount})</span>
+          <span className="sm:hidden">{selectedCount}</span>
+        </Button>
+      )}
+
+      {totalForStatus > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={isBulkDeleting}
+          className="border-red-600/30 text-red-700 hover:bg-red-50"
+        >
+          {isBulkDeleting ? <Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 sm:mr-1" />}
+          <span className="hidden sm:inline">Clear All ({totalForStatus})</span>
+          <span className="sm:hidden">Clear</span>
+        </Button>
+      )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {totalForStatus} suggestions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {statusFilter === 'all' ? '' : statusFilter + ' '} 
+              link suggestions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onClearAll(); setShowDeleteConfirm(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
