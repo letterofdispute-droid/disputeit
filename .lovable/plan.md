@@ -1,40 +1,66 @@
 
 
-# Fix "Apply to Articles" Infinite Loop
+# Fix Link Stats Sync and Stale Job Issues
 
-## Root Cause
+## Problem Summary
 
-When a link suggestion cannot be inserted into article HTML (the AI can't find a good spot, or the paragraph matching fails), `insertLinkContextually` returns `null`. The code increments `failedCount++` but **never updates the suggestion's status**. It stays `'approved'`, so the next batch picks it up again, fails again, and the cycle repeats infinitely. This is why processed count (16,420) exceeds total (14,681).
+Three interconnected bugs on the Links tab:
 
-## Fix
+1. **"Internal Links: 50"** in the top stats card -- counts only the 50 items on page 1 instead of querying the database for the real total
+2. **"Discovering links..." spinner stuck** -- the scan panel picks up the apply job (which uses the same `semantic_scan_jobs` table) and shows it as a discovery scan
+3. **Apply counter exceeds total (17501 / 14681)** -- the old apply job is stuck in `processing` status because the fix was deployed after it started looping
 
-### File: `supabase/functions/apply-links-bulk/index.ts`
+## Changes
 
-**Change 1**: When a suggestion fails to apply, mark it as `'rejected'` with an explanation so it's not re-fetched:
+### 1. CoverageStats.tsx -- Use DB counts instead of client-side counting
+
+**Current**: Calls `useLinkSuggestions()` with no params, gets 50 items, counts `.filter(s => s.status === 'applied').length` (max 50).
+
+**Fix**: Replace the `useLinkSuggestions` import with a dedicated lightweight query that counts applied and pending links using `{ count: 'exact', head: true }`. This avoids loading any suggestion rows just for the stats card.
 
 ```typescript
-// Line ~426-428: after insertLinkContextually returns null
-} else {
-  // Mark as rejected so it's not re-fetched in the next batch
-  await supabaseAdmin
-    .from('link_suggestions')
-    .update({ status: 'rejected', hierarchy_violation: 'Could not find suitable insertion point' })
-    .eq('id', suggestion.id);
-  failedCount++;
-}
+// Replace useLinkSuggestions() with a direct count query
+const { data: linkCounts } = useQuery({
+  queryKey: ['link-counts-overview'],
+  queryFn: async () => {
+    const [applied, pending] = await Promise.all([
+      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'applied'),
+      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    ]);
+    return { applied: applied.count || 0, pending: pending.count || 0 };
+  },
+  staleTime: 30000,
+});
 ```
 
-**Change 2**: Same treatment in the catch block (~line 429-432): mark the suggestion as rejected on error.
+### 2. SemanticScanPanel.tsx -- Filter out apply jobs from scan display
 
-**Change 3**: Fix the completion check. Currently `result.processed === 0` is the termination condition, but the `finally` block also checks `remaining` approved count. With the fix above, failed suggestions will be rejected, so `remaining` will eventually reach 0 and the job will terminate correctly.
+**Current**: `activeScanJob` is the most recent job in `semantic_scan_jobs` regardless of type. If it's an apply job (`category_filter = '__apply_links__'`), the panel shows "Discovering links..." incorrectly.
 
-### File: `src/components/admin/seo/links/LinkActions.tsx`
+**Fix**: Add a condition to exclude apply jobs from the scan progress display. The `isScanJobRunning` and scan progress section should only show when `activeScanJob.category_filter !== '__apply_links__'`.
 
-No changes needed -- the progress display will now show accurate numbers since processed won't exceed total.
+### 3. useSemanticLinkScan.ts -- Exclude apply jobs from scan job query
+
+**Current**: The `activeScanJob` query (line 96-113) fetches the most recent `semantic_scan_jobs` row with no filter, so it can return an apply job.
+
+**Fix**: Add a filter to exclude apply jobs: `.neq('category_filter', '__apply_links__')`. This way `isScanJobRunning` only reflects actual discovery scans, not apply jobs. The apply job tracking is already handled separately in `LinkSuggestions.tsx` via a dedicated query or the existing `activeApplyJob` memo.
+
+But we also need a separate query for the apply job -- add a second query specifically for `category_filter = '__apply_links__'` jobs so `LinkSuggestions` can track apply progress independently.
+
+### 4. Clean up stale apply job
+
+The stuck job (17501/14681) needs to be marked as completed. Add a check: if an apply job has `processed_items > total_items`, treat it as completed in the UI. Also consider adding a one-time data fix to mark the stale job as completed.
+
+## Files to Edit
+
+- **src/components/admin/seo/CoverageStats.tsx** -- Replace `useLinkSuggestions` with direct DB count query
+- **src/hooks/useSemanticLinkScan.ts** -- Split `activeScanJob` into two queries: one for discovery scans (excluding apply), one for apply jobs; export both
+- **src/components/admin/seo/LinkSuggestions.tsx** -- Use the new dedicated apply job query from `useSemanticLinkScan` instead of deriving it from `activeScanJob`
+- **src/components/admin/seo/links/SemanticScanPanel.tsx** -- No changes needed if the hook is fixed (the scan panel already uses `isScanJobRunning` and `activeScanJob` from the hook)
 
 ## Result
 
-- Failed suggestions get marked as `'rejected'` instead of staying `'approved'`
-- No more infinite re-processing of the same suggestions
-- Progress counter stays accurate (processed will never exceed total)
-- Job completes naturally when all approved suggestions have been attempted
+- "Internal Links" card shows real DB count (e.g., 4,883 applied)
+- Discover Links section only shows spinner for actual discovery scans
+- Apply job progress only appears in the toolbar area, not in the scan panel
+- Stale/overflowed apply jobs are treated as completed in the UI
