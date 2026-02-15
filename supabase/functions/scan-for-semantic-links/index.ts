@@ -292,7 +292,7 @@ async function processOneArticle(
   if (newSuggestions.length > 0) {
     const { error: insertError } = await supabaseAdmin
       .from('link_suggestions')
-      .insert(newSuggestions);
+      .upsert(newSuggestions, { onConflict: 'source_post_id,target_slug', ignoreDuplicates: true });
 
     if (!insertError) {
       suggestions += newSuggestions.length;
@@ -453,9 +453,29 @@ serve(async (req) => {
       .eq('id', currentJobId)
       .single();
 
-    if (jobRow?.status === 'cancelled') {
-      console.log('[SCAN] Job was cancelled, stopping');
+    if (jobRow?.status === 'cancelled' || jobRow?.status === 'completed') {
+      console.log(`[SCAN] Job status is ${jobRow?.status}, stopping`);
       return new Response(JSON.stringify({ success: true, cancelled: true, jobId: currentJobId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── Completion guard: stop if we've processed everything ──
+    const { data: progressCheck } = await supabaseAdmin
+      .from('semantic_scan_jobs')
+      .select('processed_items, total_items')
+      .eq('id', currentJobId)
+      .single();
+
+    if (progressCheck && progressCheck.processed_items >= progressCheck.total_items) {
+      await supabaseAdmin.from('semantic_scan_jobs').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', currentJobId);
+
+      console.log('[SCAN] Completion guard: processed_items >= total_items, marking complete');
+      return new Response(JSON.stringify({ success: true, jobId: currentJobId, message: 'Scan complete (guard)' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -509,6 +529,13 @@ serve(async (req) => {
 
     console.log(`[SCAN] Processing batch of ${sourceArticles.length} articles`);
 
+    // ── ATOMIC CLAIM: Mark articles as claimed BEFORE processing ──
+    const articleIds = (sourceArticles as ArticleEmbedding[]).map(a => a.id);
+    await supabaseAdmin
+      .from('article_embeddings')
+      .update({ next_scan_due_at: getNextScanDate() })
+      .in('id', articleIds);
+
     // ── Process batch with per-article timeout + try/finally for self-chain ──
     let batchSuggestions = 0;
     let batchProcessed = 0;
@@ -525,21 +552,10 @@ serve(async (req) => {
           batchSuggestions += articleSuggestions;
           batchProcessed++;
 
-          // Update scan timestamp so this article isn't picked up again
-          await supabaseAdmin
-            .from('article_embeddings')
-            .update({ next_scan_due_at: getNextScanDate() })
-            .eq('id', source.id);
-
         } catch (articleError) {
           const msg = articleError instanceof Error ? articleError.message : 'Unknown error';
           console.error(`[SCAN] Article failed "${source.title}": ${msg}`);
-          batchProcessed++; // Count as processed even if failed, to avoid infinite retry
-          // Still update scan date to prevent retrying a broken article forever
-          await supabaseAdmin
-            .from('article_embeddings')
-            .update({ next_scan_due_at: getNextScanDate() })
-            .eq('id', source.id);
+          batchProcessed++; // Count as processed even if failed
         }
       }
 
