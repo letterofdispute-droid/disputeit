@@ -1,111 +1,127 @@
 
 
-# Fix: Move AI Sentence Generation Into Discovery Phase
+# Fix Missing Links in Articles + Mobile Layout
 
-## The Real Problem
+## Problem 1: 28,917 "Applied" Links Are Not in Article HTML
 
-The scan function (`scan-for-smart-links`) demands that anchor phrases already exist **verbatim** in the article body. If the article doesn't naturally contain a phrase matching a target, no suggestion is created -- period. The AI sentence generation capability exists in `apply-links-bulk`, but it only runs for suggestions that were already discovered. Discovery is the bottleneck.
+Database audit results:
+- 1,225 articles have suggestions marked "applied" but contain **zero** `<a>` tags
+- Articles that DO have links show only 1 link despite 7-8 "applied" suggestions
+- 3 apply jobs are stuck in "processing" with overflow (processed > total), indicating they ran simultaneously and overwrote each other
 
-This is why you're stuck at ~4.7 links per article instead of 8. The AI finds the right targets but can't find matching text in the body, so it silently drops them.
+### Root Cause
 
-## The Fix: Two-mode anchor strategy in discovery
+The `apply-links-bulk` function has a **race condition**. Multiple apply jobs run in parallel because old jobs never get marked as "completed" (they overflow and stay "processing"). When a new apply job starts, it:
+1. Fetches an article's content (which may already have links from a previous batch)
+2. Processes suggestions and modifies the content
+3. Saves the content back
 
-Change the `scan-for-smart-links` AI prompt and suggestion storage to support two types of anchors:
+But a concurrent stuck job can fetch the SAME article's original content and save it without the links from the other job, effectively erasing them.
 
-### 1. Update the AI prompt (lines 199-226)
+Additionally, the content save at line 516-520 has **no error handling** -- if the update fails, the suggestion is already marked "applied" and the link is lost forever.
 
-Instead of requiring verbatim body matches only, ask the AI for two types:
-- **Existing phrases**: Anchors that exist verbatim in the body (current behavior)
-- **Generated anchors**: For targets where no good verbatim phrase exists, the AI should propose a short anchor phrase (2-5 words) AND a continuation sentence that contains it
+### Fix (in `supabase/functions/apply-links-bulk/index.ts`)
 
-New prompt structure:
-```
-For each target, try to find a verbatim phrase in the body text first.
-If no good verbatim phrase exists, generate a short natural sentence 
-that continues a relevant paragraph, containing a 2-5 word anchor phrase.
+**A. Prevent concurrent apply jobs:**
+Before creating a new apply job, check for and cancel any stuck "processing" apply jobs (those older than 10 minutes with overflow).
 
-Return JSON array:
-[
-  {"anchor_text":"...", "target_index":1, "section_heading":"...", 
-   "reasoning":"...", "confidence":85, "mode":"existing"},
-  {"anchor_text":"...", "target_index":3, "section_heading":"...", 
-   "reasoning":"...", "confidence":80, "mode":"generated",
-   "generated_sentence":"One natural sentence with the anchor phrase embedded."}
-]
-```
-
-### 2. Update the AISuggestion interface (line 22)
-
-Add two optional fields:
 ```typescript
-interface AISuggestion {
-  anchor_text: string;
-  target_index: number;
-  section_heading: string;
-  reasoning: string;
-  confidence?: number;
-  mode?: 'existing' | 'generated';           // NEW
-  generated_sentence?: string;                 // NEW
+// At the start of the main handler, before creating a new job:
+const { data: stuckJobs } = await supabaseAdmin
+  .from('semantic_scan_jobs')
+  .select('id')
+  .eq('category_filter', '__apply_links__')
+  .eq('status', 'processing');
+
+for (const stuckJob of (stuckJobs || [])) {
+  await supabaseAdmin
+    .from('semantic_scan_jobs')
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .eq('id', stuckJob.id);
 }
 ```
 
-### 3. Update validation logic (validateSuggestion, line 272)
-
-For `mode === 'generated'` suggestions:
-- Skip the "anchor must exist verbatim in body" check (line 303)
-- Skip the "not in intro" check (line 310)  
-- Keep all other quality gates (word count, char length, not a title prefix, not generic)
-- Add a new check: `generated_sentence` must contain the `anchor_text` exactly
-
-### 4. Store generated_sentence in link_suggestions
-
-The `link_suggestions` table needs a column to store the generated sentence so `apply-links-bulk` can use it directly instead of re-generating.
-
-**Database migration:**
-```sql
-ALTER TABLE link_suggestions 
-  ADD COLUMN IF NOT EXISTS generated_sentence TEXT;
-```
-
-### 5. Update insertion in processOneArticle (lines 489-500)
-
-Include the `generated_sentence` field when inserting:
+**B. Add error handling to content save:**
 ```typescript
-const rows = validSuggestions.map(({ candidate, anchor, confidence, generatedSentence }) => ({
-  source_post_id: article.id,
-  target_type: candidate.contentType,
-  target_slug: candidate.slug,
-  target_title: candidate.title,
-  target_embedding_id: candidate.embeddingId,
-  anchor_text: anchor,
-  anchor_source: 'ai_suggested',
-  relevance_score: Math.max(55, Math.min(95, confidence)),
-  hierarchy_valid: true,
-  status: 'pending',
-  generated_sentence: generatedSentence || null,
-}));
+if (updatedContent !== post.content) {
+  const { error: updateError } = await supabaseAdmin
+    .from('blog_posts')
+    .update({ content: updatedContent })
+    .eq('id', postId);
+  
+  if (updateError) {
+    console.error(`Failed to save content for ${postId}:`, updateError);
+    // Revert applied statuses for this post's suggestions
+    for (const s of cappedSuggestions) {
+      await supabaseAdmin
+        .from('link_suggestions')
+        .update({ status: 'approved' }) // back to approved for retry
+        .eq('id', s.id)
+        .eq('status', 'applied');
+    }
+  }
+}
 ```
 
-### 6. Update apply-links-bulk to use stored sentences
+**C. Reset the 28,917 ghost "applied" suggestions:**
+A one-time migration to reset suggestions that were marked "applied" but whose source article has no actual links:
 
-In `insertLinkContextually` (apply-links-bulk), when a suggestion has a `generated_sentence`:
-- Skip the phrase-matching step
-- Skip the AI sentence generation fallback
-- Directly insert the pre-generated sentence into the best-scoring paragraph
-- Wrap the anchor phrase in the sentence with the link tag
+```sql
+UPDATE link_suggestions 
+SET status = 'approved', applied_at = NULL
+WHERE status = 'applied'
+AND source_post_id IN (
+  SELECT ls.source_post_id 
+  FROM link_suggestions ls
+  JOIN blog_posts bp ON bp.id = ls.source_post_id
+  WHERE ls.status = 'applied'
+  AND bp.content NOT LIKE '%<a href=%'
+);
+```
 
-This removes the second AI call during application, making it faster and more reliable.
+This puts them back into the "approved" queue so the next apply run will actually insert them.
 
-## Files to edit
+---
 
-1. **supabase/functions/scan-for-smart-links/index.ts** -- Updated prompt, interface, validation, and insertion logic
-2. **supabase/functions/apply-links-bulk/index.ts** -- Use stored `generated_sentence` instead of re-generating
-3. **Database migration** -- Add `generated_sentence` column to `link_suggestions`
+## Problem 2: 1,000 Orphan Articles
 
-## Expected impact
+This is a direct consequence of Problem 1. Once the links are actually applied to article HTML, these orphan articles will receive inbound links and drop off the orphan list. No separate fix needed.
 
-- Discovery will produce 8-10 valid suggestions per article instead of 4-5
-- Articles without natural keyword matches will still get links via generated sentences
-- The apply phase becomes faster (no redundant AI calls)
-- After a Force re-scan of all categories, total links should reach 35,000-40,000
+---
 
+## Problem 3: Mobile Layout -- Content Pushed Right
+
+The article content section (line 590-648) uses:
+```html
+<div class="flex gap-12">
+  <article class="flex-1 max-w-3xl mx-auto lg:mx-0">...</article>
+  <aside class="hidden lg:block w-72 shrink-0">...</aside>
+</div>
+```
+
+On mobile, the sidebar is hidden (`hidden lg:block`), but `flex gap-12` still applies a 3rem gap context and `mx-auto` centers within the flex container. The `flex` layout without wrapping can cause the content to overflow or push right on narrow screens.
+
+### Fix (in `src/pages/ArticlePage.tsx`)
+
+Change the flex container to only apply on `lg` and use block layout on mobile:
+
+```tsx
+<div className="lg:flex lg:gap-12">
+  <article className="flex-1 max-w-3xl mx-auto lg:mx-0">
+```
+
+This ensures on mobile the article takes full width with proper centering, and only switches to side-by-side flex layout on large screens where the sidebar is visible.
+
+---
+
+## Files to Edit
+
+1. **`supabase/functions/apply-links-bulk/index.ts`** -- Cancel stuck jobs before starting, add error handling to content save, revert statuses on save failure
+2. **`src/pages/ArticlePage.tsx`** -- Change `flex gap-12` to `lg:flex lg:gap-12` on the content wrapper
+3. **Database migration** -- Reset ghost "applied" suggestions back to "approved" for re-processing
+
+## After Implementation
+
+1. Run "Apply to Articles" once more -- it will process the ~28,917 suggestions that are now back in "approved" status and actually save the links into article HTML
+2. Orphan count should drop significantly
+3. Mobile layout will display correctly
