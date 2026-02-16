@@ -17,6 +17,24 @@ export interface FAQItem {
   answer: string;
 }
 
+export interface RegulatoryContact {
+  name: string;
+  description: string;
+  url: string;
+  phone?: string;
+}
+
+export interface StateVariation {
+  state: string;
+  detail: string;
+}
+
+export interface StatSnapshot {
+  label: string;
+  value: string;
+  source?: string;
+}
+
 export interface CategoryGuide {
   categoryId: string;
   title: string;
@@ -32,6 +50,9 @@ export interface CategoryGuide {
   warningSigns?: string[];
   proTips?: string[];
   lastUpdated?: string;
+  regulatoryContacts?: RegulatoryContact[];
+  stateVariations?: StateVariation[];
+  statSnapshot?: StatSnapshot[];
 }
 
 export const consumerRightsGuides: CategoryGuide[] = [
@@ -120,6 +141,23 @@ export const consumerRightsGuides: CategoryGuide[] = [
       'File complaints with both the FTC (ReportFraud.ftc.gov) and your state AG — even if your individual case isn\'t pursued, pattern complaints trigger investigations',
       'For purchases over $50 from a seller within 100 miles, the FCBA lets you withhold payment to your credit card company while you dispute the purchase directly',
     ],
+    regulatoryContacts: [
+      { name: 'Federal Trade Commission (FTC)', description: 'File complaints about deceptive business practices, scams, and unfair refund policies.', url: 'https://reportfraud.ftc.gov/', phone: '1-877-382-4357' },
+      { name: 'Consumer Financial Protection Bureau (CFPB)', description: 'Dispute credit card billing errors and financial product issues.', url: 'https://www.consumerfinance.gov/complaint/', phone: '1-855-411-2372' },
+      { name: 'Better Business Bureau (BBB)', description: 'File a complaint and check business ratings before purchasing.', url: 'https://www.bbb.org/file-a-complaint' },
+      { name: 'State Attorney General', description: 'Your state AG enforces consumer protection laws and can investigate businesses.', url: 'https://www.usa.gov/state-attorney-general' },
+    ],
+    stateVariations: [
+      { state: 'California', detail: 'Song-Beverly Consumer Warranty Act allows refund, replacement, or reimbursement for defective goods — plus civil penalties up to 2x the purchase price for willful violations.' },
+      { state: 'New York', detail: 'Stores must post refund policies conspicuously; if no policy is posted, consumers are entitled to a full refund within 30 days.' },
+      { state: 'Massachusetts', detail: 'Chapter 93A provides automatic treble (3x) damages for willful or knowing consumer protection violations, plus attorney\'s fees.' },
+      { state: 'Texas', detail: 'The DTPA (Deceptive Trade Practices Act) allows consumers to recover up to 3x economic damages plus mental anguish damages.' },
+    ],
+    statSnapshot: [
+      { label: 'FTC complaints filed annually', value: '5.4M+', source: 'FTC Consumer Sentinel Network, 2024' },
+      { label: 'Median credit card dispute resolved in favor of consumer', value: '~60%', source: 'CFPB Annual Report, 2024' },
+      { label: 'Average chargeback recovery', value: '$450', source: 'Chargebacks911 Industry Report' },
+    ],
   },
   {
     categoryId: 'housing',
@@ -204,6 +242,23 @@ export const consumerRightsGuides: CategoryGuide[] = [
       'If your landlord won\'t return your deposit, a demand letter citing your state\'s penalty provisions often resolves the issue — landlords know courts award double or triple damages',
       'Keep a "landlord file" with copies of your lease, all maintenance requests, all correspondence, and photos — organized chronologically. This becomes your evidence file if you ever need to go to court',
       'Know your city\'s rent control or stabilization laws if applicable — these can significantly limit rent increases and provide additional eviction protections',
+    ],
+    regulatoryContacts: [
+      { name: 'HUD Fair Housing', description: 'File housing discrimination complaints and request investigations.', url: 'https://www.hud.gov/program_offices/fair_housing_equal_opp/online-complaint', phone: '1-800-669-9777' },
+      { name: 'Local Housing Code Enforcement', description: 'Report habitability violations — inspectors can order landlords to make repairs.', url: 'https://www.hud.gov/topics/rental_assistance' },
+      { name: 'State Attorney General', description: 'Investigate landlords who systematically violate tenant protection laws.', url: 'https://www.usa.gov/state-attorney-general' },
+      { name: 'Legal Aid Society', description: 'Free legal assistance for tenants facing eviction or rights violations.', url: 'https://www.lsc.gov/about-lsc/what-legal-aid/get-legal-help', phone: '1-202-295-1500' },
+    ],
+    stateVariations: [
+      { state: 'California', detail: 'Statewide rent cap (AB 1482) limits annual increases to 5% + CPI (max 10%). Security deposit return within 21 days; penalty for wrongful withholding.' },
+      { state: 'New York', detail: 'Rent-stabilized apartments in NYC have strict limits on increases and provide strong eviction protections. Security deposit limited to 1 month\'s rent.' },
+      { state: 'Texas', detail: 'No statewide rent control. Landlords must return security deposits within 30 days but face limited penalties for violations compared to other states.' },
+      { state: 'Illinois', detail: 'Chicago\'s RLTO (Residential Landlord and Tenant Ordinance) provides some of the strongest tenant protections in the country, including 2x deposit penalties.' },
+    ],
+    statSnapshot: [
+      { label: 'HUD discrimination complaints resolved', value: '8,000+/yr', source: 'HUD Annual Report, 2024' },
+      { label: 'Average wrongfully withheld deposit', value: '$1,100', source: 'Nolo Legal Research, 2024' },
+      { label: 'States with anti-retaliation laws', value: '49 of 50', source: 'National Conference of State Legislatures' },
     ],
   },
   {
@@ -539,6 +594,23 @@ export const consumerRightsGuides: CategoryGuide[] = [
       'For credit card disputes, always submit in writing even if you also call — written disputes trigger specific legal obligations under the FCBA that phone calls don\'t',
       'Request your "adverse action notice" any time you\'re denied credit, receive less favorable terms, or face a rate increase based on your credit — it tells you exactly why and which credit score was used',
     ],
+    regulatoryContacts: [
+      { name: 'Consumer Financial Protection Bureau (CFPB)', description: 'File complaints about banks, credit bureaus, lenders, and debt collectors.', url: 'https://www.consumerfinance.gov/complaint/', phone: '1-855-411-2372' },
+      { name: 'Federal Trade Commission (FTC)', description: 'Report identity theft, fraud, and deceptive financial practices.', url: 'https://reportfraud.ftc.gov/', phone: '1-877-382-4357' },
+      { name: 'Office of the Comptroller of the Currency (OCC)', description: 'Complaints against national banks and federal savings associations.', url: 'https://www.occ.treas.gov/topics/consumers-and-communities/consumer-protection/index-consumer-protection.html', phone: '1-800-613-6743' },
+      { name: 'State Banking Regulator', description: 'File complaints about state-chartered banks and credit unions.', url: 'https://www.csbs.org/consumer-complaints' },
+    ],
+    stateVariations: [
+      { state: 'California', detail: 'The CCFPL (California Consumer Financial Protection Law) provides state-level CFPB-like enforcement. Stronger debt collection restrictions than federal minimums.' },
+      { state: 'New York', detail: 'DFS (Department of Financial Services) actively regulates banks and can issue fines. Usury cap of 16% on most consumer loans.' },
+      { state: 'Texas', detail: 'Homestead protections prevent creditors from forcing the sale of your primary residence to satisfy most debts. Strong garnishment protections.' },
+      { state: 'Florida', detail: 'Unlimited homestead exemption in bankruptcy. Wages of heads of household are fully exempt from garnishment.' },
+    ],
+    statSnapshot: [
+      { label: 'CFPB complaints with company response', value: '97%', source: 'CFPB Consumer Response Annual Report, 2024' },
+      { label: 'Consumers who got relief through CFPB', value: '1 in 5', source: 'CFPB, 2024' },
+      { label: 'Money returned to consumers by CFPB', value: '$20.7B+', source: 'CFPB cumulative through 2024' },
+    ],
   },
   {
     categoryId: 'insurance',
@@ -621,6 +693,23 @@ export const consumerRightsGuides: CategoryGuide[] = [
       'Get at least two independent repair/damage estimates before the insurance adjuster visits — knowing the true cost strengthens your negotiating position',
       'If the insurer\'s offer seems low, invoke the policy\'s appraisal clause (for property claims) — it\'s cheaper and faster than litigation',
       'Keep a detailed claim diary: every phone call (who, when, what was said), every document sent and received, every promise made — this becomes powerful evidence in a bad faith claim',
+    ],
+    regulatoryContacts: [
+      { name: 'State Insurance Commissioner', description: 'File complaints about claim denials, delays, and unfair practices. Each state has a Department of Insurance.', url: 'https://content.naic.org/state-insurance-departments', phone: 'Varies by state' },
+      { name: 'National Association of Insurance Commissioners (NAIC)', description: 'Find your state regulator and access consumer resources.', url: 'https://content.naic.org/consumer.htm' },
+      { name: 'CMS (for Medicare/Medicaid)', description: 'Appeal Medicare Advantage or Part D coverage denials.', url: 'https://www.cms.gov/Medicare/Appeals-and-Grievances', phone: '1-800-633-4227' },
+      { name: 'State Attorney General', description: 'Investigate insurance companies engaging in systematic bad faith practices.', url: 'https://www.usa.gov/state-attorney-general' },
+    ],
+    stateVariations: [
+      { state: 'California', detail: 'Proposition 103 requires prior approval for rate increases. Strong bad faith penalties including punitive damages with no cap.' },
+      { state: 'Florida', detail: 'Frequent homeowners insurance disputes due to hurricanes. Citizens Property Insurance provides last-resort coverage. Strict timelines for claim handling.' },
+      { state: 'Texas', detail: 'Prompt Payment of Claims Act requires insurers to accept or deny claims within 15 business days. Penalties of 18% annual interest on late payments.' },
+      { state: 'New York', detail: 'Regulation 64 provides strong protections for auto insurance claims. External appeal rights for health insurance that predate the ACA.' },
+    ],
+    statSnapshot: [
+      { label: 'Insurance complaints filed annually with state regulators', value: '280,000+', source: 'NAIC Market Conduct Annual Statement, 2024' },
+      { label: 'Health insurance claim denials overturned on appeal', value: '~50%', source: 'HealthCare.gov, 2024' },
+      { label: 'Average bad faith insurance settlement', value: '$30,000+', source: 'Insurance Research Council' },
     ],
   },
   {

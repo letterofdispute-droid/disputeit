@@ -1,16 +1,23 @@
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
-import { getCategoryById } from '@/data/templateCategories';
+import { getCategoryById, templateCategories } from '@/data/templateCategories';
 import { getGuideByCategory } from '@/data/consumerRightsContent';
-import { ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Clock, FileText, Scale, HelpCircle, ShieldAlert, Lightbulb, BookOpen } from 'lucide-react';
+import { getTemplatesByCategory } from '@/data/allTemplates';
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Clock, FileText, Scale, HelpCircle, ShieldAlert, Lightbulb, BookOpen, ExternalLink, Phone, BarChart3, MapPin, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import NotFound from './NotFound';
+import { useState } from 'react';
 
 const CategoryGuidePage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const [stateVarOpen, setStateVarOpen] = useState(false);
   
   const category = getCategoryById(categoryId || '');
   const guide = getGuideByCategory(categoryId || '');
@@ -20,17 +27,41 @@ const CategoryGuidePage = () => {
   }
 
   const Icon = category.icon;
+  const templates = getTemplatesByCategory(categoryId || '');
+  const templateCount = templates.length || category.templateCount;
+
+  // Fetch related blog articles
+  const { data: relatedArticles } = useQuery({
+    queryKey: ['guide-related-articles', categoryId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('title, slug, excerpt, category_slug')
+        .eq('status', 'published')
+        .eq('category_slug', categoryId || '')
+        .order('published_at', { ascending: false })
+        .limit(3);
+      return data || [];
+    },
+  });
+
+  // Get a few popular template names for the CTA
+  const popularTemplates = templates.slice(0, 3);
 
   // Build table of contents entries
   const tocItems = [
+    ...(guide.statSnapshot?.length ? [{ id: 'stats', label: 'Key Statistics' }] : []),
     { id: 'key-rights', label: 'Your Key Rights' },
     { id: 'common-issues', label: 'Common Issues' },
     { id: 'action-steps', label: 'Action Steps' },
     ...(guide.importantDeadlines?.length ? [{ id: 'deadlines', label: 'Important Deadlines' }] : []),
+    ...(guide.stateVariations?.length ? [{ id: 'state-variations', label: 'State Variations' }] : []),
     ...(guide.federalLaws?.length ? [{ id: 'federal-laws', label: 'Federal Laws' }] : []),
+    ...(guide.regulatoryContacts?.length ? [{ id: 'file-complaints', label: 'Where to File' }] : []),
     ...(guide.warningSigns?.length ? [{ id: 'warning-signs', label: 'Warning Signs' }] : []),
     ...(guide.proTips?.length ? [{ id: 'pro-tips', label: 'Expert Tips' }] : []),
     ...(guide.faqItems?.length ? [{ id: 'faq', label: 'FAQ' }] : []),
+    ...(relatedArticles && relatedArticles.length > 0 ? [{ id: 'related-articles', label: 'Related Articles' }] : []),
   ];
 
   // Build breadcrumbs for schema
@@ -141,6 +172,21 @@ const CategoryGuidePage = () => {
                 ))}
               </div>
 
+              {/* Key Statistics Strip */}
+              {guide.statSnapshot && guide.statSnapshot.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10" id="stats">
+                  {guide.statSnapshot.map((stat, index) => (
+                    <div key={index} className="bg-primary/5 border border-primary/10 rounded-xl p-5 text-center">
+                      <div className="text-2xl md:text-3xl font-bold text-primary mb-1">{stat.value}</div>
+                      <div className="text-sm text-muted-foreground">{stat.label}</div>
+                      {stat.source && (
+                        <div className="text-[10px] text-muted-foreground/60 mt-2">{stat.source}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Key Rights */}
               <Card className="mb-8" id="key-rights">
                 <CardHeader>
@@ -233,6 +279,38 @@ const CategoryGuidePage = () => {
                 </Card>
               )}
 
+              {/* State Variations */}
+              {guide.stateVariations && guide.stateVariations.length > 0 && (
+                <Card className="mb-8 border-amber-200 bg-amber-50/30 dark:bg-amber-950/10" id="state-variations">
+                  <CardHeader>
+                    <Collapsible open={stateVarOpen} onOpenChange={setStateVarOpen}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full">
+                        <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                          <MapPin className="h-5 w-5 text-amber-600" />
+                          State-Specific Variations
+                        </CardTitle>
+                        <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${stateVarOpen ? 'rotate-180' : ''}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-4 space-y-4">
+                          {guide.stateVariations.map((sv, index) => (
+                            <div key={index} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+                              <h4 className="font-semibold text-sm flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">{sv.state}</Badge>
+                              </h4>
+                              <p className="text-sm text-muted-foreground mt-1">{sv.detail}</p>
+                            </div>
+                          ))}
+                          <p className="text-xs text-muted-foreground/60 italic">
+                            These are examples — always check your specific state's consumer protection statutes for the most current rules.
+                          </p>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </CardHeader>
+                </Card>
+              )}
+
               {/* Federal Laws */}
               {guide.federalLaws && guide.federalLaws.length > 0 && (
                 <Card className="mb-8 border-blue-200 bg-blue-50/50 dark:bg-blue-950/10" id="federal-laws">
@@ -256,6 +334,45 @@ const CategoryGuidePage = () => {
                               Learn more →
                             </a>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Where to File Complaints */}
+              {guide.regulatoryContacts && guide.regulatoryContacts.length > 0 && (
+                <Card className="mb-8 border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/10" id="file-complaints">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                      <ExternalLink className="h-5 w-5 text-indigo-600" />
+                      Where to File Complaints
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {guide.regulatoryContacts.map((contact, index) => (
+                        <div key={index} className="flex items-start gap-3 border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                            <ExternalLink className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <a 
+                              href={contact.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="font-semibold text-sm text-indigo-700 dark:text-indigo-400 hover:underline"
+                            >
+                              {contact.name} →
+                            </a>
+                            <p className="text-sm text-muted-foreground mt-0.5">{contact.description}</p>
+                            {contact.phone && (
+                              <p className="text-xs text-muted-foreground/70 mt-1 flex items-center gap-1">
+                                <Phone className="h-3 w-3" /> {contact.phone}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -334,7 +451,7 @@ const CategoryGuidePage = () => {
               )}
 
               {/* CTA */}
-              <div className="bg-primary/5 rounded-xl p-8 text-center">
+              <div className="bg-primary/5 rounded-xl p-8 text-center mb-8">
                 <h2 className="font-serif text-xl font-bold mb-3">
                   Ready to Assert Your Rights?
                 </h2>
@@ -346,10 +463,53 @@ const CategoryGuidePage = () => {
                   to={`/templates/${categoryId}`}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >
-                  Browse {category.name} Templates
+                  Browse {templateCount} {category.name} Templates
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+
+                {/* Popular template links */}
+                {popularTemplates.length > 0 && (
+                  <div className="mt-5 flex flex-wrap justify-center gap-2">
+                    <span className="text-xs text-muted-foreground">Popular:</span>
+                    {popularTemplates.map((t) => (
+                      <Link
+                        key={t.slug}
+                        to={`/letters/${t.slug}`}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {t.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Related Articles */}
+              {relatedArticles && relatedArticles.length > 0 && (
+                <div className="mb-8" id="related-articles">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    <h2 className="font-serif text-xl font-bold">Related Articles</h2>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    {relatedArticles.map((article) => (
+                      <Link
+                        key={article.slug}
+                        to={`/articles/${article.slug}`}
+                        className="group border border-border rounded-lg p-4 hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                      >
+                        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                          {article.title}
+                        </h3>
+                        {article.excerpt && (
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{article.excerpt}</p>
+                        )}
+                        <span className="text-xs text-primary mt-2 inline-block">Read more →</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

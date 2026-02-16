@@ -193,35 +193,50 @@ const MegaMenu = () => {
             </NavigationMenuContent>
           </NavigationMenuItem>
 
-          {/* Consumer Rights Guides - Standalone menu */}
+          {/* Consumer Rights Guides - Upgraded menu */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">
               Guides
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[500px] p-4">
-                {/* Header */}
-                <div className="mb-3 px-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Scale className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">Know Your Rights</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Understand your legal protections before writing your dispute letter
-                  </p>
+              <div className="w-[650px] p-4">
+                {/* Top pick banner */}
+                <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <p className="text-xs text-muted-foreground mb-1">Popular guide</p>
+                  <Link 
+                    to="/guides/refunds"
+                    className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Scale className="h-4 w-4" />
+                    Know your refund rights before writing your dispute letter →
+                  </Link>
                 </div>
 
-                {/* 2-column grid of guides */}
-                <ul className="grid grid-cols-2 gap-1">
+                {/* Category grid with descriptions - 3 columns */}
+                <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
                     return (
-                      <GuideListItem
-                        key={category.id}
-                        title={category.name.replace(' & ', ' ')}
-                        href={`/guides/${category.id}`}
-                        icon={Icon}
-                      />
+                      <li key={category.id}>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to={`/guides/${category.id}`}
+                            className="flex items-start gap-2 select-none rounded-lg p-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group"
+                          >
+                            <div className="p-1.5 rounded-md flex-shrink-0" style={{ backgroundColor: `${category.color}15` }}>
+                              <Icon className="h-3.5 w-3.5" style={{ color: category.color }} />
+                            </div>
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-medium leading-tight">{category.name.replace(' & ', ' ')}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground line-clamp-1 leading-snug">
+                                {category.description.split('.')[0]}
+                              </span>
+                            </div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
                     );
                   })}
                 </ul>
