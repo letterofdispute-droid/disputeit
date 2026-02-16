@@ -1,89 +1,36 @@
 
 
-# Fix: Serve Complete Paginated Blog Sitemap on Your Domain
+# Move Close Button to Its Own Row in Global Search
 
 ## Problem
-
-The build script (`scripts/build-static.mjs`) fetches blog posts with a single REST API call, which hits the 1,000-row PostgREST limit. Result: `letterofdispute.com/sitemap-blog.xml` only contains ~1,000 posts instead of all ~5,000+.
-
-The edge function (`generate-sitemap`) correctly paginates into 5 pages of 1,000, but its sitemap index points to the Supabase function URL -- not your domain.
+The Dialog's built-in X close button overlaps with the search input in the CommandDialog, creating an ugly visual conflict (visible in the screenshot).
 
 ## Solution
+Update the `CommandDialog` component in `src/components/ui/command.tsx` to render a dedicated close-button row at the top, above the search input.
 
-Update the build script to:
+## Technical Details
 
-1. **Fetch ALL blog posts using pagination** -- loop in batches of 1,000 until no more results
-2. **Generate multiple blog sitemap files** -- `sitemap-blog-1.xml`, `sitemap-blog-2.xml`, etc. (1,000 URLs each)
-3. **Update the sitemap index** to reference all paginated blog sitemaps on `letterofdispute.com`
+### File: `src/components/ui/command.tsx`
 
-## Changes
+**Change the `CommandDialog` component:**
+- Import `DialogClose` from the dialog component
+- Remove the default close button that comes from `DialogContent` by adding a `hideCloseButton` approach -- or override the layout
+- Add a top row with a right-aligned X button above the `Command` children
+- The `DialogContent` currently renders a close button absolutely positioned at `right-4 top-4`. We'll override this by:
+  1. Adding a custom class to `DialogContent` to hide its built-in close button (`[&>button.absolute]:hidden` or similar)
+  2. Rendering our own close button in a flex row at the top of the dialog
 
-### File: `scripts/build-static.mjs`
-
-**1. Replace `loadBlogPosts()` with paginated fetching:**
-
-```javascript
-async function loadBlogPosts() {
-  console.log('   Fetching blog posts from database (paginated)...');
-  const allPosts = [];
-  const BATCH_SIZE = 1000;
-  let offset = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/blog_posts?status=eq.published&select=slug,category_slug,updated_at&order=published_at.desc&offset=${offset}&limit=${BATCH_SIZE}`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-
-    if (!response.ok) break;
-    const data = await response.json();
-    allPosts.push(...data.map(post => ({
-      slug: post.slug,
-      categorySlug: post.category_slug,
-      lastmod: post.updated_at?.split('T')[0] || BUILD_DATE
-    })));
-    hasMore = data.length === BATCH_SIZE;
-    offset += BATCH_SIZE;
-  }
-
-  return allPosts;
-}
+The resulting layout will be:
+```
+[ ----------------------------------------- X ]   <-- close button row
+[ (magnifying glass) Search input...            ]   <-- search input
+[ Results list...                               ]   <-- results
+[ Footer                                        ]   <-- keyboard hints
 ```
 
-**2. Generate paginated blog sitemaps (1,000 URLs per file):**
+### Specific changes:
+- In `CommandDialog`, add a `div` with `flex justify-end` containing a `DialogClose` button before the `Command` component
+- Add a class to `DialogContent` to suppress its default absolute-positioned close button (e.g., `[&>button:last-child]:hidden`)
+- Style the new close button to match the existing design (same icon size, opacity, hover state)
 
-Instead of one `sitemap-blog.xml`, generate `sitemap-blog-1.xml`, `sitemap-blog-2.xml`, etc.
-
-**3. Update `generateSitemapIndex()` to list all blog pages:**
-
-```xml
-<sitemap>
-  <loc>https://letterofdispute.com/sitemap-blog-1.xml</loc>
-</sitemap>
-<sitemap>
-  <loc>https://letterofdispute.com/sitemap-blog-2.xml</loc>
-</sitemap>
-<!-- ...up to page 5+ -->
-```
-
-**4. Write all files to both `dist/` and `public/`**
-
-## Result
-
-- `letterofdispute.com/sitemap.xml` will reference all paginated blog sitemaps
-- Each `sitemap-blog-N.xml` will contain up to 1,000 article URLs
-- All 5,000+ blog posts will be included
-- Everything served from your own domain -- no Supabase function URLs
-- `robots.txt` already points to `letterofdispute.com/sitemap.xml` so no change needed there
-
-## What Stays the Same
-
-- The edge function (`generate-sitemap`) remains as a backup but is no longer the primary sitemap
-- `sitemap-static.xml`, `sitemap-categories.xml`, `sitemap-templates.xml` are unchanged
-- `robots.txt` unchanged
+No changes needed to `GlobalSearch.tsx` -- this is purely a UI component fix.
