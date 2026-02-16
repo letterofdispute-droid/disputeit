@@ -87,6 +87,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/cookie-policy" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Cookie Policy
+                </Link>
+              </li>
+              <li>
                 <button
                   onClick={openSettings}
                   className="text-muted-foreground hover:text-foreground transition-colors"
