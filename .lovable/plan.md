@@ -1,76 +1,69 @@
 
 
-# Enrich Guides Pages and Improve Guides Menu
+# Replace Em Dashes (—) with Regular Hyphens (-) Across Codebase
 
-## Part 1: Guides Menu Visual Upgrade
+## Scope
 
-### File: `src/components/layout/MegaMenu.tsx`
+Found ~1,100+ instances of "—" (em dash) across 30+ files in `src/` and `supabase/`. The bulk is in:
 
-**Current state**: Plain 2-column list with uniform blue icons and no descriptions.
+- `src/data/consumerRightsContent.ts` - ~683 matches (guides data)
+- `src/data/seoContent.ts` - SEO content
+- `src/data/templates/refundsTemplates.ts` - template descriptions
+- `src/data/templates/contractors/landscapingTemplates.ts` - template text
+- `src/pages/HowItWorksPage.tsx` - page copy
+- `src/pages/CategoryGuidePage.tsx` - guide page text
+- `src/pages/ArticlesPage.tsx` - code comments
+- `src/pages/admin/AdminUsers.tsx` - fallback display values
+- `src/components/` (8 files) - UI text and code comments
+- `supabase/functions/` (10 files) - log messages, comments, prompts
+- `src/hooks/useAuth.tsx` - log message
 
-**Changes**:
-- Widen the dropdown from 500px to 600px to accommodate descriptions
-- Use each category's existing `color` property for the icon color (same as category pages)
-- Add short one-line descriptions under each category name using data from `templateCategories` descriptions (truncated)
-- Show a template count badge (e.g., "15 letters") next to each guide entry, pulled from the `CATEGORIES` data or a count of `allTemplates` per category
-- Add a highlighted "top pick" banner at the top of the dropdown (e.g., "Popular: Know your refund rights before you write your letter") linking to the refunds guide
-- Use the existing `ListItem` component style (with description) instead of the minimal `GuideListItem` for a richer appearance
+## Approach
 
-### File: `src/data/templateCategories.ts` (read-only reference)
-Already has `color`, `icon`, `description` per category -- we'll reuse these.
+Simple global find-and-replace of `—` with `-` in every file where it appears. No exceptions - comments, user-facing text, log messages, template content, AI prompts all get the same treatment.
 
-## Part 2: Guide Page Content Enrichment
+### Special case: `AdminUsers.tsx`
+The fallback `'—'` used for stats display (`stats?.total ?? '—'`) will become `'-'` which is fine as a placeholder.
 
-### File: `src/data/consumerRightsContent.ts`
+### Special case: `process-embedding-queue/index.ts`
+Contains `[-–—:|]` regex that splits on em dashes. This will change to `[-–-:|]` which is functionally equivalent since `-` is already in the character class. We should keep the regex working by replacing only the em dash character there too.
 
-**Add new fields to the `CategoryGuide` interface**:
-- `regulatoryContacts?: { name: string; description: string; url: string; phone?: string }[]` -- Where to file complaints (FTC, CFPB, state AG, BBB)
-- `stateVariations?: { state: string; detail: string }[]` -- Notable state-specific differences
-- `relatedTemplateCount?: number` -- Number of templates in this category (can also be computed)
-- `statSnapshot?: { label: string; value: string; source?: string }[]` -- Key statistics (e.g., "97% of CFPB complaints resolved within 15 days")
+## Files to edit (all instances of — become -)
 
-**Populate these fields** for at least the top 3-4 guides (refunds, housing, financial, insurance) with real regulatory data.
+**Data files (user-facing content):**
+1. `src/data/consumerRightsContent.ts` (~683 instances)
+2. `src/data/seoContent.ts`
+3. `src/data/templates/refundsTemplates.ts`
+4. `src/data/templates/contractors/landscapingTemplates.ts`
 
-### File: `src/pages/CategoryGuidePage.tsx`
+**Pages:**
+5. `src/pages/HowItWorksPage.tsx`
+6. `src/pages/CategoryGuidePage.tsx`
+7. `src/pages/ArticlesPage.tsx`
+8. `src/pages/admin/AdminUsers.tsx`
 
-**Add new rendered sections** (inserted into the existing page flow):
+**Components:**
+9. `src/components/admin/blog/ImageBackfillCard.tsx`
+10. `src/components/admin/analytics/SiteSearchReport.tsx`
+11. `src/components/admin/storage/ImageOptimizer.tsx`
+12. `src/components/admin/seo/TemplateCoverageMap.tsx`
+13. `src/components/admin/seo/queue/GenerationProgress.tsx`
+14. `src/components/admin/seo/links/SemanticScanPanel.tsx`
+15. `src/components/admin/seo/links/LinkActions.tsx`
+16. `src/components/letter/GeneratingOverlay.tsx`
 
-1. **"Where to File Complaints" section** (after Federal Laws)
-   - Card with agency name, description, direct link, and optional phone number
-   - Styled with a distinct blue/indigo accent (like the federal laws card)
-   - Each agency as a row with an external link icon
+**Hooks:**
+17. `src/hooks/useAuth.tsx`
 
-2. **"Key Statistics" callout strip** (after the introduction, before Key Rights)
-   - Horizontal row of 2-3 stat cards (e.g., "97% CFPB resolution rate", "$500 avg refund recovered")
-   - Light background, bold numbers, small source text
+**Edge functions:**
+18. `supabase/functions/backfill-blog-images/index.ts`
+19. `supabase/functions/apply-links-bulk/index.ts`
+20. `supabase/functions/scan-for-semantic-links/index.ts`
+21. `supabase/functions/process-embedding-queue/index.ts`
+22. `supabase/functions/optimize-storage-images/index.ts`
+23. `supabase/functions/fetch-category-images/index.ts`
+24. `supabase/functions/scan-for-smart-links/index.ts`
 
-3. **"State Variations" notice** (after Important Deadlines)
-   - Collapsible section showing notable state differences
-   - Amber/info-styled card matching the deadlines card
-
-4. **"Related Letters" count + link** (enhance the CTA section)
-   - Show the actual template count: "Browse 15 Refund Letter Templates"
-   - Add 2-3 specific popular template links below the main CTA button
-
-5. **"Related Articles" section** (before "Explore Other Guides")
-   - Query published blog articles tagged to this category
-   - Show 2-3 article cards with title and excerpt
-   - This connects the Tier 2 (Guides) to Tier 3 (Articles) content hierarchy
-
-### TOC Updates
-Add new sections to the `tocItems` array so they appear in the sticky sidebar navigation.
-
-## Implementation Order
-
-1. Update the `CategoryGuide` interface with new optional fields
-2. Populate data for refunds, housing, financial, and insurance guides
-3. Render the new sections in `CategoryGuidePage.tsx`
-4. Upgrade the Guides mega menu in `MegaMenu.tsx`
-
-## What This Achieves
-
-- **SEO**: More content depth and internal linking boosts topical authority
-- **User value**: Actionable complaint filing links, real statistics, and state-specific info
-- **Conversion**: Template counts and direct links from guides to letters increase click-through
-- **Visual polish**: The menu matches the quality of the Letter Templates mega menu
+**Also check the Stripe checkout file we just edited:**
+25. `supabase/functions/create-letter-checkout/index.ts` (the `—` in the product name)
 
