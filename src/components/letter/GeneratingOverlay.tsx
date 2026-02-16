@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, FileText, Shield, Sparkles, Scale, Users, CheckCircle2 } from 'lucide-react';
 
@@ -59,6 +59,7 @@ const GeneratingOverlay = ({ isOpen, isGenerating, onComplete }: GeneratingOverl
   const [messageIndex, setMessageIndex] = useState(0);
   const [generationComplete, setGenerationComplete] = useState(false);
   const [timerComplete, setTimerComplete] = useState(false);
+  const hasCompleted = useRef(false);
 
   // Handle progress animation - start when isOpen becomes true
   useEffect(() => {
@@ -67,6 +68,7 @@ const GeneratingOverlay = ({ isOpen, isGenerating, onComplete }: GeneratingOverl
     setProgress(0);
     setGenerationComplete(false);
     setTimerComplete(false);
+    hasCompleted.current = false;
 
     // Animate progress bar over minimum duration
     const startTime = Date.now();
@@ -103,9 +105,10 @@ const GeneratingOverlay = ({ isOpen, isGenerating, onComplete }: GeneratingOverl
     }
   }, [isGenerating, progress]);
 
-  // Call onComplete when both timer and generation are done
+  // Call onComplete when both timer and generation are done — only once per cycle
   useEffect(() => {
-    if (timerComplete && generationComplete) {
+    if (timerComplete && generationComplete && !hasCompleted.current) {
+      hasCompleted.current = true;
       // Small delay for smooth transition
       const timeout = setTimeout(() => {
         onComplete();

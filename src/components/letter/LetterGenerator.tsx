@@ -410,12 +410,10 @@ const LetterGenerator = ({
       <GeneratingOverlay 
         isOpen={showGeneratingOverlay}
         isGenerating={isGenerating} 
-        onComplete={() => {
+        onComplete={useCallback(() => {
           setShowGeneratingOverlay(false);
-          // Always show pricing when generation overlay completes
-          // The AI content will already be set by this point
           setShowPricing(true);
-        }} 
+        }, [])} 
       />
     </div>;
 };
