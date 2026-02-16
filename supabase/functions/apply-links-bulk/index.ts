@@ -263,7 +263,22 @@ function insertGeneratedSentence(
     p.textLower.trim().length >= 40
   );
 
-  if (eligible.length === 0) return null;
+  if (eligible.length === 0) {
+    // Relax: allow first or last paragraph as last resort
+    const relaxed = paragraphs.filter(p =>
+      p.linkCount < 2 &&
+      p.textLower.trim().length >= 40
+    );
+    if (relaxed.length === 0) return null;
+    const midIndex = Math.floor(relaxed.length / 2);
+    const bestPara = relaxed[midIndex];
+    const linkedSentence = generatedSentence.replace(
+      anchorText,
+      `<a href="${targetUrl}" title="${escapeHtml(targetTitle)}">${anchorText}</a>`,
+    );
+    const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
+    return content.replace(bestPara.html, modifiedPara);
+  }
 
   // Pick a paragraph in the middle-ish area
   const midIndex = Math.floor(eligible.length / 2);
@@ -340,6 +355,28 @@ async function insertLinkContextually(
     );
     const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
     return content.replace(bestPara.html, modifiedPara);
+  }
+
+  // Final fallback: create a simple linking sentence and append to a suitable paragraph
+  const fallbackParagraphs = parseParagraphs(content);
+  const fallbackEligible = fallbackParagraphs.filter(p =>
+    p.index > 0 &&
+    p.index < fallbackParagraphs.length - 1 &&
+    p.linkCount < 2 &&
+    p.textLower.trim().length >= 40
+  );
+
+  const eligibleForFallback = fallbackEligible.length > 0
+    ? fallbackEligible
+    : fallbackParagraphs.filter(p => p.linkCount < 2 && p.textLower.trim().length >= 40);
+
+  if (eligibleForFallback.length > 0) {
+    const midIdx = Math.floor(eligibleForFallback.length / 2);
+    const para = eligibleForFallback[midIdx];
+    const linkHtml = `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${suggestion.anchor_text}</a>`;
+    const sentence = `For further guidance, see our resource on ${linkHtml}.`;
+    const modifiedPara = para.html.replace(/<\/p>$/i, ` ${sentence}</p>`);
+    return content.replace(para.html, modifiedPara);
   }
 
   return null;
