@@ -1,8 +1,8 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, User, LogOut, Settings, LayoutDashboard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import MegaMenu from './MegaMenu';
 import UserAccountMenu from './UserAccountMenu';
 import GlobalSearch from '@/components/search/GlobalSearch';
@@ -26,18 +26,8 @@ import {
 const Header = () => {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const isHomePage = location.pathname === '/';
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -45,13 +35,9 @@ const Header = () => {
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-      scrolled || !isHomePage
-        ? 'bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-[0_1px_3px_0_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06)]'
-        : 'bg-transparent'
-    }`}>
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container-wide">
-        <div className="flex h-16 lg:h-[4.5rem] items-center justify-between">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center group">
             <img 
@@ -82,7 +68,7 @@ const Header = () => {
                     Login
                   </Link>
                 </Button>
-                <Button variant="default" size="sm" className="rounded-full px-5 bg-primary text-primary-foreground hover:bg-primary/90" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
+                <Button variant="accent" size="sm" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
                   <Link to="/#letters">Create Letter</Link>
                 </Button>
               </>

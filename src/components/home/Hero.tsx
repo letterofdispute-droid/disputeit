@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
+import GlobalSearch from '@/components/search/GlobalSearch';
 import { trackAIAssistantOpen, trackBrowseTemplatesClick, trackCTAClick } from '@/hooks/useGTM';
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const handleStartDisputeClick = () => {
-    trackCTAClick('start_your_dispute', 'hero');
+  const handleAssistantOpen = () => {
     trackAIAssistantOpen();
     setIsAssistantOpen(true);
   };
@@ -24,84 +24,101 @@ const Hero = () => {
     }
   };
 
+  const handleStartDisputeClick = () => {
+    trackCTAClick('start_your_dispute', 'hero');
+    handleAssistantOpen();
+  };
+
   return (
-    <section className="relative overflow-hidden bg-background pt-32 pb-24 md:pt-40 md:pb-32">
-      {/* Grid pattern background with warm gradient fade */}
-      <div className="absolute inset-0">
-        <svg className="absolute inset-0 w-full h-full opacity-[0.07]" aria-hidden="true">
-          <defs>
-            <pattern id="hero-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="hsl(var(--foreground))" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#hero-grid)" />
-        </svg>
-        {/* Warm gradient overlay fading from bottom */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse 80% 60% at 50% 100%, hsl(var(--accent) / 0.12) 0%, transparent 70%)',
-          }}
-          aria-hidden="true"
-        />
-        {/* Top fade to white */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to bottom, hsl(var(--background)) 0%, transparent 40%)',
-          }}
-          aria-hidden="true"
-        />
+    <section className="relative overflow-hidden bg-primary py-20 md:py-28">
+      {/* LCP Image - Optimized with fetchPriority */}
+      <img
+        src="/images/hero-bg.jpg"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        loading="eager"
+        className="absolute inset-0 w-full h-full object-cover object-top opacity-30 grayscale" />
+
+      
+      {/* Gradient Overlay - More transparent to show image */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/85 to-primary/90" />
+
+      {/* Background Pattern (subtle) */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
       </div>
 
       <div className="container-wide relative">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Announcement Pill */}
-          <div className="animate-fade-up mb-8">
-            <button
-              onClick={handleBrowseClick}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/60 backdrop-blur-sm text-sm text-muted-foreground hover:text-foreground hover:border-accent/40 transition-all duration-300 group"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-              500+ templates available — Browse categories
-              <ChevronRight className="h-3.5 w-3.5 text-accent group-hover:translate-x-0.5 transition-transform" />
-            </button>
+        <div className="max-w-3xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Pre-Validated Letter Templates</span>
           </div>
 
           {/* Headline */}
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.1] mb-8 animate-fade-up" style={{ animationDelay: '0.08s' }}>
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6 animate-fade-up">
             Professional Dispute Letters,{' '}
             <span className="text-accent">Without the Guesswork</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-up" style={{ animationDelay: '0.16s' }}>
+          <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
             Pre-validated letter templates with controlled language, consistent structure, and legal precision. 
             No trial and error. Just predictable, professional results.
           </p>
 
-          {/* Dual CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: '0.24s' }}>
-            <Button
-              variant="hero"
-              size="xl"
-              onClick={handleStartDisputeClick}
-              className="rounded-full shadow-[0_4px_24px_-4px_hsl(var(--accent)/0.45)]"
-            >
+          {/* AI Search Prompt */}
+          <div className="animate-fade-up pb-4" style={{ animationDelay: '0.15s' }}>
+            <button
+              onClick={handleAssistantOpen}
+              className="w-full max-w-xl mx-auto flex items-center gap-3 px-5 py-4 bg-primary-foreground/10 hover:bg-primary-foreground/15 border border-primary-foreground/20 rounded-xl text-left transition-all duration-300 group mb-6">
+
+              <Search className="h-5 w-5 text-primary-foreground/60 group-hover:text-accent transition-colors" />
+              <span className="flex-1 text-primary-foreground/60 group-hover:text-primary-foreground/80 transition-colors">
+                Describe your dispute and I'll find the right letter...
+              </span>
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-accent rounded-lg text-accent-foreground text-sm font-medium">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Help
+              </div>
+            </button>
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="text-sm text-primary-foreground/50 hover:text-primary-foreground/80 transition-colors underline underline-offset-2">
+
+              or search templates & articles manually
+            </button>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-up" style={{ animationDelay: '0.2s' }}>
+            <Button variant="hero" size="xl" onClick={handleStartDisputeClick}>
               Start Your Dispute
               <ArrowRight className="h-5 w-5" />
             </Button>
-            <Button
-              variant="outline"
-              size="xl"
-              className="rounded-full border-border hover:border-foreground/20"
-              asChild
-            >
-              <Link to="/how-it-works">
-                Learn More
-                <ChevronRight className="h-5 w-5" />
-              </Link>
+            <Button variant="heroOutline" size="xl" onClick={handleBrowseClick}>
+              Browse Letter Templates
             </Button>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 max-w-3xl mx-auto animate-fade-up" style={{ animationDelay: '0.3s' }}>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <Target className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Certainty, not guesswork</span>
+            </div>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <ShieldCheck className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Pre-validated letters</span>
+            </div>
+            <div className="flex items-center gap-2 text-primary-foreground/70">
+              <Clock className="h-5 w-5 flex-shrink-0 text-accent" />
+              <span className="text-sm whitespace-nowrap">Legal-safe language</span>
+            </div>
           </div>
         </div>
       </div>
@@ -109,10 +126,13 @@ const Hero = () => {
       {/* AI Assistant Modal */}
       <DisputeAssistantModal
         isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-      />
-    </section>
-  );
+        onClose={() => setIsAssistantOpen(false)} />
+
+
+      {/* Global Search */}
+      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} triggerSource="hero" />
+    </section>);
+
 };
 
 export default Hero;
