@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search } from 'lucide-react';
+import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 import GlobalSearch from '@/components/search/GlobalSearch';
@@ -8,6 +8,7 @@ import { trackAIAssistantOpen, trackBrowseTemplatesClick, trackCTAClick } from '
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [autoStartVoice, setAutoStartVoice] = useState(false);
 
   const handleAssistantOpen = () => {
     trackAIAssistantOpen();
@@ -85,8 +86,19 @@ const Hero = () => {
                 className="w-full max-w-xl mx-auto lg:mx-0 flex items-center gap-3 px-5 py-4 bg-card hover:bg-muted/50 border border-border shadow-soft rounded-xl text-left transition-all duration-300 group mb-4">
                 <Search className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
                 <span className="flex-1 text-muted-foreground group-hover:text-foreground/80 transition-colors">
-                  Describe your dispute and I'll find the right letter...
+                  Type or speak your dispute...
                 </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAutoStartVoice(true);
+                    handleAssistantOpen();
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
+                  title="Speak your dispute"
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
                 <div className="flex items-center gap-1 px-3 py-1.5 bg-accent rounded-lg text-accent-foreground text-sm font-medium">
                   <Sparkles className="h-3.5 w-3.5" />
                   AI Help
@@ -164,7 +176,8 @@ const Hero = () => {
       {/* AI Assistant Modal */}
       <DisputeAssistantModal
         isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)} />
+        onClose={() => { setIsAssistantOpen(false); setAutoStartVoice(false); }}
+        autoStartListening={autoStartVoice} />
 
       {/* Global Search */}
       <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} triggerSource="hero" />

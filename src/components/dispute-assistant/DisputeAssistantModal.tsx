@@ -28,6 +28,7 @@ interface DisputeAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   startInLegalExpertMode?: boolean;
+  autoStartListening?: boolean;
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -35,7 +36,7 @@ const INITIAL_MESSAGE: Message = {
   content: "Hi! I'm here to help you resolve your dispute. Tell me what happened, and I'll find the right letter for you.",
 };
 
-const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false }: DisputeAssistantModalProps) => {
+const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false, autoStartListening = false }: DisputeAssistantModalProps) => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -258,7 +259,8 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
                 <ChatInput 
                   onSend={streamChat} 
                   isLoading={isLoading}
-                  placeholder="Describe what happened..."
+                  placeholder="Type or speak your dispute..."
+                  autoStartListening={autoStartListening}
                 />
                 {messages.length > 1 && (
                   <Button 
