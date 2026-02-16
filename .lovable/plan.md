@@ -1,36 +1,33 @@
 
 
-# Move Close Button to Its Own Row in Global Search
+# Fix: PricingModal Reopens After Closing
 
 ## Problem
-The Dialog's built-in X close button overlaps with the search input in the CommandDialog, creating an ugly visual conflict (visible in the screenshot).
+When you click the X button to close the "Get Your Letter" pricing modal, it immediately reopens. This happens because the `GeneratingOverlay` component retains its "completed" state (`timerComplete` and `generationComplete` both `true`) even after the pricing modal is closed. The effect that calls `onComplete` (which sets `showPricing(true)`) can re-fire whenever the `onComplete` function reference changes on re-render, causing the modal to reopen.
 
 ## Solution
-Update the `CommandDialog` component in `src/components/ui/command.tsx` to render a dedicated close-button row at the top, above the search input.
+
+### File: `src/components/letter/GeneratingOverlay.tsx`
+
+Add a `hasCompleted` ref to ensure `onComplete` is only called **once** per generation cycle:
+
+- Add a `useRef` (`hasCompleted`) that tracks whether `onComplete` has already been invoked
+- In the completion effect, check `hasCompleted.current` before calling `onComplete()`
+- Reset `hasCompleted` to `false` when `isOpen` becomes true (new generation starts)
+
+### File: `src/components/letter/LetterGenerator.tsx`
+
+Stabilize the `onComplete` callback with `useCallback` so it doesn't create a new reference on every render, which would retrigger the effect.
 
 ## Technical Details
 
-### File: `src/components/ui/command.tsx`
+**GeneratingOverlay.tsx changes:**
+- Add `const hasCompleted = useRef(false)` 
+- In the `isOpen` reset effect, add `hasCompleted.current = false`
+- In the completion effect (line 107-115), wrap with `if (!hasCompleted.current)` and set it to `true` before calling `onComplete()`
 
-**Change the `CommandDialog` component:**
-- Import `DialogClose` from the dialog component
-- Remove the default close button that comes from `DialogContent` by adding a `hideCloseButton` approach -- or override the layout
-- Add a top row with a right-aligned X button above the `Command` children
-- The `DialogContent` currently renders a close button absolutely positioned at `right-4 top-4`. We'll override this by:
-  1. Adding a custom class to `DialogContent` to hide its built-in close button (`[&>button.absolute]:hidden` or similar)
-  2. Rendering our own close button in a flex row at the top of the dialog
+**LetterGenerator.tsx changes:**
+- Wrap the `onComplete` handler in `useCallback` to stabilize the reference
 
-The resulting layout will be:
-```
-[ ----------------------------------------- X ]   <-- close button row
-[ (magnifying glass) Search input...            ]   <-- search input
-[ Results list...                               ]   <-- results
-[ Footer                                        ]   <-- keyboard hints
-```
+This ensures the pricing modal opens exactly once after generation, and stays closed when the user dismisses it.
 
-### Specific changes:
-- In `CommandDialog`, add a `div` with `flex justify-end` containing a `DialogClose` button before the `Command` component
-- Add a class to `DialogContent` to suppress its default absolute-positioned close button (e.g., `[&>button:last-child]:hidden`)
-- Style the new close button to match the existing design (same icon size, opacity, hover state)
-
-No changes needed to `GlobalSearch.tsx` -- this is purely a UI component fix.
