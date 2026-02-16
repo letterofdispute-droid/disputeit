@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { LetterTemplate } from '@/data/letterTemplates';
+import { US_STATES } from '@/data/stateSpecificLaws';
 import { generateFullLetter } from '@/lib/letterGeneration';
 import { assessLetterStrength } from '@/lib/fieldValidators';
 import LetterPreview from './LetterPreview';
@@ -42,6 +43,7 @@ const LetterGenerator = ({
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [selectedTone, setSelectedTone] = useState<'neutral' | 'firm' | 'final'>('neutral');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState(template.jurisdictions[0].code);
+  const [selectedState, setSelectedState] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
@@ -223,6 +225,8 @@ const LetterGenerator = ({
                   <Select value={selectedJurisdiction} onValueChange={(v) => {
                     setSelectedJurisdiction(v);
                     trackJurisdictionSelected(template.slug, v);
+                    // Reset state when switching away from US
+                    if (v !== 'US') setSelectedState('');
                   }}>
                     <SelectTrigger>
                       <SelectValue />
@@ -237,6 +241,28 @@ const LetterGenerator = ({
                     This helps us include appropriate legal references (available in paid tiers).
                   </p>
                 </div>
+
+                {/* US State Selection - only shown when US jurisdiction selected */}
+                {selectedJurisdiction === 'US' && (
+                  <div className="space-y-3">
+                    <Label>Your State</Label>
+                    <Select value={selectedState} onValueChange={setSelectedState}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your state (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {US_STATES.map(s => (
+                          <SelectItem key={s.code} value={s.code}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Selecting your state adds specific state statute citations to strengthen your letter.
+                    </p>
+                  </div>
+                )}
               </div>}
 
             {/* Step 3: Review */}
@@ -351,6 +377,7 @@ const LetterGenerator = ({
                       formData,
                       jurisdiction: selectedJurisdiction as 'US' | 'UK' | 'EU' | 'generic',
                       tone: selectedTone,
+                      usState: selectedState || undefined,
                     });
                     
                     if (aiContent) {

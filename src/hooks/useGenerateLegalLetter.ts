@@ -9,6 +9,7 @@ export interface GenerateLegalLetterParams {
   formData: Record<string, string>;
   jurisdiction: 'US' | 'UK' | 'EU' | 'generic';
   tone: 'neutral' | 'firm' | 'final';
+  usState?: string;
 }
 
 export interface GenerateLegalLetterResult {
