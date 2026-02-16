@@ -82,7 +82,7 @@ const Header = () => {
                     Login
                   </Link>
                 </Button>
-                <Button variant="accent" size="sm" className="rounded-full px-5" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
+                <Button variant="default" size="sm" className="rounded-full px-5 bg-primary text-primary-foreground hover:bg-primary/90" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
                   <Link to="/#letters">Create Letter</Link>
                 </Button>
               </>
