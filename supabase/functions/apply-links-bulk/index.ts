@@ -312,53 +312,56 @@ async function insertLinkContextually(
     );
   }
 
-  // Otherwise, use existing phrase-matching logic
+  // Otherwise, try phrase-matching logic first
   const paragraphs = parseParagraphs(content);
-  if (paragraphs.length < 3) return null;
+  
+  // If link already exists, skip entirely
   if (content.includes(`href="${targetUrl}"`)) return null;
 
   const targetWords = getTargetWords(targetPrimaryKeyword, targetSecondaryKeywords);
-  if (targetWords.length === 0) return null;
 
-  const scored = paragraphs
-    .map(p => ({ para: p, score: scoreParagraph(p, targetWords, paragraphs.length) }))
-    .filter(s => s.score > 0)
-    .sort((a, b) => b.score - a.score);
+  // Try phrase-matching and AI generation only if we have enough paragraphs and keywords
+  if (paragraphs.length >= 3 && targetWords.length > 0) {
+    const scored = paragraphs
+      .map(p => ({ para: p, score: scoreParagraph(p, targetWords, paragraphs.length) }))
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-  if (scored.length === 0) return null;
+    if (scored.length > 0) {
+      for (const { para } of scored.slice(0, 3)) {
+        const modified = tryNaturalPhraseMatch(para.html, targetWords, targetUrl, suggestion.target_title);
+        if (modified) {
+          return content.replace(para.html, modified);
+        }
+      }
 
-  for (const { para } of scored.slice(0, 3)) {
-    const modified = tryNaturalPhraseMatch(para.html, targetWords, targetUrl, suggestion.target_title);
-    if (modified) {
-      return content.replace(para.html, modified);
+      // Fallback: AI-generated sentence
+      const bestPara = scored[0].para;
+      const allKeywords = [
+        ...(targetPrimaryKeyword ? [targetPrimaryKeyword] : []),
+        ...(targetSecondaryKeywords || []),
+      ];
+
+      const aiResult = await generateContextualSentence(
+        bestPara.html,
+        suggestion.target_title,
+        allKeywords,
+        targetUrl,
+      );
+
+      if (aiResult) {
+        const linkedSentence = aiResult.sentence.replace(
+          aiResult.anchorPhrase,
+          `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${aiResult.anchorPhrase}</a>`,
+        );
+        const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
+        return content.replace(bestPara.html, modifiedPara);
+      }
     }
   }
 
-  // Fallback: AI-generated sentence (only for suggestions without pre-generated ones)
-  const bestPara = scored[0].para;
-  const allKeywords = [
-    ...(targetPrimaryKeyword ? [targetPrimaryKeyword] : []),
-    ...(targetSecondaryKeywords || []),
-  ];
-
-  const aiResult = await generateContextualSentence(
-    bestPara.html,
-    suggestion.target_title,
-    allKeywords,
-    targetUrl,
-  );
-
-  if (aiResult) {
-    const linkedSentence = aiResult.sentence.replace(
-      aiResult.anchorPhrase,
-      `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${aiResult.anchorPhrase}</a>`,
-    );
-    const modifiedPara = bestPara.html.replace(/<\/p>$/i, ` ${linkedSentence}</p>`);
-    return content.replace(bestPara.html, modifiedPara);
-  }
-
   // Final fallback: create a simple linking sentence and append to a suitable paragraph
-  const fallbackParagraphs = parseParagraphs(content);
+  const fallbackParagraphs = paragraphs.length > 0 ? paragraphs : parseParagraphs(content);
   const fallbackEligible = fallbackParagraphs.filter(p =>
     p.index > 0 &&
     p.index < fallbackParagraphs.length - 1 &&
