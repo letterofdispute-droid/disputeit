@@ -303,10 +303,10 @@ async function insertLinkContextually(
 ): Promise<string | null> {
   console.log(`[INSERT] Suggestion ${suggestion.id}: entering insertLinkContextually`);
 
-  // If link already exists, skip entirely
+  // If link already exists, mark as already applied
   if (content.includes(`href="${targetUrl}"`)) {
-    console.log(`[INSERT] Suggestion ${suggestion.id}: duplicate URL, skipping`);
-    return null;
+    console.log(`[INSERT] Suggestion ${suggestion.id}: URL already in article, marking as applied`);
+    return 'ALREADY_EXISTS';
   }
 
   // If we have a pre-generated sentence from discovery, use it directly
@@ -520,7 +520,15 @@ async function processBatch(
             targetSecondaryKeywords,
           );
 
-          if (result) {
+          if (result === 'ALREADY_EXISTS') {
+            // Link already in article - mark as applied (no content change needed)
+            await supabaseAdmin
+              .from('link_suggestions')
+              .update({ status: 'applied', applied_at: new Date().toISOString() })
+              .eq('id', suggestion.id);
+            console.log(`[BATCH] Suggestion ${suggestion.id}: already exists, marked applied`);
+            appliedCount++;
+          } else if (result) {
             updatedContent = result;
             await supabaseAdmin
               .from('link_suggestions')
