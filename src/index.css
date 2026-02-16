@@ -404,4 +404,17 @@
     width: 60%;
     left: 20%;
   }
+
+  /* Glassmorphism utility */
+  .glass {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 4px 16px -2px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  }
+  .glass:hover {
+    background: hsl(var(--card) / 0.85);
+    box-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.08), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+  }
 }
