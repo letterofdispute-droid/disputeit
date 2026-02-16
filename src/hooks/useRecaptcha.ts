@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getConsentSync } from '@/hooks/useCookieConsent';
 
 const RECAPTCHA_SITE_KEY = '6Ld622AsAAAAAB0AAUWGc3Bl78A1YKxdM6Piu27-';
 
@@ -51,7 +52,14 @@ export const useRecaptcha = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Dynamically load the reCAPTCHA script when this hook is used
+    // Only load reCAPTCHA if analytics consent has been granted
+    const consent = getConsentSync();
+    if (consent && !consent.analytics) {
+      // User explicitly rejected analytics cookies – skip reCAPTCHA
+      setIsReady(false);
+      return;
+    }
+
     loadRecaptchaScript()
       .then(() => {
         if (window.grecaptcha?.enterprise) {
