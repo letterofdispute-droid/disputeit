@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { supabase } from '@/integrations/supabase/client';
-import { getBlogCategoryBySlug, blogCategories } from '@/data/blogPosts';
+import { blogCategories } from '@/data/blogPosts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, ChevronRight } from 'lucide-react';
@@ -26,10 +26,26 @@ const ArticleCategoryPage = () => {
   const { category } = useParams<{ category: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
-  
-  const categoryData = category ? getBlogCategoryBySlug(category) : undefined;
 
   const offset = (currentPage - 1) * POSTS_PER_PAGE;
+
+  // Fetch categories from DB with static fallback
+  const { data: dbCategories } = useQuery({
+    queryKey: ['blog-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_categories')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  const categories = dbCategories && dbCategories.length > 0 ? dbCategories : blogCategories;
+  const categoryData = category ? categories.find(c => c.slug === category) : undefined;
 
   // Fetch posts with server-side pagination
   const { data: queryResult, isLoading, isError } = useQuery({
@@ -126,7 +142,7 @@ const ArticleCategoryPage = () => {
             <Link to="/articles">
               <Badge variant="outline" className="cursor-pointer hover:bg-muted">All Articles</Badge>
             </Link>
-            {blogCategories.map((cat) => (
+            {categories.map((cat) => (
               <Link key={cat.slug} to={`/articles/${cat.slug}`}>
                 <Badge 
                   variant={cat.slug === category ? 'default' : 'outline'} 

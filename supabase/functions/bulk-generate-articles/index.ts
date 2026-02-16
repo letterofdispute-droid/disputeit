@@ -47,17 +47,17 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 const CATEGORY_MAP: Record<string, { slug: string; name: string }> = {
   'refunds': { slug: 'consumer-rights', name: 'Consumer Rights' },
   'damaged-goods': { slug: 'consumer-rights', name: 'Consumer Rights' },
-  'ecommerce': { slug: 'consumer-rights', name: 'Consumer Rights' },
-  'housing': { slug: 'complaint-guides', name: 'Complaint Guides' },
-  'hoa': { slug: 'complaint-guides', name: 'Complaint Guides' },
+  'ecommerce': { slug: 'ecommerce', name: 'E-commerce & Online Services' },
+  'housing': { slug: 'housing', name: 'Landlord & Housing' },
+  'hoa': { slug: 'hoa', name: 'Neighbor & HOA Disputes' },
   'contractors': { slug: 'contractors', name: 'Contractors' },
-  'financial': { slug: 'legal-tips', name: 'Legal Tips' },
-  'insurance': { slug: 'legal-tips', name: 'Legal Tips' },
-  'employment': { slug: 'consumer-rights', name: 'Consumer Rights' },
-  'travel': { slug: 'complaint-guides', name: 'Complaint Guides' },
-  'vehicle': { slug: 'complaint-guides', name: 'Complaint Guides' },
-  'utilities': { slug: 'complaint-guides', name: 'Complaint Guides' },
-  'healthcare': { slug: 'consumer-rights', name: 'Consumer Rights' },
+  'financial': { slug: 'financial', name: 'Financial Services' },
+  'insurance': { slug: 'insurance', name: 'Insurance Claims' },
+  'employment': { slug: 'employment', name: 'Employment & Workplace' },
+  'travel': { slug: 'travel', name: 'Travel & Transportation' },
+  'vehicle': { slug: 'vehicle', name: 'Vehicle & Auto' },
+  'utilities': { slug: 'utilities', name: 'Utilities & Telecommunications' },
+  'healthcare': { slug: 'healthcare', name: 'Healthcare & Medical Billing' },
 };
 
 // Author personas for random assignment
