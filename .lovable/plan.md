@@ -1,105 +1,172 @@
 
-
-# Template Social Proof System
+# Cookie Consent Management Platform (CMP)
 
 ## Overview
-Add credibility-boosting usage stats and satisfaction scores to every template page, seeded with realistic data and designed to transition to real user feedback over time.
+Build a custom, GDPR and UK ePrivacy-compliant cookie consent system that blocks all non-essential third-party services (GTM, reCAPTCHA, Google Fonts) until the user explicitly grants consent. The banner will match the existing Letter of Dispute design language.
 
 ## What Users Will See
 
-On each template page (in the hero section, below the title), a compact social proof strip will show:
-- "1,247 letters created" (usage count)
-- "97% satisfaction" (score from verified buyers)
-- A small disclaimer: "Based on feedback from verified purchasers"
+**First Visit:** A bottom-anchored banner appears with:
+- A brief explanation: "We use cookies to improve your experience and analyse site traffic."
+- Three buttons: **Accept All**, **Reject All**, **Manage Preferences**
+- A link to the Privacy Policy
 
-After purchasing a letter, on the success page, users will see a simple thumbs-up/thumbs-down vote prompt: "Did this letter meet your expectations?"
+**Manage Preferences (expandable panel):** Grouped toggles for:
+- **Essential** (always on, greyed out) -- authentication, security, core functionality
+- **Analytics** -- Google Tag Manager, GA4, site analytics
+- **Functional** -- Google Fonts (loaded from CDN)
+
+**Returning Visitors:** Banner is hidden. A small "Cookie Settings" link in the footer lets users change preferences at any time.
+
+## How It Works
+
+```text
+Page Load
+  |
+  v
+Check localStorage("cookie_consent")
+  |
+  +-- Not found --> Show banner, block GTM + reCAPTCHA + Google Fonts
+  |
+  +-- Found --> Read preferences
+        |
+        +-- analytics: true  --> Load GTM, push consent mode
+        +-- analytics: false --> Do nothing (GTM never injected)
+        +-- functional: true --> Keep Google Fonts
+        +-- functional: false --> Remove font stylesheet
+```
+
+**Key compliance points:**
+- GTM script is NOT loaded in index.html anymore -- it is injected dynamically only after consent
+- reCAPTCHA is already loaded dynamically (only on login/signup pages) -- will be gated behind analytics consent
+- Google Fonts stylesheet is loaded by default but removed if functional cookies are rejected
+- dataLayer gets a `consent_update` event so GTM's built-in Consent Mode can enforce per-tag blocking
 
 ## Technical Plan
 
-### 1. Database: `template_stats` Table
+### 1. Consent Context and Hook
 
-Create a new table to store per-template statistics:
+**New: `src/hooks/useCookieConsent.ts`**
 
+A React context + hook that:
+- Reads/writes consent state from `localStorage` key `cookie_consent`
+- Stores: `{ analytics: boolean, functional: boolean, timestamp: string }`
+- Exposes: `consent`, `hasConsented`, `acceptAll()`, `rejectAll()`, `updateConsent(prefs)`, `openSettings()`
+- On `acceptAll` or category-level accept: dynamically injects GTM script (moved from `main.tsx`)
+- Pushes Google Consent Mode defaults (`analytics_storage`, `ad_storage`) to dataLayer
+
+### 2. Cookie Banner Component
+
+**New: `src/components/cookie/CookieBanner.tsx`**
+
+- Fixed to bottom of viewport, z-index above everything except modals
+- Renders only when `hasConsented === false`
+- Three buttons: Accept All (primary), Reject All (outline), Manage Preferences (text link)
+- Smooth slide-up animation using framer-motion (already installed)
+- Responsive: stacks vertically on mobile
+
+### 3. Cookie Preferences Modal
+
+**New: `src/components/cookie/CookiePreferencesModal.tsx`**
+
+- Opens from "Manage Preferences" button or footer link
+- Uses existing Radix Dialog component
+- Three category rows with Switch toggles:
+  - Essential (locked on)
+  - Analytics (GTM, GA4, reCAPTCHA)
+  - Functional (Google Fonts CDN)
+- "Save Preferences" button applies choices and closes
+
+### 4. GTM Gating -- Remove Eager Loading
+
+**Modified: `index.html`**
+- Remove the inline GTM `<script>` block from `<head>` (lines 5-10)
+- Remove the GTM `<noscript>` iframe from `<body>` (lines 80-82)
+- GTM will now ONLY be loaded via JavaScript after consent
+
+**Modified: `src/main.tsx`**
+- Remove the `initGTM()` call -- GTM initialization moves into the consent hook
+- Keep the loading overlay logic
+
+**Modified: `scripts/inject-homepage-content.mjs`**
+- No changes needed (only injects loading overlay)
+
+### 5. GTM Consent Mode Integration
+
+When consent is granted, push to dataLayer:
+```javascript
+window.dataLayer.push({
+  event: 'consent_update',
+  analytics_storage: 'granted',
+  ad_storage: 'denied', // we don't run ads
+});
 ```
-template_stats
-- id (uuid, PK)
-- template_slug (text, unique, not null)
-- usage_count (integer, default 0)
-- satisfaction_score (numeric, default 95.0)  -- percentage
-- total_votes (integer, default 0)
-- positive_votes (integer, default 0)
-- created_at (timestamptz)
-- updated_at (timestamptz)
+
+When rejected:
+```javascript
+window.dataLayer.push({
+  event: 'consent_update', 
+  analytics_storage: 'denied',
+  ad_storage: 'denied',
+});
 ```
 
-**RLS Policies:**
-- Anyone can SELECT (public-facing stats)
-- Service role can INSERT/UPDATE (for edge functions)
-- Admins can manage (full access)
+This lets any tags configured in GTM respect consent natively.
 
-### 2. Seed Data Migration
+### 6. reCAPTCHA Consent Gating
 
-A second SQL statement in the same migration will seed all 500+ templates with realistic data:
+**Modified: `src/hooks/useRecaptcha.ts`**
+- Before loading the reCAPTCHA script, check if analytics consent is granted
+- If not consented, skip reCAPTCHA gracefully (existing fallback already returns `{ success: true }`)
 
-- Usage counts: randomized per category (e.g., Refunds templates get 800-2,500; niche categories get 150-600)
-- Satisfaction scores: range from 94% to 99%
-- Vote counts: proportional to usage (roughly 15-25% of usage count)
+### 7. Google Fonts Consent Gating
 
-This uses a deterministic approach based on `hashtext(template_slug)` so re-running the migration is safe.
+**Modified: `index.html`**
+- Google Fonts stylesheet stays in HTML (functional cookies default)
+- If user rejects functional cookies, the consent hook removes the stylesheet link from the DOM
+- A CSS fallback using system fonts (`Inter` -> system-ui, `Lora` -> Georgia) is already defined in `--font-sans` and `--font-serif`
 
-### 3. Auto-Increment on Purchase
+### 8. Footer "Cookie Settings" Link
 
-Modify the `verify-letter-purchase` edge function to increment `usage_count` on the `template_stats` row after a successful payment verification. This keeps the count growing with real purchases.
+**Modified: `src/components/layout/Footer.tsx`**
+- Add a "Cookie Settings" button in the Legal column that opens the preferences modal
 
-### 4. Frontend: Social Proof Badge Component
+### 9. Wire Into App
 
-**New file: `src/components/letter/TemplateSocialProof.tsx`**
+**Modified: `src/App.tsx`**
+- Wrap the app with `<CookieConsentProvider>`
+- Add `<CookieBanner />` inside the provider (renders conditionally)
 
-A compact component that:
-- Fetches stats from `template_stats` by slug (cached with React Query, 5-minute stale time)
-- Displays usage count (formatted: "1.2K letters created") and satisfaction score
-- Shows a subtle disclaimer on hover/below
-- Uses the Users and ThumbsUp icons from lucide
+### 10. Analytics Hook Update
 
-### 5. Display on Template Page
+**Modified: `src/hooks/useAnalytics.ts`**
+- Before inserting into `analytics_events` table, check consent status
+- If analytics not consented, skip the insert (our own first-party analytics should also respect consent)
 
-**Modified file: `src/pages/LetterPage.tsx`**
+**Modified: `src/hooks/useGTM.ts`**
+- `pushToDataLayer` checks if consent is granted before pushing events (GTM won't be loaded anyway, but belt-and-suspenders)
 
-Add the `<TemplateSocialProof>` component in the hero section, right below the description text and above the CTA button.
+## Files Summary
 
-### 6. Post-Purchase Voting
+| File | Action |
+|------|--------|
+| `src/hooks/useCookieConsent.tsx` | Create -- context, hook, GTM loader |
+| `src/components/cookie/CookieBanner.tsx` | Create -- bottom banner UI |
+| `src/components/cookie/CookiePreferencesModal.tsx` | Create -- category toggles modal |
+| `index.html` | Modify -- remove GTM script tags |
+| `src/main.tsx` | Modify -- remove `initGTM()` |
+| `src/App.tsx` | Modify -- add CookieConsentProvider + CookieBanner |
+| `src/components/layout/Footer.tsx` | Modify -- add Cookie Settings link |
+| `src/hooks/useRecaptcha.ts` | Modify -- gate behind consent |
+| `src/hooks/useAnalytics.ts` | Modify -- gate behind consent |
+| `src/hooks/useGTM.ts` | Modify -- gate behind consent |
 
-**Modified file: `src/pages/PurchaseSuccessPage.tsx`**
+## Design Details
 
-After the download section, add a simple feedback card:
-- "Did this letter meet your expectations?"
-- ThumbsUp / ThumbsDown buttons
-- On click, calls an RPC function `submit_template_vote(slug, is_positive)` that:
-  - Increments `total_votes` and conditionally `positive_votes`
-  - Recalculates `satisfaction_score`
-  - Records the vote in `letter_purchases.feedback_vote` to prevent double-voting
-
-### 7. Database Function: `submit_template_vote`
-
-```sql
-CREATE FUNCTION submit_template_vote(p_slug text, p_positive boolean, p_purchase_id uuid)
-```
-- Checks that the purchase exists and hasn't already voted
-- Updates `template_stats` atomically
-- Marks the purchase as voted
-
-### 8. Schema Change to `letter_purchases`
-
-Add a nullable column `feedback_vote` (text, null = not voted, 'positive'/'negative') to track whether a buyer has already voted.
-
-## Files to Create/Modify
-
-1. **New migration** -- Creates `template_stats` table, seeds data, adds `submit_template_vote` RPC, adds `feedback_vote` column to `letter_purchases`
-2. **New: `src/components/letter/TemplateSocialProof.tsx`** -- Social proof display component
-3. **Modified: `src/pages/LetterPage.tsx`** -- Add social proof to hero section
-4. **Modified: `src/pages/PurchaseSuccessPage.tsx`** -- Add post-purchase voting UI
-5. **Modified: `supabase/functions/verify-letter-purchase/index.ts`** -- Increment usage count on purchase
-
-## Disclaimer Language
-Below the stats: "Based on feedback from verified purchasers. Only users who complete a purchase can submit a rating."
-
+- Banner background: `bg-card` with `border-t border-border` (matches footer)
+- Accept All button: primary style (deep slate blue)
+- Reject All button: outline variant
+- Text: `text-sm text-muted-foreground` with `text-foreground` headings
+- Slide-up animation from bottom (300ms ease-out)
+- Mobile: full-width, stacked buttons
+- Desktop: horizontal layout with text left, buttons right
