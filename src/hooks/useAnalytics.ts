@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getConsentSync } from '@/hooks/useCookieConsent';
 
 type EventType = 
   | 'page_view' 
@@ -113,6 +114,10 @@ export const useAnalytics = () => {
 
   const trackEvent = useCallback(async ({ eventType, eventData = {} }: TrackEventParams) => {
     try {
+      // Respect cookie consent – skip if analytics not granted
+      const consent = getConsentSync();
+      if (consent && !consent.analytics) return;
+
       const firstTouch = getFirstTouch();
       const lastTouch = getLastTouch();
 

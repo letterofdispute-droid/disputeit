@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import TrustBadgesStrip from '@/components/shared/TrustBadgesStrip';
+import { useCookieConsent } from '@/hooks/useCookieConsent';
 
 const Footer = () => {
+  const { openSettings } = useCookieConsent();
+
   return (
     <footer className="border-t border-border bg-card">
       <div className="container-wide py-12 md:py-16">
@@ -82,6 +85,14 @@ const Footer = () => {
                 <Link to="/disclaimer" className="text-muted-foreground hover:text-foreground transition-colors">
                   Legal Disclaimer
                 </Link>
+              </li>
+              <li>
+                <button
+                  onClick={openSettings}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cookie Settings
+                </button>
               </li>
             </ul>
           </div>

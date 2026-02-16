@@ -1,6 +1,8 @@
 // Google Tag Manager tracking hook
 // Centralized event tracking for funnel analytics
 
+import { getConsentSync } from '@/hooks/useCookieConsent';
+
 declare global {
   interface Window {
     dataLayer: Record<string, unknown>[];
@@ -25,14 +27,18 @@ export interface GTMEvent {
 }
 
 const pushToDataLayer = (eventData: GTMEvent) => {
-  if (typeof window !== 'undefined') {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      ...eventData,
-      page_path: window.location.pathname,
-      timestamp: new Date().toISOString(),
-    });
-  }
+  if (typeof window === 'undefined') return;
+
+  // Respect cookie consent – don't push events if analytics not granted
+  const consent = getConsentSync();
+  if (consent && !consent.analytics) return;
+
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    ...eventData,
+    page_path: window.location.pathname,
+    timestamp: new Date().toISOString(),
+  });
 };
 
 // ============ AWARENESS STAGE ============

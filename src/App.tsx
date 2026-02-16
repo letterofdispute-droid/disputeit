@@ -10,6 +10,8 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { PageLoader } from './components/ui/loading-spinner';
+import { CookieConsentProvider } from './hooks/useCookieConsent';
+import CookieBanner from './components/cookie/CookieBanner';
 
 // Eagerly loaded - critical path pages
 import Index from "./pages/Index";
@@ -75,6 +77,7 @@ const queryClient = new QueryClient({
 const App = () => (
   <HelmetProvider>
   <QueryClientProvider client={queryClient}>
+    <CookieConsentProvider>
     <AuthProvider>
     <TooltipProvider>
       <Toaster />
@@ -146,9 +149,11 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        <CookieBanner />
       </BrowserRouter>
     </TooltipProvider>
     </AuthProvider>
+    </CookieConsentProvider>
   </QueryClientProvider>
   </HelmetProvider>
 );
