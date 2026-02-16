@@ -98,7 +98,7 @@ export function useGenerationJob() {
           body: JSON.stringify({ jobId }),
         }
       );
-      // Fire-and-forget style — the function self-chains, so we don't need to wait
+      // Fire-and-forget style - the function self-chains, so we don't need to wait
       if (!response.ok) {
         const text = await response.text();
         throw new Error(text || 'Failed to resume job');

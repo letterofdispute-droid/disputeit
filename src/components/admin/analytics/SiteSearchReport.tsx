@@ -320,7 +320,7 @@ const SiteSearchReport = ({ events, period }: SiteSearchReportProps) => {
           </CardHeader>
           <CardContent className="max-h-[400px] overflow-y-auto">
             {zeroResultTerms.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No zero-result searches — great coverage!</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No zero-result searches - great coverage!</p>
             ) : (
               <Table>
                 <TableHeader>

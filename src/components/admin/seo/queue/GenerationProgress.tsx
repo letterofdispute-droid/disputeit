@@ -38,7 +38,7 @@ export default function GenerationProgress({ job, onStop, isStopping, onResume, 
   );
 
   const statusText = isStale
-    ? `Generation stalled at ${processed} of ${job.total_items} — no progress for 5+ minutes`
+    ? `Generation stalled at ${processed} of ${job.total_items} - no progress for 5+ minutes`
     : isRunning
     ? `Generating articles... (${processed} of ${job.total_items})`
     : isCompleted

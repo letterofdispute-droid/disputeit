@@ -100,7 +100,7 @@ serve(async (req) => {
             currency: "usd",
             unit_amount: AMOUNTS[purchaseType as keyof typeof AMOUNTS],
             product_data: {
-              name: `${templateName} — ${purchaseType === "pdf-editable" ? "PDF + Edit Access" : "PDF Only"}`,
+              name: `${templateName} - ${purchaseType === "pdf-editable" ? "PDF + Edit Access" : "PDF Only"}`,
               description: purchaseType === "pdf-editable"
                 ? "Professional dispute letter with 30 days of in-app editing and unlimited PDF exports"
                 : "Professional dispute letter as a ready-to-send PDF download",

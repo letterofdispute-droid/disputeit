@@ -1040,7 +1040,7 @@ Respond with ONLY this JSON:
       ? error.message
       : (error instanceof Error ? error.message : 'Unknown error');
     
-    // Check if this item was a retry (marked with RETRY_PENDING) — prefix error to prevent infinite retries
+    // Check if this item was a retry (marked with RETRY_PENDING) - prefix error to prevent infinite retries
     const { data: currentItem } = await supabaseAdmin
       .from('content_queue')
       .select('error_message')

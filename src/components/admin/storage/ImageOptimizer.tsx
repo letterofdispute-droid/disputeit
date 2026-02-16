@@ -319,7 +319,7 @@ const ImageOptimizer = () => {
 
         <p className="text-xs text-muted-foreground">
           Images over 300KB are resized to max 1200px width and compressed as JPEG at 80% quality.
-          Files are replaced in-place — no duplicates created. Process runs server-side in background.
+          Files are replaced in-place - no duplicates created. Process runs server-side in background.
         </p>
       </CardContent>
     </Card>

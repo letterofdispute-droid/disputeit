@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Safety timeout: if auth initialization hangs (e.g. network issues), stop loading after 8s
       const safetyTimeout = setTimeout(() => {
         if (isMounted) {
-          console.warn('[Auth] Initialization timed out — setting isLoading=false');
+          console.warn('[Auth] Initialization timed out - setting isLoading=false');
           setIsLoading(false);
         }
       }, 8000);

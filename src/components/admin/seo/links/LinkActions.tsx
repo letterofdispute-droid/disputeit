@@ -197,7 +197,7 @@ export default function LinkActions({
           </Button>
         )}
 
-        {/* Clear All — always available when there are items */}
+        {/* Clear All - always available when there are items */}
         {totalForStatus > 0 && (
           <Button
             variant="outline"

@@ -105,7 +105,7 @@ const GeneratingOverlay = ({ isOpen, isGenerating, onComplete }: GeneratingOverl
     }
   }, [isGenerating, progress]);
 
-  // Call onComplete when both timer and generation are done — only once per cycle
+  // Call onComplete when both timer and generation are done - only once per cycle
   useEffect(() => {
     if (timerComplete && generationComplete && !hasCompleted.current) {
       hasCompleted.current = true;

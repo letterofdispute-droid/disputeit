@@ -210,7 +210,7 @@ serve(async (req) => {
       const post = posts?.[0];
 
       if (!post) {
-        // No more posts need images — mark complete
+        // No more posts need images - mark complete
         console.log(`[BACKFILL] No more posts need images, marking job ${jobId} complete`);
         await supabase.from('backfill_jobs').update({
           status: 'complete', updated_at: new Date().toISOString(),

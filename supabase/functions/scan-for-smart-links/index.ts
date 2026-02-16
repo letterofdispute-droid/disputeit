@@ -92,7 +92,7 @@ async function selfChainWithRetry(body: object): Promise<void> {
       if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
     }
   }
-  console.error('[SMART-CHAIN] Both attempts failed — pg_cron will recover');
+  console.error('[SMART-CHAIN] Both attempts failed - pg_cron will recover');
 }
 
 async function verifyAdmin(req: Request): Promise<string | null> {
@@ -206,7 +206,7 @@ You have TWO strategies:
 Find a 2-6 word phrase that already exists VERBATIM in the article body text that naturally relates to a target article.
 
 **Strategy B — Generated Sentence (fallback):**
-When no good verbatim phrase exists for an important target, write ONE short natural sentence (15-30 words) that continues a relevant paragraph's topic. The sentence must contain a 2-5 word anchor phrase related to the target. The sentence must feel like the original author wrote it — same tone, same topic flow.
+When no good verbatim phrase exists for an important target, write ONE short natural sentence (15-30 words) that continues a relevant paragraph's topic. The sentence must contain a 2-5 word anchor phrase related to the target. The sentence must feel like the original author wrote it - same tone, same topic flow.
 
 STRICT RULES:
 1. For "existing" mode: anchor MUST appear VERBATIM in the body text below
