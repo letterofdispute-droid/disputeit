@@ -1,53 +1,66 @@
 
 
-# Replace Em Dashes Everywhere - Code Files + Database
+# Complete Em Dash Cleanup (Code Files + Pages Table)
 
-## Summary
+## Status Check
 
-There are two parts to this cleanup:
-1. **Code files**: ~1,100 instances across 25+ files (previous attempt was cancelled)
-2. **Database**: 168 blog posts with em dashes in content/title, plus 3 with em dashes in meta_description/excerpt
+- Database `blog_posts` table: DONE (0 remaining)
+- Database `pages` table: 2 rows still have em dashes (About, Pricing pages)
+- Code files: 927 instances across 20 files in `src/`
+- Edge functions: 166 instances across 10 files in `supabase/functions/`
 
-## Part 1: Code Files (same as before)
+## Part 1: Code Files (20 files)
 
-Replace all `—` with `-` across all files listed in the original plan. This includes data files, pages, components, hooks, and edge functions. Full list of 25 files remains the same.
+Global find-and-replace of all `—` with `-` in these files:
 
-## Part 2: Database Cleanup
+**Data files (bulk of instances):**
+1. `src/data/consumerRightsContent.ts` (~683 instances - this powers the /guides/refunds page you're seeing)
+2. `src/data/seoContent.ts`
+3. `src/data/templates/refundsTemplates.ts`
+4. `src/data/templates/contractors/landscapingTemplates.ts`
 
-Run SQL UPDATE statements to replace em dashes in the `blog_posts` table:
+**Pages:**
+5. `src/pages/HowItWorksPage.tsx`
+6. `src/pages/CategoryGuidePage.tsx`
+7. `src/pages/ArticlesPage.tsx`
+8. `src/pages/admin/AdminUsers.tsx`
+
+**Components:**
+9-16. Various admin/letter components (ImageBackfillCard, SiteSearchReport, ImageOptimizer, TemplateCoverageMap, GenerationProgress, SemanticScanPanel, LinkActions, GeneratingOverlay)
+
+**Hooks:**
+17. `src/hooks/useAuth.tsx`
+18. `src/hooks/useGenerationJob.ts`
+
+**Other data:**
+19-20. Any remaining files from the search results
+
+## Part 2: Edge Functions (10 files)
+
+Replace `—` with `-` in all edge function files, with one exception:
+- In `generate-embeddings/index.ts`, the regex patterns like `[-\u2013\u2014:|,;]` that split on em dashes need to keep working - replace the literal `—` in those regexes too since we're eliminating em dashes from all content
+
+## Part 3: Database - Pages Table
+
+Run SQL to clean the 2 remaining pages:
 
 ```text
-UPDATE blog_posts 
+UPDATE pages 
 SET content = REPLACE(content, '—', '-'),
-    title = REPLACE(title, '—', '-'),
     meta_description = REPLACE(meta_description, '—', '-'),
-    excerpt = REPLACE(excerpt, '—', '-'),
-    meta_title = REPLACE(meta_title, '—', '-')
-WHERE content LIKE '%—%' 
-   OR title LIKE '%—%' 
-   OR meta_description LIKE '%—%' 
-   OR excerpt LIKE '%—%'
-   OR meta_title LIKE '%—%';
+    title = REPLACE(title, '—', '-')
+WHERE content LIKE '%—%' OR meta_description LIKE '%—%' OR title LIKE '%—%';
 ```
 
-This single query will clean all 168+ affected blog posts in one go.
+## Part 4: Prevention (AI Prompts)
 
-## Part 3: Prevent Future Em Dashes
-
-Update the AI blog content generation prompts (in the edge functions that generate articles) to explicitly instruct the AI not to use em dashes. This goes in:
-- `supabase/functions/generate-blog-content/index.ts` - add instruction like "Never use em dashes. Use regular hyphens instead."
-- `supabase/functions/bulk-generate-articles/index.ts` - same instruction
-
-## Implementation Order
-
-1. Fix all code files (global find-and-replace of `—` with `-`)
-2. Run the database UPDATE query
-3. Add "no em dash" instruction to AI generation prompts
-4. Deploy updated edge functions
+Add "Never use em dashes (—). Use regular hyphens (-) instead." to:
+- `supabase/functions/generate-blog-content/index.ts`
+- `supabase/functions/bulk-generate-articles/index.ts`
 
 ## Impact
 
-- 168 blog posts cleaned in database
-- ~1,100 instances fixed in code
-- Future AI-generated content will avoid em dashes automatically
-
+- Fixes the /guides/refunds page you're currently viewing
+- Cleans all 927 code instances + 166 edge function instances
+- Cleans 2 remaining database pages
+- Prevents future AI-generated content from using em dashes
