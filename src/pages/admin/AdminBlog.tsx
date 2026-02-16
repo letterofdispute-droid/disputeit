@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
 import ExportButton from '@/components/admin/export/ExportButton';
 import ImageBackfillCard from '@/components/admin/blog/ImageBackfillCard';
@@ -60,16 +61,6 @@ interface BlogPost {
   meta_title: string | null;
   meta_description: string | null;
 }
-
-// Blog categories available in the system
-const BLOG_CATEGORIES = [
-  { slug: 'consumer-rights', name: 'Consumer Rights' },
-  { slug: 'complaint-guides', name: 'Complaint Guides' },
-  { slug: 'contractors', name: 'Contractors' },
-  { slug: 'legal-tips', name: 'Legal Tips' },
-  { slug: 'industry-news', name: 'Industry News' },
-  { slug: 'success-stories', name: 'Success Stories' },
-];
 
 const POSTS_PER_PAGE = 100;
 
@@ -92,6 +83,19 @@ const AdminBlog = () => {
   const [publishedCount, setPublishedCount] = useState(0);
   const [linkCounts, setLinkCounts] = useState<Record<string, { inbound: number; outbound: number }>>({});
   const { toast } = useToast();
+
+  // Fetch blog categories from database
+  const { data: blogCategories = [] } = useQuery({
+    queryKey: ['admin-blog-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_categories')
+        .select('slug, name')
+        .order('name');
+      if (error) throw error;
+      return data as { slug: string; name: string }[];
+    },
+  });
 
   // Fetch link counts for current page posts
   const fetchLinkCounts = useCallback(async (postIds: string[]) => {
@@ -475,7 +479,7 @@ const AdminBlog = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {BLOG_CATEGORIES.map(cat => (
+                  {blogCategories.map(cat => (
                     <SelectItem key={cat.slug} value={cat.slug}>
                       {cat.name}
                     </SelectItem>
