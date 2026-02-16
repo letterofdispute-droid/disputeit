@@ -1,9 +1,12 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { Link } from 'react-router-dom';
 import { Mail, Shield } from 'lucide-react';
+import { useCookieConsent } from '@/hooks/useCookieConsent';
 
 const PrivacyPage = () => {
-  const lastUpdated = "February 8, 2026";
+  const lastUpdated = "February 16, 2026";
+  const { openSettings } = useCookieConsent();
 
   const tableOfContents = [
     { id: "introduction", title: "1. Introduction" },
@@ -296,16 +299,37 @@ const PrivacyPage = () => {
             {/* Section 12 */}
             <section id="cookies" className="scroll-mt-24">
               <h2>12. Cookies and Tracking</h2>
-              <p>We use cookies and similar technologies to enhance your experience:</p>
+              <p>
+                We use cookies and similar technologies to enhance your experience. Our site implements a <strong>Cookie Consent Management Platform</strong> that gives you full control over which cookies are active, in compliance with GDPR and UK ePrivacy regulations.
+              </p>
               
-              <h3>Essential Cookies</h3>
-              <p>Required for the Service to function properly (authentication, security, preferences). These cannot be disabled.</p>
-              
-              <h3>Analytics Cookies</h3>
-              <p>Help us understand how visitors interact with our Service. You can opt out of these through your browser settings.</p>
-              
-              <h3>Managing Cookies</h3>
-              <p>You can control cookies through your browser settings. Note that disabling certain cookies may limit functionality of our Service.</p>
+              <h3>Cookie Categories</h3>
+              <ul>
+                <li><strong>Essential Cookies:</strong> Required for authentication, security, and core functionality. These cannot be disabled.</li>
+                <li><strong>Analytics Cookies:</strong> Google Tag Manager, Google Analytics 4, and reCAPTCHA Enterprise. Only loaded after you grant explicit consent.</li>
+                <li><strong>Functional Cookies:</strong> Google Fonts loaded from CDN for improved typography. Can be disabled without affecting core functionality.</li>
+              </ul>
+
+              <h3>Managing Your Cookie Preferences</h3>
+              <p>
+                When you first visit our site, a cookie banner allows you to accept all, reject all, or choose specific categories. You can change your preferences at any time by:
+              </p>
+              <ul>
+                <li>
+                  Clicking the{' '}
+                  <button onClick={openSettings} className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit">
+                    Cookie Settings
+                  </button>{' '}
+                  link (also available in the website footer)
+                </li>
+                <li>Adjusting cookie settings in your browser</li>
+              </ul>
+              <p>
+                For a full list of cookies we use, their purposes, and retention periods, please see our{' '}
+                <Link to="/cookie-policy" className="text-primary hover:text-primary/80 underline">
+                  Cookie Policy
+                </Link>.
+              </p>
             </section>
 
             {/* Section 13 */}
