@@ -268,43 +268,58 @@ async function loadAllTemplates() {
 // ============================================
 
 async function loadBlogPosts() {
-  console.log('   Fetching blog posts from database...');
-  
+  console.log('   Fetching blog posts from database (paginated)...');
+  const allPosts = [];
+  const BATCH_SIZE = 1000;
+  let offset = 0;
+  let hasMore = true;
+
   try {
-    // Use native fetch with Supabase REST API
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/blog_posts?status=eq.published&select=slug,category_slug,updated_at&order=published_at.desc`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+    while (hasMore) {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/blog_posts?status=eq.published&select=slug,category_slug,updated_at&order=published_at.desc&offset=${offset}&limit=${BATCH_SIZE}`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.log(`   ⚠️ Fetch failed at offset ${offset}: ${response.status}`);
+        break;
       }
-    );
-    
-    if (!response.ok) {
-      console.log(`   ⚠️ Could not fetch blog posts: ${response.status} ${response.statusText}`);
-      return [];
+      const data = await response.json();
+      allPosts.push(...data.map(post => ({
+        slug: post.slug,
+        categorySlug: post.category_slug,
+        lastmod: post.updated_at?.split('T')[0] || BUILD_DATE
+      })));
+      console.log(`   📦 Fetched ${data.length} posts (offset ${offset}, total so far: ${allPosts.length})`);
+      hasMore = data.length === BATCH_SIZE;
+      offset += BATCH_SIZE;
     }
-    
-    const data = await response.json();
-    
-    return data.map(post => ({
-      slug: post.slug,
-      categorySlug: post.category_slug,
-      lastmod: post.updated_at?.split('T')[0] || BUILD_DATE
-    }));
   } catch (err) {
     console.log(`   ⚠️ Error fetching blog posts: ${err.message}`);
-    return [];
   }
+
+  return allPosts;
 }
 
 // ============================================
 // Sitemap Generators
 // ============================================
 
-function generateSitemapIndex() {
+function generateSitemapIndex(blogPageCount) {
+  const blogEntries = [];
+  for (let i = 1; i <= blogPageCount; i++) {
+    blogEntries.push(`  <sitemap>
+    <loc>${SITE_URL}/sitemap-blog-${i}.xml</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+  </sitemap>`);
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
@@ -319,10 +334,7 @@ function generateSitemapIndex() {
     <loc>${SITE_URL}/sitemap-templates.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
-  <sitemap>
-    <loc>${SITE_URL}/sitemap-blog.xml</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
-  </sitemap>
+${blogEntries.join('\n')}
 </sitemapindex>`;
 }
 
@@ -413,34 +425,45 @@ function generateTemplatesSitemap(templates) {
 </urlset>`;
 }
 
-function generateBlogSitemap(blogPosts) {
-  const urls = [];
+const BLOG_SITEMAP_PAGE_SIZE = 1000;
+
+function generateBlogSitemaps(blogPosts) {
+  // Page 1 always includes blog category pages + first batch of posts
+  const pages = [];
   
-  // Blog category pages
-  for (const cat of blogCategories) {
-    urls.push(`
+  // Category URLs (always in page 1)
+  const categoryUrls = blogCategories.map(cat => `
   <url>
     <loc>${SITE_URL}/articles/${cat}</loc>
     <lastmod>${BUILD_DATE}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`);
+
+  // Split posts into chunks
+  const postChunks = [];
+  for (let i = 0; i < blogPosts.length; i += BLOG_SITEMAP_PAGE_SIZE) {
+    postChunks.push(blogPosts.slice(i, i + BLOG_SITEMAP_PAGE_SIZE));
   }
-  
-  // Individual blog posts
-  for (const post of blogPosts) {
-    urls.push(`
+  if (postChunks.length === 0) postChunks.push([]);
+
+  for (let i = 0; i < postChunks.length; i++) {
+    const postUrls = postChunks[i].map(post => `
   <url>
     <loc>${SITE_URL}/articles/${post.categorySlug}/${post.slug}</loc>
-    <lastmod>${BUILD_DATE}</lastmod>
+    <lastmod>${post.lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`);
+
+    const allUrls = i === 0 ? [...categoryUrls, ...postUrls] : postUrls;
+
+    pages.push(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allUrls.join('')}
+</urlset>`);
   }
-  
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}
-</urlset>`;
+
+  return pages;
 }
 
 // ============================================
@@ -450,52 +473,47 @@ function generateBlogSitemap(blogPosts) {
 async function buildSitemaps() {
   console.log('\n🗺️  Generating sitemaps...\n');
   
-  // Ensure output directory exists
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
   
-  // Load all templates
   console.log('📚 Loading templates...');
   const templates = await loadAllTemplates();
   console.log(`   ✅ Found ${templates.length} templates`);
   
-  // Load blog posts
   console.log('📝 Loading blog posts...');
   const blogPosts = await loadBlogPosts();
   console.log(`   ✅ Found ${blogPosts.length} blog posts`);
   
-  // Generate sitemap content
-  const sitemapIndex = generateSitemapIndex();
+  // Generate content
   const sitemapStatic = generateStaticSitemap();
   const sitemapCategories = generateCategoriesSitemap();
   const sitemapTemplates = generateTemplatesSitemap(templates);
-  const sitemapBlog = generateBlogSitemap(blogPosts);
+  const blogSitemapPages = generateBlogSitemaps(blogPosts);
+  const sitemapIndex = generateSitemapIndex(blogSitemapPages.length);
   
-  // Write to dist/ (for current build)
-  console.log('\n📄 Writing sitemap files to dist/...');
-  fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), sitemapIndex);
-  fs.writeFileSync(path.join(outputDir, 'sitemap-static.xml'), sitemapStatic);
-  fs.writeFileSync(path.join(outputDir, 'sitemap-categories.xml'), sitemapCategories);
-  fs.writeFileSync(path.join(outputDir, 'sitemap-templates.xml'), sitemapTemplates);
-  fs.writeFileSync(path.join(outputDir, 'sitemap-blog.xml'), sitemapBlog);
-  console.log('   ✅ Sitemaps written to dist/');
-  
-  // Also write to public/ (for source control and future builds)
   const publicDir = path.join(__dirname, '..', 'public');
-  console.log('\n📄 Writing sitemap files to public/...');
-  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), sitemapIndex);
-  fs.writeFileSync(path.join(publicDir, 'sitemap-static.xml'), sitemapStatic);
-  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), sitemapCategories);
-  fs.writeFileSync(path.join(publicDir, 'sitemap-templates.xml'), sitemapTemplates);
-  fs.writeFileSync(path.join(publicDir, 'sitemap-blog.xml'), sitemapBlog);
-  console.log('   ✅ Sitemaps written to public/');
+
+  // Write to both dist/ and public/
+  for (const dir of [outputDir, publicDir]) {
+    const label = dir === outputDir ? 'dist' : 'public';
+    console.log(`\n📄 Writing sitemap files to ${label}/...`);
+    fs.writeFileSync(path.join(dir, 'sitemap.xml'), sitemapIndex);
+    fs.writeFileSync(path.join(dir, 'sitemap-static.xml'), sitemapStatic);
+    fs.writeFileSync(path.join(dir, 'sitemap-categories.xml'), sitemapCategories);
+    fs.writeFileSync(path.join(dir, 'sitemap-templates.xml'), sitemapTemplates);
+    
+    // Write paginated blog sitemaps
+    for (let i = 0; i < blogSitemapPages.length; i++) {
+      fs.writeFileSync(path.join(dir, `sitemap-blog-${i + 1}.xml`), blogSitemapPages[i]);
+    }
+    console.log(`   ✅ Sitemaps written to ${label}/`);
+  }
   
-  // Summary
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
-  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogCategories.length + blogPosts.length;
-  console.log(`\n✨ Generated ${totalUrls} URLs across 5 sitemap files (in both dist/ and public/)\n`);
+  const blogUrlCount = blogCategories.length + blogPosts.length;
+  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogUrlCount;
+  console.log(`\n✨ Generated ${totalUrls} URLs across ${3 + blogSitemapPages.length} sitemap files (in both dist/ and public/)\n`);
 }
 
-// Run the build
 buildSitemaps().catch(console.error);
