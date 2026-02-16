@@ -36,11 +36,11 @@ const Index = () => {
         </div>
       </div>
       
+      <LetterCategories />
       <WhatIsDisputeLetter />
       <RealWorldScenarios />
       <SuccessStories />
       <WhyNotChatGPT />
-      <LetterCategories />
       <HowItWorks />
       <TrustIndicators />
       <Pricing />
