@@ -411,4 +411,17 @@
     from { transform: rotate(45deg); }
     to { transform: rotate(405deg); }
   }
+
+  .animate-pulse-ring {
+    animation: pulseRing 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulseRing {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--destructive) / 0);
+    }
+  }
 }
