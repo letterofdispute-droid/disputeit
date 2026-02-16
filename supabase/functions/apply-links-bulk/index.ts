@@ -301,24 +301,34 @@ async function insertLinkContextually(
   targetPrimaryKeyword: string | null,
   targetSecondaryKeywords: string[] | null,
 ): Promise<string | null> {
+  console.log(`[INSERT] Suggestion ${suggestion.id}: entering insertLinkContextually`);
+
+  // If link already exists, skip entirely
+  if (content.includes(`href="${targetUrl}"`)) {
+    console.log(`[INSERT] Suggestion ${suggestion.id}: duplicate URL, skipping`);
+    return null;
+  }
+
   // If we have a pre-generated sentence from discovery, use it directly
   if (suggestion.generated_sentence) {
-    return insertGeneratedSentence(
+    console.log(`[INSERT] Suggestion ${suggestion.id}: using pre-generated sentence`);
+    const result = insertGeneratedSentence(
       content,
       targetUrl,
       suggestion.target_title,
       suggestion.anchor_text,
       suggestion.generated_sentence,
     );
+    if (result) return result;
+    console.log(`[INSERT] Suggestion ${suggestion.id}: pre-generated sentence insertion failed, falling through to fallback`);
   }
 
   // Otherwise, try phrase-matching logic first
   const paragraphs = parseParagraphs(content);
-  
-  // If link already exists, skip entirely
-  if (content.includes(`href="${targetUrl}"`)) return null;
+  console.log(`[INSERT] Suggestion ${suggestion.id}: ${paragraphs.length} paragraphs found`);
 
   const targetWords = getTargetWords(targetPrimaryKeyword, targetSecondaryKeywords);
+  console.log(`[INSERT] Suggestion ${suggestion.id}: ${targetWords.length} target words`);
 
   // Try phrase-matching and AI generation only if we have enough paragraphs and keywords
   if (paragraphs.length >= 3 && targetWords.length > 0) {
@@ -327,10 +337,13 @@ async function insertLinkContextually(
       .filter(s => s.score > 0)
       .sort((a, b) => b.score - a.score);
 
+    console.log(`[INSERT] Suggestion ${suggestion.id}: ${scored.length} scored paragraphs`);
+
     if (scored.length > 0) {
       for (const { para } of scored.slice(0, 3)) {
         const modified = tryNaturalPhraseMatch(para.html, targetWords, targetUrl, suggestion.target_title);
         if (modified) {
+          console.log(`[INSERT] Suggestion ${suggestion.id}: phrase match SUCCESS`);
           return content.replace(para.html, modified);
         }
       }
@@ -350,6 +363,7 @@ async function insertLinkContextually(
       );
 
       if (aiResult) {
+        console.log(`[INSERT] Suggestion ${suggestion.id}: AI sentence SUCCESS`);
         const linkedSentence = aiResult.sentence.replace(
           aiResult.anchorPhrase,
           `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${aiResult.anchorPhrase}</a>`,
@@ -361,17 +375,19 @@ async function insertLinkContextually(
   }
 
   // Final fallback: create a simple linking sentence and append to a suitable paragraph
-  const fallbackParagraphs = paragraphs.length > 0 ? paragraphs : parseParagraphs(content);
-  const fallbackEligible = fallbackParagraphs.filter(p =>
+  const allParas = paragraphs.length > 0 ? paragraphs : parseParagraphs(content);
+  const fallbackEligible = allParas.filter(p =>
     p.index > 0 &&
-    p.index < fallbackParagraphs.length - 1 &&
+    p.index < allParas.length - 1 &&
     p.linkCount < 2 &&
     p.textLower.trim().length >= 40
   );
 
   const eligibleForFallback = fallbackEligible.length > 0
     ? fallbackEligible
-    : fallbackParagraphs.filter(p => p.linkCount < 2 && p.textLower.trim().length >= 40);
+    : allParas.filter(p => p.linkCount < 2 && p.textLower.trim().length >= 40);
+
+  console.log(`[INSERT] Suggestion ${suggestion.id}: fallback eligible=${fallbackEligible.length}, relaxed=${eligibleForFallback.length}`);
 
   if (eligibleForFallback.length > 0) {
     const midIdx = Math.floor(eligibleForFallback.length / 2);
@@ -379,9 +395,11 @@ async function insertLinkContextually(
     const linkHtml = `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${suggestion.anchor_text}</a>`;
     const sentence = `For further guidance, see our resource on ${linkHtml}.`;
     const modifiedPara = para.html.replace(/<\/p>$/i, ` ${sentence}</p>`);
+    console.log(`[INSERT] Suggestion ${suggestion.id}: fallback sentence SUCCESS`);
     return content.replace(para.html, modifiedPara);
   }
 
+  console.log(`[INSERT] Suggestion ${suggestion.id}: ALL paths exhausted, 0 eligible paragraphs`);
   return null;
 }
 
@@ -509,10 +527,14 @@ async function processBatch(
               .update({ status: 'applied', applied_at: new Date().toISOString() })
               .eq('id', suggestion.id);
 
-            await supabaseAdmin.rpc('increment_link_counters', {
-              p_source_post_id: postId,
-              p_target_embedding_id: suggestion.target_embedding_id,
-            }).catch((err: any) => console.warn(`Counter update failed for ${suggestion.id}:`, err));
+            try {
+              await supabaseAdmin.rpc('increment_link_counters', {
+                p_source_post_id: postId,
+                p_target_embedding_id: suggestion.target_embedding_id,
+              });
+            } catch (counterErr: any) {
+              console.warn(`Counter update failed for ${suggestion.id}:`, counterErr);
+            }
 
             appliedCount++;
           } else {
@@ -524,11 +546,14 @@ async function processBatch(
           }
         } catch (error) {
           console.error(`Failed to apply suggestion ${suggestion.id}:`, error);
-          await supabaseAdmin
-            .from('link_suggestions')
-            .update({ status: 'rejected', hierarchy_violation: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` })
-            .eq('id', suggestion.id)
-            .catch(() => {});
+            try {
+              await supabaseAdmin
+                .from('link_suggestions')
+                .update({ status: 'rejected', hierarchy_violation: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` })
+                .eq('id', suggestion.id);
+            } catch (_) {
+              // ignore
+            }
           failedCount++;
         }
       }
