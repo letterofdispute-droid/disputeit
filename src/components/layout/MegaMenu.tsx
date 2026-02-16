@@ -199,7 +199,7 @@ const MegaMenu = () => {
               Guides
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[650px] p-4">
+              <div className="w-[750px] p-4">
                 {/* Top pick banner */}
                 <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
                   <p className="text-xs text-muted-foreground mb-1">Popular guide</p>
