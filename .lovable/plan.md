@@ -1,35 +1,52 @@
 
 
-# Fix Logo Clipping on Mobile (Header and Footer)
+# Add Link Counts to Admin Blog & Templates Lists
 
-## Problem
-The logo SVG (`/ld-logo.svg`) includes the tagline "Precision Letters. Proven Results" beneath the main "Letter of Dispute" text. On mobile, the fixed `h-9` height constraint clips the bottom of the SVG, cutting off the tagline text. This affects both the header and footer logos.
+## Blog Posts List (`src/pages/admin/AdminBlog.tsx`)
 
-## Root Cause
-The `<img>` element uses `className="h-9"` which sets a fixed height of 2.25rem (36px). The SVG's aspect ratio means the tagline at the bottom gets clipped when the image is constrained to this height on smaller screens.
+### Data Source
+The `article_embeddings` table already stores `inbound_count` and `outbound_count` per blog post (keyed by `content_id = blog_post.id`). We will fetch these counts for the current page of posts and display them inline.
 
-## Fix
+### Changes
+- After fetching the page of posts, run a secondary query: `SELECT content_id, inbound_count, outbound_count FROM article_embeddings WHERE content_id IN (...)` using the current page's post IDs
+- Store the result as a `Record<string, { inbound: number; outbound: number }>` map
+- Add a new "Links" table column between "Status" and "Date"
+- Display as two small badges: an arrow-down icon with inbound count and an arrow-up icon with outbound count
+- Color-code: inbound 0 gets a warning style (orphan article), outbound >= 8 gets a warning style (over-linked)
 
-### 1. `src/components/layout/Header.tsx`
-- Change the logo from `h-9` to `h-8 sm:h-9` so it scales slightly smaller on the tiniest screens, but more importantly add `w-auto` to ensure the full width renders
-- Alternatively, increase to `h-10` on mobile to give the tagline room, or use `object-contain` to ensure nothing is clipped
-- Add `overflow-visible` to the parent Link if needed
+### Visual
+```text
+| Links          |
+| IN: 3  OUT: 5  |
+```
 
-### 2. `src/components/layout/Footer.tsx`
-- Apply the same fix to the footer logo `<img>` tag
+## Templates List (`src/pages/admin/AdminTemplates.tsx`)
 
-### 3. Investigate the SVG itself
-- If the SVG's `viewBox` is cropping the tagline, the viewBox dimensions may need adjusting. This would be the most robust fix -- ensuring the SVG file itself includes proper dimensions for all its content including the "Proven Results" text.
+### Data Source
+The existing `get_template_article_counts()` RPC returns `{ template_slug, article_count }` -- the number of published blog articles that reference each template via `related_templates`. Additionally, we can query `link_suggestions` to count suggestions targeting template pages.
 
-## Specific Changes
+### Changes
+- Fetch template article counts using the existing `get_template_article_counts()` RPC via `useQuery`
+- Add an "Articles" column showing how many published blog posts reference each template
+- Templates with 0 articles get a muted style; those with articles get a green badge
 
-**Header.tsx (line 46):** Change `className="h-9"` to `className="h-10 w-auto"` to give the tagline more vertical space.
-
-**Footer.tsx (line 15):** Same change -- `className="h-9"` to `className="h-10 w-auto"`.
-
-If the SVG viewBox itself is the issue, we will also need to adjust the SVG file's viewBox to fully encompass the tagline text.
+### Visual
+```text
+| Articles |
+|    5     |
+```
 
 ## Files to Modify
-1. `src/components/layout/Header.tsx` - Logo img height
-2. `src/components/layout/Footer.tsx` - Logo img height  
-3. `public/ld-logo.svg` - Potentially adjust viewBox if content is cropped at the SVG level
+
+1. **`src/pages/admin/AdminBlog.tsx`**
+   - Add `article_embeddings` query for current page post IDs
+   - Add "Links" TableHead column
+   - Add inbound/outbound badges in each row with color coding
+
+2. **`src/pages/admin/AdminTemplates.tsx`**
+   - Add `useQuery` calling `get_template_article_counts()` RPC
+   - Add "Articles" TableHead column
+   - Show article count per template with badge styling
+
+No database changes needed -- all data sources already exist.
+
