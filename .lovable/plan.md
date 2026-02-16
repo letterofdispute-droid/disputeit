@@ -1,75 +1,91 @@
 
+# Hero Redesign - Grid Effect + Announcement Bar Style
 
-# Super Modern Hero + Header Redesign
+Inspired by the reference design: light background with a warm gradient grid effect, centered layout with an announcement pill, large bold headline, and dual CTAs.
 
-## The Concept
+## What Changes
 
-Ditch the dark navy + photo hero entirely. Go **light, airy, and geometric** - think Linear, Vercel, Stripe. White/light gray background with decorative SVG elements (dots, grid lines, abstract shapes) that give depth without heaviness. The header becomes near-invisible until you scroll.
+### Hero (`src/components/home/Hero.tsx`) - Full Rewrite
 
-## Hero - Complete Visual Overhaul
+**Background:**
+- Replace the current dot grid + circle SVGs with a **CSS grid/mesh pattern** that fades from a warm amber tint (bottom) into the white background (top) - similar to the reference's warm peach gradient grid
+- Use an SVG grid pattern (thin lines forming squares) at very low opacity, overlaid on a subtle warm radial gradient anchored to the bottom center
 
-### What changes:
-- **Background**: Remove the hero-bg.jpg image entirely. Replace with a clean `bg-background` (near-white) canvas
-- **SVG decoration**: Add inline SVG elements - a subtle dot grid pattern on the left, abstract geometric lines/circles on the right, maybe a faint radial gradient glow behind the headline
-- **Typography**: Keep serif for headline but make the accent color pop more against the light bg. Use `text-foreground` instead of white
-- **AI search bar**: Redesign with a frosted-glass / glassmorphism look - white bg, subtle border, soft shadow. Feels like a modern search input
-- **CTA button**: Keep the amber accent but add a subtle glow/shadow effect behind it
-- **Spacing**: Even more generous - `py-28 md:py-36` for a truly spacious feel
-- **Trust strip**: Integrate a minimal version directly into the hero bottom as small gray text with thin separator dots
+**Announcement Pill (new element):**
+- Add a small rounded pill at the top: something like "500+ templates available - Browse categories -->" 
+- Styled with a thin border, rounded-full, small text, subtle hover - matches the reference's "New announcement" bar
+- Links to the `#letters` section
 
-### SVG Elements (inline, not images):
-1. **Dot grid** - repeating circle pattern, very low opacity (`opacity-[0.04]`), positioned absolute top-left
-2. **Abstract circles** - two or three overlapping circle outlines, positioned bottom-right, in primary color at very low opacity
-3. **Gradient orb** - a soft radial gradient blob behind the text area for depth (think a blurred accent-colored circle)
+**Headline:**
+- Keep the serif font (Lora) for brand consistency, but make it **bolder and larger** - `text-5xl md:text-6xl lg:text-7xl`
+- Keep the amber accent on key phrase
+- Content stays: "Professional Dispute Letters, Without the Guesswork"
 
-## Header - Transparent-to-Solid
+**Subheadline:**
+- Slightly larger text, more breathing room below headline
 
-### What changes:
-- **Default state (at top)**: Transparent background, no shadow, blends with the light hero
-- **Scrolled state**: Transitions to solid white/card with subtle shadow (requires adding a scroll listener with `useState`)
-- **Logo**: Stays the same
-- **Nav items**: Slightly more spaced, cleaner hover states
-- **CTA**: Keep the pill shape but make it slightly smaller/more refined
+**CTAs - Dual Button Layout (like reference):**
+- Primary: "Start Your Dispute" - solid accent (amber) button, rounded-full
+- Secondary: "Learn More >" - outline/ghost button with a chevron, rounded-full
+- Both buttons side by side horizontally (not stacked)
 
-## Files to Modify
+**Remove:**
+- The AI search bar from the hero (move it to be accessible via the header search icon only - it's already there)
+- The SVG dot grid, abstract circles, and gradient orb decorations
+- The "or browse all letter templates" text link
+- The bottom trust strip text (already covered by TrustBadgesStrip below)
 
-1. **`src/components/home/Hero.tsx`** - Full rewrite: remove bg image, add SVG decorations, redesign search bar, lighter color scheme
-2. **`src/components/layout/Header.tsx`** - Add scroll-based transparency effect with `useEffect` + `useState`
-3. **`src/index.css`** - Minor tweaks: possibly add a `.glass` utility class for the frosted search bar effect
+**Add:**
+- Full-width SVG grid pattern background with warm gradient fade
+- Announcement pill at top
 
-## Visual Reference (ASCII)
+### Header (`src/components/layout/Header.tsx`) - Minor Tweaks
+
+- Keep the transparent-to-solid scroll behavior (already implemented)
+- Make the "Contact Us" / CTA button in the header use `rounded-full` with the dark primary color (like the reference's "Contact Us" pill) instead of accent
+- This is already mostly there, just ensure consistency
+
+### CSS (`src/index.css`)
+
+- Add a `.grid-pattern` utility class for the SVG grid background
+- Update or keep the `.glass` class (may no longer be needed if we remove the search bar from hero)
+
+## Visual Structure
 
 ```text
 +----------------------------------------------------------+
-|  [Logo]     Templates  Guides  Resources    [Search] [CTA]|  <- transparent header
+|  [Logo]     Templates  Guides  Resources    [Search] [CTA]|
 +----------------------------------------------------------+
 |                                                           |
-|  .  .  .  .  .                                            |
-|  .  .  .  .  .                                            |
-|  .  .  .  .  .     Professional Dispute Letters,          |
-|  .  .  .  .  .     Without the Guesswork                  |  <- light bg + SVG dots
+|              ________________________________             |
+|             | 500+ templates - Browse now -> |             |  <- announcement pill
+|              --------------------------------             |
 |                                                           |
-|           [ Describe your dispute...    AI Help ]         |  <- glass search bar
+|            Professional Dispute Letters,                  |
+|              Without the Guesswork                        |  <- large serif headline
 |                                                           |
-|              [ Start Your Dispute -> ]                    |
-|              or browse all letter templates                |
-|                                         ___               |
-|                                        /   \              |  <- decorative circles
-|                                       |     |             |
-|  500+ Templates  -  US Federal Law  -  Instant Download   |
+|         Pre-validated templates with legal                |
+|         precision. No guesswork. Just results.            |  <- subheadline
+|                                                           |
+|          [Start Your Dispute]  [Learn More >]             |  <- dual CTAs
+|                                                           |
+|     _______________________________________________       |
+|     |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |      |  <- grid pattern
+|     |__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|      |    with warm gradient
+|     |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |      |    fading upward
 +----------------------------------------------------------+
 ```
 
-## What Stays the Same
-- All event tracking (GTM)
-- DisputeAssistantModal integration
-- Mobile menu structure
-- MegaMenu dropdowns
-- Color palette variables (we just use them differently)
+## Files to Modify
+
+1. `src/components/home/Hero.tsx` - Full rewrite with grid background, announcement pill, larger headline, dual CTAs, no search bar
+2. `src/components/layout/Header.tsx` - Minor CTA styling tweak
+3. `src/index.css` - Add grid-pattern utility, clean up unused glass class if needed
 
 ## Technical Notes
 - No new dependencies
-- SVGs are inline JSX (no external files)
-- Scroll listener uses `useEffect` with cleanup
-- Framer Motion is already installed if we want to animate the header transition, but CSS transitions work fine too
-
+- All GTM tracking preserved (handleStartDisputeClick, handleBrowseClick)
+- DisputeAssistantModal still triggered by the "Start Your Dispute" button
+- The AI search bar remains accessible via the header search icon (GlobalSearch component)
+- "Learn More" secondary CTA links to /how-it-works
+- Announcement pill links to #letters section
