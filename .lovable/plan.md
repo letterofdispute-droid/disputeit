@@ -1,172 +1,91 @@
 
-# Cookie Consent Management Platform (CMP)
 
-## Overview
-Build a custom, GDPR and UK ePrivacy-compliant cookie consent system that blocks all non-essential third-party services (GTM, reCAPTCHA, Google Fonts) until the user explicitly grants consent. The banner will match the existing Letter of Dispute design language.
+# Add Missing Blog Categories and Re-Categorize Articles
 
-## What Users Will See
+## The Problem
 
-**First Visit:** A bottom-anchored banner appears with:
-- A brief explanation: "We use cookies to improve your experience and analyse site traffic."
-- Three buttons: **Accept All**, **Reject All**, **Manage Preferences**
-- A link to the Privacy Policy
+The bulk article generation pipeline has a hardcoded `CATEGORY_MAP` that funnels all 13 template verticals into just 3 generic blog categories. This means ~4,600 articles about insurance, healthcare, housing, travel, vehicles, etc. are all mislabeled under "Consumer Rights" or "Complaint Guides."
 
-**Manage Preferences (expandable panel):** Grouped toggles for:
-- **Essential** (always on, greyed out) -- authentication, security, core functionality
-- **Analytics** -- Google Tag Manager, GA4, site analytics
-- **Functional** -- Google Fonts (loaded from CDN)
+## What Will Change
 
-**Returning Visitors:** Banner is hidden. A small "Cookie Settings" link in the footer lets users change preferences at any time.
+### Step 1: Create 10 new blog categories in the database
 
-## How It Works
+Insert rows into `blog_categories` for each missing vertical:
+
+| Slug | Name |
+|------|------|
+| `insurance` | Insurance Claims |
+| `healthcare` | Healthcare & Medical Billing |
+| `utilities` | Utilities & Telecommunications |
+| `vehicle` | Vehicle & Auto |
+| `employment` | Employment & Workplace |
+| `housing` | Landlord & Housing |
+| `travel` | Travel & Transportation |
+| `financial` | Financial Services |
+| `ecommerce` | E-commerce & Online Services |
+| `hoa` | Neighbor & HOA Disputes |
+
+Names match the existing template category names from `templateCategories.ts` for consistency.
+
+The existing categories (`consumer-rights`, `complaint-guides`, `legal-tips`, `contractors`) remain untouched for now -- `refunds` and `damaged-goods` will continue mapping to `consumer-rights`.
+
+### Step 2: Re-categorize existing published articles
+
+Run an UPDATE query that joins `blog_posts` to `content_queue` to `content_plans` to determine each article's true template vertical, then sets the correct `category` and `category_slug`.
+
+Approximate redistribution (based on content_plan linkage):
+- `consumer-rights` (2,752) will split into: consumer-rights (~1,000 refunds+damaged-goods), employment, healthcare, ecommerce
+- `complaint-guides` (1,349) will split into: housing, hoa, travel, vehicle, utilities
+- `legal-tips` (518) will split into: financial, insurance
+
+Articles without a content_plan linkage stay in their current category.
+
+### Step 3: Update the CATEGORY_MAP in `bulk-generate-articles`
 
 ```text
-Page Load
-  |
-  v
-Check localStorage("cookie_consent")
-  |
-  +-- Not found --> Show banner, block GTM + reCAPTCHA + Google Fonts
-  |
-  +-- Found --> Read preferences
-        |
-        +-- analytics: true  --> Load GTM, push consent mode
-        +-- analytics: false --> Do nothing (GTM never injected)
-        +-- functional: true --> Keep Google Fonts
-        +-- functional: false --> Remove font stylesheet
+Before:
+  'insurance'   -> 'legal-tips'
+  'healthcare'  -> 'consumer-rights'
+  'housing'     -> 'complaint-guides'
+  ...
+
+After:
+  'insurance'   -> 'insurance'
+  'healthcare'  -> 'healthcare'
+  'housing'     -> 'housing'
+  ...
 ```
 
-**Key compliance points:**
-- GTM script is NOT loaded in index.html anymore -- it is injected dynamically only after consent
-- reCAPTCHA is already loaded dynamically (only on login/signup pages) -- will be gated behind analytics consent
-- Google Fonts stylesheet is loaded by default but removed if functional cookies are rejected
-- dataLayer gets a `consent_update` event so GTM's built-in Consent Mode can enforce per-tag blocking
+The `refunds` and `damaged-goods` verticals remain mapped to `consumer-rights` since they don't have their own categories.
 
-## Technical Plan
+### Step 4: Update the frontend blog data
 
-### 1. Consent Context and Hook
+**`src/data/blogPosts.ts`**: Update the `blogCategories` array to include all new categories (this is used as a fallback/seed list alongside the database).
 
-**New: `src/hooks/useCookieConsent.ts`**
+### Step 5: Update article display pages
 
-A React context + hook that:
-- Reads/writes consent state from `localStorage` key `cookie_consent`
-- Stores: `{ analytics: boolean, functional: boolean, timestamp: string }`
-- Exposes: `consent`, `hasConsented`, `acceptAll()`, `rejectAll()`, `updateConsent(prefs)`, `openSettings()`
-- On `acceptAll` or category-level accept: dynamically injects GTM script (moved from `main.tsx`)
-- Pushes Google Consent Mode defaults (`analytics_storage`, `ad_storage`) to dataLayer
+**`src/pages/ArticlesPage.tsx`** and **`src/pages/ArticleCategoryPage.tsx`**: Verify these pages dynamically load categories from the database (via `blog_categories` table) rather than relying on the hardcoded list. If hardcoded, update to use database queries.
 
-### 2. Cookie Banner Component
+## Files Changed
 
-**New: `src/components/cookie/CookieBanner.tsx`**
+| File | Action | Purpose |
+|------|--------|---------|
+| Database migration | SQL | Create 10 new blog_categories rows |
+| Database migration | SQL | Re-categorize existing articles via UPDATE with JOIN |
+| `supabase/functions/bulk-generate-articles/index.ts` | Modify | Update CATEGORY_MAP to use vertical-specific slugs |
+| `src/data/blogPosts.ts` | Modify | Add new categories to the blogCategories array |
+| `src/pages/ArticlesPage.tsx` | Check/Modify | Ensure categories load from database |
+| `src/pages/ArticleCategoryPage.tsx` | Check/Modify | Ensure category filtering works with new slugs |
 
-- Fixed to bottom of viewport, z-index above everything except modals
-- Renders only when `hasConsented === false`
-- Three buttons: Accept All (primary), Reject All (outline), Manage Preferences (text link)
-- Smooth slide-up animation using framer-motion (already installed)
-- Responsive: stacks vertically on mobile
+## What Stays the Same
 
-### 3. Cookie Preferences Modal
+- All existing articles remain published -- only their `category` and `category_slug` fields change
+- The `contractors` category (8 articles) is untouched
+- `content_plans` and `content_queue` tables are not modified
+- Template pages and letter generation are completely unaffected
+- SEO URLs for articles (`/articles/:slug`) don't include category, so no broken links
 
-**New: `src/components/cookie/CookiePreferencesModal.tsx`**
+## Risk Mitigation
 
-- Opens from "Manage Preferences" button or footer link
-- Uses existing Radix Dialog component
-- Three category rows with Switch toggles:
-  - Essential (locked on)
-  - Analytics (GTM, GA4, reCAPTCHA)
-  - Functional (Google Fonts CDN)
-- "Save Preferences" button applies choices and closes
-
-### 4. GTM Gating -- Remove Eager Loading
-
-**Modified: `index.html`**
-- Remove the inline GTM `<script>` block from `<head>` (lines 5-10)
-- Remove the GTM `<noscript>` iframe from `<body>` (lines 80-82)
-- GTM will now ONLY be loaded via JavaScript after consent
-
-**Modified: `src/main.tsx`**
-- Remove the `initGTM()` call -- GTM initialization moves into the consent hook
-- Keep the loading overlay logic
-
-**Modified: `scripts/inject-homepage-content.mjs`**
-- No changes needed (only injects loading overlay)
-
-### 5. GTM Consent Mode Integration
-
-When consent is granted, push to dataLayer:
-```javascript
-window.dataLayer.push({
-  event: 'consent_update',
-  analytics_storage: 'granted',
-  ad_storage: 'denied', // we don't run ads
-});
-```
-
-When rejected:
-```javascript
-window.dataLayer.push({
-  event: 'consent_update', 
-  analytics_storage: 'denied',
-  ad_storage: 'denied',
-});
-```
-
-This lets any tags configured in GTM respect consent natively.
-
-### 6. reCAPTCHA Consent Gating
-
-**Modified: `src/hooks/useRecaptcha.ts`**
-- Before loading the reCAPTCHA script, check if analytics consent is granted
-- If not consented, skip reCAPTCHA gracefully (existing fallback already returns `{ success: true }`)
-
-### 7. Google Fonts Consent Gating
-
-**Modified: `index.html`**
-- Google Fonts stylesheet stays in HTML (functional cookies default)
-- If user rejects functional cookies, the consent hook removes the stylesheet link from the DOM
-- A CSS fallback using system fonts (`Inter` -> system-ui, `Lora` -> Georgia) is already defined in `--font-sans` and `--font-serif`
-
-### 8. Footer "Cookie Settings" Link
-
-**Modified: `src/components/layout/Footer.tsx`**
-- Add a "Cookie Settings" button in the Legal column that opens the preferences modal
-
-### 9. Wire Into App
-
-**Modified: `src/App.tsx`**
-- Wrap the app with `<CookieConsentProvider>`
-- Add `<CookieBanner />` inside the provider (renders conditionally)
-
-### 10. Analytics Hook Update
-
-**Modified: `src/hooks/useAnalytics.ts`**
-- Before inserting into `analytics_events` table, check consent status
-- If analytics not consented, skip the insert (our own first-party analytics should also respect consent)
-
-**Modified: `src/hooks/useGTM.ts`**
-- `pushToDataLayer` checks if consent is granted before pushing events (GTM won't be loaded anyway, but belt-and-suspenders)
-
-## Files Summary
-
-| File | Action |
-|------|--------|
-| `src/hooks/useCookieConsent.tsx` | Create -- context, hook, GTM loader |
-| `src/components/cookie/CookieBanner.tsx` | Create -- bottom banner UI |
-| `src/components/cookie/CookiePreferencesModal.tsx` | Create -- category toggles modal |
-| `index.html` | Modify -- remove GTM script tags |
-| `src/main.tsx` | Modify -- remove `initGTM()` |
-| `src/App.tsx` | Modify -- add CookieConsentProvider + CookieBanner |
-| `src/components/layout/Footer.tsx` | Modify -- add Cookie Settings link |
-| `src/hooks/useRecaptcha.ts` | Modify -- gate behind consent |
-| `src/hooks/useAnalytics.ts` | Modify -- gate behind consent |
-| `src/hooks/useGTM.ts` | Modify -- gate behind consent |
-
-## Design Details
-
-- Banner background: `bg-card` with `border-t border-border` (matches footer)
-- Accept All button: primary style (deep slate blue)
-- Reject All button: outline variant
-- Text: `text-sm text-muted-foreground` with `text-foreground` headings
-- Slide-up animation from bottom (300ms ease-out)
-- Mobile: full-width, stacked buttons
-- Desktop: horizontal layout with text left, buttons right
+- The re-categorization UPDATE only touches articles that have a `content_plan_id` linking them to a known template vertical. Orphan articles keep their current category.
+- A dry-run SELECT will be executed first to verify counts before the UPDATE.
