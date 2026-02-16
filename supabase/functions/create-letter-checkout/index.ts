@@ -7,11 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PRICE_IDS = {
-  "pdf-only": "price_1SxZWsROE6uHwbbom1l6Z4fU",
-  "pdf-editable": "price_1SxZWtROE6uHwbboDYtTLOTU",
-};
-
 const AMOUNTS = {
   "pdf-only": 999,
   "pdf-editable": 1499,
@@ -41,7 +36,7 @@ serve(async (req) => {
       throw new Error("Missing required fields");
     }
 
-    if (!PRICE_IDS[purchaseType as keyof typeof PRICE_IDS]) {
+    if (!AMOUNTS[purchaseType as keyof typeof AMOUNTS]) {
       throw new Error("Invalid purchase type");
     }
 
@@ -101,7 +96,16 @@ serve(async (req) => {
       customer_email: customerId ? undefined : userEmail,
       line_items: [
         {
-          price: PRICE_IDS[purchaseType as keyof typeof PRICE_IDS],
+          price_data: {
+            currency: "usd",
+            unit_amount: AMOUNTS[purchaseType as keyof typeof AMOUNTS],
+            product_data: {
+              name: `${templateName} — ${purchaseType === "pdf-editable" ? "PDF + Edit Access" : "PDF Only"}`,
+              description: purchaseType === "pdf-editable"
+                ? "Professional dispute letter with 30 days of in-app editing and unlimited PDF exports"
+                : "Professional dispute letter as a ready-to-send PDF download",
+            },
+          },
           quantity: 1,
         },
       ],
