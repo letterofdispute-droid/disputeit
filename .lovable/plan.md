@@ -1,88 +1,46 @@
 
 
-# Fix: Handle Duplicate URL Suggestions Correctly
+# Fix Orphan Article Count and Discover Missing Links
 
-## Root Cause (Confirmed)
+## Problem
 
-The rejected suggestions are NOT failing because of missing fallback logic. They are failing because **the links are already present in the article content**.
-
-- 4,932 out of 5,115 currently approved suggestions already have their target URL in the source article
-- This happened because we kept resetting rejected suggestions back to "approved", but the links from those suggestions were already successfully applied to the articles in previous runs
-- The duplicate URL check (`content.includes(href="${targetUrl}")`) correctly detects this and returns `null`, which then gets marked as "rejected"
-
-In other words: these links were already applied -- the suggestions just had the wrong status.
+The panel shows 312 orphan articles, but the count is inflated:
+- **124 articles** already have applied inbound links -- their `inbound_count` is stuck at 0 due to the counter bug
+- **188 articles** genuinely have no inbound links and need scanning
 
 ## Fix (Two Parts)
 
-### 1. Update the edge function to mark duplicates as "applied" instead of "rejected"
+### Part 1: Fix the false orphans (database migration)
 
-When a URL already exists in the article, the link IS there -- so the suggestion should be marked as `applied` (not rejected). Change `insertLinkContextually` to return a special sentinel value (e.g., `'ALREADY_EXISTS'`) when the URL is already present, and update `processBatch` to set status to `applied` for those cases.
-
-**Changes to `supabase/functions/apply-links-bulk/index.ts`:**
-
-- `insertLinkContextually`: Return `'ALREADY_EXISTS'` string instead of `null` when the duplicate URL check triggers
-- `processBatch`: Check for the `'ALREADY_EXISTS'` return value and mark the suggestion as `applied` with `applied_at` timestamp, instead of `rejected`
-
-### 2. Clean up existing data: flip the 654 "Could not find suitable insertion point" rejections
-
-Run a SQL update to mark the currently rejected duplicate-URL suggestions as `applied`, since those links are already in the articles:
+Run a SQL migration to re-backfill `inbound_count` for ALL articles based on actual applied link suggestions. The previous backfill ran but missed these 124 because the suggestions were in `rejected` status at the time.
 
 ```sql
--- Mark suggestions as 'applied' where the link already exists in the article
-UPDATE link_suggestions ls
-SET status = 'applied', applied_at = NOW(), hierarchy_violation = NULL
-FROM blog_posts bp
-WHERE ls.source_post_id = bp.id
-  AND ls.status IN ('rejected', 'approved')
-  AND (
-    bp.content LIKE '%/templates/' || ls.target_slug || '"%'
-    OR bp.content LIKE '%/articles/%/' || ls.target_slug || '"%'
-    OR bp.content LIKE '%/guides/' || ls.target_slug || '"%'
-  );
+-- Reset all inbound counts to accurate values
+UPDATE article_embeddings ae
+SET inbound_count = COALESCE(sub.cnt, 0)
+FROM (
+  SELECT ls.target_slug, COUNT(*) as cnt
+  FROM link_suggestions ls
+  WHERE ls.status = 'applied'
+  GROUP BY ls.target_slug
+) sub
+WHERE ae.slug = sub.target_slug
+  AND ae.inbound_count != COALESCE(sub.cnt, 0);
 ```
 
-## Technical Details
+This will immediately reduce the orphan count from 312 to ~188.
 
-**Edge function change (lines ~307-310 in `insertLinkContextually`):**
+### Part 2: Scan the remaining 188 orphans
 
-```typescript
-// Before:
-if (content.includes(`href="${targetUrl}"`)) {
-  console.log(`[INSERT] Suggestion ${suggestion.id}: duplicate URL, skipping`);
-  return null;
-}
+The 188 genuinely orphaned articles need a link discovery scan (Smart Scan or Vector Scan) to generate inbound link suggestions for them. No code change needed -- the user just needs to run a scan from the UI. However, the current scan logic scans SOURCE articles looking for outbound targets. Orphans need the REVERSE: scanning other articles to find places to link TO these orphans.
 
-// After:
-if (content.includes(`href="${targetUrl}"`)) {
-  console.log(`[INSERT] Suggestion ${suggestion.id}: URL already in article, marking as applied`);
-  return 'ALREADY_EXISTS';
-}
-```
+The existing Vector Scan already handles this via "reverse discovery" (pgvector similarity matching finds articles similar to the orphan). So running a full scan (All Categories) should generate suggestions targeting these orphans.
 
-**Processing change (lines ~523-545 in `processBatch`):**
+**No code changes needed** -- just the database migration and then running a scan.
 
-```typescript
-if (result === 'ALREADY_EXISTS') {
-  // Link already in article - mark as applied
-  await supabaseAdmin
-    .from('link_suggestions')
-    .update({ status: 'applied', applied_at: new Date().toISOString() })
-    .eq('id', suggestion.id);
-  appliedCount++;
-} else if (result) {
-  // New link inserted
-  updatedContent = result;
-  // ... existing save logic ...
-} else {
-  // Could not insert
-  // ... existing rejection logic ...
-}
-```
+## Steps
 
-## Expected Outcome
-
-- The ~4,932 duplicate suggestions will be correctly marked as "applied"
-- The remaining ~183 genuinely new suggestions will be processed normally (phrase-match, AI, or fallback)
-- Future runs will not create this loop of reset-then-reject
-- The stats will accurately reflect reality
+1. Run database migration to fix the 124 false orphans
+2. Verify orphan count drops to ~188
+3. User runs a Smart Scan or Vector Scan (All Categories, Force Re-scan) to discover inbound links for the remaining orphans
 
