@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, Search, Edit, Trash2, Eye, 
-  MoreHorizontal, Calendar, Loader2, Sparkles, CheckSquare
+  MoreHorizontal, Calendar, Loader2, Sparkles, CheckSquare,
+  ArrowDownToLine, ArrowUpFromLine
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -89,7 +90,24 @@ const AdminBlog = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
   const [publishedCount, setPublishedCount] = useState(0);
+  const [linkCounts, setLinkCounts] = useState<Record<string, { inbound: number; outbound: number }>>({});
   const { toast } = useToast();
+
+  // Fetch link counts for current page posts
+  const fetchLinkCounts = useCallback(async (postIds: string[]) => {
+    if (postIds.length === 0) { setLinkCounts({}); return; }
+    const { data } = await supabase
+      .from('article_embeddings')
+      .select('content_id, inbound_count, outbound_count')
+      .in('content_id', postIds);
+    const map: Record<string, { inbound: number; outbound: number }> = {};
+    data?.forEach(row => {
+      if (row.content_id) {
+        map[row.content_id] = { inbound: row.inbound_count || 0, outbound: row.outbound_count || 0 };
+      }
+    });
+    setLinkCounts(map);
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -162,6 +180,7 @@ const AdminBlog = () => {
     } else {
       setPosts(data || []);
       setTotalCount(count || 0);
+      fetchLinkCounts((data || []).map(p => p.id));
     }
     setIsLoading(false);
   }, [currentPage, statusFilter, categoryFilter, debouncedSearch, toast]);
@@ -506,6 +525,7 @@ const AdminBlog = () => {
                     <TableHead className="w-[45%]">Title</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Links</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Views</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -546,6 +566,18 @@ const AdminBlog = () => {
                         >
                           {post.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-0.5 text-xs ${(linkCounts[post.id]?.inbound ?? 0) === 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                            <ArrowDownToLine className="h-3 w-3" />
+                            {linkCounts[post.id]?.inbound ?? 0}
+                          </span>
+                          <span className={`inline-flex items-center gap-0.5 text-xs ${(linkCounts[post.id]?.outbound ?? 0) >= 8 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                            <ArrowUpFromLine className="h-3 w-3" />
+                            {linkCounts[post.id]?.outbound ?? 0}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">

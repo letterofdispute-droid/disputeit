@@ -22,6 +22,7 @@ import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BookOpen } from 'lucide-react';
 
 const TEMPLATES_PER_PAGE = 100;
 
@@ -37,6 +38,18 @@ const AdminTemplates = () => {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch template article counts
+  const { data: articleCounts = {} } = useQuery({
+    queryKey: ['template-article-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_template_article_counts');
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      data?.forEach((item: { template_slug: string; article_count: number }) => { map[item.template_slug] = item.article_count; });
+      return map;
+    },
+  });
 
   // Fetch all SEO overrides
   const { data: seoOverrides = {} } = useQuery({
@@ -191,7 +204,8 @@ const AdminTemplates = () => {
                   <TableHead className="min-w-[350px]">Template</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Subcategory</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead>Articles</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,6 +235,17 @@ const AdminTemplates = () => {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {subcategoryInfo?.name || template.subcategory || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const count = articleCounts[template.slug] || 0;
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium ${count > 0 ? 'text-emerald-600' : 'text-muted-foreground/50'}`}>
+                              <BookOpen className="h-3 w-3" />
+                              {count}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
