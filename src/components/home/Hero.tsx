@@ -52,7 +52,7 @@ const Hero = () => {
       </div>
 
       <div className="container-wide relative">
-        <div className="max-w-5xl mx-auto text-center">
+        <div className="max-w-3xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
             <ShieldCheck className="h-4 w-4" />
@@ -72,7 +72,7 @@ const Hero = () => {
           </p>
 
           {/* AI Search Prompt */}
-          <div className="animate-fade-up" style={{ animationDelay: '0.15s' }}>
+          <div className="animate-fade-up pb-4" style={{ animationDelay: '0.15s' }}>
             <button
               onClick={handleAssistantOpen}
               className="w-full max-w-xl mx-auto flex items-center gap-3 px-5 py-4 bg-primary-foreground/10 hover:bg-primary-foreground/15 border border-primary-foreground/20 rounded-xl text-left transition-all duration-300 group mb-6">
