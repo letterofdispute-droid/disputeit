@@ -186,7 +186,7 @@ export function useSemanticLinkScan() {
       return data as SemanticScanResponse;
     },
     onSuccess: (data) => {
-      // Job is now running in the background — start polling
+      // Job is now running in the background - start polling
       queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
       toast({

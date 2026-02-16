@@ -42,7 +42,7 @@ async function sendAdminAlert(categoryId: string, contextKey: string, searchQuer
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured — cannot send admin alert");
+      console.error("RESEND_API_KEY not configured - cannot send admin alert");
       return;
     }
 
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     ).join(' ');
     const altText = generateAltText(displayName, searchQuery, hit.tags);
 
-    // Download and self-host — NO fallback to Pixabay URLs
+    // Download and self-host - NO fallback to Pixabay URLs
     console.log(`Downloading image from Pixabay...`);
     let imageBuffer: ArrayBuffer;
     try {
