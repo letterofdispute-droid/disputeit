@@ -26,8 +26,8 @@ const CookieBanner = () => {
                   <Cookie className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
                     We use cookies to improve your experience and analyse site traffic. Read our{' '}
-                    <Link to="/privacy" className="underline text-foreground hover:text-primary transition-colors">
-                      Privacy Policy
+                    <Link to="/cookie-policy" className="underline text-foreground hover:text-primary transition-colors">
+                      Cookie Policy
                     </Link>.
                   </p>
                 </div>

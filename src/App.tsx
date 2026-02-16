@@ -40,6 +40,7 @@ const FAQPage = lazy(() => import("./pages/FAQPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const DisclaimerPage = lazy(() => import("./pages/DisclaimerPage"));
+const CookiePolicyPage = lazy(() => import("./pages/CookiePolicyPage"));
 const PurchaseSuccessPage = lazy(() => import("./pages/PurchaseSuccessPage"));
 const LetterEditorPage = lazy(() => import("./pages/LetterEditorPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/disclaimer" element={<DisclaimerPage />} />
+            <Route path="/cookie-policy" element={<CookiePolicyPage />} />
             <Route path="/guides" element={<GuidesPage />} />
             <Route path="/guides/:categoryId" element={<CategoryGuidePage />} />
             <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
