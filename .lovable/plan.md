@@ -1,61 +1,35 @@
 
 
-# Add Voice Input to Dispute Assistant
+# Fix Logo Clipping on Mobile (Header and Footer)
 
-## Overview
+## Problem
+The logo SVG (`/ld-logo.svg`) includes the tagline "Precision Letters. Proven Results" beneath the main "Letter of Dispute" text. On mobile, the fixed `h-9` height constraint clips the bottom of the SVG, cutting off the tagline text. This affects both the header and footer logos.
 
-Add a microphone button that lets users speak their dispute instead of typing. The voice input will be communicated as a feature in both the hero search bar and the chat input area.
+## Root Cause
+The `<img>` element uses `className="h-9"` which sets a fixed height of 2.25rem (36px). The SVG's aspect ratio means the tagline at the bottom gets clipped when the image is constrained to this height on smaller screens.
 
-## Approach: Browser Speech Recognition (Web Speech API)
+## Fix
 
-Using the built-in browser Web Speech API - no external API keys, no extra cost, works on Chrome, Edge, Safari, and most mobile browsers. This is the fastest path to a working voice feature and covers the vast majority of users.
+### 1. `src/components/layout/Header.tsx`
+- Change the logo from `h-9` to `h-8 sm:h-9` so it scales slightly smaller on the tiniest screens, but more importantly add `w-auto` to ensure the full width renders
+- Alternatively, increase to `h-10` on mobile to give the tagline room, or use `object-contain` to ensure nothing is clipped
+- Add `overflow-visible` to the parent Link if needed
 
-## Changes
+### 2. `src/components/layout/Footer.tsx`
+- Apply the same fix to the footer logo `<img>` tag
 
-### 1. New Hook: `src/hooks/useSpeechRecognition.ts`
-A reusable hook wrapping the Web Speech API:
-- Manages `isListening`, `transcript`, and `isSupported` state
-- Handles `start()`, `stop()`, and auto-stop on silence
-- Returns interim results so users see words appearing in real-time
-- Gracefully falls back (hides mic button) on unsupported browsers
+### 3. Investigate the SVG itself
+- If the SVG's `viewBox` is cropping the tagline, the viewBox dimensions may need adjusting. This would be the most robust fix -- ensuring the SVG file itself includes proper dimensions for all its content including the "Proven Results" text.
 
-### 2. Update `src/components/dispute-assistant/ChatInput.tsx`
-- Add a microphone toggle button next to the send button
-- When listening: mic button pulses with an animation, textarea shows live transcript
-- When user stops speaking (or taps mic again): transcript populates the textarea for review before sending
-- Option: auto-send after a brief pause for a more conversational feel
+## Specific Changes
 
-### 3. Update Hero Search Bar in `src/components/home/Hero.tsx`
-- Add a small microphone icon inside the search prompt bar (before the "AI Help" badge)
-- Update placeholder text to: "Type or speak your dispute..."
-- Clicking the mic icon opens the Dispute Assistant modal and auto-starts listening
+**Header.tsx (line 46):** Change `className="h-9"` to `className="h-10 w-auto"` to give the tagline more vertical space.
 
-### 4. Update `src/index.css`
-- Add a `animate-pulse-ring` keyframe for the listening indicator (a subtle pulsing ring around the mic button)
+**Footer.tsx (line 15):** Same change -- `className="h-9"` to `className="h-10 w-auto"`.
 
-## Visual Design
+If the SVG viewBox itself is the issue, we will also need to adjust the SVG file's viewBox to fully encompass the tagline text.
 
-The chat input area will change from:
-
-```text
-[Describe what happened...              ] [Send]
-```
-
-To:
-
-```text
-[Type or speak your dispute...           ] [Mic] [Send]
-```
-
-When listening, the mic button gets a pulsing ring animation and the textarea shows the live transcript as the user speaks.
-
-## Technical Notes
-
-- Web Speech API is available on ~93% of browsers globally
-- On unsupported browsers, the mic button simply won't render (graceful degradation)
-- No new dependencies needed
-- No database changes
-- No new edge functions
-- The speech recognition runs entirely client-side
-- TypeScript declarations for `webkitSpeechRecognition` will be added to the hook file
-
+## Files to Modify
+1. `src/components/layout/Header.tsx` - Logo img height
+2. `src/components/layout/Footer.tsx` - Logo img height  
+3. `public/ld-logo.svg` - Potentially adjust viewBox if content is cropped at the SVG level
