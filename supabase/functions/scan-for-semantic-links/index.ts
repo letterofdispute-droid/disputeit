@@ -91,7 +91,7 @@ async function selfChainWithRetry(body: object): Promise<void> {
       if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
     }
   }
-  console.error('[SELF-CHAIN] Both attempts failed — pg_cron recovery will pick up the job');
+  console.error('[SELF-CHAIN] Both attempts failed - pg_cron recovery will pick up the job');
 }
 
 async function verifyAdmin(req: Request): Promise<string | null> {
@@ -129,7 +129,7 @@ function selectAnchorText(
   title: string,
   sourceKeyword: string | null,
 ): string | null {
-  // Filter to quality variants only — never use full title
+  // Filter to quality variants only - never use full title
   const quality = (anchorVariants || []).filter(a => {
     const words = a.split(/\s+/);
     if (words.length < 2 || words.length > 6) return false;
@@ -164,7 +164,7 @@ function selectAnchorText(
     }
   }
 
-  // No quality anchor available — return null to skip this suggestion
+  // No quality anchor available - return null to skip this suggestion
   return null;
 }
 
@@ -207,7 +207,7 @@ async function processOneArticle(
 
     const remainingSlots = maxLinksPerArticle - (existingOutbound || 0);
     if (remainingSlots <= 0) {
-      console.log(`[SCAN] Skipping "${source.title}" — already at outbound cap (${existingOutbound}/${maxLinksPerArticle})`);
+      console.log(`[SCAN] Skipping "${source.title}" - already at outbound cap (${existingOutbound}/${maxLinksPerArticle})`);
       return 0;
     }
     // Use remainingSlots as the effective limit for this article

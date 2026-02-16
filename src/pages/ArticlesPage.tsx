@@ -102,7 +102,7 @@ const ArticlesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
-  // Hero post — only fetched on page 1
+  // Hero post - only fetched on page 1
   const { data: heroPost, isLoading: heroLoading, isError: heroError } = useQuery({
     queryKey: ['blog-hero-post'],
     queryFn: async () => {
@@ -121,7 +121,7 @@ const ArticlesPage = () => {
     enabled: currentPage === 1,
   });
 
-  // Grid posts — server-side paginated
+  // Grid posts - server-side paginated
   // On page 1 we offset by 1 to skip the hero post
   const gridOffset = currentPage === 1 ? 1 : (currentPage - 1) * POSTS_PER_PAGE + 1;
   const { data: gridData, isLoading: gridLoading, isError: gridError } = useQuery({
@@ -245,7 +245,7 @@ const ArticlesPage = () => {
         </div>
       </section>
 
-      {/* Loading State — skip if errored so fallback renders immediately */}
+      {/* Loading State - skip if errored so fallback renders immediately */}
       {isLoading && !isError && (
         <section className="py-12 bg-background">
           <div className="container-wide">

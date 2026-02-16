@@ -202,24 +202,24 @@ async function callAI(
 
 You have TWO strategies:
 
-**Strategy A — Existing Phrase (preferred):**
+**Strategy A - Existing Phrase (preferred):**
 Find a 2-6 word phrase that already exists VERBATIM in the article body text that naturally relates to a target article.
 
-**Strategy B — Generated Sentence (fallback):**
+**Strategy B - Generated Sentence (fallback):**
 When no good verbatim phrase exists for an important target, write ONE short natural sentence (15-30 words) that continues a relevant paragraph's topic. The sentence must contain a 2-5 word anchor phrase related to the target. The sentence must feel like the original author wrote it - same tone, same topic flow.
 
 STRICT RULES:
 1. For "existing" mode: anchor MUST appear VERBATIM in the body text below
 2. For "generated" mode: the generated_sentence MUST contain the anchor_text exactly as written
 3. NEVER use text from H2/H3 headings or the first paragraph as anchors
-4. Distribute links across different sections — max 2 links per section
+4. Distribute links across different sections - max 2 links per section
 5. Each target can only be linked once
 6. Anchors must NOT be the target's exact title or start with the same first 4+ words
 7. Prefer Strategy A when possible. Use Strategy B for important targets (pillars, templates) where no verbatim match exists
-8. Anchors must be SPECIFIC — avoid vague 2-word phrases like "insurance coverage"
+8. Anchors must be SPECIFIC - avoid vague 2-word phrases like "insurance coverage"
 9. Return a "confidence" score (1-100) for how well the anchor matches the specific target
 10. For "generated" mode, do NOT use generic phrases like "learn more", "check out", "see our guide", "explore our", "read about", "for more details"
-11. Return ONLY valid JSON — no markdown, no explanation
+11. Return ONLY valid JSON - no markdown, no explanation
 
 Return a JSON array:
 [
@@ -364,7 +364,7 @@ async function processOneArticle(
 
   const remainingSlots = maxLinksPerArticle - (existingOutbound || 0);
   if (remainingSlots <= 0) {
-    console.log(`[SMART] Skipping "${article.title}" — at outbound cap`);
+    console.log(`[SMART] Skipping "${article.title}" - at outbound cap`);
     return 0;
   }
 
@@ -379,7 +379,7 @@ async function processOneArticle(
     .toLowerCase();
 
   if (bodyTextLower.length < 100) {
-    console.log(`[SMART] Skipping "${article.title}" — body too short`);
+    console.log(`[SMART] Skipping "${article.title}" - body too short`);
     return 0;
   }
 
@@ -716,7 +716,7 @@ serve(async (req) => {
       }
 
       if (rateLimited) {
-        console.log('[SMART] Rate limited — pausing 30s before self-chain');
+        console.log('[SMART] Rate limited - pausing 30s before self-chain');
         await new Promise(r => setTimeout(r, 30_000));
       }
 

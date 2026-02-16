@@ -115,7 +115,7 @@ function generateAnchorVariants(title: string, primaryKeyword?: string, secondar
   
   variants.push(title);
   if (title.length > 50) {
-    const shortened = title.split(/[-–—:|]/).shift()?.trim();
+    const shortened = title.split(/[-\u2013\u2014:|]/).shift()?.trim();
     if (shortened && shortened.length > 10) {
       variants.push(shortened);
     }
