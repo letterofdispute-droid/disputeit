@@ -1,66 +1,38 @@
 
 
-# Complete Em Dash Cleanup (Code Files + Pages Table)
+# Complete Em Dash Cleanup - Third Attempt
 
-## Status Check
+The previous two attempts did NOT successfully replace em dashes in the largest files. There are still **887 instances remaining** across 12 files.
 
-- Database `blog_posts` table: DONE (0 remaining)
-- Database `pages` table: 2 rows still have em dashes (About, Pricing pages)
-- Code files: 927 instances across 20 files in `src/`
-- Edge functions: 166 instances across 10 files in `supabase/functions/`
+## Remaining Files (verified just now)
 
-## Part 1: Code Files (20 files)
+**Source files (812 instances across 7 files):**
 
-Global find-and-replace of all `—` with `-` in these files:
+1. `src/data/consumerRightsContent.ts` - ~683 instances (powers /guides/refunds)
+2. `src/data/seoContent.ts` - ~69 instances
+3. `src/data/templates/refundsTemplates.ts` - ~5 instances
+4. `src/data/templates/contractors/landscapingTemplates.ts` - ~1 instance
+5. `src/pages/HowItWorksPage.tsx` - ~5 instances
+6. `src/pages/ArticlesPage.tsx` - ~3 instances (code comments)
+7. `src/hooks/useSemanticLinkScan.ts` - ~1 instance
 
-**Data files (bulk of instances):**
-1. `src/data/consumerRightsContent.ts` (~683 instances - this powers the /guides/refunds page you're seeing)
-2. `src/data/seoContent.ts`
-3. `src/data/templates/refundsTemplates.ts`
-4. `src/data/templates/contractors/landscapingTemplates.ts`
+**Edge functions (75 instances across 5 files):**
 
-**Pages:**
-5. `src/pages/HowItWorksPage.tsx`
-6. `src/pages/CategoryGuidePage.tsx`
-7. `src/pages/ArticlesPage.tsx`
-8. `src/pages/admin/AdminUsers.tsx`
+8. `supabase/functions/scan-for-smart-links/index.ts` - ~10 instances
+9. `supabase/functions/scan-for-semantic-links/index.ts` - ~5 instances
+10. `supabase/functions/process-embedding-queue/index.ts` - 1 instance (regex)
+11. `supabase/functions/fetch-category-images/index.ts` - ~2 instances
+12. `supabase/functions/generate-blog-content/index.ts` - already has the prevention rule, but line 72 itself contains an em dash in the instruction text "NEVER use em dashes (--)" which is fine as a reference
 
-**Components:**
-9-16. Various admin/letter components (ImageBackfillCard, SiteSearchReport, ImageOptimizer, TemplateCoverageMap, GenerationProgress, SemanticScanPanel, LinkActions, GeneratingOverlay)
+## Approach
 
-**Hooks:**
-17. `src/hooks/useAuth.tsx`
-18. `src/hooks/useGenerationJob.ts`
+Read each file fully and perform the replacement of every `—` with `-`. The two largest files (`consumerRightsContent.ts` at ~683 instances and `seoContent.ts` at ~69 instances) will need to be rewritten since they have too many instances for line-by-line edits.
 
-**Other data:**
-19-20. Any remaining files from the search results
+## Database Check
 
-## Part 2: Edge Functions (10 files)
-
-Replace `—` with `-` in all edge function files, with one exception:
-- In `generate-embeddings/index.ts`, the regex patterns like `[-\u2013\u2014:|,;]` that split on em dashes need to keep working - replace the literal `—` in those regexes too since we're eliminating em dashes from all content
-
-## Part 3: Database - Pages Table
-
-Run SQL to clean the 2 remaining pages:
-
-```text
-UPDATE pages 
-SET content = REPLACE(content, '—', '-'),
-    meta_description = REPLACE(meta_description, '—', '-'),
-    title = REPLACE(title, '—', '-')
-WHERE content LIKE '%—%' OR meta_description LIKE '%—%' OR title LIKE '%—%';
-```
-
-## Part 4: Prevention (AI Prompts)
-
-Add "Never use em dashes (—). Use regular hyphens (-) instead." to:
-- `supabase/functions/generate-blog-content/index.ts`
-- `supabase/functions/bulk-generate-articles/index.ts`
+The `pages` table was already cleaned. The `blog_posts` table was already cleaned. No additional database work needed.
 
 ## Impact
 
-- Fixes the /guides/refunds page you're currently viewing
-- Cleans all 927 code instances + 166 edge function instances
-- Cleans 2 remaining database pages
-- Prevents future AI-generated content from using em dashes
+This will finally fix the /guides/refunds page and all other pages that display content from these data files.
+
