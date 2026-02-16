@@ -1,55 +1,76 @@
 
 
-# Show Template Name and Better Description on Stripe Checkout
+# Enrich Guides Pages and Improve Guides Menu
 
-## Problem
-The Stripe checkout page currently shows generic product names like "Letter PDF Only" because it uses pre-created Stripe Price IDs, which have fixed product names attached to them.
+## Part 1: Guides Menu Visual Upgrade
 
-## Solution
-Override the product name and description at checkout time using Stripe's `price_data` inline pricing instead of referencing pre-created Price IDs. This lets us dynamically set the product name and description per checkout session while keeping the same amounts.
+### File: `src/components/layout/MegaMenu.tsx`
 
-## Technical Details
+**Current state**: Plain 2-column list with uniform blue icons and no descriptions.
 
-### File: `supabase/functions/create-letter-checkout/index.ts`
+**Changes**:
+- Widen the dropdown from 500px to 600px to accommodate descriptions
+- Use each category's existing `color` property for the icon color (same as category pages)
+- Add short one-line descriptions under each category name using data from `templateCategories` descriptions (truncated)
+- Show a template count badge (e.g., "15 letters") next to each guide entry, pulled from the `CATEGORIES` data or a count of `allTemplates` per category
+- Add a highlighted "top pick" banner at the top of the dropdown (e.g., "Popular: Know your refund rights before you write your letter") linking to the refunds guide
+- Use the existing `ListItem` component style (with description) instead of the minimal `GuideListItem` for a richer appearance
 
-Replace the `line_items` section that references static `price` IDs with `price_data` that includes:
-- A dynamic **product name** incorporating the template name (e.g., "Double Billing Complaint - PDF + Edit Access")
-- A helpful **description** (e.g., "Professional dispute letter with legal-safe phrasing, ready to send")
-- The same amounts ($9.99 / $14.99) and currency (USD)
+### File: `src/data/templateCategories.ts` (read-only reference)
+Already has `color`, `icon`, `description` per category -- we'll reuse these.
 
-**Before:**
-```typescript
-line_items: [
-  {
-    price: PRICE_IDS[purchaseType],
-    quantity: 1,
-  },
-],
-```
+## Part 2: Guide Page Content Enrichment
 
-**After:**
-```typescript
-line_items: [
-  {
-    price_data: {
-      currency: "usd",
-      unit_amount: AMOUNTS[purchaseType],
-      product_data: {
-        name: `${templateName} — ${purchaseType === "pdf-editable" ? "PDF + Edit Access" : "PDF Only"}`,
-        description: purchaseType === "pdf-editable"
-          ? "Professional dispute letter with 30 days of in-app editing and unlimited PDF exports"
-          : "Professional dispute letter as a ready-to-send PDF download",
-      },
-    },
-    quantity: 1,
-  },
-],
-```
+### File: `src/data/consumerRightsContent.ts`
 
-This means each checkout session creates an inline product with the template's actual name visible to the customer. The `PRICE_IDS` constant becomes unused and can be removed.
+**Add new fields to the `CategoryGuide` interface**:
+- `regulatoryContacts?: { name: string; description: string; url: string; phone?: string }[]` -- Where to file complaints (FTC, CFPB, state AG, BBB)
+- `stateVariations?: { state: string; detail: string }[]` -- Notable state-specific differences
+- `relatedTemplateCount?: number` -- Number of templates in this category (can also be computed)
+- `statSnapshot?: { label: string; value: string; source?: string }[]` -- Key statistics (e.g., "97% of CFPB complaints resolved within 15 days")
 
-### Impact
-- Customers will see e.g. **"Double Billing Complaint -- PDF + Edit Access"** instead of generic "Letter PDF Only"
-- No database or frontend changes needed
-- Only the edge function is updated
+**Populate these fields** for at least the top 3-4 guides (refunds, housing, financial, insurance) with real regulatory data.
+
+### File: `src/pages/CategoryGuidePage.tsx`
+
+**Add new rendered sections** (inserted into the existing page flow):
+
+1. **"Where to File Complaints" section** (after Federal Laws)
+   - Card with agency name, description, direct link, and optional phone number
+   - Styled with a distinct blue/indigo accent (like the federal laws card)
+   - Each agency as a row with an external link icon
+
+2. **"Key Statistics" callout strip** (after the introduction, before Key Rights)
+   - Horizontal row of 2-3 stat cards (e.g., "97% CFPB resolution rate", "$500 avg refund recovered")
+   - Light background, bold numbers, small source text
+
+3. **"State Variations" notice** (after Important Deadlines)
+   - Collapsible section showing notable state differences
+   - Amber/info-styled card matching the deadlines card
+
+4. **"Related Letters" count + link** (enhance the CTA section)
+   - Show the actual template count: "Browse 15 Refund Letter Templates"
+   - Add 2-3 specific popular template links below the main CTA button
+
+5. **"Related Articles" section** (before "Explore Other Guides")
+   - Query published blog articles tagged to this category
+   - Show 2-3 article cards with title and excerpt
+   - This connects the Tier 2 (Guides) to Tier 3 (Articles) content hierarchy
+
+### TOC Updates
+Add new sections to the `tocItems` array so they appear in the sticky sidebar navigation.
+
+## Implementation Order
+
+1. Update the `CategoryGuide` interface with new optional fields
+2. Populate data for refunds, housing, financial, and insurance guides
+3. Render the new sections in `CategoryGuidePage.tsx`
+4. Upgrade the Guides mega menu in `MegaMenu.tsx`
+
+## What This Achieves
+
+- **SEO**: More content depth and internal linking boosts topical authority
+- **User value**: Actionable complaint filing links, real statistics, and state-specific info
+- **Conversion**: Template counts and direct links from guides to letters increase click-through
+- **Visual polish**: The menu matches the quality of the Letter Templates mega menu
 
