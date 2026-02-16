@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.scan-for-smart-links]
 verify_jwt = false
+
+[functions.send-follow-up-reminders]
+verify_jwt = false

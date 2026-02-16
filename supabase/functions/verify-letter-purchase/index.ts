@@ -93,6 +93,9 @@ serve(async (req) => {
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       : null;
     
+    // Set follow-up reminder for 14 days from now
+    const followUpDueAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    
     const { error: updateError } = await supabaseClient
       .from("letter_purchases")
       .update({
@@ -100,6 +103,7 @@ serve(async (req) => {
         email: customerEmail,
         stripe_payment_intent_id: session.payment_intent as string,
         edit_expires_at: editExpiresAt,
+        follow_up_due_at: followUpDueAt,
       })
       .eq("id", purchaseId);
 
