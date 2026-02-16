@@ -146,7 +146,7 @@ const MegaMenu = () => {
         <NavigationMenuList>
           {/* Letter Templates - 3 Column Layout */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
+            <NavigationMenuTrigger className="bg-transparent nav-underline">
               Letter Templates
             </NavigationMenuTrigger>
             <NavigationMenuContent>
@@ -195,7 +195,7 @@ const MegaMenu = () => {
 
           {/* Consumer Rights Guides - Upgraded menu */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
+            <NavigationMenuTrigger className="bg-transparent nav-underline">
               Guides
             </NavigationMenuTrigger>
             <NavigationMenuContent>
@@ -257,7 +257,7 @@ const MegaMenu = () => {
 
           {/* Resources */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
+            <NavigationMenuTrigger className="bg-transparent nav-underline">
               Resources
             </NavigationMenuTrigger>
             <NavigationMenuContent>

@@ -35,9 +35,9 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-[0_1px_3px_0_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.06)]">
       <div className="container-wide">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 lg:h-[4.5rem] items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center group">
             <img 
@@ -68,7 +68,7 @@ const Header = () => {
                     Login
                   </Link>
                 </Button>
-                <Button variant="accent" size="sm" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
+                <Button variant="accent" size="sm" className="rounded-full px-5" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
                   <Link to="/#letters">Create Letter</Link>
                 </Button>
               </>
