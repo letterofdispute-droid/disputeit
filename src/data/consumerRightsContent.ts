@@ -57,1161 +57,2409 @@ export interface CategoryGuide {
 
 export const consumerRightsGuides: CategoryGuide[] = [
   {
-    categoryId: 'refunds',
-    title: 'Your Rights When Seeking Refunds & Returns',
-    subtitle: 'Federal and state consumer protection laws that guarantee your right to refunds, repairs, and replacements',
-    lastUpdated: '2026-02-01',
-    introduction: 'When you purchase goods or services that fail to meet expectations — whether they arrive defective, don\'t match the description, or simply don\'t perform as advertised — federal and state consumer protection laws provide you with powerful remedies. The Federal Trade Commission (FTC) Act prohibits unfair or deceptive business practices, while the Magnuson-Moss Warranty Act ensures that product warranties are honored as promised. These protections apply whether you shop in-store, online, or through catalog purchases.\n\nThe Fair Credit Billing Act (FCBA) adds another layer of protection for credit card purchases, giving you the right to dispute charges for goods not delivered, goods that differ substantially from what was ordered, or billing errors. Under this law, credit card issuers must investigate disputes and temporarily credit your account while the investigation is pending.\n\nMany states have enacted additional consumer protection statutes that go beyond federal minimums. For example, some states provide automatic treble (triple) damages for willful violations of consumer protection laws, making it financially risky for businesses to ignore legitimate refund requests. The FTC\'s Cooling-Off Rule also gives you a 3-day right to cancel certain sales made at your home or at locations that are not the seller\'s permanent place of business.\n\nUnderstanding these overlapping protections is crucial because they give you multiple avenues for relief. If one approach doesn\'t work — say the seller refuses your direct request — you can escalate to a credit card dispute, file a complaint with the FTC or your state attorney general, or pursue the matter in small claims court.',
+    categoryId: "refunds",
+    title: "Your Rights When Seeking Refunds & Returns",
+    subtitle:
+      "Federal and state consumer protection laws that guarantee your right to refunds, repairs, and replacements",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "When you purchase goods or services that fail to meet expectations - whether they arrive defective, don't match the description, or simply don't perform as advertised - federal and state consumer protection laws provide you with powerful remedies. The Federal Trade Commission (FTC) Act prohibits unfair or deceptive business practices, while the Magnuson-Moss Warranty Act ensures that product warranties are honored as promised. These protections apply whether you shop in-store, online, or through catalog purchases.\n\nThe Fair Credit Billing Act (FCBA) adds another layer of protection for credit card purchases, giving you the right to dispute charges for goods not delivered, goods that differ substantially from what was ordered, or billing errors. Under this law, credit card issuers must investigate disputes and temporarily credit your account while the investigation is pending.\n\nMany states have enacted additional consumer protection statutes that go beyond federal minimums. For example, some states provide automatic treble (triple) damages for willful violations of consumer protection laws, making it financially risky for businesses to ignore legitimate refund requests. The FTC's Cooling-Off Rule also gives you a 3-day right to cancel certain sales made at your home or at locations that are not the seller's permanent place of business.\n\nUnderstanding these overlapping protections is crucial because they give you multiple avenues for relief. If one approach doesn't work - say the seller refuses your direct request - you can escalate to a credit card dispute, file a complaint with the FTC or your state attorney general, or pursue the matter in small claims court.",
     keyRights: [
-      { title: 'Right to a Refund for Faulty Goods', description: 'If a product is defective, not as described, or unfit for its intended purpose, you are entitled to a full refund. Under the UCC (Uniform Commercial Code) adopted by all 50 states, sellers provide an implied warranty of merchantability — meaning goods must work as a reasonable buyer would expect.' },
-      { title: 'Right to Repair or Replacement', description: 'For minor defects discovered after the initial return window, sellers may offer repair or replacement as an alternative to a full refund. Under the Magnuson-Moss Warranty Act, if a product is covered by a written warranty, the warrantor must provide a remedy within a reasonable time and without charge.' },
-      { title: 'FTC Cooling-Off Rule', description: 'The FTC\'s Cooling-Off Rule gives you 3 business days to cancel purchases of $25 or more made at your home, workplace, or at temporary locations like hotel rooms or convention centers. The seller must inform you of your cancellation rights at the time of sale.' },
-      { title: 'Credit Card Chargeback Rights', description: 'Under the Fair Credit Billing Act, you can dispute credit card charges within 60 days of the statement date for goods not delivered, goods significantly not as described, or unauthorized charges. The card issuer must investigate and respond within two billing cycles.' },
-      { title: 'Right to Honest Advertising', description: 'The FTC Act Section 5 prohibits unfair or deceptive acts, including false advertising. If you bought something based on misleading claims, you have grounds for a refund and may also file a complaint with the FTC.' },
-      { title: 'State Lemon Laws for Products', description: 'While most people associate lemon laws with vehicles, some states have general "lemon" protections for consumer products that have repeated, unfixable defects. Check your state\'s specific consumer protection statutes.' },
-      { title: 'Right to Cancel Online Orders Before Shipment', description: 'Under the FTC\'s Mail, Internet, or Telephone Order Rule, sellers must ship within the promised timeframe (or 30 days if no timeframe was stated). If they can\'t, they must notify you and offer the option to cancel for a full refund.' },
-      { title: 'Debit Card Dispute Rights', description: 'Under the Electronic Fund Transfer Act (EFTA/Regulation E), you can dispute unauthorized debit card transactions within 60 days. Your bank must investigate and provisionally credit your account within 10 business days.' },
+      {
+        title: "Right to a Refund for Faulty Goods",
+        description:
+          "If a product is defective, not as described, or unfit for its intended purpose, you are entitled to a full refund. Under the UCC (Uniform Commercial Code) adopted by all 50 states, sellers provide an implied warranty of merchantability - meaning goods must work as a reasonable buyer would expect.",
+      },
+      {
+        title: "Right to Repair or Replacement",
+        description:
+          "For minor defects discovered after the initial return window, sellers may offer repair or replacement as an alternative to a full refund. Under the Magnuson-Moss Warranty Act, if a product is covered by a written warranty, the warrantor must provide a remedy within a reasonable time and without charge.",
+      },
+      {
+        title: "FTC Cooling-Off Rule",
+        description:
+          "The FTC's Cooling-Off Rule gives you 3 business days to cancel purchases of $25 or more made at your home, workplace, or at temporary locations like hotel rooms or convention centers. The seller must inform you of your cancellation rights at the time of sale.",
+      },
+      {
+        title: "Credit Card Chargeback Rights",
+        description:
+          "Under the Fair Credit Billing Act, you can dispute credit card charges within 60 days of the statement date for goods not delivered, goods significantly not as described, or unauthorized charges. The card issuer must investigate and respond within two billing cycles.",
+      },
+      {
+        title: "Right to Honest Advertising",
+        description:
+          "The FTC Act Section 5 prohibits unfair or deceptive acts, including false advertising. If you bought something based on misleading claims, you have grounds for a refund and may also file a complaint with the FTC.",
+      },
+      {
+        title: "State Lemon Laws for Products",
+        description:
+          'While most people associate lemon laws with vehicles, some states have general "lemon" protections for consumer products that have repeated, unfixable defects. Check your state\'s specific consumer protection statutes.',
+      },
+      {
+        title: "Right to Cancel Online Orders Before Shipment",
+        description:
+          "Under the FTC's Mail, Internet, or Telephone Order Rule, sellers must ship within the promised timeframe (or 30 days if no timeframe was stated). If they can't, they must notify you and offer the option to cancel for a full refund.",
+      },
+      {
+        title: "Debit Card Dispute Rights",
+        description:
+          "Under the Electronic Fund Transfer Act (EFTA/Regulation E), you can dispute unauthorized debit card transactions within 60 days. Your bank must investigate and provisionally credit your account within 10 business days.",
+      },
     ],
     commonIssues: [
-      'Product doesn\'t match the online description or photos',
-      'Item arrived damaged, broken, or defective out of the box',
-      'Service not performed as promised or to a professional standard',
-      'Seller refuses to honor their posted return policy',
-      'Delayed or missing refunds after return was accepted',
-      'Restocking fees that were not disclosed before purchase',
-      'Store credit offered instead of cash/card refund when law requires original payment method',
-      'Seller claims product was damaged by buyer to deny refund',
-      'Digital product or download doesn\'t work as described',
-      'Subscription auto-renewed without adequate notice',
+      "Product doesn't match the online description or photos",
+      "Item arrived damaged, broken, or defective out of the box",
+      "Service not performed as promised or to a professional standard",
+      "Seller refuses to honor their posted return policy",
+      "Delayed or missing refunds after return was accepted",
+      "Restocking fees that were not disclosed before purchase",
+      "Store credit offered instead of cash/card refund when law requires original payment method",
+      "Seller claims product was damaged by buyer to deny refund",
+      "Digital product or download doesn't work as described",
+      "Subscription auto-renewed without adequate notice",
     ],
     actionSteps: [
-      'Document the issue immediately with timestamped photos and videos showing the defect or discrepancy',
-      'Save all receipts, order confirmations, shipping notifications, and correspondence with the seller',
-      'Contact the seller in writing (email creates a paper trail) — clearly state the problem and your desired remedy',
-      'Reference specific laws: cite the FTC Act, Magnuson-Moss Act, or your state\'s consumer protection statute by name',
-      'Set a clear, reasonable deadline for resolution (typically 14 business days)',
-      'If the seller refuses, file a dispute with your credit card company or bank under the FCBA or EFTA',
-      'File a complaint with the FTC at ReportFraud.ftc.gov and your state attorney general\'s consumer protection division',
-      'For amounts under your state\'s small claims limit (typically $5,000-$10,000), consider filing in small claims court',
-      'Keep a written log of all phone calls: note the date, time, representative name, and what was discussed',
-      'If the seller is on a marketplace (Amazon, eBay), use the platform\'s buyer protection/guarantee program first',
+      "Document the issue immediately with timestamped photos and videos showing the defect or discrepancy",
+      "Save all receipts, order confirmations, shipping notifications, and correspondence with the seller",
+      "Contact the seller in writing (email creates a paper trail) - clearly state the problem and your desired remedy",
+      "Reference specific laws: cite the FTC Act, Magnuson-Moss Act, or your state's consumer protection statute by name",
+      "Set a clear, reasonable deadline for resolution (typically 14 business days)",
+      "If the seller refuses, file a dispute with your credit card company or bank under the FCBA or EFTA",
+      "File a complaint with the FTC at ReportFraud.ftc.gov and your state attorney general's consumer protection division",
+      "For amounts under your state's small claims limit (typically $5,000-$10,000), consider filing in small claims court",
+      "Keep a written log of all phone calls: note the date, time, representative name, and what was discussed",
+      "If the seller is on a marketplace (Amazon, eBay), use the platform's buyer protection/guarantee program first",
     ],
     importantDeadlines: [
-      '3 business days: FTC Cooling-Off Rule cancellation period for door-to-door and off-premises sales',
-      '30 days: FTC Mail Order Rule — seller must ship within this period or offer cancellation',
-      '60 days: Fair Credit Billing Act deadline to dispute credit card charges (from statement date)',
-      '60 days: EFTA/Reg E deadline for debit card unauthorized transaction disputes',
-      '90 days: Many retailers\' maximum return window for general merchandise',
-      '120 days: Typical chargeback filing window for Visa/Mastercard disputes',
-      '4 years: UCC statute of limitations for breach of sales contract (varies by state)',
-      '1 year: Magnuson-Moss Warranty Act — typical minimum warranty period for consumer products over $15',
+      "3 business days: FTC Cooling-Off Rule cancellation period for door-to-door and off-premises sales",
+      "30 days: FTC Mail Order Rule - seller must ship within this period or offer cancellation",
+      "60 days: Fair Credit Billing Act deadline to dispute credit card charges (from statement date)",
+      "60 days: EFTA/Reg E deadline for debit card unauthorized transaction disputes",
+      "90 days: Many retailers' maximum return window for general merchandise",
+      "120 days: Typical chargeback filing window for Visa/Mastercard disputes",
+      "4 years: UCC statute of limitations for breach of sales contract (varies by state)",
+      "1 year: Magnuson-Moss Warranty Act - typical minimum warranty period for consumer products over $15",
     ],
     federalLaws: [
-      { name: 'FTC Act (Section 5)', citation: '15 U.S.C. § 45', description: 'Prohibits unfair or deceptive acts or practices in commerce, including false advertising and misleading sales tactics.', url: 'https://www.ftc.gov/legal-library/browse/statutes/federal-trade-commission-act' },
-      { name: 'Magnuson-Moss Warranty Act', citation: '15 U.S.C. §§ 2301-2312', description: 'Governs consumer product warranties. Requires warranties to be clearly written and prevents companies from disclaiming implied warranties when offering written ones.', url: 'https://www.ftc.gov/legal-library/browse/statutes/magnuson-moss-warranty-federal-trade-commission-improvement-act' },
-      { name: 'Fair Credit Billing Act (FCBA)', citation: '15 U.S.C. § 1666', description: 'Protects consumers against inaccurate credit card billing. Allows disputes for unauthorized charges, charges for undelivered goods, and billing errors.', url: 'https://www.ftc.gov/legal-library/browse/statutes/fair-credit-billing-act' },
-      { name: 'FTC Cooling-Off Rule', citation: '16 CFR Part 429', description: 'Gives buyers 3 business days to cancel sales of $25+ made at their home or at temporary seller locations. Seller must provide cancellation forms.', url: 'https://www.ftc.gov/legal-library/browse/rules/cooling-rule' },
-      { name: 'FTC Mail, Internet, or Telephone Order Rule', citation: '16 CFR Part 435', description: 'Requires sellers to ship goods within the promised timeframe (or 30 days). Must offer cancellation and full refund for delays.', url: 'https://www.ftc.gov/legal-library/browse/rules/mail-internet-or-telephone-order-merchandise-rule' },
-      { name: 'Electronic Fund Transfer Act (EFTA)', citation: '15 U.S.C. § 1693', description: 'Protects consumers using debit cards and electronic payments. Limits liability for unauthorized transfers and requires prompt investigation of errors.' },
+      {
+        name: "FTC Act (Section 5)",
+        citation: "15 U.S.C. § 45",
+        description:
+          "Prohibits unfair or deceptive acts or practices in commerce, including false advertising and misleading sales tactics.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/federal-trade-commission-act",
+      },
+      {
+        name: "Magnuson-Moss Warranty Act",
+        citation: "15 U.S.C. §§ 2301-2312",
+        description:
+          "Governs consumer product warranties. Requires warranties to be clearly written and prevents companies from disclaiming implied warranties when offering written ones.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/magnuson-moss-warranty-federal-trade-commission-improvement-act",
+      },
+      {
+        name: "Fair Credit Billing Act (FCBA)",
+        citation: "15 U.S.C. § 1666",
+        description:
+          "Protects consumers against inaccurate credit card billing. Allows disputes for unauthorized charges, charges for undelivered goods, and billing errors.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/fair-credit-billing-act",
+      },
+      {
+        name: "FTC Cooling-Off Rule",
+        citation: "16 CFR Part 429",
+        description:
+          "Gives buyers 3 business days to cancel sales of $25+ made at their home or at temporary seller locations. Seller must provide cancellation forms.",
+        url: "https://www.ftc.gov/legal-library/browse/rules/cooling-rule",
+      },
+      {
+        name: "FTC Mail, Internet, or Telephone Order Rule",
+        citation: "16 CFR Part 435",
+        description:
+          "Requires sellers to ship goods within the promised timeframe (or 30 days). Must offer cancellation and full refund for delays.",
+        url: "https://www.ftc.gov/legal-library/browse/rules/mail-internet-or-telephone-order-merchandise-rule",
+      },
+      {
+        name: "Electronic Fund Transfer Act (EFTA)",
+        citation: "15 U.S.C. § 1693",
+        description:
+          "Protects consumers using debit cards and electronic payments. Limits liability for unauthorized transfers and requires prompt investigation of errors.",
+      },
     ],
     faqItems: [
-      { question: 'Can a store refuse to give me a refund if I have a receipt?', answer: 'It depends. If the product is defective or not as described, you have a legal right to a refund regardless of the store\'s return policy — the UCC\'s implied warranty of merchantability overrides store policies. However, if you simply changed your mind about a non-defective item, the store\'s posted return policy generally governs, unless you purchased online (where cooling-off periods may apply). Some states also have laws requiring stores to clearly post their return policies; failure to do so may entitle you to a full refund.' },
-      { question: 'How long do I have to dispute a credit card charge?', answer: 'Under the Fair Credit Billing Act, you have 60 days from the date of the billing statement containing the charge to submit a written dispute to your credit card issuer. However, card networks like Visa and Mastercard often allow disputes up to 120 days from the transaction date. It\'s always best to dispute as soon as you identify the problem. Your issuer must acknowledge your dispute within 30 days and resolve it within two billing cycles (but no more than 90 days).' },
-      { question: 'What if the seller says "all sales final"?', answer: '"All sales final" policies cannot override your statutory rights. If a product is defective, materially different from what was advertised, or if the seller engaged in deceptive practices, consumer protection laws still require a remedy. The FTC considers blanket "no refund" policies potentially deceptive if they mislead consumers about their legal rights. Additionally, credit card chargeback rights exist independently of any seller policy.' },
-      { question: 'Can I get a refund for a digital purchase or download?', answer: 'Yes, in many cases. If a digital product doesn\'t work as described, contains malware, or doesn\'t function on the platforms the seller claimed it supports, you have the same rights as with physical goods. Major platforms (Apple, Google, Steam) have their own refund policies for digital content. If the platform won\'t help, you can dispute the charge with your credit card company. The FTC has pursued companies for selling non-functional digital products.' },
-      { question: 'What is the FTC Cooling-Off Rule and when does it apply?', answer: 'The FTC Cooling-Off Rule gives you 3 business days to cancel purchases of $25 or more made at your home, at the seller\'s temporary location (like a trade show or hotel), or at facilities rented by the seller on a short-term basis. It does NOT apply to purchases made at the seller\'s permanent store, online purchases, or purchases under $25. The seller must give you two copies of a cancellation form and a receipt at the time of sale.' },
-      { question: 'Can I dispute charges for services that were poorly performed?', answer: 'Yes. If a service provider failed to perform the service as agreed or performed it negligently, you have grounds to dispute the charge. Document the substandard work with photos and written descriptions. First, give the provider written notice and a reasonable opportunity to fix the issue. If they refuse, you can dispute the charge with your credit card company, file a complaint with your state attorney general, or pursue the claim in small claims court.' },
+      {
+        question: "Can a store refuse to give me a refund if I have a receipt?",
+        answer:
+          "It depends. If the product is defective or not as described, you have a legal right to a refund regardless of the store's return policy - the UCC's implied warranty of merchantability overrides store policies. However, if you simply changed your mind about a non-defective item, the store's posted return policy generally governs, unless you purchased online (where cooling-off periods may apply). Some states also have laws requiring stores to clearly post their return policies; failure to do so may entitle you to a full refund.",
+      },
+      {
+        question: "How long do I have to dispute a credit card charge?",
+        answer:
+          "Under the Fair Credit Billing Act, you have 60 days from the date of the billing statement containing the charge to submit a written dispute to your credit card issuer. However, card networks like Visa and Mastercard often allow disputes up to 120 days from the transaction date. It's always best to dispute as soon as you identify the problem. Your issuer must acknowledge your dispute within 30 days and resolve it within two billing cycles (but no more than 90 days).",
+      },
+      {
+        question: 'What if the seller says "all sales final"?',
+        answer:
+          '"All sales final" policies cannot override your statutory rights. If a product is defective, materially different from what was advertised, or if the seller engaged in deceptive practices, consumer protection laws still require a remedy. The FTC considers blanket "no refund" policies potentially deceptive if they mislead consumers about their legal rights. Additionally, credit card chargeback rights exist independently of any seller policy.',
+      },
+      {
+        question: "Can I get a refund for a digital purchase or download?",
+        answer:
+          "Yes, in many cases. If a digital product doesn't work as described, contains malware, or doesn't function on the platforms the seller claimed it supports, you have the same rights as with physical goods. Major platforms (Apple, Google, Steam) have their own refund policies for digital content. If the platform won't help, you can dispute the charge with your credit card company. The FTC has pursued companies for selling non-functional digital products.",
+      },
+      {
+        question: "What is the FTC Cooling-Off Rule and when does it apply?",
+        answer:
+          "The FTC Cooling-Off Rule gives you 3 business days to cancel purchases of $25 or more made at your home, at the seller's temporary location (like a trade show or hotel), or at facilities rented by the seller on a short-term basis. It does NOT apply to purchases made at the seller's permanent store, online purchases, or purchases under $25. The seller must give you two copies of a cancellation form and a receipt at the time of sale.",
+      },
+      {
+        question: "Can I dispute charges for services that were poorly performed?",
+        answer:
+          "Yes. If a service provider failed to perform the service as agreed or performed it negligently, you have grounds to dispute the charge. Document the substandard work with photos and written descriptions. First, give the provider written notice and a reasonable opportunity to fix the issue. If they refuse, you can dispute the charge with your credit card company, file a complaint with your state attorney general, or pursue the claim in small claims court.",
+      },
     ],
     warningSigns: [
-      'Seller pressures you to pay in cash, gift cards, wire transfers, or cryptocurrency — these are nearly impossible to recover',
-      'No physical address, phone number, or legitimate contact information on the seller\'s website',
-      'Return policy is buried in fine print or contradicts what the salesperson told you verbally',
-      'Seller offers only store credit when you\'re legally entitled to a cash/card refund for defective goods',
-      'Company demands you pay for return shipping on a product that arrived defective or was not as described',
+      "Seller pressures you to pay in cash, gift cards, wire transfers, or cryptocurrency - these are nearly impossible to recover",
+      "No physical address, phone number, or legitimate contact information on the seller's website",
+      "Return policy is buried in fine print or contradicts what the salesperson told you verbally",
+      "Seller offers only store credit when you're legally entitled to a cash/card refund for defective goods",
+      "Company demands you pay for return shipping on a product that arrived defective or was not as described",
       'Seller threatens to charge a "restocking fee" that was never disclosed before purchase',
-      'Website has no SSL certificate (no padlock icon) or uses a suspicious domain name',
+      "Website has no SSL certificate (no padlock icon) or uses a suspicious domain name",
       'Seller claims "all sales are final" for clearly defective merchandise',
     ],
     proTips: [
-      'Always pay with a credit card (not debit) for purchases over $50 — the FCBA gives you stronger dispute rights than the EFTA provides for debit cards',
-      'Take a screenshot of the product listing before purchasing, especially the price, description, and photos — sellers can change listings after your purchase',
-      'Send refund requests via email (not phone) to create a timestamped written record that can serve as evidence',
-      'In your dispute letter, cite the specific federal or state law by name and section number — this signals you know your rights and increases the chance of a favorable response',
-      'If a seller offers a partial refund, don\'t accept it immediately — negotiate from your legal position and only accept if it truly compensates you for the deficiency',
-      'File complaints with both the FTC (ReportFraud.ftc.gov) and your state AG — even if your individual case isn\'t pursued, pattern complaints trigger investigations',
-      'For purchases over $50 from a seller within 100 miles, the FCBA lets you withhold payment to your credit card company while you dispute the purchase directly',
+      "Always pay with a credit card (not debit) for purchases over $50 - the FCBA gives you stronger dispute rights than the EFTA provides for debit cards",
+      "Take a screenshot of the product listing before purchasing, especially the price, description, and photos - sellers can change listings after your purchase",
+      "Send refund requests via email (not phone) to create a timestamped written record that can serve as evidence",
+      "In your dispute letter, cite the specific federal or state law by name and section number - this signals you know your rights and increases the chance of a favorable response",
+      "If a seller offers a partial refund, don't accept it immediately - negotiate from your legal position and only accept if it truly compensates you for the deficiency",
+      "File complaints with both the FTC (ReportFraud.ftc.gov) and your state AG - even if your individual case isn't pursued, pattern complaints trigger investigations",
+      "For purchases over $50 from a seller within 100 miles, the FCBA lets you withhold payment to your credit card company while you dispute the purchase directly",
     ],
     regulatoryContacts: [
-      { name: 'Federal Trade Commission (FTC)', description: 'File complaints about deceptive business practices, scams, and unfair refund policies.', url: 'https://reportfraud.ftc.gov/', phone: '1-877-382-4357' },
-      { name: 'Consumer Financial Protection Bureau (CFPB)', description: 'Dispute credit card billing errors and financial product issues.', url: 'https://www.consumerfinance.gov/complaint/', phone: '1-855-411-2372' },
-      { name: 'Better Business Bureau (BBB)', description: 'File a complaint and check business ratings before purchasing.', url: 'https://www.bbb.org/file-a-complaint' },
-      { name: 'State Attorney General', description: 'Your state AG enforces consumer protection laws and can investigate businesses.', url: 'https://www.usa.gov/state-attorney-general' },
+      {
+        name: "Federal Trade Commission (FTC)",
+        description: "File complaints about deceptive business practices, scams, and unfair refund policies.",
+        url: "https://reportfraud.ftc.gov/",
+        phone: "1-877-382-4357",
+      },
+      {
+        name: "Consumer Financial Protection Bureau (CFPB)",
+        description: "Dispute credit card billing errors and financial product issues.",
+        url: "https://www.consumerfinance.gov/complaint/",
+        phone: "1-855-411-2372",
+      },
+      {
+        name: "Better Business Bureau (BBB)",
+        description: "File a complaint and check business ratings before purchasing.",
+        url: "https://www.bbb.org/file-a-complaint",
+      },
+      {
+        name: "State Attorney General",
+        description: "Your state AG enforces consumer protection laws and can investigate businesses.",
+        url: "https://www.usa.gov/state-attorney-general",
+      },
     ],
     stateVariations: [
-      { state: 'California', detail: 'Song-Beverly Consumer Warranty Act allows refund, replacement, or reimbursement for defective goods — plus civil penalties up to 2x the purchase price for willful violations.' },
-      { state: 'New York', detail: 'Stores must post refund policies conspicuously; if no policy is posted, consumers are entitled to a full refund within 30 days.' },
-      { state: 'Massachusetts', detail: 'Chapter 93A provides automatic treble (3x) damages for willful or knowing consumer protection violations, plus attorney\'s fees.' },
-      { state: 'Texas', detail: 'The DTPA (Deceptive Trade Practices Act) allows consumers to recover up to 3x economic damages plus mental anguish damages.' },
+      {
+        state: "California",
+        detail:
+          "Song-Beverly Consumer Warranty Act allows refund, replacement, or reimbursement for defective goods - plus civil penalties up to 2x the purchase price for willful violations.",
+      },
+      {
+        state: "New York",
+        detail:
+          "Stores must post refund policies conspicuously; if no policy is posted, consumers are entitled to a full refund within 30 days.",
+      },
+      {
+        state: "Massachusetts",
+        detail:
+          "Chapter 93A provides automatic treble (3x) damages for willful or knowing consumer protection violations, plus attorney's fees.",
+      },
+      {
+        state: "Texas",
+        detail:
+          "The DTPA (Deceptive Trade Practices Act) allows consumers to recover up to 3x economic damages plus mental anguish damages.",
+      },
     ],
     statSnapshot: [
-      { label: 'FTC complaints filed annually', value: '5.4M+', source: 'FTC Consumer Sentinel Network, 2024' },
-      { label: 'Median credit card dispute resolved in favor of consumer', value: '~60%', source: 'CFPB Annual Report, 2024' },
-      { label: 'Average chargeback recovery', value: '$450', source: 'Chargebacks911 Industry Report' },
+      { label: "FTC complaints filed annually", value: "5.4M+", source: "FTC Consumer Sentinel Network, 2024" },
+      {
+        label: "Median credit card dispute resolved in favor of consumer",
+        value: "~60%",
+        source: "CFPB Annual Report, 2024",
+      },
+      { label: "Average chargeback recovery", value: "$450", source: "Chargebacks911 Industry Report" },
     ],
   },
   {
-    categoryId: 'housing',
-    title: 'Tenant Rights & Housing Protections',
-    subtitle: 'Federal and state laws that protect renters from unfair landlord practices',
-    lastUpdated: '2026-02-01',
-    introduction: 'Tenants across the United States have significant legal protections covering virtually every aspect of the landlord-tenant relationship — from the physical condition of the property to how security deposits are handled, and from privacy rights to protection against retaliation. These rights exist under a combination of federal fair housing laws, state tenant protection statutes, and local housing codes.\n\nThe Fair Housing Act (FHA) prohibits discrimination in housing based on race, color, national origin, religion, sex, familial status, and disability. This applies to rental applications, lease terms, maintenance, and eviction decisions. Landlords who violate the FHA can face substantial penalties, including compensatory and punitive damages.\n\nState landlord-tenant laws typically establish the implied warranty of habitability — the legal principle that landlords must maintain rental properties in a livable condition. This includes functioning plumbing, heating, electrical systems, and structural integrity. When landlords fail to make necessary repairs, tenants may have remedies including rent withholding, repair-and-deduct, or lease termination.\n\nSecurity deposit laws vary significantly by state but universally require landlords to return deposits within specified timeframes and provide itemized deductions. Some states require landlords to hold deposits in separate, interest-bearing accounts. Violations of deposit laws often result in automatic penalties — in some states, landlords who wrongfully withhold deposits must pay double or triple the deposit amount.',
+    categoryId: "housing",
+    title: "Tenant Rights & Housing Protections",
+    subtitle: "Federal and state laws that protect renters from unfair landlord practices",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Tenants across the United States have significant legal protections covering virtually every aspect of the landlord-tenant relationship - from the physical condition of the property to how security deposits are handled, and from privacy rights to protection against retaliation. These rights exist under a combination of federal fair housing laws, state tenant protection statutes, and local housing codes.\n\nThe Fair Housing Act (FHA) prohibits discrimination in housing based on race, color, national origin, religion, sex, familial status, and disability. This applies to rental applications, lease terms, maintenance, and eviction decisions. Landlords who violate the FHA can face substantial penalties, including compensatory and punitive damages.\n\nState landlord-tenant laws typically establish the implied warranty of habitability - the legal principle that landlords must maintain rental properties in a livable condition. This includes functioning plumbing, heating, electrical systems, and structural integrity. When landlords fail to make necessary repairs, tenants may have remedies including rent withholding, repair-and-deduct, or lease termination.\n\nSecurity deposit laws vary significantly by state but universally require landlords to return deposits within specified timeframes and provide itemized deductions. Some states require landlords to hold deposits in separate, interest-bearing accounts. Violations of deposit laws often result in automatic penalties - in some states, landlords who wrongfully withhold deposits must pay double or triple the deposit amount.",
     keyRights: [
-      { title: 'Right to a Habitable Home', description: 'Under the implied warranty of habitability recognized in all 50 states, landlords must maintain properties in a condition fit for human habitation. This includes working heating, plumbing, electrical systems, hot water, pest control, and structural safety. Failure to maintain habitability may entitle you to rent reduction, repair-and-deduct remedies, or lease termination.' },
-      { title: 'Security Deposit Protections', description: 'State laws set strict rules for security deposits: maximum amounts (typically 1-2 months\' rent), required holding in separate accounts, itemized deduction statements, and return deadlines (usually 14-45 days after move-out). Landlords who violate these rules often face automatic penalties of 2-3x the deposit amount.' },
-      { title: 'Right to Quiet Enjoyment', description: 'You have the legal right to use your rental property without unreasonable interference from your landlord. This means landlords cannot enter without proper notice (usually 24-48 hours), cannot shut off utilities, and cannot remove doors or windows to force you out (constructive eviction).' },
-      { title: 'Protection from Retaliation', description: 'In most states, landlords cannot evict, raise rent, or reduce services in retaliation for tenants exercising legal rights — such as reporting code violations, requesting repairs, joining a tenant organization, or filing a complaint with a housing agency. Retaliatory actions within 6-12 months of the protected activity are often presumed illegal.' },
-      { title: 'Fair Housing Protections', description: 'The Fair Housing Act prohibits discrimination based on race, color, national origin, religion, sex, familial status, and disability. Many states and cities add protections for sexual orientation, gender identity, source of income, age, and marital status. Discriminatory practices include refusing to rent, setting different terms, and steering tenants to particular areas.' },
-      { title: 'Right to Proper Eviction Process', description: 'Landlords cannot engage in "self-help" evictions — changing locks, removing belongings, or shutting off utilities. All evictions must follow state legal procedures, including proper written notice, filing in court, and obtaining a court order. You have the right to appear in court and present your defense.' },
-      { title: 'Lead Paint Disclosure', description: 'For housing built before 1978, federal law requires landlords to disclose known lead-based paint hazards, provide an EPA-approved information pamphlet, and include specific lead paint warnings in the lease. Failure to disclose can result in penalties up to $19,507 per violation.' },
-      { title: 'Right to Reasonable Accommodations', description: 'Under the Fair Housing Act and ADA, landlords must make reasonable accommodations for tenants with disabilities. This includes allowing service animals regardless of pet policies, permitting modifications to the unit (at tenant\'s expense in most cases), and providing accessible parking or mailbox locations.' },
+      {
+        title: "Right to a Habitable Home",
+        description:
+          "Under the implied warranty of habitability recognized in all 50 states, landlords must maintain properties in a condition fit for human habitation. This includes working heating, plumbing, electrical systems, hot water, pest control, and structural safety. Failure to maintain habitability may entitle you to rent reduction, repair-and-deduct remedies, or lease termination.",
+      },
+      {
+        title: "Security Deposit Protections",
+        description:
+          "State laws set strict rules for security deposits: maximum amounts (typically 1-2 months' rent), required holding in separate accounts, itemized deduction statements, and return deadlines (usually 14-45 days after move-out). Landlords who violate these rules often face automatic penalties of 2-3x the deposit amount.",
+      },
+      {
+        title: "Right to Quiet Enjoyment",
+        description:
+          "You have the legal right to use your rental property without unreasonable interference from your landlord. This means landlords cannot enter without proper notice (usually 24-48 hours), cannot shut off utilities, and cannot remove doors or windows to force you out (constructive eviction).",
+      },
+      {
+        title: "Protection from Retaliation",
+        description:
+          "In most states, landlords cannot evict, raise rent, or reduce services in retaliation for tenants exercising legal rights - such as reporting code violations, requesting repairs, joining a tenant organization, or filing a complaint with a housing agency. Retaliatory actions within 6-12 months of the protected activity are often presumed illegal.",
+      },
+      {
+        title: "Fair Housing Protections",
+        description:
+          "The Fair Housing Act prohibits discrimination based on race, color, national origin, religion, sex, familial status, and disability. Many states and cities add protections for sexual orientation, gender identity, source of income, age, and marital status. Discriminatory practices include refusing to rent, setting different terms, and steering tenants to particular areas.",
+      },
+      {
+        title: "Right to Proper Eviction Process",
+        description:
+          'Landlords cannot engage in "self-help" evictions - changing locks, removing belongings, or shutting off utilities. All evictions must follow state legal procedures, including proper written notice, filing in court, and obtaining a court order. You have the right to appear in court and present your defense.',
+      },
+      {
+        title: "Lead Paint Disclosure",
+        description:
+          "For housing built before 1978, federal law requires landlords to disclose known lead-based paint hazards, provide an EPA-approved information pamphlet, and include specific lead paint warnings in the lease. Failure to disclose can result in penalties up to $19,507 per violation.",
+      },
+      {
+        title: "Right to Reasonable Accommodations",
+        description:
+          "Under the Fair Housing Act and ADA, landlords must make reasonable accommodations for tenants with disabilities. This includes allowing service animals regardless of pet policies, permitting modifications to the unit (at tenant's expense in most cases), and providing accessible parking or mailbox locations.",
+      },
     ],
     commonIssues: [
-      'Unreturned or unfairly deducted security deposits — landlords claiming excessive "cleaning" or "repair" costs',
-      'Landlord failing to make necessary repairs despite repeated written requests',
-      'Landlord entering the unit without proper notice or consent',
-      'Rent increases without the legally required advance notice period',
-      'Attempted eviction without following proper legal procedures',
-      'Mold, pest infestations, or other habitability issues landlord refuses to address',
-      'Landlord retaliating after tenant filed a complaint with housing authority',
-      'Lease terms that violate state tenant protection laws (illegal clauses)',
-      'Constructive eviction tactics — making conditions so bad you\'re forced to leave',
-      'Discrimination in rental applications or lease terms',
+      'Unreturned or unfairly deducted security deposits - landlords claiming excessive "cleaning" or "repair" costs',
+      "Landlord failing to make necessary repairs despite repeated written requests",
+      "Landlord entering the unit without proper notice or consent",
+      "Rent increases without the legally required advance notice period",
+      "Attempted eviction without following proper legal procedures",
+      "Mold, pest infestations, or other habitability issues landlord refuses to address",
+      "Landlord retaliating after tenant filed a complaint with housing authority",
+      "Lease terms that violate state tenant protection laws (illegal clauses)",
+      "Constructive eviction tactics - making conditions so bad you're forced to leave",
+      "Discrimination in rental applications or lease terms",
     ],
     actionSteps: [
-      'Document property conditions with timestamped photos and video at move-in and throughout your tenancy',
-      'Put ALL repair requests in writing (email or certified mail) — never rely on verbal requests alone',
-      'Know your specific state\'s tenant protection laws — they vary significantly and provide your strongest protections',
-      'Keep organized copies of your lease, all correspondence, rent payments, and maintenance requests',
-      'For urgent habitability issues (no heat in winter, sewage backup), contact your local housing code enforcement immediately',
-      'Send a formal demand letter citing specific state statutes before filing any legal action',
-      'If facing illegal eviction, contact your local legal aid organization — many provide free representation for tenants',
-      'File complaints with HUD (for federal fair housing violations) or your state civil rights agency',
-      'Consider rent escrow through your local court if the landlord refuses to make critical repairs',
-      'Join or contact a local tenant rights organization for support, information, and collective bargaining power',
+      "Document property conditions with timestamped photos and video at move-in and throughout your tenancy",
+      "Put ALL repair requests in writing (email or certified mail) - never rely on verbal requests alone",
+      "Know your specific state's tenant protection laws - they vary significantly and provide your strongest protections",
+      "Keep organized copies of your lease, all correspondence, rent payments, and maintenance requests",
+      "For urgent habitability issues (no heat in winter, sewage backup), contact your local housing code enforcement immediately",
+      "Send a formal demand letter citing specific state statutes before filing any legal action",
+      "If facing illegal eviction, contact your local legal aid organization - many provide free representation for tenants",
+      "File complaints with HUD (for federal fair housing violations) or your state civil rights agency",
+      "Consider rent escrow through your local court if the landlord refuses to make critical repairs",
+      "Join or contact a local tenant rights organization for support, information, and collective bargaining power",
     ],
     importantDeadlines: [
-      '14-45 days: State-specific deadline for landlord to return security deposit after move-out',
-      '24-48 hours: Minimum advance notice landlords must give before entering your rental unit',
-      '30-60 days: Required advance notice for rent increases (varies by state and lease type)',
+      "14-45 days: State-specific deadline for landlord to return security deposit after move-out",
+      "24-48 hours: Minimum advance notice landlords must give before entering your rental unit",
+      "30-60 days: Required advance notice for rent increases (varies by state and lease type)",
       '3-30 days: "Cure or quit" notice periods for lease violations before eviction can be filed',
-      '1 year: Statute of limitations for filing fair housing discrimination complaints with HUD',
-      '2-6 years: Typical statute of limitations for security deposit lawsuits (varies by state)',
-      '10 days: Required notice period before landlord can dispose of abandoned tenant property (most states)',
-      '180 days: Deadline to file a complaint with HUD for housing discrimination',
+      "1 year: Statute of limitations for filing fair housing discrimination complaints with HUD",
+      "2-6 years: Typical statute of limitations for security deposit lawsuits (varies by state)",
+      "10 days: Required notice period before landlord can dispose of abandoned tenant property (most states)",
+      "180 days: Deadline to file a complaint with HUD for housing discrimination",
     ],
     federalLaws: [
-      { name: 'Fair Housing Act (FHA)', citation: '42 U.S.C. §§ 3601-3631', description: 'Prohibits discrimination in housing based on race, color, national origin, religion, sex, familial status, and disability. Covers rentals, sales, lending, and insurance.', url: 'https://www.hud.gov/program_offices/fair_housing_equal_opp/fair_housing_act_overview' },
-      { name: 'Residential Lead-Based Paint Hazard Reduction Act', citation: '42 U.S.C. § 4852d', description: 'Requires disclosure of known lead-based paint hazards in pre-1978 housing before sale or lease. Penalties up to $19,507 per violation.' },
-      { name: 'Servicemembers Civil Relief Act (SCRA)', citation: '50 U.S.C. §§ 3901-4043', description: 'Allows active-duty military members to terminate residential leases early upon deployment or permanent change of station. Also provides protections against eviction and foreclosure.', url: 'https://www.justice.gov/servicemembers/servicemembers-civil-relief-act-scra' },
-      { name: 'Violence Against Women Act (VAWA) Housing Protections', citation: '34 U.S.C. § 12491', description: 'Protects survivors of domestic violence, dating violence, sexual assault, and stalking from being evicted or denied housing because of their status as victims.' },
-      { name: 'Fair Debt Collection Practices Act (for rent debt)', citation: '15 U.S.C. § 1692', description: 'Protects tenants from abusive debt collection practices when past-due rent is sent to third-party collectors. Collectors cannot harass, threaten, or misrepresent the debt.' },
+      {
+        name: "Fair Housing Act (FHA)",
+        citation: "42 U.S.C. §§ 3601-3631",
+        description:
+          "Prohibits discrimination in housing based on race, color, national origin, religion, sex, familial status, and disability. Covers rentals, sales, lending, and insurance.",
+        url: "https://www.hud.gov/program_offices/fair_housing_equal_opp/fair_housing_act_overview",
+      },
+      {
+        name: "Residential Lead-Based Paint Hazard Reduction Act",
+        citation: "42 U.S.C. § 4852d",
+        description:
+          "Requires disclosure of known lead-based paint hazards in pre-1978 housing before sale or lease. Penalties up to $19,507 per violation.",
+      },
+      {
+        name: "Servicemembers Civil Relief Act (SCRA)",
+        citation: "50 U.S.C. §§ 3901-4043",
+        description:
+          "Allows active-duty military members to terminate residential leases early upon deployment or permanent change of station. Also provides protections against eviction and foreclosure.",
+        url: "https://www.justice.gov/servicemembers/servicemembers-civil-relief-act-scra",
+      },
+      {
+        name: "Violence Against Women Act (VAWA) Housing Protections",
+        citation: "34 U.S.C. § 12491",
+        description:
+          "Protects survivors of domestic violence, dating violence, sexual assault, and stalking from being evicted or denied housing because of their status as victims.",
+      },
+      {
+        name: "Fair Debt Collection Practices Act (for rent debt)",
+        citation: "15 U.S.C. § 1692",
+        description:
+          "Protects tenants from abusive debt collection practices when past-due rent is sent to third-party collectors. Collectors cannot harass, threaten, or misrepresent the debt.",
+      },
     ],
     faqItems: [
-      { question: 'How long does my landlord have to return my security deposit?', answer: 'This varies by state, typically ranging from 14 to 45 days after you move out and return the keys. For example, California requires return within 21 days, New York within 14 days, Texas within 30 days, and Florida within 15-60 days depending on whether you dispute deductions. The landlord must provide an itemized list of any deductions with receipts. If the landlord fails to return the deposit within the statutory period, many states impose automatic penalties — often 2x or 3x the deposit amount, plus attorney\'s fees.' },
-      { question: 'Can my landlord enter my apartment without permission?', answer: 'In almost all states, landlords must provide advance written notice (typically 24-48 hours) before entering your unit, and entry must be during reasonable hours and for a legitimate purpose (repairs, inspections, showing to prospective tenants). Exceptions exist for genuine emergencies (fire, flood, gas leak). Repeated unauthorized entry can constitute harassment and may give you grounds to terminate the lease or seek a restraining order.' },
-      { question: 'What can I do if my landlord won\'t make repairs?', answer: 'You have several remedies depending on your state: (1) Repair and deduct — hire someone to fix the issue and deduct the cost from rent; (2) Rent withholding — pay rent into an escrow account until repairs are made; (3) Rent reduction — request reduced rent to reflect the diminished value of the unit; (4) Lease termination — for serious habitability issues, terminate the lease and move out; (5) Code enforcement — report violations to your local housing inspector, who can order the landlord to make repairs. Always document the issue and give written notice before using any remedy.' },
-      { question: 'Can my landlord evict me for complaining about problems?', answer: 'No. Virtually every state has anti-retaliation laws that prohibit landlords from evicting, raising rent, or reducing services in response to tenants exercising their legal rights. This includes reporting code violations, requesting repairs, filing complaints with government agencies, or joining a tenant union. If your landlord takes adverse action within 6-12 months of your protected activity, courts often presume the action was retaliatory, shifting the burden to the landlord to prove a legitimate reason.' },
-      { question: 'Is my landlord responsible for mold in my apartment?', answer: 'Generally, yes — if the mold results from a maintenance issue the landlord failed to address (leaky pipes, poor ventilation, roof leaks). Under the implied warranty of habitability, landlords must maintain properties free from health hazards, which includes toxic mold. Document the mold with photos, get a professional assessment if possible, report it in writing, and keep medical records if you experience health effects. Some states have specific mold disclosure and remediation requirements.' },
-      { question: 'What are my rights if I\'m being discriminated against in housing?', answer: 'The Fair Housing Act protects you from discrimination based on race, color, national origin, religion, sex, familial status, and disability. Many state and local laws add additional protected classes. If you believe you\'ve been discriminated against, you can: (1) File a complaint with HUD within 1 year; (2) File a complaint with your state civil rights agency; (3) Sue in federal court within 2 years. Keep detailed records of discriminatory statements, actions, or patterns. HUD will investigate at no cost to you and can pursue the case on your behalf.' },
+      {
+        question: "How long does my landlord have to return my security deposit?",
+        answer:
+          "This varies by state, typically ranging from 14 to 45 days after you move out and return the keys. For example, California requires return within 21 days, New York within 14 days, Texas within 30 days, and Florida within 15-60 days depending on whether you dispute deductions. The landlord must provide an itemized list of any deductions with receipts. If the landlord fails to return the deposit within the statutory period, many states impose automatic penalties - often 2x or 3x the deposit amount, plus attorney's fees.",
+      },
+      {
+        question: "Can my landlord enter my apartment without permission?",
+        answer:
+          "In almost all states, landlords must provide advance written notice (typically 24-48 hours) before entering your unit, and entry must be during reasonable hours and for a legitimate purpose (repairs, inspections, showing to prospective tenants). Exceptions exist for genuine emergencies (fire, flood, gas leak). Repeated unauthorized entry can constitute harassment and may give you grounds to terminate the lease or seek a restraining order.",
+      },
+      {
+        question: "What can I do if my landlord won't make repairs?",
+        answer:
+          "You have several remedies depending on your state: (1) Repair and deduct - hire someone to fix the issue and deduct the cost from rent; (2) Rent withholding - pay rent into an escrow account until repairs are made; (3) Rent reduction - request reduced rent to reflect the diminished value of the unit; (4) Lease termination - for serious habitability issues, terminate the lease and move out; (5) Code enforcement - report violations to your local housing inspector, who can order the landlord to make repairs. Always document the issue and give written notice before using any remedy.",
+      },
+      {
+        question: "Can my landlord evict me for complaining about problems?",
+        answer:
+          "No. Virtually every state has anti-retaliation laws that prohibit landlords from evicting, raising rent, or reducing services in response to tenants exercising their legal rights. This includes reporting code violations, requesting repairs, filing complaints with government agencies, or joining a tenant union. If your landlord takes adverse action within 6-12 months of your protected activity, courts often presume the action was retaliatory, shifting the burden to the landlord to prove a legitimate reason.",
+      },
+      {
+        question: "Is my landlord responsible for mold in my apartment?",
+        answer:
+          "Generally, yes - if the mold results from a maintenance issue the landlord failed to address (leaky pipes, poor ventilation, roof leaks). Under the implied warranty of habitability, landlords must maintain properties free from health hazards, which includes toxic mold. Document the mold with photos, get a professional assessment if possible, report it in writing, and keep medical records if you experience health effects. Some states have specific mold disclosure and remediation requirements.",
+      },
+      {
+        question: "What are my rights if I'm being discriminated against in housing?",
+        answer:
+          "The Fair Housing Act protects you from discrimination based on race, color, national origin, religion, sex, familial status, and disability. Many state and local laws add additional protected classes. If you believe you've been discriminated against, you can: (1) File a complaint with HUD within 1 year; (2) File a complaint with your state civil rights agency; (3) Sue in federal court within 2 years. Keep detailed records of discriminatory statements, actions, or patterns. HUD will investigate at no cost to you and can pursue the case on your behalf.",
+      },
     ],
     warningSigns: [
-      'Landlord refuses to put lease terms or repair promises in writing',
-      'Lease contains clauses waiving your statutory rights (these are often unenforceable but signal a problematic landlord)',
-      'Landlord demands cash-only rent payments with no receipts',
-      'Property shows signs of deferred maintenance: peeling paint in pre-1978 building, visible mold, pest evidence',
-      'Landlord discourages you from contacting the housing authority or threatens eviction for complaining',
-      'No working smoke detectors, carbon monoxide detectors, or fire extinguishers',
-      'Landlord asks about your national origin, religion, family plans, or disability during application',
-      'Previous tenants\' security deposits were systematically withheld (check online reviews)',
+      "Landlord refuses to put lease terms or repair promises in writing",
+      "Lease contains clauses waiving your statutory rights (these are often unenforceable but signal a problematic landlord)",
+      "Landlord demands cash-only rent payments with no receipts",
+      "Property shows signs of deferred maintenance: peeling paint in pre-1978 building, visible mold, pest evidence",
+      "Landlord discourages you from contacting the housing authority or threatens eviction for complaining",
+      "No working smoke detectors, carbon monoxide detectors, or fire extinguishers",
+      "Landlord asks about your national origin, religion, family plans, or disability during application",
+      "Previous tenants' security deposits were systematically withheld (check online reviews)",
     ],
     proTips: [
-      'Do a video walkthrough at move-in AND move-out, narrating the condition of every room — email it to yourself for a timestamped record',
-      'Send repair requests via email and also via certified mail with return receipt — the certified mail receipt is proof of delivery that\'s hard to dispute in court',
-      'Pay rent by check or electronic transfer (never cash) so you have a verifiable payment history',
-      'Before signing a lease, search for the landlord\'s name and property address on your local court system\'s website to check for prior tenant lawsuits or code violations',
-      'If your landlord won\'t return your deposit, a demand letter citing your state\'s penalty provisions often resolves the issue — landlords know courts award double or triple damages',
-      'Keep a "landlord file" with copies of your lease, all maintenance requests, all correspondence, and photos — organized chronologically. This becomes your evidence file if you ever need to go to court',
-      'Know your city\'s rent control or stabilization laws if applicable — these can significantly limit rent increases and provide additional eviction protections',
+      "Do a video walkthrough at move-in AND move-out, narrating the condition of every room - email it to yourself for a timestamped record",
+      "Send repair requests via email and also via certified mail with return receipt - the certified mail receipt is proof of delivery that's hard to dispute in court",
+      "Pay rent by check or electronic transfer (never cash) so you have a verifiable payment history",
+      "Before signing a lease, search for the landlord's name and property address on your local court system's website to check for prior tenant lawsuits or code violations",
+      "If your landlord won't return your deposit, a demand letter citing your state's penalty provisions often resolves the issue - landlords know courts award double or triple damages",
+      'Keep a "landlord file" with copies of your lease, all maintenance requests, all correspondence, and photos - organized chronologically. This becomes your evidence file if you ever need to go to court',
+      "Know your city's rent control or stabilization laws if applicable - these can significantly limit rent increases and provide additional eviction protections",
     ],
     regulatoryContacts: [
-      { name: 'HUD Fair Housing', description: 'File housing discrimination complaints and request investigations.', url: 'https://www.hud.gov/program_offices/fair_housing_equal_opp/online-complaint', phone: '1-800-669-9777' },
-      { name: 'Local Housing Code Enforcement', description: 'Report habitability violations — inspectors can order landlords to make repairs.', url: 'https://www.hud.gov/topics/rental_assistance' },
-      { name: 'State Attorney General', description: 'Investigate landlords who systematically violate tenant protection laws.', url: 'https://www.usa.gov/state-attorney-general' },
-      { name: 'Legal Aid Society', description: 'Free legal assistance for tenants facing eviction or rights violations.', url: 'https://www.lsc.gov/about-lsc/what-legal-aid/get-legal-help', phone: '1-202-295-1500' },
+      {
+        name: "HUD Fair Housing",
+        description: "File housing discrimination complaints and request investigations.",
+        url: "https://www.hud.gov/program_offices/fair_housing_equal_opp/online-complaint",
+        phone: "1-800-669-9777",
+      },
+      {
+        name: "Local Housing Code Enforcement",
+        description: "Report habitability violations - inspectors can order landlords to make repairs.",
+        url: "https://www.hud.gov/topics/rental_assistance",
+      },
+      {
+        name: "State Attorney General",
+        description: "Investigate landlords who systematically violate tenant protection laws.",
+        url: "https://www.usa.gov/state-attorney-general",
+      },
+      {
+        name: "Legal Aid Society",
+        description: "Free legal assistance for tenants facing eviction or rights violations.",
+        url: "https://www.lsc.gov/about-lsc/what-legal-aid/get-legal-help",
+        phone: "1-202-295-1500",
+      },
     ],
     stateVariations: [
-      { state: 'California', detail: 'Statewide rent cap (AB 1482) limits annual increases to 5% + CPI (max 10%). Security deposit return within 21 days; penalty for wrongful withholding.' },
-      { state: 'New York', detail: 'Rent-stabilized apartments in NYC have strict limits on increases and provide strong eviction protections. Security deposit limited to 1 month\'s rent.' },
-      { state: 'Texas', detail: 'No statewide rent control. Landlords must return security deposits within 30 days but face limited penalties for violations compared to other states.' },
-      { state: 'Illinois', detail: 'Chicago\'s RLTO (Residential Landlord and Tenant Ordinance) provides some of the strongest tenant protections in the country, including 2x deposit penalties.' },
+      {
+        state: "California",
+        detail:
+          "Statewide rent cap (AB 1482) limits annual increases to 5% + CPI (max 10%). Security deposit return within 21 days; penalty for wrongful withholding.",
+      },
+      {
+        state: "New York",
+        detail:
+          "Rent-stabilized apartments in NYC have strict limits on increases and provide strong eviction protections. Security deposit limited to 1 month's rent.",
+      },
+      {
+        state: "Texas",
+        detail:
+          "No statewide rent control. Landlords must return security deposits within 30 days but face limited penalties for violations compared to other states.",
+      },
+      {
+        state: "Illinois",
+        detail:
+          "Chicago's RLTO (Residential Landlord and Tenant Ordinance) provides some of the strongest tenant protections in the country, including 2x deposit penalties.",
+      },
     ],
     statSnapshot: [
-      { label: 'HUD discrimination complaints resolved', value: '8,000+/yr', source: 'HUD Annual Report, 2024' },
-      { label: 'Average wrongfully withheld deposit', value: '$1,100', source: 'Nolo Legal Research, 2024' },
-      { label: 'States with anti-retaliation laws', value: '49 of 50', source: 'National Conference of State Legislatures' },
+      { label: "HUD discrimination complaints resolved", value: "8,000+/yr", source: "HUD Annual Report, 2024" },
+      { label: "Average wrongfully withheld deposit", value: "$1,100", source: "Nolo Legal Research, 2024" },
+      {
+        label: "States with anti-retaliation laws",
+        value: "49 of 50",
+        source: "National Conference of State Legislatures",
+      },
     ],
   },
   {
-    categoryId: 'travel',
-    title: 'Air Passenger & Travel Consumer Rights',
-    subtitle: 'DOT regulations and international conventions that protect travelers',
-    lastUpdated: '2026-02-01',
-    introduction: 'Air passengers and travelers in the United States have increasingly robust protections thanks to Department of Transportation (DOT) regulations, international treaties like the Montreal Convention, and evolving federal rules. The DOT requires airlines to provide automatic refunds for cancelled flights, significant delays, and lost baggage — a major consumer protection milestone.\n\nThe Montreal Convention governs international air travel and sets liability limits for lost, delayed, or damaged baggage (approximately $1,700 per passenger for checked bags), as well as passenger injury during international flights. For domestic travel, DOT regulations require airlines to compensate passengers for involuntary denied boarding (bumping) — up to 400% of the one-way fare.\n\nThe DOT\'s Airline Passengers with Disabilities Bill of Rights ensures accessible air travel for passengers with disabilities, requiring airlines to provide wheelchair assistance, accommodate service animals, and properly handle mobility devices. Violations can result in significant fines against airlines.\n\nBeyond air travel, the FTC\'s consumer protection authority covers deceptive practices by hotels, car rental companies, travel agencies, and online booking platforms. Hidden resort fees, misleading "free cancellation" policies, and bait-and-switch pricing tactics are all actionable under federal and state consumer protection laws.',
+    categoryId: "travel",
+    title: "Air Passenger & Travel Consumer Rights",
+    subtitle: "DOT regulations and international conventions that protect travelers",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Air passengers and travelers in the United States have increasingly robust protections thanks to Department of Transportation (DOT) regulations, international treaties like the Montreal Convention, and evolving federal rules. The DOT requires airlines to provide automatic refunds for cancelled flights, significant delays, and lost baggage - a major consumer protection milestone.\n\nThe Montreal Convention governs international air travel and sets liability limits for lost, delayed, or damaged baggage (approximately $1,700 per passenger for checked bags), as well as passenger injury during international flights. For domestic travel, DOT regulations require airlines to compensate passengers for involuntary denied boarding (bumping) - up to 400% of the one-way fare.\n\nThe DOT's Airline Passengers with Disabilities Bill of Rights ensures accessible air travel for passengers with disabilities, requiring airlines to provide wheelchair assistance, accommodate service animals, and properly handle mobility devices. Violations can result in significant fines against airlines.\n\nBeyond air travel, the FTC's consumer protection authority covers deceptive practices by hotels, car rental companies, travel agencies, and online booking platforms. Hidden resort fees, misleading \"free cancellation\" policies, and bait-and-switch pricing tactics are all actionable under federal and state consumer protection laws.",
     keyRights: [
-      { title: 'Automatic Refunds for Cancellations', description: 'DOT rules require airlines to automatically provide prompt refunds (within 7 business days for credit cards) when a flight is cancelled or significantly changed — regardless of the reason. Airlines cannot substitute vouchers or credits unless you affirmatively choose them.' },
-      { title: 'Denied Boarding Compensation', description: 'If you\'re involuntarily bumped from an oversold flight, you\'re entitled to up to 400% of your one-way fare (max $1,550) depending on the length of delay. Airlines must also provide a written statement of your rights at the airport.' },
-      { title: 'Baggage Liability', description: 'Airlines are liable for lost, delayed, or damaged checked baggage — up to $3,800 for domestic flights (DOT minimum) and approximately $1,700 for international flights under the Montreal Convention. Airlines must reimburse reasonable interim expenses for delayed bags.' },
-      { title: 'Right to Transparent Pricing', description: 'DOT requires airlines to display the full fare including all mandatory fees upfront. Hidden fees for carry-on bags, seat selection, and other services must be clearly disclosed before purchase.' },
-      { title: 'Tarmac Delay Protections', description: 'Airlines cannot keep you on the tarmac for more than 3 hours (domestic) or 4 hours (international) without giving you the option to deplane. They must also provide food, water, and working lavatories within 2 hours.' },
-      { title: 'Disability Accommodations', description: 'The Air Carrier Access Act prohibits discrimination against passengers with disabilities. Airlines must provide wheelchair assistance, accommodate service animals, and handle mobility devices properly. Damaged wheelchairs must be repaired or replaced.' },
-      { title: '24-Hour Free Cancellation', description: 'DOT requires airlines to allow free cancellation within 24 hours of booking, provided the booking was made at least 7 days before departure. This applies regardless of whether the ticket is refundable or non-refundable.' },
-      { title: 'Right to File DOT Complaints', description: 'You can file complaints directly with the DOT\'s Aviation Consumer Protection Division. The DOT tracks complaint data and can take enforcement action against airlines that systematically violate consumer protections.' },
+      {
+        title: "Automatic Refunds for Cancellations",
+        description:
+          "DOT rules require airlines to automatically provide prompt refunds (within 7 business days for credit cards) when a flight is cancelled or significantly changed - regardless of the reason. Airlines cannot substitute vouchers or credits unless you affirmatively choose them.",
+      },
+      {
+        title: "Denied Boarding Compensation",
+        description:
+          "If you're involuntarily bumped from an oversold flight, you're entitled to up to 400% of your one-way fare (max $1,550) depending on the length of delay. Airlines must also provide a written statement of your rights at the airport.",
+      },
+      {
+        title: "Baggage Liability",
+        description:
+          "Airlines are liable for lost, delayed, or damaged checked baggage - up to $3,800 for domestic flights (DOT minimum) and approximately $1,700 for international flights under the Montreal Convention. Airlines must reimburse reasonable interim expenses for delayed bags.",
+      },
+      {
+        title: "Right to Transparent Pricing",
+        description:
+          "DOT requires airlines to display the full fare including all mandatory fees upfront. Hidden fees for carry-on bags, seat selection, and other services must be clearly disclosed before purchase.",
+      },
+      {
+        title: "Tarmac Delay Protections",
+        description:
+          "Airlines cannot keep you on the tarmac for more than 3 hours (domestic) or 4 hours (international) without giving you the option to deplane. They must also provide food, water, and working lavatories within 2 hours.",
+      },
+      {
+        title: "Disability Accommodations",
+        description:
+          "The Air Carrier Access Act prohibits discrimination against passengers with disabilities. Airlines must provide wheelchair assistance, accommodate service animals, and handle mobility devices properly. Damaged wheelchairs must be repaired or replaced.",
+      },
+      {
+        title: "24-Hour Free Cancellation",
+        description:
+          "DOT requires airlines to allow free cancellation within 24 hours of booking, provided the booking was made at least 7 days before departure. This applies regardless of whether the ticket is refundable or non-refundable.",
+      },
+      {
+        title: "Right to File DOT Complaints",
+        description:
+          "You can file complaints directly with the DOT's Aviation Consumer Protection Division. The DOT tracks complaint data and can take enforcement action against airlines that systematically violate consumer protections.",
+      },
     ],
     commonIssues: [
-      'Flight cancelled with airline offering only vouchers instead of required cash refund',
-      'Significant schedule change that effectively cancels your trip',
-      'Lost or delayed baggage with airline minimizing compensation',
-      'Denied boarding on overbooked flight with insufficient compensation',
-      'Hidden fees and charges not disclosed at booking',
+      "Flight cancelled with airline offering only vouchers instead of required cash refund",
+      "Significant schedule change that effectively cancels your trip",
+      "Lost or delayed baggage with airline minimizing compensation",
+      "Denied boarding on overbooked flight with insufficient compensation",
+      "Hidden fees and charges not disclosed at booking",
       'Hotel or resort charging undisclosed "resort fees" or "destination fees"',
-      'Rental car company charging for pre-existing damage',
-      'Travel insurance claim denied for covered event',
-      'Airline downgrading your seat without refunding the fare difference',
-      'Package tour operator failing to deliver advertised services',
+      "Rental car company charging for pre-existing damage",
+      "Travel insurance claim denied for covered event",
+      "Airline downgrading your seat without refunding the fare difference",
+      "Package tour operator failing to deliver advertised services",
     ],
     actionSteps: [
-      'Keep all boarding passes, receipts, and booking confirmations — both digital and printed copies',
-      'Get written confirmation from the airline of the cancellation or delay reason (ask for it at the gate)',
-      'File baggage damage reports before leaving the airport — this is critical for your claim',
-      'Request DOT-mandated compensation by name and cite the specific regulation',
-      'For refund denials, file a complaint with the DOT Aviation Consumer Protection Division at airconsumer.dot.gov',
-      'Document everything with timestamped photos: damaged bags, gate displays showing delays, hotel conditions',
-      'For rental car damage disputes, photograph the entire vehicle at pickup using the rental company\'s walk-around form',
-      'Submit travel insurance claims within the policy\'s required timeframe (typically 20-90 days)',
-      'For international flights, reference the Montreal Convention in your claim correspondence',
-      'Use your credit card\'s travel protection benefits — many cards offer trip cancellation, delay, and baggage insurance',
+      "Keep all boarding passes, receipts, and booking confirmations - both digital and printed copies",
+      "Get written confirmation from the airline of the cancellation or delay reason (ask for it at the gate)",
+      "File baggage damage reports before leaving the airport - this is critical for your claim",
+      "Request DOT-mandated compensation by name and cite the specific regulation",
+      "For refund denials, file a complaint with the DOT Aviation Consumer Protection Division at airconsumer.dot.gov",
+      "Document everything with timestamped photos: damaged bags, gate displays showing delays, hotel conditions",
+      "For rental car damage disputes, photograph the entire vehicle at pickup using the rental company's walk-around form",
+      "Submit travel insurance claims within the policy's required timeframe (typically 20-90 days)",
+      "For international flights, reference the Montreal Convention in your claim correspondence",
+      "Use your credit card's travel protection benefits - many cards offer trip cancellation, delay, and baggage insurance",
     ],
     importantDeadlines: [
-      '7 business days: Airline deadline to refund credit card purchases for cancelled flights',
-      '24 hours: Free cancellation window for airline bookings made 7+ days before departure',
-      '7 days: Deadline to file written baggage damage report after receiving your bag',
-      '21 days: Deadline to file delayed baggage expense claims',
-      '2 years: Montreal Convention statute of limitations for international air travel claims',
-      '1 year: Typical deadline for filing DOT complaints (though no hard cutoff)',
-      '20-90 days: Common travel insurance claim filing deadlines (check your policy)',
-      '60 days: Credit card chargeback deadline for travel purchases',
+      "7 business days: Airline deadline to refund credit card purchases for cancelled flights",
+      "24 hours: Free cancellation window for airline bookings made 7+ days before departure",
+      "7 days: Deadline to file written baggage damage report after receiving your bag",
+      "21 days: Deadline to file delayed baggage expense claims",
+      "2 years: Montreal Convention statute of limitations for international air travel claims",
+      "1 year: Typical deadline for filing DOT complaints (though no hard cutoff)",
+      "20-90 days: Common travel insurance claim filing deadlines (check your policy)",
+      "60 days: Credit card chargeback deadline for travel purchases",
     ],
     federalLaws: [
-      { name: 'DOT Airline Consumer Protection Regulations', citation: '14 CFR Part 259', description: 'Comprehensive regulations requiring automatic refunds, tarmac delay protections, transparent pricing, and disability accommodations for air travelers.', url: 'https://www.transportation.gov/airconsumer' },
-      { name: 'Montreal Convention', citation: 'Treaty Doc. 106-45', description: 'International treaty governing airline liability for passenger injury, baggage loss/damage, and cargo claims on international flights. Sets liability limits and filing deadlines.' },
-      { name: 'Air Carrier Access Act', citation: '49 U.S.C. § 41705', description: 'Prohibits discrimination against passengers with disabilities in air travel. Requires airlines to provide accessibility accommodations and properly handle assistive devices.', url: 'https://www.transportation.gov/airconsumer/disability' },
-      { name: 'Fly America Act', citation: '49 U.S.C. § 40118', description: 'Requires use of U.S.-flag air carriers for federally funded travel. Relevant for government employees and grant recipients.' },
-      { name: 'FTC Act (Travel Industry)', citation: '15 U.S.C. § 45', description: 'Prohibits deceptive practices by hotels, car rental companies, travel agencies, and booking platforms, including hidden fees and misleading cancellation policies.' },
+      {
+        name: "DOT Airline Consumer Protection Regulations",
+        citation: "14 CFR Part 259",
+        description:
+          "Comprehensive regulations requiring automatic refunds, tarmac delay protections, transparent pricing, and disability accommodations for air travelers.",
+        url: "https://www.transportation.gov/airconsumer",
+      },
+      {
+        name: "Montreal Convention",
+        citation: "Treaty Doc. 106-45",
+        description:
+          "International treaty governing airline liability for passenger injury, baggage loss/damage, and cargo claims on international flights. Sets liability limits and filing deadlines.",
+      },
+      {
+        name: "Air Carrier Access Act",
+        citation: "49 U.S.C. § 41705",
+        description:
+          "Prohibits discrimination against passengers with disabilities in air travel. Requires airlines to provide accessibility accommodations and properly handle assistive devices.",
+        url: "https://www.transportation.gov/airconsumer/disability",
+      },
+      {
+        name: "Fly America Act",
+        citation: "49 U.S.C. § 40118",
+        description:
+          "Requires use of U.S.-flag air carriers for federally funded travel. Relevant for government employees and grant recipients.",
+      },
+      {
+        name: "FTC Act (Travel Industry)",
+        citation: "15 U.S.C. § 45",
+        description:
+          "Prohibits deceptive practices by hotels, car rental companies, travel agencies, and booking platforms, including hidden fees and misleading cancellation policies.",
+      },
     ],
     faqItems: [
-      { question: 'Am I entitled to a cash refund if my flight is cancelled?', answer: 'Yes. Under DOT regulations, airlines must automatically provide a prompt cash refund to your original form of payment when they cancel your flight — regardless of the reason (weather, mechanical, staffing, etc.). Airlines cannot force you to accept vouchers, credits, or rebooking. For credit card purchases, the refund must be processed within 7 business days. If the airline refuses, file a complaint with the DOT.' },
-      { question: 'What compensation do I get if I\'m bumped from an overbooked flight?', answer: 'If you\'re involuntarily denied boarding on an oversold flight, DOT regulations require compensation: 200% of your one-way fare (max $775) if the airline gets you to your destination within 1-2 hours of the original arrival time (domestic) or 1-4 hours (international), or 400% of your one-way fare (max $1,550) for longer delays. The airline must also rebook you on the next available flight. You can also insist on a check rather than a voucher.' },
-      { question: 'What should I do about lost or damaged luggage?', answer: 'File a report with the airline before leaving the airport — this creates an official record. For domestic flights, airlines are liable up to $3,800 per bag. For international flights, the Montreal Convention sets the limit at approximately $1,700 per passenger. Keep receipts for essential items you purchase while waiting for a delayed bag; airlines typically reimburse reasonable interim expenses. File the formal claim within 7 days (damage) or 21 days (delayed bag) of receiving your luggage.' },
-      { question: 'Can I get a refund for a non-refundable hotel booking?', answer: 'Potentially, yes. If the hotel materially misrepresented the property (different room, construction noise, no working amenities), you may have grounds for a chargeback through your credit card company. Many credit cards also include trip cancellation/interruption insurance that covers non-refundable hotel costs for covered reasons (illness, weather, etc.). Always document the discrepancy with photos and written complaints to the hotel.' },
-      { question: 'What are my rights if my rental car company charges me for damage I didn\'t cause?', answer: 'Always photograph the entire vehicle at pickup and return, using the company\'s walk-around checklist. Note any pre-existing damage on the rental agreement before driving off. If charged for damage you didn\'t cause, dispute the charge in writing, provide your photos as evidence, and file a chargeback with your credit card company. Many credit cards include rental car damage coverage that can help in these situations.' },
-      { question: 'How long can an airline keep me on the tarmac?', answer: 'Under DOT regulations, airlines cannot keep passengers on the tarmac for more than 3 hours (domestic flights) or 4 hours (international flights) without providing the option to deplane. During any tarmac delay, airlines must provide food, water, and working lavatories within 2 hours of the delay beginning. Airlines that violate tarmac delay rules face fines of up to $27,500 per passenger. Exceptions exist only for safety, security, or air traffic control reasons.' },
+      {
+        question: "Am I entitled to a cash refund if my flight is cancelled?",
+        answer:
+          "Yes. Under DOT regulations, airlines must automatically provide a prompt cash refund to your original form of payment when they cancel your flight - regardless of the reason (weather, mechanical, staffing, etc.). Airlines cannot force you to accept vouchers, credits, or rebooking. For credit card purchases, the refund must be processed within 7 business days. If the airline refuses, file a complaint with the DOT.",
+      },
+      {
+        question: "What compensation do I get if I'm bumped from an overbooked flight?",
+        answer:
+          "If you're involuntarily denied boarding on an oversold flight, DOT regulations require compensation: 200% of your one-way fare (max $775) if the airline gets you to your destination within 1-2 hours of the original arrival time (domestic) or 1-4 hours (international), or 400% of your one-way fare (max $1,550) for longer delays. The airline must also rebook you on the next available flight. You can also insist on a check rather than a voucher.",
+      },
+      {
+        question: "What should I do about lost or damaged luggage?",
+        answer:
+          "File a report with the airline before leaving the airport - this creates an official record. For domestic flights, airlines are liable up to $3,800 per bag. For international flights, the Montreal Convention sets the limit at approximately $1,700 per passenger. Keep receipts for essential items you purchase while waiting for a delayed bag; airlines typically reimburse reasonable interim expenses. File the formal claim within 7 days (damage) or 21 days (delayed bag) of receiving your luggage.",
+      },
+      {
+        question: "Can I get a refund for a non-refundable hotel booking?",
+        answer:
+          "Potentially, yes. If the hotel materially misrepresented the property (different room, construction noise, no working amenities), you may have grounds for a chargeback through your credit card company. Many credit cards also include trip cancellation/interruption insurance that covers non-refundable hotel costs for covered reasons (illness, weather, etc.). Always document the discrepancy with photos and written complaints to the hotel.",
+      },
+      {
+        question: "What are my rights if my rental car company charges me for damage I didn't cause?",
+        answer:
+          "Always photograph the entire vehicle at pickup and return, using the company's walk-around checklist. Note any pre-existing damage on the rental agreement before driving off. If charged for damage you didn't cause, dispute the charge in writing, provide your photos as evidence, and file a chargeback with your credit card company. Many credit cards include rental car damage coverage that can help in these situations.",
+      },
+      {
+        question: "How long can an airline keep me on the tarmac?",
+        answer:
+          "Under DOT regulations, airlines cannot keep passengers on the tarmac for more than 3 hours (domestic flights) or 4 hours (international flights) without providing the option to deplane. During any tarmac delay, airlines must provide food, water, and working lavatories within 2 hours of the delay beginning. Airlines that violate tarmac delay rules face fines of up to $27,500 per passenger. Exceptions exist only for safety, security, or air traffic control reasons.",
+      },
     ],
     warningSigns: [
-      'Airline immediately offers a voucher after cancellation without mentioning your right to a cash refund',
+      "Airline immediately offers a voucher after cancellation without mentioning your right to a cash refund",
       'Travel booking site shows a "final price" but adds mandatory fees at checkout',
-      'Hotel website photos look significantly different from actual online reviews with guest photos',
-      'Rental car company pressures you to buy their insurance at the counter instead of at booking',
-      'Tour operator asks for full payment upfront with no cancellation policy or escrow arrangement',
+      "Hotel website photos look significantly different from actual online reviews with guest photos",
+      "Rental car company pressures you to buy their insurance at the counter instead of at booking",
+      "Tour operator asks for full payment upfront with no cancellation policy or escrow arrangement",
       'Travel "deals" that require attendance at a timeshare presentation',
       'Airline claims delay is "weather-related" to avoid compensation when other airlines are flying the same route',
     ],
     proTips: [
-      'Use a credit card with built-in travel protections (trip cancellation, delay insurance, rental car coverage) — this gives you backup even if the airline or hotel refuses your claim',
-      'Screenshot your booking confirmation and fare breakdown immediately after purchase — airlines sometimes alter records',
-      'At the gate, ask for the specific reason for the delay/cancellation IN WRITING — the reason determines your compensation rights',
-      'For international flights, always reference the "Montreal Convention" by name in claim letters — it signals you know the legal framework',
-      'File DOT complaints online at airconsumer.dot.gov even for small issues — aggregate complaint data drives enforcement actions against airlines',
-      'Photograph the rental car with a newspaper or phone showing the date visible — this timestamps your evidence definitively',
+      "Use a credit card with built-in travel protections (trip cancellation, delay insurance, rental car coverage) - this gives you backup even if the airline or hotel refuses your claim",
+      "Screenshot your booking confirmation and fare breakdown immediately after purchase - airlines sometimes alter records",
+      "At the gate, ask for the specific reason for the delay/cancellation IN WRITING - the reason determines your compensation rights",
+      'For international flights, always reference the "Montreal Convention" by name in claim letters - it signals you know the legal framework',
+      "File DOT complaints online at airconsumer.dot.gov even for small issues - aggregate complaint data drives enforcement actions against airlines",
+      "Photograph the rental car with a newspaper or phone showing the date visible - this timestamps your evidence definitively",
     ],
   },
   {
-    categoryId: 'damaged-goods',
-    title: 'Rights for Damaged & Defective Products',
-    subtitle: 'Warranty laws, product safety standards, and your remedies for faulty goods',
-    lastUpdated: '2026-02-01',
-    introduction: 'When products arrive damaged, prove defective during normal use, or fail to match their description, a robust framework of federal and state laws provides strong consumer remedies. The Magnuson-Moss Warranty Act is the primary federal law governing consumer product warranties, requiring that warranties be clearly written, easy to understand, and properly honored by manufacturers and sellers.\n\nThe Uniform Commercial Code (UCC), adopted in some form by all 50 states, creates implied warranties that apply even when no written warranty exists. The implied warranty of merchantability means products must work as a reasonable consumer would expect. The implied warranty of fitness for a particular purpose applies when a seller knows you\'re buying the product for a specific use and recommends it for that purpose.\n\nThe Consumer Product Safety Act (CPSA) and the Consumer Product Safety Commission (CPSC) provide additional protections by setting safety standards for consumer products and maintaining recall authority for dangerous products. The CPSC operates CPSC.gov where consumers can report unsafe products and check for recalls.\n\nState consumer protection statutes typically provide additional remedies including attorney\'s fees, treble damages for willful violations, and specific protections for categories like electronics, appliances, and building materials.',
+    categoryId: "damaged-goods",
+    title: "Rights for Damaged & Defective Products",
+    subtitle: "Warranty laws, product safety standards, and your remedies for faulty goods",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "When products arrive damaged, prove defective during normal use, or fail to match their description, a robust framework of federal and state laws provides strong consumer remedies. The Magnuson-Moss Warranty Act is the primary federal law governing consumer product warranties, requiring that warranties be clearly written, easy to understand, and properly honored by manufacturers and sellers.\n\nThe Uniform Commercial Code (UCC), adopted in some form by all 50 states, creates implied warranties that apply even when no written warranty exists. The implied warranty of merchantability means products must work as a reasonable consumer would expect. The implied warranty of fitness for a particular purpose applies when a seller knows you're buying the product for a specific use and recommends it for that purpose.\n\nThe Consumer Product Safety Act (CPSA) and the Consumer Product Safety Commission (CPSC) provide additional protections by setting safety standards for consumer products and maintaining recall authority for dangerous products. The CPSC operates CPSC.gov where consumers can report unsafe products and check for recalls.\n\nState consumer protection statutes typically provide additional remedies including attorney's fees, treble damages for willful violations, and specific protections for categories like electronics, appliances, and building materials.",
     keyRights: [
-      { title: 'Implied Warranty of Merchantability', description: 'Under the UCC, every product sold comes with an automatic implied warranty that it will work as a reasonable consumer would expect for its ordinary purpose. This applies even if the seller provides no written warranty. Sellers can only disclaim this warranty in very limited circumstances.' },
-      { title: 'Written Warranty Protections', description: 'The Magnuson-Moss Act requires warranties to be clearly labeled as "Full" or "Limited," prohibits requiring consumers to pay for warranty service, and prevents sellers from disclaiming implied warranties when they offer written ones. A "Full" warranty must provide repair or replacement at no cost within a reasonable time.' },
-      { title: 'Seller Responsibility for Delivery Damage', description: 'Under the UCC, risk of loss transfers to the buyer only upon delivery. If a product arrives damaged during shipping, the seller — not the buyer — bears responsibility for replacing or refunding the item, regardless of who caused the damage during transit.' },
-      { title: 'Right to Reject Non-Conforming Goods', description: 'The UCC\'s "perfect tender rule" allows you to reject goods that fail to conform to the contract in any way. You can reject the entire shipment, accept the whole lot, or accept some units and reject others. Rejection must occur within a reasonable time after delivery.' },
-      { title: 'Product Safety Protections', description: 'The CPSA gives the CPSC authority to set mandatory safety standards, ban dangerous products, and order recalls. If a product you purchased is subject to a recall, you\'re typically entitled to a repair, replacement, or refund at the manufacturer\'s expense.' },
-      { title: 'Lemon Law Extensions for Products', description: 'Some states extend lemon-law-style protections beyond vehicles to other consumer products. If a product has been repaired multiple times for the same defect without success, you may be entitled to a full refund or replacement.' },
-      { title: 'Right to Consequential Damages', description: 'If a defective product causes additional harm — such as a leaking dishwasher damaging your floors — you may be entitled to recover not just the purchase price but also the cost of repairing the secondary damage caused by the defect.' },
-      { title: 'Deceptive Advertising Protections', description: 'Under FTC Act Section 5, if a product was advertised with claims that turn out to be false or misleading (e.g., "waterproof" but isn\'t, "organic" but contains synthetic materials), you have grounds for a refund and can file an FTC complaint.' },
+      {
+        title: "Implied Warranty of Merchantability",
+        description:
+          "Under the UCC, every product sold comes with an automatic implied warranty that it will work as a reasonable consumer would expect for its ordinary purpose. This applies even if the seller provides no written warranty. Sellers can only disclaim this warranty in very limited circumstances.",
+      },
+      {
+        title: "Written Warranty Protections",
+        description:
+          'The Magnuson-Moss Act requires warranties to be clearly labeled as "Full" or "Limited," prohibits requiring consumers to pay for warranty service, and prevents sellers from disclaiming implied warranties when they offer written ones. A "Full" warranty must provide repair or replacement at no cost within a reasonable time.',
+      },
+      {
+        title: "Seller Responsibility for Delivery Damage",
+        description:
+          "Under the UCC, risk of loss transfers to the buyer only upon delivery. If a product arrives damaged during shipping, the seller - not the buyer - bears responsibility for replacing or refunding the item, regardless of who caused the damage during transit.",
+      },
+      {
+        title: "Right to Reject Non-Conforming Goods",
+        description:
+          'The UCC\'s "perfect tender rule" allows you to reject goods that fail to conform to the contract in any way. You can reject the entire shipment, accept the whole lot, or accept some units and reject others. Rejection must occur within a reasonable time after delivery.',
+      },
+      {
+        title: "Product Safety Protections",
+        description:
+          "The CPSA gives the CPSC authority to set mandatory safety standards, ban dangerous products, and order recalls. If a product you purchased is subject to a recall, you're typically entitled to a repair, replacement, or refund at the manufacturer's expense.",
+      },
+      {
+        title: "Lemon Law Extensions for Products",
+        description:
+          "Some states extend lemon-law-style protections beyond vehicles to other consumer products. If a product has been repaired multiple times for the same defect without success, you may be entitled to a full refund or replacement.",
+      },
+      {
+        title: "Right to Consequential Damages",
+        description:
+          "If a defective product causes additional harm - such as a leaking dishwasher damaging your floors - you may be entitled to recover not just the purchase price but also the cost of repairing the secondary damage caused by the defect.",
+      },
+      {
+        title: "Deceptive Advertising Protections",
+        description:
+          'Under FTC Act Section 5, if a product was advertised with claims that turn out to be false or misleading (e.g., "waterproof" but isn\'t, "organic" but contains synthetic materials), you have grounds for a refund and can file an FTC complaint.',
+      },
     ],
     commonIssues: [
-      'Product arrived broken, crushed, or visibly damaged during shipping',
-      'Item doesn\'t match online photos, description, or specifications',
-      'Defect appeared within days or weeks of normal use',
-      'Seller blaming the shipping company and refusing to issue a refund or replacement',
-      'Manufacturer denying warranty claim based on technicalities',
-      'Product recalled after purchase but manufacturer not providing a clear remedy',
-      'Counterfeit product sold as genuine brand name item',
-      'Missing parts or accessories that were advertised as included',
-      'Electronic product fails to meet stated battery life, performance, or compatibility claims',
-      'Seller offering only store credit for a clearly defective product',
+      "Product arrived broken, crushed, or visibly damaged during shipping",
+      "Item doesn't match online photos, description, or specifications",
+      "Defect appeared within days or weeks of normal use",
+      "Seller blaming the shipping company and refusing to issue a refund or replacement",
+      "Manufacturer denying warranty claim based on technicalities",
+      "Product recalled after purchase but manufacturer not providing a clear remedy",
+      "Counterfeit product sold as genuine brand name item",
+      "Missing parts or accessories that were advertised as included",
+      "Electronic product fails to meet stated battery life, performance, or compatibility claims",
+      "Seller offering only store credit for a clearly defective product",
     ],
     actionSteps: [
-      'Photograph damage or defects immediately upon discovery — capture packaging, shipping labels, and the product itself',
-      'Do NOT discard the original packaging or shipping materials — they may be needed for investigation',
-      'Report issues to the seller within 48 hours of delivery for shipping damage (the sooner the better)',
-      'Request repair, replacement, or refund in writing — cite the UCC implied warranty and/or written warranty terms',
-      'If the seller refuses, file a dispute with your credit card company within 60 days of the charge',
-      'Check CPSC.gov for any recalls on the product — if recalled, follow the recall remedy instructions',
-      'For products that caused injury or property damage, preserve all evidence and consult a product liability attorney',
-      'File complaints with the FTC (ReportFraud.ftc.gov) and your state attorney general for deceptive practices',
-      'For online marketplace purchases, use the platform\'s A-to-Z guarantee or buyer protection program',
-      'Keep a written timeline of all communications with the seller, including who you spoke with and what was said',
+      "Photograph damage or defects immediately upon discovery - capture packaging, shipping labels, and the product itself",
+      "Do NOT discard the original packaging or shipping materials - they may be needed for investigation",
+      "Report issues to the seller within 48 hours of delivery for shipping damage (the sooner the better)",
+      "Request repair, replacement, or refund in writing - cite the UCC implied warranty and/or written warranty terms",
+      "If the seller refuses, file a dispute with your credit card company within 60 days of the charge",
+      "Check CPSC.gov for any recalls on the product - if recalled, follow the recall remedy instructions",
+      "For products that caused injury or property damage, preserve all evidence and consult a product liability attorney",
+      "File complaints with the FTC (ReportFraud.ftc.gov) and your state attorney general for deceptive practices",
+      "For online marketplace purchases, use the platform's A-to-Z guarantee or buyer protection program",
+      "Keep a written timeline of all communications with the seller, including who you spoke with and what was said",
     ],
     importantDeadlines: [
-      '48 hours: Best practice to report shipping damage to seller (some require it)',
+      "48 hours: Best practice to report shipping damage to seller (some require it)",
       '30 days: Typical "short-term right to reject" period for defective goods',
-      '60 days: FCBA credit card dispute deadline from statement date',
-      '6 months: UCC presumption period — defects found within 6 months are presumed to have existed at time of sale',
-      '1 year: Magnuson-Moss typical minimum written warranty period for products over $15',
-      '4 years: UCC statute of limitations for breach of warranty claims (varies by state)',
-      '3 years: Typical statute of limitations for state consumer protection claims',
-      '15 years: Some states\' statute of repose for product liability claims',
+      "60 days: FCBA credit card dispute deadline from statement date",
+      "6 months: UCC presumption period - defects found within 6 months are presumed to have existed at time of sale",
+      "1 year: Magnuson-Moss typical minimum written warranty period for products over $15",
+      "4 years: UCC statute of limitations for breach of warranty claims (varies by state)",
+      "3 years: Typical statute of limitations for state consumer protection claims",
+      "15 years: Some states' statute of repose for product liability claims",
     ],
     federalLaws: [
-      { name: 'Magnuson-Moss Warranty Act', citation: '15 U.S.C. §§ 2301-2312', description: 'Primary federal warranty law. Requires clear warranty labeling, prohibits warranty tie-in sales, and allows consumers to sue for breach of warranty with attorney\'s fees.', url: 'https://www.ftc.gov/legal-library/browse/statutes/magnuson-moss-warranty-federal-trade-commission-improvement-act' },
-      { name: 'Uniform Commercial Code Article 2 (Sales)', citation: 'UCC §§ 2-313 to 2-318', description: 'Adopted by all states. Creates implied warranties of merchantability and fitness, establishes the perfect tender rule, and defines remedies for breach including damages and rejection.' },
-      { name: 'Consumer Product Safety Act (CPSA)', citation: '15 U.S.C. §§ 2051-2089', description: 'Establishes the CPSC with authority to set mandatory safety standards, ban hazardous products, and order recalls of dangerous consumer products.' },
-      { name: 'FTC Act Section 5', citation: '15 U.S.C. § 45', description: 'Prohibits unfair or deceptive practices including false advertising, misleading product claims, and deceptive packaging or labeling.' },
-      { name: 'Consumer Product Safety Improvement Act (CPSIA)', citation: 'P.L. 110-314', description: 'Strengthened product safety rules, particularly for children\'s products. Imposed mandatory testing requirements and lead content limits.' },
+      {
+        name: "Magnuson-Moss Warranty Act",
+        citation: "15 U.S.C. §§ 2301-2312",
+        description:
+          "Primary federal warranty law. Requires clear warranty labeling, prohibits warranty tie-in sales, and allows consumers to sue for breach of warranty with attorney's fees.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/magnuson-moss-warranty-federal-trade-commission-improvement-act",
+      },
+      {
+        name: "Uniform Commercial Code Article 2 (Sales)",
+        citation: "UCC §§ 2-313 to 2-318",
+        description:
+          "Adopted by all states. Creates implied warranties of merchantability and fitness, establishes the perfect tender rule, and defines remedies for breach including damages and rejection.",
+      },
+      {
+        name: "Consumer Product Safety Act (CPSA)",
+        citation: "15 U.S.C. §§ 2051-2089",
+        description:
+          "Establishes the CPSC with authority to set mandatory safety standards, ban hazardous products, and order recalls of dangerous consumer products.",
+      },
+      {
+        name: "FTC Act Section 5",
+        citation: "15 U.S.C. § 45",
+        description:
+          "Prohibits unfair or deceptive practices including false advertising, misleading product claims, and deceptive packaging or labeling.",
+      },
+      {
+        name: "Consumer Product Safety Improvement Act (CPSIA)",
+        citation: "P.L. 110-314",
+        description:
+          "Strengthened product safety rules, particularly for children's products. Imposed mandatory testing requirements and lead content limits.",
+      },
     ],
     faqItems: [
-      { question: 'Is the seller or the shipping company responsible for delivery damage?', answer: 'The seller is responsible. Under the UCC, risk of loss does not pass to the buyer until the goods are actually delivered. If a product arrives damaged — whether by the carrier, poor packaging, or any other reason — the seller must provide a replacement or refund. The seller can then pursue a claim against the shipping company, but that\'s their problem, not yours. Don\'t let sellers redirect you to UPS, FedEx, or USPS.' },
-      { question: 'What\'s the difference between a "Full" and "Limited" warranty?', answer: 'Under the Magnuson-Moss Act: A "Full" warranty means the product will be repaired or replaced free of charge within a reasonable time, no registration required, and after a reasonable number of failed repairs you get a refund or replacement. A "Limited" warranty can impose conditions — like requiring registration, charging for labor, or limiting remedies to repair only. Importantly, sellers who provide any written warranty (Full or Limited) cannot disclaim the UCC\'s implied warranty of merchantability.' },
-      { question: 'Can I return a product if I simply changed my mind?', answer: 'There is no federal law requiring sellers to accept returns for buyer\'s remorse on in-store purchases. However, many states require retailers to clearly post their return policy — and failure to do so may entitle you to a refund within a certain period. For online purchases, there may be cooling-off period protections. Always check the seller\'s return policy before purchasing and prefer sellers with generous return windows.' },
-      { question: 'What should I do if I bought a counterfeit product?', answer: 'Report it to the brand owner, the selling platform, and the FTC. If purchased online, file a claim through the marketplace\'s buyer protection program. Dispute the charge with your credit card company, as counterfeit goods are considered "materially different from what was described." You can also report counterfeit goods to the National Intellectual Property Rights Coordination Center (IPRCenter.gov). Keep the product as evidence.' },
-      { question: 'How do I know if my product has been recalled?', answer: 'Check CPSC.gov/Recalls for the most current recall database. You can search by product type, brand, or date. Sign up for email alerts at CPSC.gov to receive automatic notifications. If your product is recalled, follow the instructions provided — typically you\'ll receive a repair, replacement, or refund at no cost. Stop using recalled products immediately, especially if the recall involves a fire, choking, or injury hazard.' },
-      { question: 'Can a seller void my warranty for using third-party parts or repair services?', answer: 'Generally, no. The Magnuson-Moss Act prohibits "tie-in sales provisions" — meaning a warrantor cannot require you to use only their branded parts or authorized repair services as a condition of warranty coverage. The FTC has specifically warned companies against voiding warranties for using third-party accessories or independent repair shops. However, the warrantor can deny claims if they can prove the third-party part or service actually caused the defect.' },
+      {
+        question: "Is the seller or the shipping company responsible for delivery damage?",
+        answer:
+          "The seller is responsible. Under the UCC, risk of loss does not pass to the buyer until the goods are actually delivered. If a product arrives damaged - whether by the carrier, poor packaging, or any other reason - the seller must provide a replacement or refund. The seller can then pursue a claim against the shipping company, but that's their problem, not yours. Don't let sellers redirect you to UPS, FedEx, or USPS.",
+      },
+      {
+        question: 'What\'s the difference between a "Full" and "Limited" warranty?',
+        answer:
+          'Under the Magnuson-Moss Act: A "Full" warranty means the product will be repaired or replaced free of charge within a reasonable time, no registration required, and after a reasonable number of failed repairs you get a refund or replacement. A "Limited" warranty can impose conditions - like requiring registration, charging for labor, or limiting remedies to repair only. Importantly, sellers who provide any written warranty (Full or Limited) cannot disclaim the UCC\'s implied warranty of merchantability.',
+      },
+      {
+        question: "Can I return a product if I simply changed my mind?",
+        answer:
+          "There is no federal law requiring sellers to accept returns for buyer's remorse on in-store purchases. However, many states require retailers to clearly post their return policy - and failure to do so may entitle you to a refund within a certain period. For online purchases, there may be cooling-off period protections. Always check the seller's return policy before purchasing and prefer sellers with generous return windows.",
+      },
+      {
+        question: "What should I do if I bought a counterfeit product?",
+        answer:
+          'Report it to the brand owner, the selling platform, and the FTC. If purchased online, file a claim through the marketplace\'s buyer protection program. Dispute the charge with your credit card company, as counterfeit goods are considered "materially different from what was described." You can also report counterfeit goods to the National Intellectual Property Rights Coordination Center (IPRCenter.gov). Keep the product as evidence.',
+      },
+      {
+        question: "How do I know if my product has been recalled?",
+        answer:
+          "Check CPSC.gov/Recalls for the most current recall database. You can search by product type, brand, or date. Sign up for email alerts at CPSC.gov to receive automatic notifications. If your product is recalled, follow the instructions provided - typically you'll receive a repair, replacement, or refund at no cost. Stop using recalled products immediately, especially if the recall involves a fire, choking, or injury hazard.",
+      },
+      {
+        question: "Can a seller void my warranty for using third-party parts or repair services?",
+        answer:
+          'Generally, no. The Magnuson-Moss Act prohibits "tie-in sales provisions" - meaning a warrantor cannot require you to use only their branded parts or authorized repair services as a condition of warranty coverage. The FTC has specifically warned companies against voiding warranties for using third-party accessories or independent repair shops. However, the warrantor can deny claims if they can prove the third-party part or service actually caused the defect.',
+      },
     ],
     warningSigns: [
-      'Seller ships products without adequate packaging or protection — a sign they don\'t care about product condition',
-      'No written warranty provided with the product despite it being a durable consumer good over $15',
-      'Seller\'s website has no physical address or phone number — makes warranty claims nearly impossible',
-      'Product lacks required safety certifications (UL listing, FCC compliance, etc.)',
-      'Seller claims warranty is void because you opened the product or used non-branded accessories',
-      'Price is dramatically below market rate — may indicate counterfeit, refurbished sold as new, or gray market goods',
-      'Product label or packaging has misspellings, poor print quality, or missing regulatory markings',
+      "Seller ships products without adequate packaging or protection - a sign they don't care about product condition",
+      "No written warranty provided with the product despite it being a durable consumer good over $15",
+      "Seller's website has no physical address or phone number - makes warranty claims nearly impossible",
+      "Product lacks required safety certifications (UL listing, FCC compliance, etc.)",
+      "Seller claims warranty is void because you opened the product or used non-branded accessories",
+      "Price is dramatically below market rate - may indicate counterfeit, refurbished sold as new, or gray market goods",
+      "Product label or packaging has misspellings, poor print quality, or missing regulatory markings",
     ],
     proTips: [
-      'Unbox new products on video — this creates undeniable proof of the product\'s condition at delivery and is powerful evidence for disputes',
-      'Register your product warranty immediately, even though Magnuson-Moss says registration can\'t be required — it speeds up claims and creates a paper trail',
-      'Save the original packaging for at least 30 days — many return and warranty policies require it, and it\'s needed for shipping returns',
-      'Before buying expensive products, check CPSC.gov for any recall history on that brand or product line',
-      'For electronics, save screenshots of the product\'s advertised specifications — manufacturers sometimes quietly update listings after complaints',
-      'If filing a warranty claim, send correspondence via certified mail with return receipt — this proves the manufacturer received your claim and starts the clock on their response deadline',
+      "Unbox new products on video - this creates undeniable proof of the product's condition at delivery and is powerful evidence for disputes",
+      "Register your product warranty immediately, even though Magnuson-Moss says registration can't be required - it speeds up claims and creates a paper trail",
+      "Save the original packaging for at least 30 days - many return and warranty policies require it, and it's needed for shipping returns",
+      "Before buying expensive products, check CPSC.gov for any recall history on that brand or product line",
+      "For electronics, save screenshots of the product's advertised specifications - manufacturers sometimes quietly update listings after complaints",
+      "If filing a warranty claim, send correspondence via certified mail with return receipt - this proves the manufacturer received your claim and starts the clock on their response deadline",
     ],
   },
   {
-    categoryId: 'utilities',
-    title: 'Utility & Telecom Consumer Rights',
-    subtitle: 'Regulations protecting you from billing errors, service failures, and unfair contract terms',
-    lastUpdated: '2026-02-01',
-    introduction: 'Utility and telecommunications companies operate under extensive federal and state regulations designed to protect consumers from billing abuses, service failures, and unfair contract practices. The Telecommunications Act of 1996, the FCC\'s Truth in Billing rules, and state public utility commission regulations create a comprehensive framework of consumer rights.\n\nThe FCC requires telecom companies to provide clear, non-misleading bills and prohibits "cramming" (placing unauthorized charges on your bill) and "slamming" (switching your carrier without consent). These practices carry significant penalties — carriers found guilty of cramming can face fines and must refund all unauthorized charges.\n\nFor energy and water utilities, state public utility commissions (PUCs) set service quality standards, regulate rate increases, and provide dispute resolution processes. Most states prohibit utility disconnection during extreme weather conditions and require payment plan options for customers facing financial hardship.\n\nThe Telephone Consumer Protection Act (TCPA) provides additional protections against unwanted telemarketing calls, robocalls, and spam texts. Violations can result in damages of $500-$1,500 per call or text, making it one of the most consumer-friendly enforcement mechanisms in federal law.',
+    categoryId: "utilities",
+    title: "Utility & Telecom Consumer Rights",
+    subtitle: "Regulations protecting you from billing errors, service failures, and unfair contract terms",
+    lastUpdated: "2026-02-01",
+    introduction:
+      'Utility and telecommunications companies operate under extensive federal and state regulations designed to protect consumers from billing abuses, service failures, and unfair contract practices. The Telecommunications Act of 1996, the FCC\'s Truth in Billing rules, and state public utility commission regulations create a comprehensive framework of consumer rights.\n\nThe FCC requires telecom companies to provide clear, non-misleading bills and prohibits "cramming" (placing unauthorized charges on your bill) and "slamming" (switching your carrier without consent). These practices carry significant penalties - carriers found guilty of cramming can face fines and must refund all unauthorized charges.\n\nFor energy and water utilities, state public utility commissions (PUCs) set service quality standards, regulate rate increases, and provide dispute resolution processes. Most states prohibit utility disconnection during extreme weather conditions and require payment plan options for customers facing financial hardship.\n\nThe Telephone Consumer Protection Act (TCPA) provides additional protections against unwanted telemarketing calls, robocalls, and spam texts. Violations can result in damages of $500-$1,500 per call or text, making it one of the most consumer-friendly enforcement mechanisms in federal law.',
     keyRights: [
-      { title: 'Accurate, Transparent Billing', description: 'FCC Truth in Billing rules require telecom companies to provide clear, itemized bills. Each charge must be described in plain language, and companies cannot bill for services you didn\'t authorize. You have the right to receive and review a detailed bill explaining every charge.' },
-      { title: 'Protection from Cramming and Slamming', description: 'Federal law prohibits carriers from placing unauthorized charges on your bill (cramming) or switching your service provider without consent (slamming). If you\'re a victim, the carrier must remove the charges and you may be entitled to additional compensation.' },
-      { title: 'Service Quality Standards', description: 'State PUCs set minimum service quality standards that utilities must meet. This includes response times for outages, voltage/pressure standards, and customer service requirements. Chronic service failures can result in bill credits or rate reductions.' },
-      { title: 'Disconnection Protections', description: 'Most states prohibit utility disconnection during extreme weather (hot or cold), for households with elderly or medically vulnerable members, and without adequate prior written notice (typically 10-15 days). Payment plan options must be offered before disconnection.' },
-      { title: 'Right to Switch Providers', description: 'In deregulated markets, you have the right to choose your energy or telecom provider. Early termination fees must be clearly disclosed, and some states cap or prohibit them entirely. Switching must be seamless with no service interruption.' },
-      { title: 'Privacy Protections (CPNI)', description: 'The FCC\'s Customer Proprietary Network Information (CPNI) rules protect your telecom usage data. Carriers cannot share your call records, usage patterns, or other CPNI without your explicit consent.' },
-      { title: 'Robocall and Spam Protections', description: 'The TCPA prohibits unsolicited robocalls and texts to cell phones without prior express consent. Violators face damages of $500 per call/text, increased to $1,500 for willful violations. You can revoke consent at any time.' },
-      { title: 'Complaint and Dispute Resolution', description: 'You have the right to file complaints with the FCC (for telecom), your state PUC (for utilities), and the CFPB (for billing disputes). These agencies must investigate and can order remedies including refunds and service improvements.' },
+      {
+        title: "Accurate, Transparent Billing",
+        description:
+          "FCC Truth in Billing rules require telecom companies to provide clear, itemized bills. Each charge must be described in plain language, and companies cannot bill for services you didn't authorize. You have the right to receive and review a detailed bill explaining every charge.",
+      },
+      {
+        title: "Protection from Cramming and Slamming",
+        description:
+          "Federal law prohibits carriers from placing unauthorized charges on your bill (cramming) or switching your service provider without consent (slamming). If you're a victim, the carrier must remove the charges and you may be entitled to additional compensation.",
+      },
+      {
+        title: "Service Quality Standards",
+        description:
+          "State PUCs set minimum service quality standards that utilities must meet. This includes response times for outages, voltage/pressure standards, and customer service requirements. Chronic service failures can result in bill credits or rate reductions.",
+      },
+      {
+        title: "Disconnection Protections",
+        description:
+          "Most states prohibit utility disconnection during extreme weather (hot or cold), for households with elderly or medically vulnerable members, and without adequate prior written notice (typically 10-15 days). Payment plan options must be offered before disconnection.",
+      },
+      {
+        title: "Right to Switch Providers",
+        description:
+          "In deregulated markets, you have the right to choose your energy or telecom provider. Early termination fees must be clearly disclosed, and some states cap or prohibit them entirely. Switching must be seamless with no service interruption.",
+      },
+      {
+        title: "Privacy Protections (CPNI)",
+        description:
+          "The FCC's Customer Proprietary Network Information (CPNI) rules protect your telecom usage data. Carriers cannot share your call records, usage patterns, or other CPNI without your explicit consent.",
+      },
+      {
+        title: "Robocall and Spam Protections",
+        description:
+          "The TCPA prohibits unsolicited robocalls and texts to cell phones without prior express consent. Violators face damages of $500 per call/text, increased to $1,500 for willful violations. You can revoke consent at any time.",
+      },
+      {
+        title: "Complaint and Dispute Resolution",
+        description:
+          "You have the right to file complaints with the FCC (for telecom), your state PUC (for utilities), and the CFPB (for billing disputes). These agencies must investigate and can order remedies including refunds and service improvements.",
+      },
     ],
     commonIssues: [
-      'Unexplained charges or fee increases on monthly bills',
-      'Poor service quality — frequent outages, slow internet speeds, dropped calls',
-      'Early termination fees exceeding what was disclosed at signup',
-      'Difficulty cancelling services or being transferred endlessly',
-      'Incorrect meter readings leading to inflated utility bills',
-      'Promotional rates expiring without adequate notice, causing bill shock',
-      'Unauthorized third-party charges (cramming) on phone bills',
+      "Unexplained charges or fee increases on monthly bills",
+      "Poor service quality - frequent outages, slow internet speeds, dropped calls",
+      "Early termination fees exceeding what was disclosed at signup",
+      "Difficulty cancelling services or being transferred endlessly",
+      "Incorrect meter readings leading to inflated utility bills",
+      "Promotional rates expiring without adequate notice, causing bill shock",
+      "Unauthorized third-party charges (cramming) on phone bills",
       'Data throttling despite paying for "unlimited" plans',
-      'Excessive robocalls and spam texts despite being on the Do Not Call registry',
-      'Utility threatening disconnection without offering required payment plan options',
+      "Excessive robocalls and spam texts despite being on the Do Not Call registry",
+      "Utility threatening disconnection without offering required payment plan options",
     ],
     actionSteps: [
-      'Review every bill carefully — compare charges to your contract terms and previous bills',
-      'Document service outages with exact dates, times, and duration — this supports credit claims',
-      'Request itemized breakdowns of all charges and ask for plain-language explanations of anything unclear',
-      'File complaints with your state PUC for utility issues and the FCC for telecom problems',
-      'For billing disputes, send a written dispute letter via certified mail — this triggers investigation requirements',
-      'Register on the National Do Not Call Registry (donotcall.gov) and report violations',
-      'Check if your state has a utility bill of rights — many provide additional protections beyond federal minimums',
-      'Before signing any contract, get a complete fee schedule including early termination, equipment, and overage charges in writing',
-      'If facing disconnection, immediately contact the utility about payment plans and assistance programs like LIHEAP',
-      'For internet speed issues, run and document speed tests at different times — compare results to your contract\'s promised speeds',
+      "Review every bill carefully - compare charges to your contract terms and previous bills",
+      "Document service outages with exact dates, times, and duration - this supports credit claims",
+      "Request itemized breakdowns of all charges and ask for plain-language explanations of anything unclear",
+      "File complaints with your state PUC for utility issues and the FCC for telecom problems",
+      "For billing disputes, send a written dispute letter via certified mail - this triggers investigation requirements",
+      "Register on the National Do Not Call Registry (donotcall.gov) and report violations",
+      "Check if your state has a utility bill of rights - many provide additional protections beyond federal minimums",
+      "Before signing any contract, get a complete fee schedule including early termination, equipment, and overage charges in writing",
+      "If facing disconnection, immediately contact the utility about payment plans and assistance programs like LIHEAP",
+      "For internet speed issues, run and document speed tests at different times - compare results to your contract's promised speeds",
     ],
     importantDeadlines: [
-      '10-15 days: Minimum advance notice required before utility disconnection (varies by state)',
-      '30 days: Typical billing dispute investigation period',
-      '60 days: FCC complaint response deadline for telecom carriers',
-      '1 year: TCPA statute of limitations for robocall/spam text claims (4 years in some states)',
-      '2 years: Typical statute of limitations for billing overcharge claims',
-      '30 days: Common notice period for rate or contract term changes',
-      '14 days: Cooling-off period for many telecom contracts (state-dependent)',
+      "10-15 days: Minimum advance notice required before utility disconnection (varies by state)",
+      "30 days: Typical billing dispute investigation period",
+      "60 days: FCC complaint response deadline for telecom carriers",
+      "1 year: TCPA statute of limitations for robocall/spam text claims (4 years in some states)",
+      "2 years: Typical statute of limitations for billing overcharge claims",
+      "30 days: Common notice period for rate or contract term changes",
+      "14 days: Cooling-off period for many telecom contracts (state-dependent)",
     ],
     federalLaws: [
-      { name: 'Telecommunications Act of 1996', citation: '47 U.S.C. §§ 151 et seq.', description: 'Major overhaul of telecom regulation. Promotes competition, requires universal service, and establishes consumer protection standards for telecom providers.' },
-      { name: 'FCC Truth in Billing Rules', citation: '47 CFR § 64.2401', description: 'Requires clear, non-misleading billing practices. Bills must contain full, non-misleading descriptions of charges and company names associated with each charge.' },
-      { name: 'Telephone Consumer Protection Act (TCPA)', citation: '47 U.S.C. § 227', description: 'Restricts telemarketing calls, robocalls, and spam texts. Provides private right of action with $500-$1,500 per violation damages.', url: 'https://www.fcc.gov/consumers/guides/stop-unwanted-robocalls-and-texts' },
-      { name: 'Cable Communications Policy Act', citation: '47 U.S.C. §§ 521-573', description: 'Regulates cable television service including rate regulation, franchise requirements, and consumer protection provisions for cable subscribers.' },
-      { name: 'CAN-SPAM Act', citation: '15 U.S.C. § 7701', description: 'Sets rules for commercial email, gives recipients the right to stop receiving emails, and establishes penalties for violations. Each violation can result in penalties up to $50,120.' },
+      {
+        name: "Telecommunications Act of 1996",
+        citation: "47 U.S.C. §§ 151 et seq.",
+        description:
+          "Major overhaul of telecom regulation. Promotes competition, requires universal service, and establishes consumer protection standards for telecom providers.",
+      },
+      {
+        name: "FCC Truth in Billing Rules",
+        citation: "47 CFR § 64.2401",
+        description:
+          "Requires clear, non-misleading billing practices. Bills must contain full, non-misleading descriptions of charges and company names associated with each charge.",
+      },
+      {
+        name: "Telephone Consumer Protection Act (TCPA)",
+        citation: "47 U.S.C. § 227",
+        description:
+          "Restricts telemarketing calls, robocalls, and spam texts. Provides private right of action with $500-$1,500 per violation damages.",
+        url: "https://www.fcc.gov/consumers/guides/stop-unwanted-robocalls-and-texts",
+      },
+      {
+        name: "Cable Communications Policy Act",
+        citation: "47 U.S.C. §§ 521-573",
+        description:
+          "Regulates cable television service including rate regulation, franchise requirements, and consumer protection provisions for cable subscribers.",
+      },
+      {
+        name: "CAN-SPAM Act",
+        citation: "15 U.S.C. § 7701",
+        description:
+          "Sets rules for commercial email, gives recipients the right to stop receiving emails, and establishes penalties for violations. Each violation can result in penalties up to $50,120.",
+      },
     ],
     faqItems: [
-      { question: 'Can my utility company shut off my service without notice?', answer: 'No. Federal and state regulations require utilities to provide written advance notice before disconnection — typically 10-15 days. Most states also prohibit disconnection during extreme weather (often when temperatures are below 32°F or above 95°F), for households with seriously ill residents (with medical certification), and for customers who are actively engaged in a payment plan or dispute process. If you receive a disconnection notice, immediately contact the utility to arrange a payment plan.' },
-      { question: 'What should I do about unauthorized charges on my phone bill?', answer: 'This is called "cramming" and is illegal under FCC rules. Immediately: (1) Contact your carrier and demand removal of the charges; (2) Ask the carrier to block third-party billing on your account; (3) File a complaint with the FCC at consumercomplaints.fcc.gov; (4) If the carrier doesn\'t resolve it, dispute the charges with your credit card company. The carrier is required to investigate and refund unauthorized charges. You can also file a complaint with your state attorney general.' },
-      { question: 'My internet speed is much slower than advertised. What are my rights?', answer: 'If your actual speeds consistently fall far below the advertised speed, you may have grounds for a billing adjustment or contract termination without penalty. Run speed tests at different times of day using FCC\'s speed test tool at broadbandmap.fcc.gov. Document the results over several weeks. File a complaint with the FCC if speeds are consistently below what you\'re paying for. The FTC has also taken action against ISPs for deceptive speed claims. Check your contract — many ISPs use "up to" language, but consistently delivering far below advertised speeds can still be considered deceptive.' },
-      { question: 'Can I cancel my phone/internet contract without paying a termination fee?', answer: 'It depends. You can often avoid ETFs if: (1) The provider materially changed your contract terms (price increase, service reduction); (2) You\'re within your state\'s cooling-off period; (3) The provider failed to meet service quality standards; (4) You\'re a military member receiving deployment orders (SCRA protection). Some states prohibit or cap early termination fees. Even where ETFs apply, they\'re usually prorated based on remaining contract time.' },
-      { question: 'How do I stop robocalls and spam texts?', answer: 'Register your number on the National Do Not Call Registry at donotcall.gov. For calls/texts that continue, you have TCPA rights: report violations to the FCC, file complaints, or pursue legal action for $500-$1,500 per violation. Use your phone\'s built-in call blocking features, and ask your carrier about free robocall blocking tools (all major carriers now offer them). For persistent harassment from a specific company, send a written cease-and-desist notice via certified mail.' },
-      { question: 'What is LIHEAP and how do I apply for utility bill assistance?', answer: 'LIHEAP (Low Income Home Energy Assistance Program) is a federally funded program that helps eligible low-income households pay their energy bills. Benefits can include bill payment assistance, weatherization services, and emergency energy crisis intervention. Eligibility typically requires household income below 150% of the federal poverty level. Apply through your state or local LIHEAP agency — find yours at liheapch.acf.hhs.gov. Applications are typically accepted year-round, though benefits may be distributed seasonally.' },
+      {
+        question: "Can my utility company shut off my service without notice?",
+        answer:
+          "No. Federal and state regulations require utilities to provide written advance notice before disconnection - typically 10-15 days. Most states also prohibit disconnection during extreme weather (often when temperatures are below 32°F or above 95°F), for households with seriously ill residents (with medical certification), and for customers who are actively engaged in a payment plan or dispute process. If you receive a disconnection notice, immediately contact the utility to arrange a payment plan.",
+      },
+      {
+        question: "What should I do about unauthorized charges on my phone bill?",
+        answer:
+          'This is called "cramming" and is illegal under FCC rules. Immediately: (1) Contact your carrier and demand removal of the charges; (2) Ask the carrier to block third-party billing on your account; (3) File a complaint with the FCC at consumercomplaints.fcc.gov; (4) If the carrier doesn\'t resolve it, dispute the charges with your credit card company. The carrier is required to investigate and refund unauthorized charges. You can also file a complaint with your state attorney general.',
+      },
+      {
+        question: "My internet speed is much slower than advertised. What are my rights?",
+        answer:
+          "If your actual speeds consistently fall far below the advertised speed, you may have grounds for a billing adjustment or contract termination without penalty. Run speed tests at different times of day using FCC's speed test tool at broadbandmap.fcc.gov. Document the results over several weeks. File a complaint with the FCC if speeds are consistently below what you're paying for. The FTC has also taken action against ISPs for deceptive speed claims. Check your contract - many ISPs use \"up to\" language, but consistently delivering far below advertised speeds can still be considered deceptive.",
+      },
+      {
+        question: "Can I cancel my phone/internet contract without paying a termination fee?",
+        answer:
+          "It depends. You can often avoid ETFs if: (1) The provider materially changed your contract terms (price increase, service reduction); (2) You're within your state's cooling-off period; (3) The provider failed to meet service quality standards; (4) You're a military member receiving deployment orders (SCRA protection). Some states prohibit or cap early termination fees. Even where ETFs apply, they're usually prorated based on remaining contract time.",
+      },
+      {
+        question: "How do I stop robocalls and spam texts?",
+        answer:
+          "Register your number on the National Do Not Call Registry at donotcall.gov. For calls/texts that continue, you have TCPA rights: report violations to the FCC, file complaints, or pursue legal action for $500-$1,500 per violation. Use your phone's built-in call blocking features, and ask your carrier about free robocall blocking tools (all major carriers now offer them). For persistent harassment from a specific company, send a written cease-and-desist notice via certified mail.",
+      },
+      {
+        question: "What is LIHEAP and how do I apply for utility bill assistance?",
+        answer:
+          "LIHEAP (Low Income Home Energy Assistance Program) is a federally funded program that helps eligible low-income households pay their energy bills. Benefits can include bill payment assistance, weatherization services, and emergency energy crisis intervention. Eligibility typically requires household income below 150% of the federal poverty level. Apply through your state or local LIHEAP agency - find yours at liheapch.acf.hhs.gov. Applications are typically accepted year-round, though benefits may be distributed seasonally.",
+      },
     ],
     warningSigns: [
-      'Bill suddenly increases significantly without any change in your usage or a clear explanation',
-      'Contract terms are vague about early termination fees, data caps, or rate increases',
-      'Company makes it extremely difficult to cancel — requiring phone calls, long hold times, or in-person visits',
-      'Third-party charges appear on your bill that you never authorized (cramming)',
-      'Promotional offers that don\'t specify what the rate will be after the promotional period ends',
+      "Bill suddenly increases significantly without any change in your usage or a clear explanation",
+      "Contract terms are vague about early termination fees, data caps, or rate increases",
+      "Company makes it extremely difficult to cancel - requiring phone calls, long hold times, or in-person visits",
+      "Third-party charges appear on your bill that you never authorized (cramming)",
+      "Promotional offers that don't specify what the rate will be after the promotional period ends",
       'Provider claims "unlimited" but buries data throttling thresholds in fine print',
-      'Meter hasn\'t been physically read in months — estimated readings can lead to major billing errors',
-      'Sales representatives pressure you to make immediate decisions without giving you time to review contracts',
+      "Meter hasn't been physically read in months - estimated readings can lead to major billing errors",
+      "Sales representatives pressure you to make immediate decisions without giving you time to review contracts",
     ],
     proTips: [
-      'Call your provider annually and ask about current promotions — loyal customers often pay more than new ones. Threatening to switch providers (in markets with competition) usually unlocks retention offers',
-      'Ask your carrier to add a "third-party charge block" to your account — this prevents cramming before it happens',
-      'For internet service, use the FCC\'s broadband speed test regularly and save the results — this creates evidence if you ever need to dispute your service quality',
-      'Before your promotional rate expires, call and negotiate — most companies will extend the promotion or offer a new one rather than lose you as a customer',
-      'Apply for LIHEAP or other assistance programs before falling behind on bills — it\'s much easier to get help before you have a past-due balance',
-      'Document every customer service interaction: note the date, time, representative name, and what was agreed — request a confirmation email or reference number',
+      "Call your provider annually and ask about current promotions - loyal customers often pay more than new ones. Threatening to switch providers (in markets with competition) usually unlocks retention offers",
+      'Ask your carrier to add a "third-party charge block" to your account - this prevents cramming before it happens',
+      "For internet service, use the FCC's broadband speed test regularly and save the results - this creates evidence if you ever need to dispute your service quality",
+      "Before your promotional rate expires, call and negotiate - most companies will extend the promotion or offer a new one rather than lose you as a customer",
+      "Apply for LIHEAP or other assistance programs before falling behind on bills - it's much easier to get help before you have a past-due balance",
+      "Document every customer service interaction: note the date, time, representative name, and what was agreed - request a confirmation email or reference number",
     ],
   },
   {
-    categoryId: 'financial',
-    title: 'Financial Consumer Protection Rights',
-    subtitle: 'Federal laws protecting your credit, banking, and financial interests',
-    lastUpdated: '2026-02-01',
-    introduction: 'Financial consumers in the United States benefit from one of the most comprehensive regulatory frameworks in the world. The Fair Credit Reporting Act (FCRA), Fair Debt Collection Practices Act (FDCPA), Truth in Lending Act (TILA), and Equal Credit Opportunity Act (ECOA) create overlapping protections that govern how your credit is reported, how debts are collected, how loans are disclosed, and how credit decisions are made.\n\nThe Consumer Financial Protection Bureau (CFPB), established by the Dodd-Frank Act in 2010, serves as the primary federal agency dedicated to consumer financial protection. The CFPB has authority over banks, credit unions, mortgage companies, payday lenders, debt collectors, and other financial service providers. It maintains a consumer complaint database and has returned billions of dollars to consumers through enforcement actions.\n\nThe FCRA is particularly important because your credit reports affect everything from loan interest rates to employment opportunities and insurance premiums. Under the FCRA, you have the right to dispute inaccurate information, receive free annual credit reports from all three bureaus, and be notified when information in your credit report has been used against you.\n\nThe FDCPA provides critical protections against abusive debt collection practices — prohibiting harassment, false representations, and unfair practices by third-party debt collectors. Knowing your rights under the FDCPA can help you manage debt situations without being subjected to illegal collection tactics.',
+    categoryId: "financial",
+    title: "Financial Consumer Protection Rights",
+    subtitle: "Federal laws protecting your credit, banking, and financial interests",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Financial consumers in the United States benefit from one of the most comprehensive regulatory frameworks in the world. The Fair Credit Reporting Act (FCRA), Fair Debt Collection Practices Act (FDCPA), Truth in Lending Act (TILA), and Equal Credit Opportunity Act (ECOA) create overlapping protections that govern how your credit is reported, how debts are collected, how loans are disclosed, and how credit decisions are made.\n\nThe Consumer Financial Protection Bureau (CFPB), established by the Dodd-Frank Act in 2010, serves as the primary federal agency dedicated to consumer financial protection. The CFPB has authority over banks, credit unions, mortgage companies, payday lenders, debt collectors, and other financial service providers. It maintains a consumer complaint database and has returned billions of dollars to consumers through enforcement actions.\n\nThe FCRA is particularly important because your credit reports affect everything from loan interest rates to employment opportunities and insurance premiums. Under the FCRA, you have the right to dispute inaccurate information, receive free annual credit reports from all three bureaus, and be notified when information in your credit report has been used against you.\n\nThe FDCPA provides critical protections against abusive debt collection practices - prohibiting harassment, false representations, and unfair practices by third-party debt collectors. Knowing your rights under the FDCPA can help you manage debt situations without being subjected to illegal collection tactics.",
     keyRights: [
-      { title: 'Accurate Credit Reporting (FCRA)', description: 'Credit bureaus must maintain accurate information and investigate disputes within 30 days. Inaccurate, incomplete, or unverifiable information must be corrected or deleted. You\'re entitled to free credit reports annually from each bureau at AnnualCreditReport.com, plus additional free reports if you\'ve been denied credit.' },
-      { title: 'Protection from Abusive Debt Collection (FDCPA)', description: 'Third-party collectors cannot call before 8am or after 9pm, use threatening or obscene language, call your workplace after being told not to, or misrepresent the amount owed. You can send a written "cease communication" letter, and the collector must stop all contact except to notify you of specific legal actions.' },
-      { title: 'Truth in Lending Disclosures (TILA)', description: 'Lenders must clearly disclose the APR, total finance charges, payment schedule, and total cost of the loan before you sign. For adjustable-rate mortgages, lenders must explain how and when rates can change and provide worst-case scenarios.' },
-      { title: 'Right to Dispute Unauthorized Transactions', description: 'Under the EFTA and FCBA, you can dispute unauthorized debit or credit card charges. Banks must investigate and provisionally credit your account within specific timeframes. For credit cards, your liability for unauthorized charges is capped at $50 (and most issuers offer zero-liability).' },
-      { title: 'Equal Credit Opportunity (ECOA)', description: 'Lenders cannot discriminate based on race, color, religion, national origin, sex, marital status, age, or receipt of public assistance. If denied credit, you have the right to know the specific reasons and to request a copy of any credit score used in the decision.' },
-      { title: 'Right to Financial Privacy', description: 'The Gramm-Leach-Bliley Act requires financial institutions to explain their information-sharing practices and give you the right to opt out of having your information shared with certain third parties. Banks must protect the security of your personal financial data.' },
-      { title: 'Mortgage Servicing Protections', description: 'Under RESPA and Dodd-Frank rules, mortgage servicers must respond to qualified written requests within 30 days, cannot charge late fees during dispute investigation, and must provide loss mitigation options before foreclosure.' },
-      { title: 'Debt Validation Rights', description: 'When a debt collector first contacts you, they must send a written "validation notice" within 5 days identifying the debt, the amount, and the original creditor. You have 30 days to request debt verification, during which collection activity must pause.' },
+      {
+        title: "Accurate Credit Reporting (FCRA)",
+        description:
+          "Credit bureaus must maintain accurate information and investigate disputes within 30 days. Inaccurate, incomplete, or unverifiable information must be corrected or deleted. You're entitled to free credit reports annually from each bureau at AnnualCreditReport.com, plus additional free reports if you've been denied credit.",
+      },
+      {
+        title: "Protection from Abusive Debt Collection (FDCPA)",
+        description:
+          'Third-party collectors cannot call before 8am or after 9pm, use threatening or obscene language, call your workplace after being told not to, or misrepresent the amount owed. You can send a written "cease communication" letter, and the collector must stop all contact except to notify you of specific legal actions.',
+      },
+      {
+        title: "Truth in Lending Disclosures (TILA)",
+        description:
+          "Lenders must clearly disclose the APR, total finance charges, payment schedule, and total cost of the loan before you sign. For adjustable-rate mortgages, lenders must explain how and when rates can change and provide worst-case scenarios.",
+      },
+      {
+        title: "Right to Dispute Unauthorized Transactions",
+        description:
+          "Under the EFTA and FCBA, you can dispute unauthorized debit or credit card charges. Banks must investigate and provisionally credit your account within specific timeframes. For credit cards, your liability for unauthorized charges is capped at $50 (and most issuers offer zero-liability).",
+      },
+      {
+        title: "Equal Credit Opportunity (ECOA)",
+        description:
+          "Lenders cannot discriminate based on race, color, religion, national origin, sex, marital status, age, or receipt of public assistance. If denied credit, you have the right to know the specific reasons and to request a copy of any credit score used in the decision.",
+      },
+      {
+        title: "Right to Financial Privacy",
+        description:
+          "The Gramm-Leach-Bliley Act requires financial institutions to explain their information-sharing practices and give you the right to opt out of having your information shared with certain third parties. Banks must protect the security of your personal financial data.",
+      },
+      {
+        title: "Mortgage Servicing Protections",
+        description:
+          "Under RESPA and Dodd-Frank rules, mortgage servicers must respond to qualified written requests within 30 days, cannot charge late fees during dispute investigation, and must provide loss mitigation options before foreclosure.",
+      },
+      {
+        title: "Debt Validation Rights",
+        description:
+          'When a debt collector first contacts you, they must send a written "validation notice" within 5 days identifying the debt, the amount, and the original creditor. You have 30 days to request debt verification, during which collection activity must pause.',
+      },
     ],
     commonIssues: [
-      'Errors on credit reports — incorrect accounts, wrong balances, outdated negative items',
-      'Unauthorized charges on credit cards or bank accounts',
-      'Aggressive or harassing debt collector tactics',
-      'Unfair bank fees — overdraft charges, maintenance fees, hidden transaction fees',
-      'Identity theft resulting in fraudulent accounts or charges',
-      'Loan terms different from what was discussed or advertised',
-      'Mortgage servicer misapplying payments or failing to process modifications',
-      'Debt collector attempting to collect a debt you don\'t owe or that is past the statute of limitations',
-      'Credit card company closing account without notice, damaging credit score',
-      'Being denied credit without receiving the legally required adverse action notice',
+      "Errors on credit reports - incorrect accounts, wrong balances, outdated negative items",
+      "Unauthorized charges on credit cards or bank accounts",
+      "Aggressive or harassing debt collector tactics",
+      "Unfair bank fees - overdraft charges, maintenance fees, hidden transaction fees",
+      "Identity theft resulting in fraudulent accounts or charges",
+      "Loan terms different from what was discussed or advertised",
+      "Mortgage servicer misapplying payments or failing to process modifications",
+      "Debt collector attempting to collect a debt you don't owe or that is past the statute of limitations",
+      "Credit card company closing account without notice, damaging credit score",
+      "Being denied credit without receiving the legally required adverse action notice",
     ],
     actionSteps: [
-      'Pull your free credit reports from all three bureaus (Equifax, Experian, TransUnion) at AnnualCreditReport.com',
-      'Dispute credit report errors in writing with each bureau — include copies of supporting documents, not originals',
-      'For debt collection harassment, keep a log of every call (date, time, what was said) and send a written cease-communication letter via certified mail',
-      'Report unauthorized bank transactions immediately — the faster you report, the lower your liability',
-      'File complaints with the CFPB at consumerfinance.gov/complaint — the CFPB requires companies to respond within 15 days',
-      'For identity theft, file a report at IdentityTheft.gov, place fraud alerts on your credit files, and consider a credit freeze',
-      'Review all loan disclosures carefully before signing — compare the APR, not just the interest rate, when shopping for loans',
+      "Pull your free credit reports from all three bureaus (Equifax, Experian, TransUnion) at AnnualCreditReport.com",
+      "Dispute credit report errors in writing with each bureau - include copies of supporting documents, not originals",
+      "For debt collection harassment, keep a log of every call (date, time, what was said) and send a written cease-communication letter via certified mail",
+      "Report unauthorized bank transactions immediately - the faster you report, the lower your liability",
+      "File complaints with the CFPB at consumerfinance.gov/complaint - the CFPB requires companies to respond within 15 days",
+      "For identity theft, file a report at IdentityTheft.gov, place fraud alerts on your credit files, and consider a credit freeze",
+      "Review all loan disclosures carefully before signing - compare the APR, not just the interest rate, when shopping for loans",
       'For mortgage servicing problems, send a "Qualified Written Request" via certified mail citing RESPA Section 6',
-      'Document all financial institution communications — save emails, take notes during calls, and request written confirmation of any agreements',
-      'Consult a consumer protection attorney for significant disputes — many FCRA and FDCPA cases are taken on contingency (no upfront cost) because these laws allow attorney\'s fee recovery',
+      "Document all financial institution communications - save emails, take notes during calls, and request written confirmation of any agreements",
+      "Consult a consumer protection attorney for significant disputes - many FCRA and FDCPA cases are taken on contingency (no upfront cost) because these laws allow attorney's fee recovery",
     ],
     importantDeadlines: [
-      '30 days: FCRA deadline for credit bureaus to complete dispute investigation',
-      '60 days: FCBA deadline to dispute credit card charges',
-      '60 days: EFTA deadline to dispute debit card/electronic transfer errors',
-      '30 days: Debt collector validation period — you must request validation within 30 days of initial notice',
-      '7 years: Maximum time most negative items can remain on credit reports',
-      '10 years: Chapter 7 bankruptcy stays on credit report; 7 years for Chapter 13',
-      '3-6 years: Statute of limitations for debt collection lawsuits (varies by state and debt type)',
-      '1 year: FCRA statute of limitations for suing credit bureaus or furnishers for violations',
+      "30 days: FCRA deadline for credit bureaus to complete dispute investigation",
+      "60 days: FCBA deadline to dispute credit card charges",
+      "60 days: EFTA deadline to dispute debit card/electronic transfer errors",
+      "30 days: Debt collector validation period - you must request validation within 30 days of initial notice",
+      "7 years: Maximum time most negative items can remain on credit reports",
+      "10 years: Chapter 7 bankruptcy stays on credit report; 7 years for Chapter 13",
+      "3-6 years: Statute of limitations for debt collection lawsuits (varies by state and debt type)",
+      "1 year: FCRA statute of limitations for suing credit bureaus or furnishers for violations",
     ],
     federalLaws: [
-      { name: 'Fair Credit Reporting Act (FCRA)', citation: '15 U.S.C. § 1681', description: 'Governs credit reporting accuracy, consumer access to credit reports, dispute rights, and limits on who can access your credit information. Provides statutory damages of $100-$1,000 per violation.', url: 'https://www.ftc.gov/legal-library/browse/statutes/fair-credit-reporting-act' },
-      { name: 'Fair Debt Collection Practices Act (FDCPA)', citation: '15 U.S.C. § 1692', description: 'Prohibits abusive, deceptive, and unfair debt collection practices by third-party collectors. Provides statutory damages up to $1,000 per lawsuit plus actual damages and attorney\'s fees.', url: 'https://www.ftc.gov/legal-library/browse/statutes/fair-debt-collection-practices-act' },
-      { name: 'Truth in Lending Act (TILA)', citation: '15 U.S.C. § 1601', description: 'Requires clear disclosure of credit terms including APR, finance charges, and payment schedules. Provides a 3-day right to rescind certain mortgage transactions.' },
-      { name: 'Electronic Fund Transfer Act (EFTA)', citation: '15 U.S.C. § 1693', description: 'Protects consumers using debit cards, ATMs, and electronic payments. Limits liability for unauthorized transfers and requires error investigation within 10 business days.' },
-      { name: 'Equal Credit Opportunity Act (ECOA)', citation: '15 U.S.C. § 1691', description: 'Prohibits discrimination in credit decisions based on race, color, religion, national origin, sex, marital status, age, or public assistance status.' },
-      { name: 'Dodd-Frank Wall Street Reform Act', citation: '12 U.S.C. § 5301', description: 'Created the CFPB and expanded consumer financial protections. Established the Consumer Complaint Database and gave the CFPB authority over most consumer financial products and services.', url: 'https://www.consumerfinance.gov/' },
+      {
+        name: "Fair Credit Reporting Act (FCRA)",
+        citation: "15 U.S.C. § 1681",
+        description:
+          "Governs credit reporting accuracy, consumer access to credit reports, dispute rights, and limits on who can access your credit information. Provides statutory damages of $100-$1,000 per violation.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/fair-credit-reporting-act",
+      },
+      {
+        name: "Fair Debt Collection Practices Act (FDCPA)",
+        citation: "15 U.S.C. § 1692",
+        description:
+          "Prohibits abusive, deceptive, and unfair debt collection practices by third-party collectors. Provides statutory damages up to $1,000 per lawsuit plus actual damages and attorney's fees.",
+        url: "https://www.ftc.gov/legal-library/browse/statutes/fair-debt-collection-practices-act",
+      },
+      {
+        name: "Truth in Lending Act (TILA)",
+        citation: "15 U.S.C. § 1601",
+        description:
+          "Requires clear disclosure of credit terms including APR, finance charges, and payment schedules. Provides a 3-day right to rescind certain mortgage transactions.",
+      },
+      {
+        name: "Electronic Fund Transfer Act (EFTA)",
+        citation: "15 U.S.C. § 1693",
+        description:
+          "Protects consumers using debit cards, ATMs, and electronic payments. Limits liability for unauthorized transfers and requires error investigation within 10 business days.",
+      },
+      {
+        name: "Equal Credit Opportunity Act (ECOA)",
+        citation: "15 U.S.C. § 1691",
+        description:
+          "Prohibits discrimination in credit decisions based on race, color, religion, national origin, sex, marital status, age, or public assistance status.",
+      },
+      {
+        name: "Dodd-Frank Wall Street Reform Act",
+        citation: "12 U.S.C. § 5301",
+        description:
+          "Created the CFPB and expanded consumer financial protections. Established the Consumer Complaint Database and gave the CFPB authority over most consumer financial products and services.",
+        url: "https://www.consumerfinance.gov/",
+      },
     ],
     faqItems: [
-      { question: 'How do I dispute errors on my credit report?', answer: 'Submit disputes in writing to each credit bureau (Equifax, Experian, TransUnion) that shows the error. Include your name, address, the account in dispute, why you\'re disputing it, and copies (not originals) of supporting documents. The bureau must investigate within 30 days and notify you of the results. If the information is found to be inaccurate, incomplete, or unverifiable, it must be corrected or deleted. Also file a dispute directly with the company that furnished the inaccurate information (the "furnisher").' },
-      { question: 'Can a debt collector contact my family or employer about my debt?', answer: 'Very limited. Under the FDCPA, collectors can contact third parties only to obtain your contact information — and they can\'t reveal that they\'re collecting a debt. They cannot contact your employer about the debt (except to verify employment for garnishment purposes). They cannot discuss your debt with family members, friends, or neighbors. If a collector violates these rules, you can sue for statutory damages of up to $1,000 plus actual damages and attorney\'s fees.' },
-      { question: 'What should I do if I\'m a victim of identity theft?', answer: 'Act quickly: (1) Report to IdentityTheft.gov to create an official FTC Identity Theft Report; (2) Place a fraud alert with one credit bureau (it propagates to all three); (3) Consider a credit freeze for stronger protection; (4) Dispute fraudulent accounts with each bureau; (5) File a police report; (6) Contact all affected financial institutions. Under the FCRA, identity theft victims can get fraudulent accounts removed by sending an identity theft report and proof of identity to the credit bureaus.' },
-      { question: 'Can I stop a debt collector from calling me?', answer: 'Yes. Send a written "cease communication" letter via certified mail telling the collector to stop contacting you. Under the FDCPA, they must stop all contact except to notify you that they\'re ending collection efforts or that they intend to take a specific legal action (like filing a lawsuit). Note: stopping communication doesn\'t eliminate the debt — the collector can still sue you. Keep a copy of your letter and the certified mail receipt as proof.' },
-      { question: 'How long can negative items stay on my credit report?', answer: 'Most negative items remain for 7 years from the date of first delinquency. This includes late payments, collections, charge-offs, and repossessions. Chapter 7 bankruptcy stays for 10 years; Chapter 13 for 7 years. Tax liens (unpaid) can remain indefinitely, though the major bureaus now remove them after 7 years. Student loan defaults remain for 7 years. Positive information generally stays for 10 years after the account is closed. These timelines cannot be "restarted" by making a payment on an old debt.' },
-      { question: 'What are my rights if a bank charges unfair fees?', answer: 'You can dispute fees directly with the bank, file a complaint with the CFPB, and consider switching institutions. For overdraft fees specifically, banks must get your opt-in consent before charging overdraft fees on debit card purchases. The CFPB has taken enforcement action against banks for excessive, unfair, or deceptive fee practices. Many banks will reverse fees if you ask — especially for first-time occurrences or if you can show the fee resulted from a bank error. Document the fee and your dispute for your records.' },
+      {
+        question: "How do I dispute errors on my credit report?",
+        answer:
+          'Submit disputes in writing to each credit bureau (Equifax, Experian, TransUnion) that shows the error. Include your name, address, the account in dispute, why you\'re disputing it, and copies (not originals) of supporting documents. The bureau must investigate within 30 days and notify you of the results. If the information is found to be inaccurate, incomplete, or unverifiable, it must be corrected or deleted. Also file a dispute directly with the company that furnished the inaccurate information (the "furnisher").',
+      },
+      {
+        question: "Can a debt collector contact my family or employer about my debt?",
+        answer:
+          "Very limited. Under the FDCPA, collectors can contact third parties only to obtain your contact information - and they can't reveal that they're collecting a debt. They cannot contact your employer about the debt (except to verify employment for garnishment purposes). They cannot discuss your debt with family members, friends, or neighbors. If a collector violates these rules, you can sue for statutory damages of up to $1,000 plus actual damages and attorney's fees.",
+      },
+      {
+        question: "What should I do if I'm a victim of identity theft?",
+        answer:
+          "Act quickly: (1) Report to IdentityTheft.gov to create an official FTC Identity Theft Report; (2) Place a fraud alert with one credit bureau (it propagates to all three); (3) Consider a credit freeze for stronger protection; (4) Dispute fraudulent accounts with each bureau; (5) File a police report; (6) Contact all affected financial institutions. Under the FCRA, identity theft victims can get fraudulent accounts removed by sending an identity theft report and proof of identity to the credit bureaus.",
+      },
+      {
+        question: "Can I stop a debt collector from calling me?",
+        answer:
+          "Yes. Send a written \"cease communication\" letter via certified mail telling the collector to stop contacting you. Under the FDCPA, they must stop all contact except to notify you that they're ending collection efforts or that they intend to take a specific legal action (like filing a lawsuit). Note: stopping communication doesn't eliminate the debt - the collector can still sue you. Keep a copy of your letter and the certified mail receipt as proof.",
+      },
+      {
+        question: "How long can negative items stay on my credit report?",
+        answer:
+          'Most negative items remain for 7 years from the date of first delinquency. This includes late payments, collections, charge-offs, and repossessions. Chapter 7 bankruptcy stays for 10 years; Chapter 13 for 7 years. Tax liens (unpaid) can remain indefinitely, though the major bureaus now remove them after 7 years. Student loan defaults remain for 7 years. Positive information generally stays for 10 years after the account is closed. These timelines cannot be "restarted" by making a payment on an old debt.',
+      },
+      {
+        question: "What are my rights if a bank charges unfair fees?",
+        answer:
+          "You can dispute fees directly with the bank, file a complaint with the CFPB, and consider switching institutions. For overdraft fees specifically, banks must get your opt-in consent before charging overdraft fees on debit card purchases. The CFPB has taken enforcement action against banks for excessive, unfair, or deceptive fee practices. Many banks will reverse fees if you ask - especially for first-time occurrences or if you can show the fee resulted from a bank error. Document the fee and your dispute for your records.",
+      },
     ],
     warningSigns: [
-      'Debt collector threatens arrest, jail, wage garnishment without a court order, or deportation — these are all FDCPA violations',
-      'Credit report shows accounts you didn\'t open — possible identity theft',
-      'Lender pressures you to sign loan documents quickly without time to review',
-      'Bank charges multiple overdraft fees in a single day by reordering transactions from largest to smallest',
-      'Debt collector refuses to provide written verification of the debt when requested',
-      'Financial advisor or broker recommends products that generate high commissions without explaining alternatives',
-      'Payday lender rolls over loans automatically, creating a cycle of escalating fees',
-      'Loan terms at closing are different from the terms you were quoted — walk away',
+      "Debt collector threatens arrest, jail, wage garnishment without a court order, or deportation - these are all FDCPA violations",
+      "Credit report shows accounts you didn't open - possible identity theft",
+      "Lender pressures you to sign loan documents quickly without time to review",
+      "Bank charges multiple overdraft fees in a single day by reordering transactions from largest to smallest",
+      "Debt collector refuses to provide written verification of the debt when requested",
+      "Financial advisor or broker recommends products that generate high commissions without explaining alternatives",
+      "Payday lender rolls over loans automatically, creating a cycle of escalating fees",
+      "Loan terms at closing are different from the terms you were quoted - walk away",
     ],
     proTips: [
-      'Freeze your credit at all three bureaus for free — this prevents identity thieves from opening accounts in your name. You can temporarily "thaw" when you need to apply for credit',
-      'When disputing credit report errors, send disputes via certified mail with return receipt — online disputes sometimes waive your right to sue if the dispute isn\'t resolved',
-      'Under the FDCPA, if you dispute a debt in writing within 30 days, the collector must stop collection activity until they verify the debt. Use this strategically.',
-      'File CFPB complaints for any financial institution issue — companies respond 97% of the time because the CFPB publishes complaint data publicly',
-      'For credit card disputes, always submit in writing even if you also call — written disputes trigger specific legal obligations under the FCBA that phone calls don\'t',
-      'Request your "adverse action notice" any time you\'re denied credit, receive less favorable terms, or face a rate increase based on your credit — it tells you exactly why and which credit score was used',
+      'Freeze your credit at all three bureaus for free - this prevents identity thieves from opening accounts in your name. You can temporarily "thaw" when you need to apply for credit',
+      "When disputing credit report errors, send disputes via certified mail with return receipt - online disputes sometimes waive your right to sue if the dispute isn't resolved",
+      "Under the FDCPA, if you dispute a debt in writing within 30 days, the collector must stop collection activity until they verify the debt. Use this strategically.",
+      "File CFPB complaints for any financial institution issue - companies respond 97% of the time because the CFPB publishes complaint data publicly",
+      "For credit card disputes, always submit in writing even if you also call - written disputes trigger specific legal obligations under the FCBA that phone calls don't",
+      'Request your "adverse action notice" any time you\'re denied credit, receive less favorable terms, or face a rate increase based on your credit - it tells you exactly why and which credit score was used',
     ],
     regulatoryContacts: [
-      { name: 'Consumer Financial Protection Bureau (CFPB)', description: 'File complaints about banks, credit bureaus, lenders, and debt collectors.', url: 'https://www.consumerfinance.gov/complaint/', phone: '1-855-411-2372' },
-      { name: 'Federal Trade Commission (FTC)', description: 'Report identity theft, fraud, and deceptive financial practices.', url: 'https://reportfraud.ftc.gov/', phone: '1-877-382-4357' },
-      { name: 'Office of the Comptroller of the Currency (OCC)', description: 'Complaints against national banks and federal savings associations.', url: 'https://www.occ.treas.gov/topics/consumers-and-communities/consumer-protection/index-consumer-protection.html', phone: '1-800-613-6743' },
-      { name: 'State Banking Regulator', description: 'File complaints about state-chartered banks and credit unions.', url: 'https://www.csbs.org/consumer-complaints' },
+      {
+        name: "Consumer Financial Protection Bureau (CFPB)",
+        description: "File complaints about banks, credit bureaus, lenders, and debt collectors.",
+        url: "https://www.consumerfinance.gov/complaint/",
+        phone: "1-855-411-2372",
+      },
+      {
+        name: "Federal Trade Commission (FTC)",
+        description: "Report identity theft, fraud, and deceptive financial practices.",
+        url: "https://reportfraud.ftc.gov/",
+        phone: "1-877-382-4357",
+      },
+      {
+        name: "Office of the Comptroller of the Currency (OCC)",
+        description: "Complaints against national banks and federal savings associations.",
+        url: "https://www.occ.treas.gov/topics/consumers-and-communities/consumer-protection/index-consumer-protection.html",
+        phone: "1-800-613-6743",
+      },
+      {
+        name: "State Banking Regulator",
+        description: "File complaints about state-chartered banks and credit unions.",
+        url: "https://www.csbs.org/consumer-complaints",
+      },
     ],
     stateVariations: [
-      { state: 'California', detail: 'The CCFPL (California Consumer Financial Protection Law) provides state-level CFPB-like enforcement. Stronger debt collection restrictions than federal minimums.' },
-      { state: 'New York', detail: 'DFS (Department of Financial Services) actively regulates banks and can issue fines. Usury cap of 16% on most consumer loans.' },
-      { state: 'Texas', detail: 'Homestead protections prevent creditors from forcing the sale of your primary residence to satisfy most debts. Strong garnishment protections.' },
-      { state: 'Florida', detail: 'Unlimited homestead exemption in bankruptcy. Wages of heads of household are fully exempt from garnishment.' },
+      {
+        state: "California",
+        detail:
+          "The CCFPL (California Consumer Financial Protection Law) provides state-level CFPB-like enforcement. Stronger debt collection restrictions than federal minimums.",
+      },
+      {
+        state: "New York",
+        detail:
+          "DFS (Department of Financial Services) actively regulates banks and can issue fines. Usury cap of 16% on most consumer loans.",
+      },
+      {
+        state: "Texas",
+        detail:
+          "Homestead protections prevent creditors from forcing the sale of your primary residence to satisfy most debts. Strong garnishment protections.",
+      },
+      {
+        state: "Florida",
+        detail:
+          "Unlimited homestead exemption in bankruptcy. Wages of heads of household are fully exempt from garnishment.",
+      },
     ],
     statSnapshot: [
-      { label: 'CFPB complaints with company response', value: '97%', source: 'CFPB Consumer Response Annual Report, 2024' },
-      { label: 'Consumers who got relief through CFPB', value: '1 in 5', source: 'CFPB, 2024' },
-      { label: 'Money returned to consumers by CFPB', value: '$20.7B+', source: 'CFPB cumulative through 2024' },
+      {
+        label: "CFPB complaints with company response",
+        value: "97%",
+        source: "CFPB Consumer Response Annual Report, 2024",
+      },
+      { label: "Consumers who got relief through CFPB", value: "1 in 5", source: "CFPB, 2024" },
+      { label: "Money returned to consumers by CFPB", value: "$20.7B+", source: "CFPB cumulative through 2024" },
     ],
   },
   {
-    categoryId: 'insurance',
-    title: 'Insurance Claim Rights & Protections',
-    subtitle: 'How to fight claim denials, lowball settlements, and bad faith insurance practices',
-    lastUpdated: '2026-02-01',
-    introduction: 'Insurance policyholders have powerful legal protections when filing claims, fighting denials, and challenging inadequate settlements. The principle of "utmost good faith" (uberrimae fidei) requires insurance companies to deal fairly with their policyholders — and when they don\'t, state "bad faith" laws provide serious consequences including punitive damages that can far exceed the original claim amount.\n\nWhile insurance is primarily regulated at the state level under the McCarran-Ferguson Act, several federal laws provide important protections. The Affordable Care Act (ACA) guarantees health insurance rights including the prohibition of pre-existing condition exclusions, mandatory coverage of essential health benefits, and external appeal rights for denied claims. ERISA governs employer-sponsored benefit plans and establishes fiduciary duties and appeal procedures.\n\nState insurance departments are your most important regulatory ally. Every state has an insurance commissioner or superintendent who oversees insurance companies, investigates complaints, and can take enforcement action against companies that engage in unfair claims practices. State unfair claims settlement practices acts typically prohibit: failing to acknowledge claims promptly, not conducting reasonable investigations, denying claims without a stated reason, and offering unreasonably low settlements.\n\nKnowing when an insurance company\'s behavior crosses the line from "aggressive" to "bad faith" is crucial — because bad faith claims can result in damages many times the original policy limits, creating powerful leverage in negotiations.',
+    categoryId: "insurance",
+    title: "Insurance Claim Rights & Protections",
+    subtitle: "How to fight claim denials, lowball settlements, and bad faith insurance practices",
+    lastUpdated: "2026-02-01",
+    introduction:
+      'Insurance policyholders have powerful legal protections when filing claims, fighting denials, and challenging inadequate settlements. The principle of "utmost good faith" (uberrimae fidei) requires insurance companies to deal fairly with their policyholders - and when they don\'t, state "bad faith" laws provide serious consequences including punitive damages that can far exceed the original claim amount.\n\nWhile insurance is primarily regulated at the state level under the McCarran-Ferguson Act, several federal laws provide important protections. The Affordable Care Act (ACA) guarantees health insurance rights including the prohibition of pre-existing condition exclusions, mandatory coverage of essential health benefits, and external appeal rights for denied claims. ERISA governs employer-sponsored benefit plans and establishes fiduciary duties and appeal procedures.\n\nState insurance departments are your most important regulatory ally. Every state has an insurance commissioner or superintendent who oversees insurance companies, investigates complaints, and can take enforcement action against companies that engage in unfair claims practices. State unfair claims settlement practices acts typically prohibit: failing to acknowledge claims promptly, not conducting reasonable investigations, denying claims without a stated reason, and offering unreasonably low settlements.\n\nKnowing when an insurance company\'s behavior crosses the line from "aggressive" to "bad faith" is crucial - because bad faith claims can result in damages many times the original policy limits, creating powerful leverage in negotiations.',
     keyRights: [
-      { title: 'Good Faith Claims Handling', description: 'Insurers have a legal duty to handle claims in good faith — investigating promptly, communicating clearly, and paying valid claims fairly. Failure to do so can trigger "bad faith" liability, which in many states allows for punitive damages, attorney\'s fees, and damages for emotional distress beyond the policy limits.' },
-      { title: 'Written Denial Explanations', description: 'When a claim is denied, insurers must provide a clear, written explanation citing specific policy provisions, exclusions, or factual findings that support the denial. Vague or conclusory denials may themselves constitute bad faith.' },
-      { title: 'Right to Appeal', description: 'You can appeal claim denials through the insurer\'s internal appeals process. For health insurance under the ACA, you also have the right to an independent external review by a third party — and the external reviewer\'s decision is binding on the insurer.' },
-      { title: 'Timely Processing', description: 'State laws typically require insurers to acknowledge claims within 15 days, begin investigation promptly, and make decisions within 30-45 days. Unreasonable delays in processing are a common basis for bad faith claims.' },
-      { title: 'Right to Independent Appraisal', description: 'Most property insurance policies contain an "appraisal clause" that allows either party to demand an independent appraisal when there\'s a disagreement about the value of a loss. This is often faster and cheaper than litigation.' },
-      { title: 'Protection Against Unfair Settlement Practices', description: 'State unfair claims practices acts prohibit insurers from making lowball offers that bear no reasonable relationship to the actual loss, requiring claimants to accept less than the policy limits when liability is clear, and misrepresenting policy terms to reduce payouts.' },
-      { title: 'Pre-Existing Condition Protections', description: 'Under the ACA, health insurers cannot deny coverage, charge higher premiums, or exclude benefits based on pre-existing conditions. This applies to all individual and employer-sponsored group plans.' },
-      { title: 'Free Look Period', description: 'Most states require a "free look" period (typically 10-30 days) after purchasing a new insurance policy, during which you can cancel for a full refund if you\'re not satisfied with the coverage.' },
+      {
+        title: "Good Faith Claims Handling",
+        description:
+          'Insurers have a legal duty to handle claims in good faith - investigating promptly, communicating clearly, and paying valid claims fairly. Failure to do so can trigger "bad faith" liability, which in many states allows for punitive damages, attorney\'s fees, and damages for emotional distress beyond the policy limits.',
+      },
+      {
+        title: "Written Denial Explanations",
+        description:
+          "When a claim is denied, insurers must provide a clear, written explanation citing specific policy provisions, exclusions, or factual findings that support the denial. Vague or conclusory denials may themselves constitute bad faith.",
+      },
+      {
+        title: "Right to Appeal",
+        description:
+          "You can appeal claim denials through the insurer's internal appeals process. For health insurance under the ACA, you also have the right to an independent external review by a third party - and the external reviewer's decision is binding on the insurer.",
+      },
+      {
+        title: "Timely Processing",
+        description:
+          "State laws typically require insurers to acknowledge claims within 15 days, begin investigation promptly, and make decisions within 30-45 days. Unreasonable delays in processing are a common basis for bad faith claims.",
+      },
+      {
+        title: "Right to Independent Appraisal",
+        description:
+          'Most property insurance policies contain an "appraisal clause" that allows either party to demand an independent appraisal when there\'s a disagreement about the value of a loss. This is often faster and cheaper than litigation.',
+      },
+      {
+        title: "Protection Against Unfair Settlement Practices",
+        description:
+          "State unfair claims practices acts prohibit insurers from making lowball offers that bear no reasonable relationship to the actual loss, requiring claimants to accept less than the policy limits when liability is clear, and misrepresenting policy terms to reduce payouts.",
+      },
+      {
+        title: "Pre-Existing Condition Protections",
+        description:
+          "Under the ACA, health insurers cannot deny coverage, charge higher premiums, or exclude benefits based on pre-existing conditions. This applies to all individual and employer-sponsored group plans.",
+      },
+      {
+        title: "Free Look Period",
+        description:
+          'Most states require a "free look" period (typically 10-30 days) after purchasing a new insurance policy, during which you can cancel for a full refund if you\'re not satisfied with the coverage.',
+      },
     ],
     commonIssues: [
-      'Claim denied without a clear, specific explanation citing policy language',
-      'Lowball settlement offers that don\'t cover the actual cost of repairs or losses',
-      'Unreasonable delays in processing claims — months of investigation for straightforward losses',
-      'Adjuster misrepresenting policy coverage or exclusions',
-      'Insurer cancelling or non-renewing policy after filing a legitimate claim',
-      'Requiring unnecessary documentation or repetitive inspections to delay payment',
-      'Health insurance denying coverage for medically necessary procedures',
-      'Auto insurer using aftermarket or salvage parts for repairs instead of OEM parts',
-      'Insurer claiming pre-existing damage to reduce property claim payouts',
-      'Life insurance claim denied based on alleged material misrepresentation on the application',
+      "Claim denied without a clear, specific explanation citing policy language",
+      "Lowball settlement offers that don't cover the actual cost of repairs or losses",
+      "Unreasonable delays in processing claims - months of investigation for straightforward losses",
+      "Adjuster misrepresenting policy coverage or exclusions",
+      "Insurer cancelling or non-renewing policy after filing a legitimate claim",
+      "Requiring unnecessary documentation or repetitive inspections to delay payment",
+      "Health insurance denying coverage for medically necessary procedures",
+      "Auto insurer using aftermarket or salvage parts for repairs instead of OEM parts",
+      "Insurer claiming pre-existing damage to reduce property claim payouts",
+      "Life insurance claim denied based on alleged material misrepresentation on the application",
     ],
     actionSteps: [
-      'Document every aspect of your claim with photos, videos, receipts, and written records from the very beginning',
-      'Read your policy carefully — understand your coverage limits, deductibles, exclusions, and endorsements',
-      'Request a complete copy of your claims file from the insurer — many states give you the right to see the adjuster\'s notes, photos, and internal communications',
-      'When denied, request a written explanation citing the specific policy provisions, and compare it against your actual policy language',
-      'File a formal internal appeal in writing, addressing every reason given for the denial with evidence',
-      'For health insurance, request an external review — the insurer must comply under ACA rules',
-      'File a complaint with your state insurance department — this creates a regulatory record and often prompts action',
-      'Get independent estimates for property damage — don\'t rely solely on the insurer\'s adjuster',
-      'Consider hiring a public adjuster (for property claims) who works for you, not the insurance company',
-      'Consult an insurance bad faith attorney if the insurer\'s behavior seems unreasonable — many work on contingency',
+      "Document every aspect of your claim with photos, videos, receipts, and written records from the very beginning",
+      "Read your policy carefully - understand your coverage limits, deductibles, exclusions, and endorsements",
+      "Request a complete copy of your claims file from the insurer - many states give you the right to see the adjuster's notes, photos, and internal communications",
+      "When denied, request a written explanation citing the specific policy provisions, and compare it against your actual policy language",
+      "File a formal internal appeal in writing, addressing every reason given for the denial with evidence",
+      "For health insurance, request an external review - the insurer must comply under ACA rules",
+      "File a complaint with your state insurance department - this creates a regulatory record and often prompts action",
+      "Get independent estimates for property damage - don't rely solely on the insurer's adjuster",
+      "Consider hiring a public adjuster (for property claims) who works for you, not the insurance company",
+      "Consult an insurance bad faith attorney if the insurer's behavior seems unreasonable - many work on contingency",
     ],
     importantDeadlines: [
-      '15 days: Typical insurer deadline to acknowledge receipt of a claim',
-      '30-45 days: Common state deadline for insurers to accept or deny a claim after investigation',
-      '180 days: ACA deadline to file an external appeal for denied health insurance claims',
-      '1-2 years: Typical policy deadline to file a proof of loss (check your specific policy)',
-      '1-6 years: Statute of limitations for bad faith insurance claims (varies significantly by state)',
+      "15 days: Typical insurer deadline to acknowledge receipt of a claim",
+      "30-45 days: Common state deadline for insurers to accept or deny a claim after investigation",
+      "180 days: ACA deadline to file an external appeal for denied health insurance claims",
+      "1-2 years: Typical policy deadline to file a proof of loss (check your specific policy)",
+      "1-6 years: Statute of limitations for bad faith insurance claims (varies significantly by state)",
       '10-30 days: "Free look" period to cancel a new insurance policy for a full refund',
-      '60 days: Common deadline to report property damage to your insurer (check your policy)',
+      "60 days: Common deadline to report property damage to your insurer (check your policy)",
     ],
     federalLaws: [
-      { name: 'McCarran-Ferguson Act', citation: '15 U.S.C. §§ 1011-1015', description: 'Establishes that insurance is primarily regulated by states, not the federal government. Gives state insurance laws priority over federal regulation in most cases.' },
-      { name: 'Affordable Care Act (ACA)', citation: '42 U.S.C. § 18001', description: 'Prohibits pre-existing condition exclusions, guarantees essential health benefits, and provides mandatory internal and external appeal rights for denied health insurance claims.', url: 'https://www.healthcare.gov/health-care-law-protections/' },
-      { name: 'Employee Retirement Income Security Act (ERISA)', citation: '29 U.S.C. § 1001', description: 'Governs employer-sponsored health and benefit plans. Establishes fiduciary duties, claims procedures, and appeal rights. Preempts most state law claims against employer plans.' },
-      { name: 'National Flood Insurance Act', citation: '42 U.S.C. § 4001', description: 'Establishes the National Flood Insurance Program (NFIP). Provides federally backed flood insurance in participating communities and sets claims procedures for flood losses.' },
-      { name: 'Terrorism Risk Insurance Act (TRIA)', citation: '15 U.S.C. § 6701 note', description: 'Ensures availability of insurance coverage for acts of terrorism. Requires insurers to offer terrorism coverage and provides a federal backstop for insured losses.' },
+      {
+        name: "McCarran-Ferguson Act",
+        citation: "15 U.S.C. §§ 1011-1015",
+        description:
+          "Establishes that insurance is primarily regulated by states, not the federal government. Gives state insurance laws priority over federal regulation in most cases.",
+      },
+      {
+        name: "Affordable Care Act (ACA)",
+        citation: "42 U.S.C. § 18001",
+        description:
+          "Prohibits pre-existing condition exclusions, guarantees essential health benefits, and provides mandatory internal and external appeal rights for denied health insurance claims.",
+        url: "https://www.healthcare.gov/health-care-law-protections/",
+      },
+      {
+        name: "Employee Retirement Income Security Act (ERISA)",
+        citation: "29 U.S.C. § 1001",
+        description:
+          "Governs employer-sponsored health and benefit plans. Establishes fiduciary duties, claims procedures, and appeal rights. Preempts most state law claims against employer plans.",
+      },
+      {
+        name: "National Flood Insurance Act",
+        citation: "42 U.S.C. § 4001",
+        description:
+          "Establishes the National Flood Insurance Program (NFIP). Provides federally backed flood insurance in participating communities and sets claims procedures for flood losses.",
+      },
+      {
+        name: "Terrorism Risk Insurance Act (TRIA)",
+        citation: "15 U.S.C. § 6701 note",
+        description:
+          "Ensures availability of insurance coverage for acts of terrorism. Requires insurers to offer terrorism coverage and provides a federal backstop for insured losses.",
+      },
     ],
     faqItems: [
-      { question: 'What should I do immediately after my insurance claim is denied?', answer: 'Don\'t panic — denials are not final. First, request the complete denial letter citing specific policy provisions. Compare those provisions against your actual policy language. Then file a formal internal appeal in writing, addressing every reason for denial point by point with supporting evidence. Keep copies of everything. For health insurance, you\'re entitled to two levels of internal appeal plus an independent external review under the ACA. For property/auto claims, consider getting independent estimates and filing a complaint with your state insurance department.' },
-      { question: 'What constitutes "bad faith" by an insurance company?', answer: 'Bad faith occurs when an insurer unreasonably refuses to pay a valid claim, fails to properly investigate, deliberately delays processing, misrepresents policy terms, or offers an unreasonably low settlement. Specific examples include: denying a claim without investigation, requiring excessive documentation to delay payment, threatening to cancel your policy if you don\'t accept a low offer, and failing to inform you of time-sensitive deadlines. Bad faith claims can result in damages far exceeding your policy limits, including punitive damages and attorney\'s fees.' },
-      { question: 'Should I accept the insurance company\'s first settlement offer?', answer: 'Almost never. The first offer is typically the lowest the insurer believes you\'ll accept. For property damage, get independent repair estimates from licensed contractors — not just the insurer\'s preferred vendors. For auto claims, research the fair market value of your vehicle using multiple sources (KBB, NADA, local listings). For injury claims, don\'t settle until you\'ve reached maximum medical improvement. Counter-offer in writing with documentation supporting your valuation.' },
-      { question: 'Can my insurance company cancel my policy after I file a claim?', answer: 'Insurers generally cannot cancel a policy mid-term solely because you filed a claim — but they can choose not to renew it when the current term ends. However, state laws often limit non-renewal practices, requiring adequate notice (typically 30-60 days) and prohibiting non-renewal based on a single claim. If your insurer does non-renew, file a complaint with your state insurance department and shop for coverage immediately — specialized "non-standard" carriers may provide coverage.' },
-      { question: 'How do I appeal a denied health insurance claim?', answer: 'Under the ACA, you have the right to two levels of internal appeal, followed by an independent external review. For the internal appeal, submit in writing within 180 days of the denial, include your doctor\'s supporting documentation, and cite medical necessity guidelines. If both internal appeals fail, request an external review — an independent third-party reviewer will evaluate your case, and their decision is binding on the insurer. Many states also allow you to request an expedited review for urgent situations.' },
-      { question: 'What is a public adjuster and should I hire one?', answer: 'A public adjuster is a licensed professional who works for YOU (not the insurance company) to evaluate damage, document your claim, and negotiate with the insurer. They typically charge 10-15% of the settlement. Hiring one makes sense for large or complex property claims (typically over $10,000-$15,000), cases where the insurer\'s initial offer seems unreasonably low, or when you don\'t have the time or expertise to negotiate. They\'re particularly valuable for fire, water damage, and natural disaster claims.' },
+      {
+        question: "What should I do immediately after my insurance claim is denied?",
+        answer:
+          "Don't panic - denials are not final. First, request the complete denial letter citing specific policy provisions. Compare those provisions against your actual policy language. Then file a formal internal appeal in writing, addressing every reason for denial point by point with supporting evidence. Keep copies of everything. For health insurance, you're entitled to two levels of internal appeal plus an independent external review under the ACA. For property/auto claims, consider getting independent estimates and filing a complaint with your state insurance department.",
+      },
+      {
+        question: 'What constitutes "bad faith" by an insurance company?',
+        answer:
+          "Bad faith occurs when an insurer unreasonably refuses to pay a valid claim, fails to properly investigate, deliberately delays processing, misrepresents policy terms, or offers an unreasonably low settlement. Specific examples include: denying a claim without investigation, requiring excessive documentation to delay payment, threatening to cancel your policy if you don't accept a low offer, and failing to inform you of time-sensitive deadlines. Bad faith claims can result in damages far exceeding your policy limits, including punitive damages and attorney's fees.",
+      },
+      {
+        question: "Should I accept the insurance company's first settlement offer?",
+        answer:
+          "Almost never. The first offer is typically the lowest the insurer believes you'll accept. For property damage, get independent repair estimates from licensed contractors - not just the insurer's preferred vendors. For auto claims, research the fair market value of your vehicle using multiple sources (KBB, NADA, local listings). For injury claims, don't settle until you've reached maximum medical improvement. Counter-offer in writing with documentation supporting your valuation.",
+      },
+      {
+        question: "Can my insurance company cancel my policy after I file a claim?",
+        answer:
+          'Insurers generally cannot cancel a policy mid-term solely because you filed a claim - but they can choose not to renew it when the current term ends. However, state laws often limit non-renewal practices, requiring adequate notice (typically 30-60 days) and prohibiting non-renewal based on a single claim. If your insurer does non-renew, file a complaint with your state insurance department and shop for coverage immediately - specialized "non-standard" carriers may provide coverage.',
+      },
+      {
+        question: "How do I appeal a denied health insurance claim?",
+        answer:
+          "Under the ACA, you have the right to two levels of internal appeal, followed by an independent external review. For the internal appeal, submit in writing within 180 days of the denial, include your doctor's supporting documentation, and cite medical necessity guidelines. If both internal appeals fail, request an external review - an independent third-party reviewer will evaluate your case, and their decision is binding on the insurer. Many states also allow you to request an expedited review for urgent situations.",
+      },
+      {
+        question: "What is a public adjuster and should I hire one?",
+        answer:
+          "A public adjuster is a licensed professional who works for YOU (not the insurance company) to evaluate damage, document your claim, and negotiate with the insurer. They typically charge 10-15% of the settlement. Hiring one makes sense for large or complex property claims (typically over $10,000-$15,000), cases where the insurer's initial offer seems unreasonably low, or when you don't have the time or expertise to negotiate. They're particularly valuable for fire, water damage, and natural disaster claims.",
+      },
     ],
     warningSigns: [
-      'Adjuster pressures you to sign a release or accept a settlement quickly, especially after a loss when you\'re stressed',
-      'Insurer delays for months without clear communication about your claim status',
-      'Claims adjuster tells you verbally that something isn\'t covered but won\'t put it in writing',
-      'Insurer sends multiple adjusters or re-inspects repeatedly without making a decision',
-      'Settlement offer seems dramatically lower than your independent estimates',
-      'Insurer suddenly reinterprets policy language that seemed clear when you purchased the coverage',
-      'Company requires you to use their preferred contractors or repair shops exclusively',
-      'Adjuster discourages you from hiring your own expert, attorney, or public adjuster',
+      "Adjuster pressures you to sign a release or accept a settlement quickly, especially after a loss when you're stressed",
+      "Insurer delays for months without clear communication about your claim status",
+      "Claims adjuster tells you verbally that something isn't covered but won't put it in writing",
+      "Insurer sends multiple adjusters or re-inspects repeatedly without making a decision",
+      "Settlement offer seems dramatically lower than your independent estimates",
+      "Insurer suddenly reinterprets policy language that seemed clear when you purchased the coverage",
+      "Company requires you to use their preferred contractors or repair shops exclusively",
+      "Adjuster discourages you from hiring your own expert, attorney, or public adjuster",
     ],
     proTips: [
-      'Read your entire policy BEFORE you need to file a claim — understanding your coverage, exclusions, and deadlines in advance gives you a strategic advantage',
-      'Create a home inventory with photos, receipts, and serial numbers — store it in the cloud or a safety deposit box so it survives any disaster',
-      'When filing a claim, provide detailed documentation but don\'t volunteer information the insurer doesn\'t ask for — let them investigate rather than giving them potential denial reasons',
-      'Get at least two independent repair/damage estimates before the insurance adjuster visits — knowing the true cost strengthens your negotiating position',
-      'If the insurer\'s offer seems low, invoke the policy\'s appraisal clause (for property claims) — it\'s cheaper and faster than litigation',
-      'Keep a detailed claim diary: every phone call (who, when, what was said), every document sent and received, every promise made — this becomes powerful evidence in a bad faith claim',
+      "Read your entire policy BEFORE you need to file a claim - understanding your coverage, exclusions, and deadlines in advance gives you a strategic advantage",
+      "Create a home inventory with photos, receipts, and serial numbers - store it in the cloud or a safety deposit box so it survives any disaster",
+      "When filing a claim, provide detailed documentation but don't volunteer information the insurer doesn't ask for - let them investigate rather than giving them potential denial reasons",
+      "Get at least two independent repair/damage estimates before the insurance adjuster visits - knowing the true cost strengthens your negotiating position",
+      "If the insurer's offer seems low, invoke the policy's appraisal clause (for property claims) - it's cheaper and faster than litigation",
+      "Keep a detailed claim diary: every phone call (who, when, what was said), every document sent and received, every promise made - this becomes powerful evidence in a bad faith claim",
     ],
     regulatoryContacts: [
-      { name: 'State Insurance Commissioner', description: 'File complaints about claim denials, delays, and unfair practices. Each state has a Department of Insurance.', url: 'https://content.naic.org/state-insurance-departments', phone: 'Varies by state' },
-      { name: 'National Association of Insurance Commissioners (NAIC)', description: 'Find your state regulator and access consumer resources.', url: 'https://content.naic.org/consumer.htm' },
-      { name: 'CMS (for Medicare/Medicaid)', description: 'Appeal Medicare Advantage or Part D coverage denials.', url: 'https://www.cms.gov/Medicare/Appeals-and-Grievances', phone: '1-800-633-4227' },
-      { name: 'State Attorney General', description: 'Investigate insurance companies engaging in systematic bad faith practices.', url: 'https://www.usa.gov/state-attorney-general' },
+      {
+        name: "State Insurance Commissioner",
+        description:
+          "File complaints about claim denials, delays, and unfair practices. Each state has a Department of Insurance.",
+        url: "https://content.naic.org/state-insurance-departments",
+        phone: "Varies by state",
+      },
+      {
+        name: "National Association of Insurance Commissioners (NAIC)",
+        description: "Find your state regulator and access consumer resources.",
+        url: "https://content.naic.org/consumer.htm",
+      },
+      {
+        name: "CMS (for Medicare/Medicaid)",
+        description: "Appeal Medicare Advantage or Part D coverage denials.",
+        url: "https://www.cms.gov/Medicare/Appeals-and-Grievances",
+        phone: "1-800-633-4227",
+      },
+      {
+        name: "State Attorney General",
+        description: "Investigate insurance companies engaging in systematic bad faith practices.",
+        url: "https://www.usa.gov/state-attorney-general",
+      },
     ],
     stateVariations: [
-      { state: 'California', detail: 'Proposition 103 requires prior approval for rate increases. Strong bad faith penalties including punitive damages with no cap.' },
-      { state: 'Florida', detail: 'Frequent homeowners insurance disputes due to hurricanes. Citizens Property Insurance provides last-resort coverage. Strict timelines for claim handling.' },
-      { state: 'Texas', detail: 'Prompt Payment of Claims Act requires insurers to accept or deny claims within 15 business days. Penalties of 18% annual interest on late payments.' },
-      { state: 'New York', detail: 'Regulation 64 provides strong protections for auto insurance claims. External appeal rights for health insurance that predate the ACA.' },
+      {
+        state: "California",
+        detail:
+          "Proposition 103 requires prior approval for rate increases. Strong bad faith penalties including punitive damages with no cap.",
+      },
+      {
+        state: "Florida",
+        detail:
+          "Frequent homeowners insurance disputes due to hurricanes. Citizens Property Insurance provides last-resort coverage. Strict timelines for claim handling.",
+      },
+      {
+        state: "Texas",
+        detail:
+          "Prompt Payment of Claims Act requires insurers to accept or deny claims within 15 business days. Penalties of 18% annual interest on late payments.",
+      },
+      {
+        state: "New York",
+        detail:
+          "Regulation 64 provides strong protections for auto insurance claims. External appeal rights for health insurance that predate the ACA.",
+      },
     ],
     statSnapshot: [
-      { label: 'Insurance complaints filed annually with state regulators', value: '280,000+', source: 'NAIC Market Conduct Annual Statement, 2024' },
-      { label: 'Health insurance claim denials overturned on appeal', value: '~50%', source: 'HealthCare.gov, 2024' },
-      { label: 'Average bad faith insurance settlement', value: '$30,000+', source: 'Insurance Research Council' },
+      {
+        label: "Insurance complaints filed annually with state regulators",
+        value: "280,000+",
+        source: "NAIC Market Conduct Annual Statement, 2024",
+      },
+      { label: "Health insurance claim denials overturned on appeal", value: "~50%", source: "HealthCare.gov, 2024" },
+      { label: "Average bad faith insurance settlement", value: "$30,000+", source: "Insurance Research Council" },
     ],
   },
   {
-    categoryId: 'vehicle',
-    title: 'Vehicle Buyer & Owner Rights',
-    subtitle: 'Lemon laws, dealer fraud protections, and your rights during auto transactions',
-    lastUpdated: '2026-02-01',
-    introduction: 'Vehicle purchases are among the largest consumer transactions most people make, and both federal and state laws provide extensive protections against fraud, defective vehicles, and unfair dealer practices. Every state has some form of lemon law that provides remedies when a new vehicle has repeated, unfixable defects — typically requiring a refund or replacement after a reasonable number of repair attempts.\n\nThe Federal Odometer Act makes it a federal crime to tamper with a vehicle\'s odometer or to misrepresent the mileage during a sale. The FTC\'s Used Car Rule requires dealers to display a Buyers Guide on every used vehicle, disclosing whether the vehicle is sold "as is" or with a warranty, and what major systems are covered. The Truth in Lending Act (TILA) requires auto lenders to clearly disclose loan terms including APR, finance charges, and total payment amounts.\n\nState consumer protection laws add significant protections, including requirements for dealers to disclose prior accident damage, flood damage, salvage title history, and frame damage. Many states also provide a brief cooling-off period for certain auto purchases and limit dealer markup on financing.\n\nFor vehicle repairs, most states have auto repair acts that require written estimates, customer authorization before work begins, and return of replaced parts upon request. Understanding these rights can save you thousands of dollars and protect you from unscrupulous dealers and repair shops.',
+    categoryId: "vehicle",
+    title: "Vehicle Buyer & Owner Rights",
+    subtitle: "Lemon laws, dealer fraud protections, and your rights during auto transactions",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Vehicle purchases are among the largest consumer transactions most people make, and both federal and state laws provide extensive protections against fraud, defective vehicles, and unfair dealer practices. Every state has some form of lemon law that provides remedies when a new vehicle has repeated, unfixable defects - typically requiring a refund or replacement after a reasonable number of repair attempts.\n\nThe Federal Odometer Act makes it a federal crime to tamper with a vehicle's odometer or to misrepresent the mileage during a sale. The FTC's Used Car Rule requires dealers to display a Buyers Guide on every used vehicle, disclosing whether the vehicle is sold \"as is\" or with a warranty, and what major systems are covered. The Truth in Lending Act (TILA) requires auto lenders to clearly disclose loan terms including APR, finance charges, and total payment amounts.\n\nState consumer protection laws add significant protections, including requirements for dealers to disclose prior accident damage, flood damage, salvage title history, and frame damage. Many states also provide a brief cooling-off period for certain auto purchases and limit dealer markup on financing.\n\nFor vehicle repairs, most states have auto repair acts that require written estimates, customer authorization before work begins, and return of replaced parts upon request. Understanding these rights can save you thousands of dollars and protect you from unscrupulous dealers and repair shops.",
     keyRights: [
-      { title: 'Lemon Law Protections', description: 'Every state has a lemon law covering new vehicles with substantial defects that the manufacturer cannot repair after a reasonable number of attempts (typically 3-4 repair attempts for the same issue, or 30+ days out of service). Remedies include a full refund (minus a reasonable use allowance) or a comparable replacement vehicle.' },
-      { title: 'Odometer Fraud Protection', description: 'The Federal Odometer Act requires accurate odometer disclosure on the title at every transfer. Tampering with or disconnecting an odometer is a federal crime punishable by up to $100,000 in fines and 3 years imprisonment. Victims can sue for treble damages (3x actual damages) plus attorney\'s fees.' },
-      { title: 'Used Car Buyers Guide', description: 'FTC\'s Used Car Rule requires dealers to post a Buyers Guide on every used vehicle disclosing warranty coverage (or "as is" status), what percentage of repair costs the dealer will pay, and the major systems covered. The Guide becomes part of the sale contract.' },
-      { title: 'Disclosure of Vehicle History', description: 'Dealers must disclose known material defects, prior accident damage, flood damage, salvage or rebuilt titles, and odometer discrepancies. Failure to disclose is fraud under state consumer protection laws and can result in the sale being rescinded.' },
-      { title: 'Written Repair Estimates', description: 'Most states require repair shops to provide written estimates before beginning work, obtain your authorization for any additional repairs, and return replaced parts upon request. Shops cannot charge significantly more than the estimate without your approval.' },
-      { title: 'TILA Auto Loan Disclosures', description: 'Auto lenders must disclose the APR, total finance charge, amount financed, total of payments, and payment schedule in writing before you sign. Dealer markup on the interest rate ("dealer reserve") must be reasonable and is regulated in some states.' },
-      { title: 'Warranty Cannot Be Voided by Aftermarket Parts', description: 'Under the Magnuson-Moss Warranty Act, manufacturers cannot void your warranty simply because you installed aftermarket parts, used non-dealer repair services, or didn\'t get every oil change at the dealership. They must prove the aftermarket part caused the specific defect.' },
-      { title: 'Right to Rescind for Fraud', description: 'If a dealer committed fraud during the sale — misrepresenting the vehicle\'s condition, history, or financing terms — you may be entitled to rescind the entire transaction and recover your money, plus damages for any losses caused by the fraud.' },
+      {
+        title: "Lemon Law Protections",
+        description:
+          "Every state has a lemon law covering new vehicles with substantial defects that the manufacturer cannot repair after a reasonable number of attempts (typically 3-4 repair attempts for the same issue, or 30+ days out of service). Remedies include a full refund (minus a reasonable use allowance) or a comparable replacement vehicle.",
+      },
+      {
+        title: "Odometer Fraud Protection",
+        description:
+          "The Federal Odometer Act requires accurate odometer disclosure on the title at every transfer. Tampering with or disconnecting an odometer is a federal crime punishable by up to $100,000 in fines and 3 years imprisonment. Victims can sue for treble damages (3x actual damages) plus attorney's fees.",
+      },
+      {
+        title: "Used Car Buyers Guide",
+        description:
+          'FTC\'s Used Car Rule requires dealers to post a Buyers Guide on every used vehicle disclosing warranty coverage (or "as is" status), what percentage of repair costs the dealer will pay, and the major systems covered. The Guide becomes part of the sale contract.',
+      },
+      {
+        title: "Disclosure of Vehicle History",
+        description:
+          "Dealers must disclose known material defects, prior accident damage, flood damage, salvage or rebuilt titles, and odometer discrepancies. Failure to disclose is fraud under state consumer protection laws and can result in the sale being rescinded.",
+      },
+      {
+        title: "Written Repair Estimates",
+        description:
+          "Most states require repair shops to provide written estimates before beginning work, obtain your authorization for any additional repairs, and return replaced parts upon request. Shops cannot charge significantly more than the estimate without your approval.",
+      },
+      {
+        title: "TILA Auto Loan Disclosures",
+        description:
+          'Auto lenders must disclose the APR, total finance charge, amount financed, total of payments, and payment schedule in writing before you sign. Dealer markup on the interest rate ("dealer reserve") must be reasonable and is regulated in some states.',
+      },
+      {
+        title: "Warranty Cannot Be Voided by Aftermarket Parts",
+        description:
+          "Under the Magnuson-Moss Warranty Act, manufacturers cannot void your warranty simply because you installed aftermarket parts, used non-dealer repair services, or didn't get every oil change at the dealership. They must prove the aftermarket part caused the specific defect.",
+      },
+      {
+        title: "Right to Rescind for Fraud",
+        description:
+          "If a dealer committed fraud during the sale - misrepresenting the vehicle's condition, history, or financing terms - you may be entitled to rescind the entire transaction and recover your money, plus damages for any losses caused by the fraud.",
+      },
     ],
     commonIssues: [
-      'Undisclosed prior accident damage, flood damage, or frame damage',
-      'Odometer rollback or discrepancy between title and actual mileage',
-      'Dealer refusing to honor written warranty or certified pre-owned commitments',
-      'Persistent mechanical problems in a new vehicle that the dealer can\'t fix',
-      'Unauthorized repair charges — work performed without your approval',
-      'Yo-yo financing — dealer calls days after purchase claiming the financing "fell through" and demanding new terms',
-      'Dealer adding hidden fees not disclosed before signing (documentation fees, preparation charges, VIN etching)',
-      'Trade-in payoff not being made as promised, damaging your credit',
+      "Undisclosed prior accident damage, flood damage, or frame damage",
+      "Odometer rollback or discrepancy between title and actual mileage",
+      "Dealer refusing to honor written warranty or certified pre-owned commitments",
+      "Persistent mechanical problems in a new vehicle that the dealer can't fix",
+      "Unauthorized repair charges - work performed without your approval",
+      'Yo-yo financing - dealer calls days after purchase claiming the financing "fell through" and demanding new terms',
+      "Dealer adding hidden fees not disclosed before signing (documentation fees, preparation charges, VIN etching)",
+      "Trade-in payoff not being made as promised, damaging your credit",
       'Vehicle sold "as is" but with known safety defects that weren\'t disclosed',
-      'Deceptive advertising — advertised price doesn\'t include mandatory add-ons',
+      "Deceptive advertising - advertised price doesn't include mandatory add-ons",
     ],
     actionSteps: [
-      'Get a vehicle history report (Carfax, AutoCheck) AND have an independent mechanic inspect the vehicle before purchasing',
-      'Keep ALL repair records, receipts, and work orders — organized by date for warranty and lemon law claims',
-      'Document recurring problems with photos, videos, and detailed written descriptions of symptoms',
-      'Send formal lemon law notice to the manufacturer via certified mail — most state lemon laws require written notice before you can seek a refund',
-      'Report dealer fraud to your state attorney general\'s auto fraud division',
-      'For financing disputes, review your TILA disclosure documents and compare the terms to what was discussed',
-      'File complaints with your state DMV and the FTC for dealer violations',
-      'For repair disputes, get a second opinion from an independent ASE-certified mechanic',
-      'If you suspect odometer fraud, report it to NHTSA and your state attorney general',
-      'Consider your state\'s auto arbitration program — many states offer free or low-cost arbitration for lemon law disputes',
+      "Get a vehicle history report (Carfax, AutoCheck) AND have an independent mechanic inspect the vehicle before purchasing",
+      "Keep ALL repair records, receipts, and work orders - organized by date for warranty and lemon law claims",
+      "Document recurring problems with photos, videos, and detailed written descriptions of symptoms",
+      "Send formal lemon law notice to the manufacturer via certified mail - most state lemon laws require written notice before you can seek a refund",
+      "Report dealer fraud to your state attorney general's auto fraud division",
+      "For financing disputes, review your TILA disclosure documents and compare the terms to what was discussed",
+      "File complaints with your state DMV and the FTC for dealer violations",
+      "For repair disputes, get a second opinion from an independent ASE-certified mechanic",
+      "If you suspect odometer fraud, report it to NHTSA and your state attorney general",
+      "Consider your state's auto arbitration program - many states offer free or low-cost arbitration for lemon law disputes",
     ],
     importantDeadlines: [
-      '1-2 years or 12,000-24,000 miles: Typical lemon law coverage window (varies significantly by state)',
-      '3-4 repair attempts: Common threshold for lemon law claims (for the same defect)',
-      '30 cumulative days out of service: Alternative lemon law trigger in many states',
-      '10 days: Some states allow contract cancellation for used car purchases',
-      '3 years: Federal Odometer Act statute of limitations',
-      '4-6 years: Typical state statute of limitations for auto fraud claims',
-      '30 days: Many states require lemon law written notice to manufacturer before filing claim',
-      '60 days: Credit card dispute deadline for auto-related charges',
+      "1-2 years or 12,000-24,000 miles: Typical lemon law coverage window (varies significantly by state)",
+      "3-4 repair attempts: Common threshold for lemon law claims (for the same defect)",
+      "30 cumulative days out of service: Alternative lemon law trigger in many states",
+      "10 days: Some states allow contract cancellation for used car purchases",
+      "3 years: Federal Odometer Act statute of limitations",
+      "4-6 years: Typical state statute of limitations for auto fraud claims",
+      "30 days: Many states require lemon law written notice to manufacturer before filing claim",
+      "60 days: Credit card dispute deadline for auto-related charges",
     ],
     federalLaws: [
-      { name: 'Federal Odometer Act', citation: '49 U.S.C. §§ 32701-32711', description: 'Prohibits odometer tampering, disconnection, or resetting. Requires accurate odometer disclosure at every title transfer. Provides treble damages for victims of odometer fraud.' },
-      { name: 'FTC Used Car Rule', citation: '16 CFR Part 455', description: 'Requires dealers to display a Buyers Guide on every used car showing warranty terms or "as is" status. The Guide becomes part of the sale contract and overrides any contrary provisions.' },
-      { name: 'Magnuson-Moss Warranty Act (Auto)', citation: '15 U.S.C. §§ 2301-2312', description: 'Prevents manufacturers from voiding warranties for aftermarket parts or independent repairs. Requires clear warranty terms and provides remedies for warranty breaches.' },
-      { name: 'Truth in Lending Act (Auto Loans)', citation: '15 U.S.C. § 1601', description: 'Requires auto lenders to disclose APR, finance charges, payment schedule, and total cost. Gives consumers the right to know the true cost of financing before signing.' },
-      { name: 'Motor Vehicle Information and Cost Savings Act', citation: '49 U.S.C. § 32101', description: 'Requires disclosure of vehicle information including bumper standards, insurance costs, and damage susceptibility. Supports informed consumer purchasing decisions.' },
+      {
+        name: "Federal Odometer Act",
+        citation: "49 U.S.C. §§ 32701-32711",
+        description:
+          "Prohibits odometer tampering, disconnection, or resetting. Requires accurate odometer disclosure at every title transfer. Provides treble damages for victims of odometer fraud.",
+      },
+      {
+        name: "FTC Used Car Rule",
+        citation: "16 CFR Part 455",
+        description:
+          'Requires dealers to display a Buyers Guide on every used car showing warranty terms or "as is" status. The Guide becomes part of the sale contract and overrides any contrary provisions.',
+      },
+      {
+        name: "Magnuson-Moss Warranty Act (Auto)",
+        citation: "15 U.S.C. §§ 2301-2312",
+        description:
+          "Prevents manufacturers from voiding warranties for aftermarket parts or independent repairs. Requires clear warranty terms and provides remedies for warranty breaches.",
+      },
+      {
+        name: "Truth in Lending Act (Auto Loans)",
+        citation: "15 U.S.C. § 1601",
+        description:
+          "Requires auto lenders to disclose APR, finance charges, payment schedule, and total cost. Gives consumers the right to know the true cost of financing before signing.",
+      },
+      {
+        name: "Motor Vehicle Information and Cost Savings Act",
+        citation: "49 U.S.C. § 32101",
+        description:
+          "Requires disclosure of vehicle information including bumper standards, insurance costs, and damage susceptibility. Supports informed consumer purchasing decisions.",
+      },
     ],
     faqItems: [
-      { question: 'What qualifies my car as a "lemon"?', answer: 'While specific requirements vary by state, a vehicle typically qualifies as a lemon when: (1) It has a substantial defect covered by the manufacturer\'s warranty; (2) The defect was reported within the lemon law coverage period (usually 1-2 years or 12,000-24,000 miles); (3) The manufacturer or dealer has had a reasonable number of attempts to repair it (usually 3-4 for the same defect, or 30+ cumulative days out of service); (4) The defect substantially impairs the vehicle\'s use, value, or safety. Most lemon laws cover new vehicles, though some states extend protections to used vehicles and leased vehicles.' },
-      { question: 'Can a dealer sell me a car "as is" with no warranty?', answer: 'For used cars — yes, in most states, dealers can sell vehicles "as is" (no warranty). The FTC\'s Used Car Rule requires this to be clearly disclosed on the Buyers Guide posted in the vehicle\'s window. However, "as is" does NOT mean the dealer can hide known defects. Dealers must still disclose known material issues like prior accident damage, flood damage, frame damage, and odometer discrepancies. Selling a vehicle "as is" while knowing about and concealing defects is fraud. Also, some states prohibit "as is" sales entirely or impose minimum warranty requirements.' },
-      { question: 'What is "yo-yo financing" and what can I do about it?', answer: 'Yo-yo financing (spot delivery) occurs when a dealer lets you drive off with the vehicle before financing is finalized, then calls days or weeks later claiming the financing "fell through" and demanding you return the vehicle or sign a new contract at less favorable terms. This practice is deceptive and may be illegal in your state. Options: (1) Return the vehicle and demand a refund of your down payment and trade-in; (2) Refuse the new terms and insist the dealer honor the original contract; (3) File a complaint with your state AG and the CFPB.' },
-      { question: 'Can a manufacturer void my warranty for using aftermarket parts?', answer: 'No. The Magnuson-Moss Warranty Act prohibits manufacturers from conditioning warranty coverage on the use of only their branded parts or authorized repair services. The FTC has specifically warned manufacturers against "warranty voiding" practices. However, if the manufacturer can prove that a specific aftermarket part directly caused the defect, they can deny that particular warranty claim. The burden of proof is on the manufacturer, not you.' },
-      { question: 'How do I check for odometer fraud before buying a used car?', answer: 'Get a vehicle history report from Carfax or AutoCheck — these compile odometer readings from DMV records, repair shops, inspections, and insurance claims. Compare the reported mileage to the current odometer reading. Look for physical signs: excessive wear on pedals, steering wheel, and seats inconsistent with low mileage. Check the title for odometer disclosure discrepancies. Have an independent mechanic inspect the vehicle — they can often identify signs of high mileage that contradict a low odometer reading.' },
-      { question: 'What should I do if a repair shop charges more than the estimate?', answer: 'Most state auto repair acts require shops to get your authorization before exceeding the written estimate (typically by more than 10%). If the shop performed unauthorized work or charged significantly more than quoted: (1) Refuse to pay the excess amount and pay only the authorized amount; (2) Request your old parts back (most states require shops to return them); (3) File a complaint with your state consumer protection office or the Bureau of Automotive Repair; (4) Leave a detailed review to warn others; (5) If they hold your car, know that many states limit the amount a shop can charge for storage while a billing dispute is pending.' },
+      {
+        question: 'What qualifies my car as a "lemon"?',
+        answer:
+          "While specific requirements vary by state, a vehicle typically qualifies as a lemon when: (1) It has a substantial defect covered by the manufacturer's warranty; (2) The defect was reported within the lemon law coverage period (usually 1-2 years or 12,000-24,000 miles); (3) The manufacturer or dealer has had a reasonable number of attempts to repair it (usually 3-4 for the same defect, or 30+ cumulative days out of service); (4) The defect substantially impairs the vehicle's use, value, or safety. Most lemon laws cover new vehicles, though some states extend protections to used vehicles and leased vehicles.",
+      },
+      {
+        question: 'Can a dealer sell me a car "as is" with no warranty?',
+        answer:
+          'For used cars - yes, in most states, dealers can sell vehicles "as is" (no warranty). The FTC\'s Used Car Rule requires this to be clearly disclosed on the Buyers Guide posted in the vehicle\'s window. However, "as is" does NOT mean the dealer can hide known defects. Dealers must still disclose known material issues like prior accident damage, flood damage, frame damage, and odometer discrepancies. Selling a vehicle "as is" while knowing about and concealing defects is fraud. Also, some states prohibit "as is" sales entirely or impose minimum warranty requirements.',
+      },
+      {
+        question: 'What is "yo-yo financing" and what can I do about it?',
+        answer:
+          'Yo-yo financing (spot delivery) occurs when a dealer lets you drive off with the vehicle before financing is finalized, then calls days or weeks later claiming the financing "fell through" and demanding you return the vehicle or sign a new contract at less favorable terms. This practice is deceptive and may be illegal in your state. Options: (1) Return the vehicle and demand a refund of your down payment and trade-in; (2) Refuse the new terms and insist the dealer honor the original contract; (3) File a complaint with your state AG and the CFPB.',
+      },
+      {
+        question: "Can a manufacturer void my warranty for using aftermarket parts?",
+        answer:
+          'No. The Magnuson-Moss Warranty Act prohibits manufacturers from conditioning warranty coverage on the use of only their branded parts or authorized repair services. The FTC has specifically warned manufacturers against "warranty voiding" practices. However, if the manufacturer can prove that a specific aftermarket part directly caused the defect, they can deny that particular warranty claim. The burden of proof is on the manufacturer, not you.',
+      },
+      {
+        question: "How do I check for odometer fraud before buying a used car?",
+        answer:
+          "Get a vehicle history report from Carfax or AutoCheck - these compile odometer readings from DMV records, repair shops, inspections, and insurance claims. Compare the reported mileage to the current odometer reading. Look for physical signs: excessive wear on pedals, steering wheel, and seats inconsistent with low mileage. Check the title for odometer disclosure discrepancies. Have an independent mechanic inspect the vehicle - they can often identify signs of high mileage that contradict a low odometer reading.",
+      },
+      {
+        question: "What should I do if a repair shop charges more than the estimate?",
+        answer:
+          "Most state auto repair acts require shops to get your authorization before exceeding the written estimate (typically by more than 10%). If the shop performed unauthorized work or charged significantly more than quoted: (1) Refuse to pay the excess amount and pay only the authorized amount; (2) Request your old parts back (most states require shops to return them); (3) File a complaint with your state consumer protection office or the Bureau of Automotive Repair; (4) Leave a detailed review to warn others; (5) If they hold your car, know that many states limit the amount a shop can charge for storage while a billing dispute is pending.",
+      },
     ],
     warningSigns: [
-      'Dealer pressures you to sign before reading the contract or refuse to let you take paperwork home to review',
-      'Vehicle price is significantly below market value — may indicate undisclosed damage, flood history, or salvage title',
-      'Dealer won\'t let you have the vehicle independently inspected before purchase',
-      'Mileage on the odometer doesn\'t match the wear patterns on the vehicle (worn pedals, shiny steering wheel, saggy seats)',
-      'Dealer adds fees at signing that weren\'t part of the advertised or negotiated price',
+      "Dealer pressures you to sign before reading the contract or refuse to let you take paperwork home to review",
+      "Vehicle price is significantly below market value - may indicate undisclosed damage, flood history, or salvage title",
+      "Dealer won't let you have the vehicle independently inspected before purchase",
+      "Mileage on the odometer doesn't match the wear patterns on the vehicle (worn pedals, shiny steering wheel, saggy seats)",
+      "Dealer adds fees at signing that weren't part of the advertised or negotiated price",
       'Title shows "salvage," "rebuilt," "flood," or "junk" designation',
       'Dealer says "the financing is done" but the contract has a "subject to financing approval" clause',
-      'Fresh paint, new carpet, or strong air freshener in a used car — may be covering damage, mold, or flood evidence',
+      "Fresh paint, new carpet, or strong air freshener in a used car - may be covering damage, mold, or flood evidence",
     ],
     proTips: [
-      'Always get a pre-purchase inspection from an independent mechanic (not the dealer\'s shop) — the $100-$200 cost can save you thousands',
-      'Negotiate the vehicle price FIRST, then the trade-in value separately, then the financing — dealers use these three numbers together to confuse you',
-      'For lemon law claims, send every repair complaint in writing (even if you also discuss it verbally) — this creates the documentation trail needed for your claim',
-      'Get pre-approved for an auto loan from your bank or credit union before visiting the dealer — this gives you leverage and a baseline to compare dealer financing against',
-      'Take photos of the odometer reading, VIN plate, and title odometer statement at every stage of the purchase',
-      'If a dealer offers "free" extras (VIN etching, paint protection, fabric coating), check your sales contract — they\'re often added as paid items',
+      "Always get a pre-purchase inspection from an independent mechanic (not the dealer's shop) - the $100-$200 cost can save you thousands",
+      "Negotiate the vehicle price FIRST, then the trade-in value separately, then the financing - dealers use these three numbers together to confuse you",
+      "For lemon law claims, send every repair complaint in writing (even if you also discuss it verbally) - this creates the documentation trail needed for your claim",
+      "Get pre-approved for an auto loan from your bank or credit union before visiting the dealer - this gives you leverage and a baseline to compare dealer financing against",
+      "Take photos of the odometer reading, VIN plate, and title odometer statement at every stage of the purchase",
+      'If a dealer offers "free" extras (VIN etching, paint protection, fabric coating), check your sales contract - they\'re often added as paid items',
     ],
   },
   {
-    categoryId: 'healthcare',
-    title: 'Medical Billing & Healthcare Consumer Rights',
-    subtitle: 'Federal protections against surprise bills, wrongful denials, and medical billing errors',
-    lastUpdated: '2026-02-01',
-    introduction: 'Navigating the U.S. healthcare billing system can be overwhelming, but patients have powerful federal and state protections that many never learn about. The No Surprises Act, which took effect in 2022, represents the most significant medical billing reform in decades — protecting patients from unexpected out-of-network charges in emergency situations and at in-network facilities.\n\nThe Affordable Care Act (ACA) guarantees coverage of essential health benefits, prohibits pre-existing condition exclusions, eliminates lifetime coverage caps, and provides mandatory internal and external appeal rights for denied claims. These protections apply to virtually all private health insurance plans.\n\nThe Emergency Medical Treatment and Labor Act (EMTALA) requires all hospitals that participate in Medicare (which is virtually all hospitals) to screen and stabilize any patient who arrives at the emergency room, regardless of their ability to pay or insurance status. Turning away patients based on inability to pay is a federal violation.\n\nHIPAA, while primarily known for privacy protections, also gives patients the right to access their medical records, request corrections, and receive an accounting of disclosures. For medical debt, the Fair Debt Collection Practices Act applies fully, and recent changes to credit reporting rules mean that most medical debt no longer appears on credit reports.',
+    categoryId: "healthcare",
+    title: "Medical Billing & Healthcare Consumer Rights",
+    subtitle: "Federal protections against surprise bills, wrongful denials, and medical billing errors",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Navigating the U.S. healthcare billing system can be overwhelming, but patients have powerful federal and state protections that many never learn about. The No Surprises Act, which took effect in 2022, represents the most significant medical billing reform in decades - protecting patients from unexpected out-of-network charges in emergency situations and at in-network facilities.\n\nThe Affordable Care Act (ACA) guarantees coverage of essential health benefits, prohibits pre-existing condition exclusions, eliminates lifetime coverage caps, and provides mandatory internal and external appeal rights for denied claims. These protections apply to virtually all private health insurance plans.\n\nThe Emergency Medical Treatment and Labor Act (EMTALA) requires all hospitals that participate in Medicare (which is virtually all hospitals) to screen and stabilize any patient who arrives at the emergency room, regardless of their ability to pay or insurance status. Turning away patients based on inability to pay is a federal violation.\n\nHIPAA, while primarily known for privacy protections, also gives patients the right to access their medical records, request corrections, and receive an accounting of disclosures. For medical debt, the Fair Debt Collection Practices Act applies fully, and recent changes to credit reporting rules mean that most medical debt no longer appears on credit reports.",
     keyRights: [
-      { title: 'No Surprises Act Protection', description: 'Protects patients from surprise out-of-network bills in emergency situations and when receiving care at in-network facilities from out-of-network providers (like anesthesiologists or radiologists). You only owe in-network cost-sharing amounts. The provider and insurer must resolve the payment dispute through an independent arbitration process.' },
-      { title: 'Right to Itemized Bills', description: 'You have the right to request a detailed, itemized bill showing every charge — including specific procedure codes (CPT codes), diagnosis codes (ICD-10), medications, supplies, and facility fees. This is essential for identifying billing errors, which studies show appear on up to 80% of medical bills.' },
-      { title: 'EMTALA Emergency Care Rights', description: 'Any hospital with an emergency department that participates in Medicare must screen and stabilize you in an emergency, regardless of your ability to pay, insurance status, citizenship, or any other factor. They cannot delay treatment to verify insurance or demand payment upfront for emergencies.' },
-      { title: 'Insurance Appeal Rights', description: 'Under the ACA, you have the right to two levels of internal appeal for any denied claim, followed by an independent external review. The external reviewer\'s decision is binding on the insurer. For urgent situations, expedited reviews must be completed within 72 hours.' },
-      { title: 'Good Faith Estimates for Uninsured', description: 'Under the No Surprises Act, healthcare providers must give uninsured or self-pay patients a Good Faith Estimate of costs before scheduled services. If the final bill exceeds the estimate by $400 or more, you can dispute it through the HHS patient-provider dispute resolution process.' },
-      { title: 'HIPAA Patient Rights', description: 'You have the right to access your complete medical records within 30 days of request, request corrections to inaccurate records, receive an accounting of who your information was disclosed to, and file complaints with HHS for privacy violations.' },
-      { title: 'Protection from Medical Debt Credit Reporting', description: 'Under updated credit reporting rules, medical debt under $500 and paid medical collections are no longer reported on credit reports. Medical debt cannot appear on credit reports until it\'s at least 1 year old, giving you time to resolve billing disputes and insurance issues.' },
-      { title: 'Hospital Financial Assistance', description: 'Nonprofit hospitals (which represent about 60% of U.S. hospitals) are required under IRS rules to have financial assistance policies and cannot engage in extraordinary collection actions without first determining if the patient qualifies for financial assistance. Many hospitals offer significant discounts or complete forgiveness for qualifying patients.' },
+      {
+        title: "No Surprises Act Protection",
+        description:
+          "Protects patients from surprise out-of-network bills in emergency situations and when receiving care at in-network facilities from out-of-network providers (like anesthesiologists or radiologists). You only owe in-network cost-sharing amounts. The provider and insurer must resolve the payment dispute through an independent arbitration process.",
+      },
+      {
+        title: "Right to Itemized Bills",
+        description:
+          "You have the right to request a detailed, itemized bill showing every charge - including specific procedure codes (CPT codes), diagnosis codes (ICD-10), medications, supplies, and facility fees. This is essential for identifying billing errors, which studies show appear on up to 80% of medical bills.",
+      },
+      {
+        title: "EMTALA Emergency Care Rights",
+        description:
+          "Any hospital with an emergency department that participates in Medicare must screen and stabilize you in an emergency, regardless of your ability to pay, insurance status, citizenship, or any other factor. They cannot delay treatment to verify insurance or demand payment upfront for emergencies.",
+      },
+      {
+        title: "Insurance Appeal Rights",
+        description:
+          "Under the ACA, you have the right to two levels of internal appeal for any denied claim, followed by an independent external review. The external reviewer's decision is binding on the insurer. For urgent situations, expedited reviews must be completed within 72 hours.",
+      },
+      {
+        title: "Good Faith Estimates for Uninsured",
+        description:
+          "Under the No Surprises Act, healthcare providers must give uninsured or self-pay patients a Good Faith Estimate of costs before scheduled services. If the final bill exceeds the estimate by $400 or more, you can dispute it through the HHS patient-provider dispute resolution process.",
+      },
+      {
+        title: "HIPAA Patient Rights",
+        description:
+          "You have the right to access your complete medical records within 30 days of request, request corrections to inaccurate records, receive an accounting of who your information was disclosed to, and file complaints with HHS for privacy violations.",
+      },
+      {
+        title: "Protection from Medical Debt Credit Reporting",
+        description:
+          "Under updated credit reporting rules, medical debt under $500 and paid medical collections are no longer reported on credit reports. Medical debt cannot appear on credit reports until it's at least 1 year old, giving you time to resolve billing disputes and insurance issues.",
+      },
+      {
+        title: "Hospital Financial Assistance",
+        description:
+          "Nonprofit hospitals (which represent about 60% of U.S. hospitals) are required under IRS rules to have financial assistance policies and cannot engage in extraordinary collection actions without first determining if the patient qualifies for financial assistance. Many hospitals offer significant discounts or complete forgiveness for qualifying patients.",
+      },
     ],
     commonIssues: [
-      'Surprise out-of-network charges at in-network facilities (addressed by No Surprises Act)',
-      'Billing errors — duplicate charges, upcoding, charges for services not received',
-      'Insurance claim denials for medically necessary procedures',
-      'Balance billing for emergency room visits',
-      'Medical debt sent to collections before insurance processing is complete',
-      'Hospital refusing to provide a Good Faith Estimate or itemized bill',
-      'Provider coding errors that result in denied claims (wrong CPT or ICD-10 codes)',
-      'Denied claims for mental health services that should be covered under mental health parity laws',
-      'Facility fees charged separately from physician fees without disclosure',
-      'Medical debt collectors violating FDCPA protections',
+      "Surprise out-of-network charges at in-network facilities (addressed by No Surprises Act)",
+      "Billing errors - duplicate charges, upcoding, charges for services not received",
+      "Insurance claim denials for medically necessary procedures",
+      "Balance billing for emergency room visits",
+      "Medical debt sent to collections before insurance processing is complete",
+      "Hospital refusing to provide a Good Faith Estimate or itemized bill",
+      "Provider coding errors that result in denied claims (wrong CPT or ICD-10 codes)",
+      "Denied claims for mental health services that should be covered under mental health parity laws",
+      "Facility fees charged separately from physician fees without disclosure",
+      "Medical debt collectors violating FDCPA protections",
     ],
     actionSteps: [
-      'Request an itemized bill for every medical service — compare each charge against your Explanation of Benefits (EOB)',
-      'Check for common billing errors: duplicate charges, unbundled services, upcoding, charges for canceled procedures',
-      'Appeal denied insurance claims in writing — include your doctor\'s letter of medical necessity and relevant clinical guidelines',
-      'For surprise bills covered by the No Surprises Act, file a complaint with HHS at cms.gov/nosurprises',
-      'If uninsured, request a Good Faith Estimate before any scheduled service — dispute bills that exceed the estimate by $400+',
-      'Ask about the hospital\'s financial assistance program before any bills go to collections',
-      'File complaints with your state insurance department for claims handling violations',
-      'For medical debt in collections, send a debt validation letter within 30 days — require proof of the amount owed and that the debt is yours',
-      'Request your medical records to verify that billed services match the care you actually received',
-      'Consider a medical billing advocate for complex or high-value disputes — they typically save patients 25-50% on bills',
+      "Request an itemized bill for every medical service - compare each charge against your Explanation of Benefits (EOB)",
+      "Check for common billing errors: duplicate charges, unbundled services, upcoding, charges for canceled procedures",
+      "Appeal denied insurance claims in writing - include your doctor's letter of medical necessity and relevant clinical guidelines",
+      "For surprise bills covered by the No Surprises Act, file a complaint with HHS at cms.gov/nosurprises",
+      "If uninsured, request a Good Faith Estimate before any scheduled service - dispute bills that exceed the estimate by $400+",
+      "Ask about the hospital's financial assistance program before any bills go to collections",
+      "File complaints with your state insurance department for claims handling violations",
+      "For medical debt in collections, send a debt validation letter within 30 days - require proof of the amount owed and that the debt is yours",
+      "Request your medical records to verify that billed services match the care you actually received",
+      "Consider a medical billing advocate for complex or high-value disputes - they typically save patients 25-50% on bills",
     ],
     importantDeadlines: [
-      '30 days: HIPAA deadline for providers to respond to medical records requests',
-      '180 days: ACA deadline to file an internal appeal for a denied health insurance claim',
-      '4 months: ACA deadline for external review of denied claims',
-      '1 year: Medical debt must be at least 1 year old before it can appear on credit reports',
-      '30 days: FDCPA debt validation request window after first contact from medical debt collector',
-      '120 days: CMS requires hospitals to give patients at least 120 days to apply for financial assistance before extraordinary collection',
-      '7 years: Maximum time medical collections can remain on credit reports',
+      "30 days: HIPAA deadline for providers to respond to medical records requests",
+      "180 days: ACA deadline to file an internal appeal for a denied health insurance claim",
+      "4 months: ACA deadline for external review of denied claims",
+      "1 year: Medical debt must be at least 1 year old before it can appear on credit reports",
+      "30 days: FDCPA debt validation request window after first contact from medical debt collector",
+      "120 days: CMS requires hospitals to give patients at least 120 days to apply for financial assistance before extraordinary collection",
+      "7 years: Maximum time medical collections can remain on credit reports",
     ],
     federalLaws: [
-      { name: 'No Surprises Act', citation: 'P.L. 116-260, Division BB', description: 'Protects patients from surprise out-of-network medical bills in emergency situations and at in-network facilities. Establishes independent dispute resolution for provider-insurer payment disputes.', url: 'https://www.cms.gov/nosurprises' },
-      { name: 'Emergency Medical Treatment and Labor Act (EMTALA)', citation: '42 U.S.C. § 1395dd', description: 'Requires Medicare-participating hospitals with emergency departments to screen and stabilize all patients regardless of ability to pay. Violations can result in fines up to $119,942 per violation.' },
-      { name: 'Health Insurance Portability and Accountability Act (HIPAA)', citation: 'P.L. 104-191', description: 'Establishes patient privacy rights, gives patients access to their medical records, and sets standards for electronic health information security.' },
-      { name: 'Affordable Care Act (ACA)', citation: '42 U.S.C. § 18001', description: 'Prohibits pre-existing condition exclusions, eliminates lifetime limits, requires coverage of essential health benefits, and guarantees internal and external appeal rights for denied claims.' },
-      { name: 'Mental Health Parity and Addiction Equity Act', citation: '29 U.S.C. § 1185a', description: 'Requires health insurers to provide mental health and substance use disorder benefits at parity with medical/surgical benefits — same deductibles, copays, visit limits, and prior authorization requirements.', url: 'https://www.cms.gov/cciio/programs-and-initiatives/other-insurance-protections/mhpaea_factsheet' },
-      { name: 'Fair Debt Collection Practices Act (Medical Debt)', citation: '15 U.S.C. § 1692', description: 'Fully applies to medical debt collected by third-party agencies. Prohibits harassment, false representations, and unfair practices. Medical debt collectors must validate the debt upon request.' },
+      {
+        name: "No Surprises Act",
+        citation: "P.L. 116-260, Division BB",
+        description:
+          "Protects patients from surprise out-of-network medical bills in emergency situations and at in-network facilities. Establishes independent dispute resolution for provider-insurer payment disputes.",
+        url: "https://www.cms.gov/nosurprises",
+      },
+      {
+        name: "Emergency Medical Treatment and Labor Act (EMTALA)",
+        citation: "42 U.S.C. § 1395dd",
+        description:
+          "Requires Medicare-participating hospitals with emergency departments to screen and stabilize all patients regardless of ability to pay. Violations can result in fines up to $119,942 per violation.",
+      },
+      {
+        name: "Health Insurance Portability and Accountability Act (HIPAA)",
+        citation: "P.L. 104-191",
+        description:
+          "Establishes patient privacy rights, gives patients access to their medical records, and sets standards for electronic health information security.",
+      },
+      {
+        name: "Affordable Care Act (ACA)",
+        citation: "42 U.S.C. § 18001",
+        description:
+          "Prohibits pre-existing condition exclusions, eliminates lifetime limits, requires coverage of essential health benefits, and guarantees internal and external appeal rights for denied claims.",
+      },
+      {
+        name: "Mental Health Parity and Addiction Equity Act",
+        citation: "29 U.S.C. § 1185a",
+        description:
+          "Requires health insurers to provide mental health and substance use disorder benefits at parity with medical/surgical benefits - same deductibles, copays, visit limits, and prior authorization requirements.",
+        url: "https://www.cms.gov/cciio/programs-and-initiatives/other-insurance-protections/mhpaea_factsheet",
+      },
+      {
+        name: "Fair Debt Collection Practices Act (Medical Debt)",
+        citation: "15 U.S.C. § 1692",
+        description:
+          "Fully applies to medical debt collected by third-party agencies. Prohibits harassment, false representations, and unfair practices. Medical debt collectors must validate the debt upon request.",
+      },
     ],
     faqItems: [
-      { question: 'What is a "surprise medical bill" and am I protected?', answer: 'A surprise medical bill occurs when you receive care from an out-of-network provider without your knowledge or choice — typically in emergencies or when an out-of-network specialist (anesthesiologist, radiologist, pathologist) provides care at an in-network facility. Under the No Surprises Act (effective January 2022), you\'re protected: you only owe your in-network cost-sharing amount (copay/coinsurance), and the provider and insurer must resolve any payment disputes through independent arbitration. This applies to emergency services, non-emergency services at in-network facilities from out-of-network providers, and air ambulance services.' },
-      { question: 'How do I find and fix errors on my medical bills?', answer: 'Request an itemized bill (not just a summary) showing all CPT codes, ICD-10 diagnosis codes, and individual charges. Compare it against your medical records and your insurer\'s Explanation of Benefits (EOB). Common errors include: duplicate charges for the same service, "unbundling" (billing separately for components that should be billed together), upcoding (billing for a more expensive procedure than performed), charges for canceled or not-performed services, and incorrect quantities. Up to 80% of medical bills contain errors. If you find errors, contact the billing department in writing and request corrections.' },
-      { question: 'Can a hospital deny me emergency treatment?', answer: 'No. Under EMTALA, any hospital that has an emergency department and participates in Medicare (virtually all hospitals) must provide a medical screening exam and stabilizing treatment to anyone who comes to the ER — regardless of ability to pay, insurance status, citizenship, or any other factor. The hospital cannot delay screening or stabilization to check insurance or require advance payment. Violations can result in fines up to $119,942 per violation and exclusion from Medicare. However, EMTALA requires stabilization, not necessarily complete treatment — once stable, the hospital may transfer you.' },
-      { question: 'What should I do if my health insurance denies a claim?', answer: 'File an internal appeal immediately — you have 180 days under the ACA. Include: your denial letter, your doctor\'s letter explaining medical necessity, relevant clinical guidelines or research supporting the treatment, and any other supporting documentation. If the internal appeal is denied, request an external review — an independent reviewer examines your case, and their decision is binding on the insurer. For urgent situations (ongoing treatment needed), request an expedited review (72 hours). The external review process is free to you.' },
-      { question: 'Does medical debt affect my credit score?', answer: 'Under updated credit reporting rules (effective 2023), medical debt has significantly reduced impact: Paid medical collections are removed entirely from credit reports. Unpaid medical debt cannot appear until it\'s at least 1 year old. Medical collections under $500 are not reported at all. This gives you time to resolve billing disputes, file insurance appeals, and apply for financial assistance before any credit impact. If you find medical debt on your credit report that shouldn\'t be there, dispute it with the credit bureaus.' },
-      { question: 'Am I entitled to financial assistance for hospital bills?', answer: 'If you received care at a nonprofit hospital (about 60% of U.S. hospitals), the hospital is required by IRS rules to have a Financial Assistance Policy (FAP). These policies often provide free or significantly discounted care for patients below certain income thresholds (typically 200-400% of the federal poverty level). The hospital must publicize the FAP, cannot send bills to collections or pursue extraordinary collection actions until determining whether you qualify for assistance, and must give you at least 120 days to apply. Even for-profit hospitals often have charity care or discount programs — always ask before paying or before bills go to collections.' },
+      {
+        question: 'What is a "surprise medical bill" and am I protected?',
+        answer:
+          "A surprise medical bill occurs when you receive care from an out-of-network provider without your knowledge or choice - typically in emergencies or when an out-of-network specialist (anesthesiologist, radiologist, pathologist) provides care at an in-network facility. Under the No Surprises Act (effective January 2022), you're protected: you only owe your in-network cost-sharing amount (copay/coinsurance), and the provider and insurer must resolve any payment disputes through independent arbitration. This applies to emergency services, non-emergency services at in-network facilities from out-of-network providers, and air ambulance services.",
+      },
+      {
+        question: "How do I find and fix errors on my medical bills?",
+        answer:
+          'Request an itemized bill (not just a summary) showing all CPT codes, ICD-10 diagnosis codes, and individual charges. Compare it against your medical records and your insurer\'s Explanation of Benefits (EOB). Common errors include: duplicate charges for the same service, "unbundling" (billing separately for components that should be billed together), upcoding (billing for a more expensive procedure than performed), charges for canceled or not-performed services, and incorrect quantities. Up to 80% of medical bills contain errors. If you find errors, contact the billing department in writing and request corrections.',
+      },
+      {
+        question: "Can a hospital deny me emergency treatment?",
+        answer:
+          "No. Under EMTALA, any hospital that has an emergency department and participates in Medicare (virtually all hospitals) must provide a medical screening exam and stabilizing treatment to anyone who comes to the ER - regardless of ability to pay, insurance status, citizenship, or any other factor. The hospital cannot delay screening or stabilization to check insurance or require advance payment. Violations can result in fines up to $119,942 per violation and exclusion from Medicare. However, EMTALA requires stabilization, not necessarily complete treatment - once stable, the hospital may transfer you.",
+      },
+      {
+        question: "What should I do if my health insurance denies a claim?",
+        answer:
+          "File an internal appeal immediately - you have 180 days under the ACA. Include: your denial letter, your doctor's letter explaining medical necessity, relevant clinical guidelines or research supporting the treatment, and any other supporting documentation. If the internal appeal is denied, request an external review - an independent reviewer examines your case, and their decision is binding on the insurer. For urgent situations (ongoing treatment needed), request an expedited review (72 hours). The external review process is free to you.",
+      },
+      {
+        question: "Does medical debt affect my credit score?",
+        answer:
+          "Under updated credit reporting rules (effective 2023), medical debt has significantly reduced impact: Paid medical collections are removed entirely from credit reports. Unpaid medical debt cannot appear until it's at least 1 year old. Medical collections under $500 are not reported at all. This gives you time to resolve billing disputes, file insurance appeals, and apply for financial assistance before any credit impact. If you find medical debt on your credit report that shouldn't be there, dispute it with the credit bureaus.",
+      },
+      {
+        question: "Am I entitled to financial assistance for hospital bills?",
+        answer:
+          "If you received care at a nonprofit hospital (about 60% of U.S. hospitals), the hospital is required by IRS rules to have a Financial Assistance Policy (FAP). These policies often provide free or significantly discounted care for patients below certain income thresholds (typically 200-400% of the federal poverty level). The hospital must publicize the FAP, cannot send bills to collections or pursue extraordinary collection actions until determining whether you qualify for assistance, and must give you at least 120 days to apply. Even for-profit hospitals often have charity care or discount programs - always ask before paying or before bills go to collections.",
+      },
     ],
     warningSigns: [
-      'Hospital or provider refuses to provide an itemized bill or Good Faith Estimate when requested',
-      'Medical debt collector contacts you before the 1-year credit reporting waiting period has elapsed',
-      'Provider bills you the full out-of-network rate for emergency services (No Surprises Act violation)',
-      'Hospital begins extraordinary collection (garnishment, liens) without offering financial assistance application',
+      "Hospital or provider refuses to provide an itemized bill or Good Faith Estimate when requested",
+      "Medical debt collector contacts you before the 1-year credit reporting waiting period has elapsed",
+      "Provider bills you the full out-of-network rate for emergency services (No Surprises Act violation)",
+      "Hospital begins extraordinary collection (garnishment, liens) without offering financial assistance application",
       'Insurance denies a claim as "not medically necessary" without reviewing your doctor\'s supporting documentation',
-      'Billing department pressures you to pay the full amount immediately or set up a payment plan before you\'ve had time to review the bill',
-      'Bill includes charges for services or tests you don\'t remember receiving or didn\'t consent to',
+      "Billing department pressures you to pay the full amount immediately or set up a payment plan before you've had time to review the bill",
+      "Bill includes charges for services or tests you don't remember receiving or didn't consent to",
     ],
     proTips: [
-      'Always request your itemized bill AND your EOB — compare them line by line. Discrepancies between what the provider billed and what your insurer processed can reveal errors',
-      'If uninsured, ask about the "self-pay" or "cash pay" rate BEFORE receiving non-emergency care — this is often 40-70% less than the standard billed rate',
-      'For insurance appeals, ask your doctor to include references to clinical practice guidelines (from organizations like AMA or relevant specialty societies) supporting the medical necessity of the treatment',
-      'Never pay a medical bill from a collection agency without first sending a debt validation letter — require them to prove the amount is correct and that you actually owe it',
-      'Apply for the hospital\'s Financial Assistance Program before any bills go to collections — many hospitals write off 100% of bills for patients below 200% of the federal poverty level',
-      'For mental health claim denials, cite the Mental Health Parity Act — insurers cannot impose more restrictive limitations on mental health benefits than on medical/surgical benefits',
+      "Always request your itemized bill AND your EOB - compare them line by line. Discrepancies between what the provider billed and what your insurer processed can reveal errors",
+      'If uninsured, ask about the "self-pay" or "cash pay" rate BEFORE receiving non-emergency care - this is often 40-70% less than the standard billed rate',
+      "For insurance appeals, ask your doctor to include references to clinical practice guidelines (from organizations like AMA or relevant specialty societies) supporting the medical necessity of the treatment",
+      "Never pay a medical bill from a collection agency without first sending a debt validation letter - require them to prove the amount is correct and that you actually owe it",
+      "Apply for the hospital's Financial Assistance Program before any bills go to collections - many hospitals write off 100% of bills for patients below 200% of the federal poverty level",
+      "For mental health claim denials, cite the Mental Health Parity Act - insurers cannot impose more restrictive limitations on mental health benefits than on medical/surgical benefits",
     ],
   },
   {
-    categoryId: 'employment',
-    title: 'Employee Rights in the Workplace',
-    subtitle: 'Federal labor laws protecting your wages, safety, and right to fair treatment',
-    lastUpdated: '2026-02-01',
-    introduction: 'Employees in the United States are protected by a comprehensive framework of federal and state labor laws that govern virtually every aspect of the employment relationship — from hiring practices to wages, workplace safety, discrimination, and termination. The Fair Labor Standards Act (FLSA) establishes minimum wage, overtime pay, and child labor standards affecting millions of workers in both the private sector and government.\n\nTitle VII of the Civil Rights Act of 1964 prohibits employment discrimination based on race, color, religion, sex, and national origin. The Americans with Disabilities Act (ADA) extends protections to qualified individuals with disabilities, requiring employers to provide reasonable accommodations. The Age Discrimination in Employment Act (ADEA) protects workers 40 and older from age-based discrimination.\n\nThe Occupational Safety and Health Act (OSHA) requires employers to provide a workplace free from recognized hazards and gives employees the right to report unsafe conditions without fear of retaliation. OSHA covers most private sector workers and many public sector employees.\n\nCritically, most employment discrimination and retaliation claims have strict filing deadlines — often as short as 180-300 days from the discriminatory act. Missing these deadlines can permanently bar your claims, making it essential to act quickly when workplace rights are violated.',
+    categoryId: "employment",
+    title: "Employee Rights in the Workplace",
+    subtitle: "Federal labor laws protecting your wages, safety, and right to fair treatment",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Employees in the United States are protected by a comprehensive framework of federal and state labor laws that govern virtually every aspect of the employment relationship - from hiring practices to wages, workplace safety, discrimination, and termination. The Fair Labor Standards Act (FLSA) establishes minimum wage, overtime pay, and child labor standards affecting millions of workers in both the private sector and government.\n\nTitle VII of the Civil Rights Act of 1964 prohibits employment discrimination based on race, color, religion, sex, and national origin. The Americans with Disabilities Act (ADA) extends protections to qualified individuals with disabilities, requiring employers to provide reasonable accommodations. The Age Discrimination in Employment Act (ADEA) protects workers 40 and older from age-based discrimination.\n\nThe Occupational Safety and Health Act (OSHA) requires employers to provide a workplace free from recognized hazards and gives employees the right to report unsafe conditions without fear of retaliation. OSHA covers most private sector workers and many public sector employees.\n\nCritically, most employment discrimination and retaliation claims have strict filing deadlines - often as short as 180-300 days from the discriminatory act. Missing these deadlines can permanently bar your claims, making it essential to act quickly when workplace rights are violated.",
     keyRights: [
-      { title: 'Right to Minimum Wage and Overtime (FLSA)', description: 'Non-exempt employees must be paid at least the federal minimum wage ($7.25/hour, higher in many states) and overtime at 1.5x their regular rate for hours over 40 per week. Many states and cities have significantly higher minimums. Employers cannot require off-the-clock work.' },
-      { title: 'Protection from Discrimination (Title VII)', description: 'Employers with 15+ employees cannot discriminate in hiring, firing, pay, promotions, or terms of employment based on race, color, religion, sex (including pregnancy, sexual orientation, and gender identity per Bostock v. Clayton County), or national origin.' },
-      { title: 'Disability Accommodations (ADA)', description: 'Employers with 15+ employees must provide reasonable accommodations for qualified employees with disabilities — unless doing so would cause undue hardship. Accommodations can include modified schedules, telework, ergonomic equipment, reassignment, or modified job duties.' },
-      { title: 'Workplace Safety (OSHA)', description: 'You have the right to a safe workplace, to receive training about hazards, to report unsafe conditions to OSHA without retaliation, and to refuse work that poses imminent danger of death or serious physical harm. OSHA complaints can be filed anonymously.' },
-      { title: 'Family and Medical Leave (FMLA)', description: 'Eligible employees at companies with 50+ employees can take up to 12 weeks of unpaid, job-protected leave per year for the birth/adoption of a child, a serious health condition, or to care for a family member with a serious health condition. Your job (or an equivalent position) must be held for you.' },
-      { title: 'Whistleblower Protection', description: 'Multiple federal laws protect employees from retaliation for reporting illegal activity, safety violations, fraud, or other misconduct. Protections exist under OSHA, Sarbanes-Oxley, Dodd-Frank, and the False Claims Act, among others. Remedies include reinstatement, back pay, and compensatory damages.' },
-      { title: 'WARN Act Notice for Layoffs', description: 'The Worker Adjustment and Retraining Notification (WARN) Act requires employers with 100+ employees to provide 60 days\' advance notice of plant closings or mass layoffs affecting 50+ workers. Employees who don\'t receive proper notice are entitled to back pay and benefits for the notice period they should have received.' },
-      { title: 'Equal Pay Protections', description: 'The Equal Pay Act requires that men and women performing substantially equal work receive equal pay. Pay differentials are only permitted based on seniority, merit, production quantity, or a factor other than sex. Many states have broader equal pay laws that also cover race and other protected classes.' },
+      {
+        title: "Right to Minimum Wage and Overtime (FLSA)",
+        description:
+          "Non-exempt employees must be paid at least the federal minimum wage ($7.25/hour, higher in many states) and overtime at 1.5x their regular rate for hours over 40 per week. Many states and cities have significantly higher minimums. Employers cannot require off-the-clock work.",
+      },
+      {
+        title: "Protection from Discrimination (Title VII)",
+        description:
+          "Employers with 15+ employees cannot discriminate in hiring, firing, pay, promotions, or terms of employment based on race, color, religion, sex (including pregnancy, sexual orientation, and gender identity per Bostock v. Clayton County), or national origin.",
+      },
+      {
+        title: "Disability Accommodations (ADA)",
+        description:
+          "Employers with 15+ employees must provide reasonable accommodations for qualified employees with disabilities - unless doing so would cause undue hardship. Accommodations can include modified schedules, telework, ergonomic equipment, reassignment, or modified job duties.",
+      },
+      {
+        title: "Workplace Safety (OSHA)",
+        description:
+          "You have the right to a safe workplace, to receive training about hazards, to report unsafe conditions to OSHA without retaliation, and to refuse work that poses imminent danger of death or serious physical harm. OSHA complaints can be filed anonymously.",
+      },
+      {
+        title: "Family and Medical Leave (FMLA)",
+        description:
+          "Eligible employees at companies with 50+ employees can take up to 12 weeks of unpaid, job-protected leave per year for the birth/adoption of a child, a serious health condition, or to care for a family member with a serious health condition. Your job (or an equivalent position) must be held for you.",
+      },
+      {
+        title: "Whistleblower Protection",
+        description:
+          "Multiple federal laws protect employees from retaliation for reporting illegal activity, safety violations, fraud, or other misconduct. Protections exist under OSHA, Sarbanes-Oxley, Dodd-Frank, and the False Claims Act, among others. Remedies include reinstatement, back pay, and compensatory damages.",
+      },
+      {
+        title: "WARN Act Notice for Layoffs",
+        description:
+          "The Worker Adjustment and Retraining Notification (WARN) Act requires employers with 100+ employees to provide 60 days' advance notice of plant closings or mass layoffs affecting 50+ workers. Employees who don't receive proper notice are entitled to back pay and benefits for the notice period they should have received.",
+      },
+      {
+        title: "Equal Pay Protections",
+        description:
+          "The Equal Pay Act requires that men and women performing substantially equal work receive equal pay. Pay differentials are only permitted based on seniority, merit, production quantity, or a factor other than sex. Many states have broader equal pay laws that also cover race and other protected classes.",
+      },
     ],
     commonIssues: [
-      'Unpaid wages, overtime, or commissions — employer failing to compensate for all hours worked',
-      'Wrongful termination — fired for protected activity, discriminatory reason, or in violation of employment contract',
-      'Workplace harassment or discrimination based on protected characteristics',
-      'Misclassification as an independent contractor to avoid providing benefits, overtime, and tax withholding',
-      'Retaliation for reporting safety violations, discrimination, or wage theft',
-      'FMLA violations — employer denying leave, retaliating against those who take leave, or not holding the position',
-      'Unsafe working conditions — employer ignoring OSHA standards or known hazards',
-      'Denied reasonable accommodations for disability or religious practice',
-      'Non-compete agreements that unreasonably restrict post-employment opportunities',
-      'Failure to provide final paycheck within state-required timeframe',
+      "Unpaid wages, overtime, or commissions - employer failing to compensate for all hours worked",
+      "Wrongful termination - fired for protected activity, discriminatory reason, or in violation of employment contract",
+      "Workplace harassment or discrimination based on protected characteristics",
+      "Misclassification as an independent contractor to avoid providing benefits, overtime, and tax withholding",
+      "Retaliation for reporting safety violations, discrimination, or wage theft",
+      "FMLA violations - employer denying leave, retaliating against those who take leave, or not holding the position",
+      "Unsafe working conditions - employer ignoring OSHA standards or known hazards",
+      "Denied reasonable accommodations for disability or religious practice",
+      "Non-compete agreements that unreasonably restrict post-employment opportunities",
+      "Failure to provide final paycheck within state-required timeframe",
     ],
     actionSteps: [
-      'Keep detailed records of hours worked, pay received, and any discrepancies — use a personal time-tracking app if your employer doesn\'t provide accurate records',
-      'Document every incident of discrimination, harassment, or retaliation in writing with dates, witnesses, and specifics',
-      'Report unsafe working conditions to OSHA — you can file anonymously online or by phone at 1-800-321-OSHA',
-      'File wage claims with your state labor department and/or the federal DOL Wage and Hour Division',
-      'For discrimination, file a charge with the EEOC within 180 days (300 days if your state has a fair employment agency)',
-      'Put HR complaints in writing (email is fine) — verbal complaints are harder to prove later',
-      'If terminated, request your personnel file and any documentation related to the termination decision',
-      'Consult an employment attorney for significant claims — many offer free initial consultations and work on contingency for discrimination and retaliation cases',
-      'Don\'t sign severance agreements without reviewing them with an attorney — you may be waiving valuable legal claims',
-      'File for unemployment benefits immediately after termination — even if you think you were fired "for cause," you may still qualify',
+      "Keep detailed records of hours worked, pay received, and any discrepancies - use a personal time-tracking app if your employer doesn't provide accurate records",
+      "Document every incident of discrimination, harassment, or retaliation in writing with dates, witnesses, and specifics",
+      "Report unsafe working conditions to OSHA - you can file anonymously online or by phone at 1-800-321-OSHA",
+      "File wage claims with your state labor department and/or the federal DOL Wage and Hour Division",
+      "For discrimination, file a charge with the EEOC within 180 days (300 days if your state has a fair employment agency)",
+      "Put HR complaints in writing (email is fine) - verbal complaints are harder to prove later",
+      "If terminated, request your personnel file and any documentation related to the termination decision",
+      "Consult an employment attorney for significant claims - many offer free initial consultations and work on contingency for discrimination and retaliation cases",
+      "Don't sign severance agreements without reviewing them with an attorney - you may be waiving valuable legal claims",
+      'File for unemployment benefits immediately after termination - even if you think you were fired "for cause," you may still qualify',
     ],
     importantDeadlines: [
-      '180 days: EEOC filing deadline for discrimination charges (extended to 300 days in states with fair employment agencies)',
-      '30 days: OSHA retaliation complaint deadline (varies by specific whistleblower statute)',
-      '2-3 years: FLSA statute of limitations for wage claims (2 years for non-willful, 3 years for willful violations)',
-      '180 days: ADEA (age discrimination) EEOC filing deadline (300 days with state agency)',
-      '60 days: WARN Act advance notice requirement for plant closings and mass layoffs',
-      '72 hours to 30 days: State-specific deadlines for employer to issue final paycheck after termination',
-      '12 months: Maximum FMLA leave period within a rolling 12-month window',
+      "180 days: EEOC filing deadline for discrimination charges (extended to 300 days in states with fair employment agencies)",
+      "30 days: OSHA retaliation complaint deadline (varies by specific whistleblower statute)",
+      "2-3 years: FLSA statute of limitations for wage claims (2 years for non-willful, 3 years for willful violations)",
+      "180 days: ADEA (age discrimination) EEOC filing deadline (300 days with state agency)",
+      "60 days: WARN Act advance notice requirement for plant closings and mass layoffs",
+      "72 hours to 30 days: State-specific deadlines for employer to issue final paycheck after termination",
+      "12 months: Maximum FMLA leave period within a rolling 12-month window",
     ],
     federalLaws: [
-      { name: 'Fair Labor Standards Act (FLSA)', citation: '29 U.S.C. § 201', description: 'Sets minimum wage, overtime (1.5x for 40+ hours/week), recordkeeping, and child labor standards. Covers most private sector and government employees. Overtime exemptions exist for certain executive, administrative, and professional employees.' },
-      { name: 'Title VII of the Civil Rights Act', citation: '42 U.S.C. § 2000e', description: 'Prohibits employment discrimination based on race, color, religion, sex (including sexual orientation and gender identity), and national origin. Covers employers with 15+ employees. Enforced by the EEOC.' },
-      { name: 'Americans with Disabilities Act (ADA)', citation: '42 U.S.C. § 12101', description: 'Prohibits disability discrimination and requires reasonable accommodations for qualified individuals with disabilities. Covers employers with 15+ employees.' },
-      { name: 'Occupational Safety and Health Act', citation: '29 U.S.C. § 651', description: 'Requires employers to provide a workplace free from recognized hazards. Establishes OSHA with authority to set safety standards, conduct inspections, and impose penalties.' },
-      { name: 'Family and Medical Leave Act (FMLA)', citation: '29 U.S.C. § 2601', description: 'Provides up to 12 weeks of unpaid, job-protected leave per year for qualifying family and medical reasons. Applies to employers with 50+ employees within 75 miles.' },
-      { name: 'Worker Adjustment and Retraining Notification Act (WARN)', citation: '29 U.S.C. § 2101', description: 'Requires 60 days\' advance notice of plant closings or mass layoffs. Employees entitled to back pay for each day of notice they didn\'t receive.' },
+      {
+        name: "Fair Labor Standards Act (FLSA)",
+        citation: "29 U.S.C. § 201",
+        description:
+          "Sets minimum wage, overtime (1.5x for 40+ hours/week), recordkeeping, and child labor standards. Covers most private sector and government employees. Overtime exemptions exist for certain executive, administrative, and professional employees.",
+      },
+      {
+        name: "Title VII of the Civil Rights Act",
+        citation: "42 U.S.C. § 2000e",
+        description:
+          "Prohibits employment discrimination based on race, color, religion, sex (including sexual orientation and gender identity), and national origin. Covers employers with 15+ employees. Enforced by the EEOC.",
+      },
+      {
+        name: "Americans with Disabilities Act (ADA)",
+        citation: "42 U.S.C. § 12101",
+        description:
+          "Prohibits disability discrimination and requires reasonable accommodations for qualified individuals with disabilities. Covers employers with 15+ employees.",
+      },
+      {
+        name: "Occupational Safety and Health Act",
+        citation: "29 U.S.C. § 651",
+        description:
+          "Requires employers to provide a workplace free from recognized hazards. Establishes OSHA with authority to set safety standards, conduct inspections, and impose penalties.",
+      },
+      {
+        name: "Family and Medical Leave Act (FMLA)",
+        citation: "29 U.S.C. § 2601",
+        description:
+          "Provides up to 12 weeks of unpaid, job-protected leave per year for qualifying family and medical reasons. Applies to employers with 50+ employees within 75 miles.",
+      },
+      {
+        name: "Worker Adjustment and Retraining Notification Act (WARN)",
+        citation: "29 U.S.C. § 2101",
+        description:
+          "Requires 60 days' advance notice of plant closings or mass layoffs. Employees entitled to back pay for each day of notice they didn't receive.",
+      },
     ],
     faqItems: [
-      { question: 'Can my employer require me to work overtime without extra pay?', answer: 'It depends on whether you\'re "exempt" or "non-exempt" under the FLSA. Non-exempt employees must receive overtime pay (1.5x their regular rate) for all hours over 40 per workweek. Exempt employees (generally salaried managers, professionals, and administrators earning above a minimum salary threshold) are not entitled to overtime. However, your job title alone doesn\'t determine exemption — it depends on your actual duties and salary level. Many employers misclassify employees as exempt to avoid paying overtime, which is illegal. If you think you\'re misclassified, file a wage claim.' },
-      { question: 'What constitutes workplace harassment under federal law?', answer: 'Harassment becomes illegal when it is based on a protected characteristic (race, sex, religion, etc.) AND is severe or pervasive enough to create a hostile work environment — meaning it interferes with your ability to do your job. A single severe incident (like a physical assault or extreme slur) can be sufficient. More commonly, a pattern of offensive comments, jokes, or conduct is required. The harassment doesn\'t have to come from your supervisor — it can come from coworkers, clients, or vendors. Your employer is liable if they knew or should have known about the harassment and failed to take prompt corrective action.' },
-      { question: 'Am I an employee or independent contractor?', answer: 'This is determined by the actual nature of the working relationship, not by what the company calls you. Key factors include: who controls how and when work is done, who provides tools and equipment, whether you can work for others, who bears the financial risk, and the permanency of the relationship. If you\'re classified as an independent contractor but your employer controls your schedule, requires you to work exclusively for them, provides your equipment, and dictates how the work is done, you may be misclassified — which means you\'re owed overtime, benefits, and tax withholding. File an SS-8 with the IRS for an official determination.' },
-      { question: 'Can I be fired for no reason?', answer: 'In most states, employment is "at-will," meaning your employer can terminate you for any reason or no reason — but NOT for an illegal reason. Illegal reasons include: discrimination based on protected characteristics (race, sex, age, disability, etc.), retaliation for protected activity (filing a complaint, reporting safety violations, whistleblowing), exercising legal rights (FMLA leave, workers\' comp claims, union activity), and breach of an employment contract. If you believe your termination was illegal, document everything and consult an employment attorney promptly — filing deadlines are often as short as 180 days.' },
-      { question: 'What should I do if I\'m not receiving my final paycheck?', answer: 'State laws require employers to issue final paychecks within specific timeframes — ranging from immediately (same day for fired employees in some states like California) to 30 days. Your final paycheck must include all earned wages, accrued vacation (in states where vacation pay is earned compensation), and any owed commissions or bonuses. If your employer fails to pay, file a wage claim with your state labor department or the federal DOL. Many states impose penalties on employers who withhold final wages — California, for example, charges a full day\'s pay for each day the final paycheck is late, up to 30 days.' },
-      { question: 'What are my rights regarding workplace safety?', answer: 'Under OSHA, you have the right to: a safe workplace free from recognized hazards; training about workplace hazards in a language you understand; access to injury and illness records; filing OSHA complaints without retaliation; refusing work that poses imminent danger of death or serious harm; and requesting an OSHA inspection. Your employer cannot retaliate against you for exercising any of these rights. If they do, file a retaliation complaint with OSHA within 30 days. OSHA complaints can be filed online, by phone (1-800-321-OSHA), or in writing.' },
+      {
+        question: "Can my employer require me to work overtime without extra pay?",
+        answer:
+          'It depends on whether you\'re "exempt" or "non-exempt" under the FLSA. Non-exempt employees must receive overtime pay (1.5x their regular rate) for all hours over 40 per workweek. Exempt employees (generally salaried managers, professionals, and administrators earning above a minimum salary threshold) are not entitled to overtime. However, your job title alone doesn\'t determine exemption - it depends on your actual duties and salary level. Many employers misclassify employees as exempt to avoid paying overtime, which is illegal. If you think you\'re misclassified, file a wage claim.',
+      },
+      {
+        question: "What constitutes workplace harassment under federal law?",
+        answer:
+          "Harassment becomes illegal when it is based on a protected characteristic (race, sex, religion, etc.) AND is severe or pervasive enough to create a hostile work environment - meaning it interferes with your ability to do your job. A single severe incident (like a physical assault or extreme slur) can be sufficient. More commonly, a pattern of offensive comments, jokes, or conduct is required. The harassment doesn't have to come from your supervisor - it can come from coworkers, clients, or vendors. Your employer is liable if they knew or should have known about the harassment and failed to take prompt corrective action.",
+      },
+      {
+        question: "Am I an employee or independent contractor?",
+        answer:
+          "This is determined by the actual nature of the working relationship, not by what the company calls you. Key factors include: who controls how and when work is done, who provides tools and equipment, whether you can work for others, who bears the financial risk, and the permanency of the relationship. If you're classified as an independent contractor but your employer controls your schedule, requires you to work exclusively for them, provides your equipment, and dictates how the work is done, you may be misclassified - which means you're owed overtime, benefits, and tax withholding. File an SS-8 with the IRS for an official determination.",
+      },
+      {
+        question: "Can I be fired for no reason?",
+        answer:
+          'In most states, employment is "at-will," meaning your employer can terminate you for any reason or no reason - but NOT for an illegal reason. Illegal reasons include: discrimination based on protected characteristics (race, sex, age, disability, etc.), retaliation for protected activity (filing a complaint, reporting safety violations, whistleblowing), exercising legal rights (FMLA leave, workers\' comp claims, union activity), and breach of an employment contract. If you believe your termination was illegal, document everything and consult an employment attorney promptly - filing deadlines are often as short as 180 days.',
+      },
+      {
+        question: "What should I do if I'm not receiving my final paycheck?",
+        answer:
+          "State laws require employers to issue final paychecks within specific timeframes - ranging from immediately (same day for fired employees in some states like California) to 30 days. Your final paycheck must include all earned wages, accrued vacation (in states where vacation pay is earned compensation), and any owed commissions or bonuses. If your employer fails to pay, file a wage claim with your state labor department or the federal DOL. Many states impose penalties on employers who withhold final wages - California, for example, charges a full day's pay for each day the final paycheck is late, up to 30 days.",
+      },
+      {
+        question: "What are my rights regarding workplace safety?",
+        answer:
+          "Under OSHA, you have the right to: a safe workplace free from recognized hazards; training about workplace hazards in a language you understand; access to injury and illness records; filing OSHA complaints without retaliation; refusing work that poses imminent danger of death or serious harm; and requesting an OSHA inspection. Your employer cannot retaliate against you for exercising any of these rights. If they do, file a retaliation complaint with OSHA within 30 days. OSHA complaints can be filed online, by phone (1-800-321-OSHA), or in writing.",
+      },
     ],
     warningSigns: [
       'Employer asks you to work "off the clock," skip lunch breaks without pay, or not record all hours worked',
-      'HR dismisses or minimizes your complaints about discrimination or harassment without investigation',
-      'You\'re suddenly receiving negative performance reviews shortly after filing a complaint or requesting leave',
+      "HR dismisses or minimizes your complaints about discrimination or harassment without investigation",
+      "You're suddenly receiving negative performance reviews shortly after filing a complaint or requesting leave",
       'Employer classifies you as an "independent contractor" but controls your schedule, requires exclusive work, and provides your tools',
-      'Employer retaliates after you report a safety concern or refuse unsafe work',
+      "Employer retaliates after you report a safety concern or refuse unsafe work",
       'Job posting requires characteristics that aren\'t bona fide occupational qualifications (e.g., "young and energetic")',
-      'Employer pressures you to sign a separation agreement immediately without time to review it with an attorney',
-      'Employer asks illegal interview questions about marital status, pregnancy plans, religion, or national origin',
+      "Employer pressures you to sign a separation agreement immediately without time to review it with an attorney",
+      "Employer asks illegal interview questions about marital status, pregnancy plans, religion, or national origin",
     ],
     proTips: [
-      'Keep a personal record of your hours worked — use a time-tracking app on your phone. If there\'s ever a dispute about unpaid wages, your records can support your claim even against the employer\'s records',
-      'Send HR complaints and discrimination reports via email (not just verbal) — this creates a timestamped record that\'s hard to dispute later',
-      'If you\'re asked to sign a non-compete, negotiate its scope — courts are increasingly skeptical of overly broad non-competes, and some states (California) ban them entirely',
-      'Before accepting a severance package, understand what claims you\'re waiving — the Older Workers Benefit Protection Act gives workers 40+ at least 21 days to consider severance agreements (45 days for group layoffs) and 7 days to revoke after signing',
-      'File for unemployment immediately after termination — don\'t assume you\'re ineligible. Even workers fired for performance issues (not willful misconduct) often qualify',
-      'If you suspect wage theft, file claims with BOTH your state labor department and the federal DOL — they have independent authority and may investigate different aspects of the violation',
+      "Keep a personal record of your hours worked - use a time-tracking app on your phone. If there's ever a dispute about unpaid wages, your records can support your claim even against the employer's records",
+      "Send HR complaints and discrimination reports via email (not just verbal) - this creates a timestamped record that's hard to dispute later",
+      "If you're asked to sign a non-compete, negotiate its scope - courts are increasingly skeptical of overly broad non-competes, and some states (California) ban them entirely",
+      "Before accepting a severance package, understand what claims you're waiving - the Older Workers Benefit Protection Act gives workers 40+ at least 21 days to consider severance agreements (45 days for group layoffs) and 7 days to revoke after signing",
+      "File for unemployment immediately after termination - don't assume you're ineligible. Even workers fired for performance issues (not willful misconduct) often qualify",
+      "If you suspect wage theft, file claims with BOTH your state labor department and the federal DOL - they have independent authority and may investigate different aspects of the violation",
     ],
   },
   {
-    categoryId: 'ecommerce',
-    title: 'Online Shopping & Digital Consumer Rights',
-    subtitle: 'FTC rules, data privacy laws, and marketplace protections for digital consumers',
-    lastUpdated: '2026-02-01',
-    introduction: 'Online shopping now accounts for a significant portion of all consumer purchases, and a growing body of federal and state laws protects digital consumers from fraud, privacy violations, and deceptive practices. The FTC\'s Mail, Internet, or Telephone Order Rule is the foundation of online purchase protections — requiring sellers to ship within the promised timeframe (or 30 days if not specified) and provide a full refund for orders they can\'t fulfill.\n\nData privacy has become a major consumer rights issue, with the California Consumer Privacy Act (CCPA) and similar state laws giving consumers the right to know what personal data companies collect, request deletion of their data, and opt out of data sales. While the U.S. doesn\'t have a comprehensive federal privacy law equivalent to the EU\'s GDPR, the FTC\'s authority over unfair and deceptive practices has been used to enforce privacy commitments and penalize data breaches.\n\nSubscription services face increasing regulation — the FTC\'s "Click to Cancel" rule requires sellers to make cancellation as easy as sign-up and provide clear disclosure of recurring charges before consumers agree. Many states have enacted similar "automatic renewal" laws with notification requirements.\n\nMajor online marketplaces (Amazon, eBay, Etsy, Walmart Marketplace) also provide their own buyer protection programs that supplement your legal rights, offering dispute resolution and refund guarantees that can be faster and easier than formal legal remedies.',
+    categoryId: "ecommerce",
+    title: "Online Shopping & Digital Consumer Rights",
+    subtitle: "FTC rules, data privacy laws, and marketplace protections for digital consumers",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Online shopping now accounts for a significant portion of all consumer purchases, and a growing body of federal and state laws protects digital consumers from fraud, privacy violations, and deceptive practices. The FTC's Mail, Internet, or Telephone Order Rule is the foundation of online purchase protections - requiring sellers to ship within the promised timeframe (or 30 days if not specified) and provide a full refund for orders they can't fulfill.\n\nData privacy has become a major consumer rights issue, with the California Consumer Privacy Act (CCPA) and similar state laws giving consumers the right to know what personal data companies collect, request deletion of their data, and opt out of data sales. While the U.S. doesn't have a comprehensive federal privacy law equivalent to the EU's GDPR, the FTC's authority over unfair and deceptive practices has been used to enforce privacy commitments and penalize data breaches.\n\nSubscription services face increasing regulation - the FTC's \"Click to Cancel\" rule requires sellers to make cancellation as easy as sign-up and provide clear disclosure of recurring charges before consumers agree. Many states have enacted similar \"automatic renewal\" laws with notification requirements.\n\nMajor online marketplaces (Amazon, eBay, Etsy, Walmart Marketplace) also provide their own buyer protection programs that supplement your legal rights, offering dispute resolution and refund guarantees that can be faster and easier than formal legal remedies.",
     keyRights: [
-      { title: 'FTC Mail Order Rule Protections', description: 'Sellers must ship within the promised timeframe (or 30 days if no timeframe stated). If delayed, they must notify you, provide a revised shipping date, and offer the option to cancel for a full refund. Refunds must be issued within 7 business days of cancellation.' },
-      { title: 'Right to Cancel Subscriptions Easily', description: 'The FTC\'s Click to Cancel rule requires sellers to make cancellation as easy as signing up — if you subscribed online, you must be able to cancel online. Sellers must provide clear disclosure of all recurring charges before you agree and send reminders before automatic renewals.' },
-      { title: 'Data Privacy Rights', description: 'Under CCPA and similar state laws, you have the right to know what personal data companies collect about you, request deletion of your data, opt out of the sale or sharing of your personal information, and not be discriminated against for exercising these rights.' },
-      { title: 'Chargeback Rights for Online Purchases', description: 'The Fair Credit Billing Act gives you strong chargeback rights for online purchases — you can dispute charges for goods not delivered, goods significantly different from what was described, and unauthorized transactions. Online merchants bear the burden of proof in most chargeback disputes.' },
-      { title: 'Protection from Deceptive Reviews', description: 'The FTC has taken action against companies that post fake reviews, suppress negative reviews, or incentivize positive reviews without disclosure. You have the right to access genuine consumer reviews when making purchasing decisions.' },
-      { title: 'Digital Product Protections', description: 'Digital products must work as described. If a software product, digital download, or app doesn\'t function as advertised, you have the same rights to a refund as with physical goods. Major platforms (Apple, Google, Steam) have refund policies for non-functional digital content.' },
-      { title: 'Children\'s Online Privacy (COPPA)', description: 'The Children\'s Online Privacy Protection Act requires websites and apps to obtain parental consent before collecting personal information from children under 13. Parents can review and delete their child\'s information and revoke consent.' },
-      { title: 'Marketplace Buyer Protection', description: 'Major platforms offer buyer protection programs: Amazon A-to-Z Guarantee, eBay Money Back Guarantee, PayPal Purchase Protection. These provide additional dispute resolution and refund options beyond your legal rights.' },
+      {
+        title: "FTC Mail Order Rule Protections",
+        description:
+          "Sellers must ship within the promised timeframe (or 30 days if no timeframe stated). If delayed, they must notify you, provide a revised shipping date, and offer the option to cancel for a full refund. Refunds must be issued within 7 business days of cancellation.",
+      },
+      {
+        title: "Right to Cancel Subscriptions Easily",
+        description:
+          "The FTC's Click to Cancel rule requires sellers to make cancellation as easy as signing up - if you subscribed online, you must be able to cancel online. Sellers must provide clear disclosure of all recurring charges before you agree and send reminders before automatic renewals.",
+      },
+      {
+        title: "Data Privacy Rights",
+        description:
+          "Under CCPA and similar state laws, you have the right to know what personal data companies collect about you, request deletion of your data, opt out of the sale or sharing of your personal information, and not be discriminated against for exercising these rights.",
+      },
+      {
+        title: "Chargeback Rights for Online Purchases",
+        description:
+          "The Fair Credit Billing Act gives you strong chargeback rights for online purchases - you can dispute charges for goods not delivered, goods significantly different from what was described, and unauthorized transactions. Online merchants bear the burden of proof in most chargeback disputes.",
+      },
+      {
+        title: "Protection from Deceptive Reviews",
+        description:
+          "The FTC has taken action against companies that post fake reviews, suppress negative reviews, or incentivize positive reviews without disclosure. You have the right to access genuine consumer reviews when making purchasing decisions.",
+      },
+      {
+        title: "Digital Product Protections",
+        description:
+          "Digital products must work as described. If a software product, digital download, or app doesn't function as advertised, you have the same rights to a refund as with physical goods. Major platforms (Apple, Google, Steam) have refund policies for non-functional digital content.",
+      },
+      {
+        title: "Children's Online Privacy (COPPA)",
+        description:
+          "The Children's Online Privacy Protection Act requires websites and apps to obtain parental consent before collecting personal information from children under 13. Parents can review and delete their child's information and revoke consent.",
+      },
+      {
+        title: "Marketplace Buyer Protection",
+        description:
+          "Major platforms offer buyer protection programs: Amazon A-to-Z Guarantee, eBay Money Back Guarantee, PayPal Purchase Protection. These provide additional dispute resolution and refund options beyond your legal rights.",
+      },
     ],
     commonIssues: [
-      'Item never delivered but seller claims it was shipped or delivered',
-      'Product significantly different from the listing photos or description',
-      'Seller unresponsive to complaints or refund requests',
-      'Subscription extremely difficult to cancel — hidden cancellation process or requiring phone calls',
-      'Personal data sold or shared without consent or adequate disclosure',
-      'Fake or misleading reviews making it difficult to assess product quality',
-      'Digital product doesn\'t work on the platforms or devices the seller claimed it supports',
-      'Automatic subscription renewal without adequate notice of upcoming charge',
-      'Seller disappears after receiving payment — potential scam or fraud',
-      'Hidden fees or charges added at checkout that weren\'t shown in the listed price',
+      "Item never delivered but seller claims it was shipped or delivered",
+      "Product significantly different from the listing photos or description",
+      "Seller unresponsive to complaints or refund requests",
+      "Subscription extremely difficult to cancel - hidden cancellation process or requiring phone calls",
+      "Personal data sold or shared without consent or adequate disclosure",
+      "Fake or misleading reviews making it difficult to assess product quality",
+      "Digital product doesn't work on the platforms or devices the seller claimed it supports",
+      "Automatic subscription renewal without adequate notice of upcoming charge",
+      "Seller disappears after receiving payment - potential scam or fraud",
+      "Hidden fees or charges added at checkout that weren't shown in the listed price",
     ],
     actionSteps: [
-      'Screenshot product listings, prices, and seller information before purchasing — sellers can change listings after your purchase',
-      'Track all deliveries using provided tracking numbers and save delivery confirmation',
-      'Use platform buyer protection programs first (Amazon A-to-Z, eBay guarantee) — they\'re often faster than credit card disputes',
-      'Pay with a credit card (not debit, wire transfer, or gift cards) for maximum consumer protection',
-      'For subscription issues, document the sign-up process and all renewal notices — evidence of how hard cancellation was supports FTC complaints',
-      'File FTC complaints at ReportFraud.ftc.gov for deceptive sellers and scam websites',
-      'Exercise your data privacy rights — submit CCPA/state privacy requests to companies that have your data',
-      'For non-delivered items, check the tracking details and file a complaint with the shipping carrier and the seller simultaneously',
-      'Report scam sellers to the platform, FTC, your state AG, and the Internet Crime Complaint Center (IC3)',
-      'Use virtual credit card numbers when shopping at unfamiliar online stores — this limits your exposure if the seller is fraudulent',
+      "Screenshot product listings, prices, and seller information before purchasing - sellers can change listings after your purchase",
+      "Track all deliveries using provided tracking numbers and save delivery confirmation",
+      "Use platform buyer protection programs first (Amazon A-to-Z, eBay guarantee) - they're often faster than credit card disputes",
+      "Pay with a credit card (not debit, wire transfer, or gift cards) for maximum consumer protection",
+      "For subscription issues, document the sign-up process and all renewal notices - evidence of how hard cancellation was supports FTC complaints",
+      "File FTC complaints at ReportFraud.ftc.gov for deceptive sellers and scam websites",
+      "Exercise your data privacy rights - submit CCPA/state privacy requests to companies that have your data",
+      "For non-delivered items, check the tracking details and file a complaint with the shipping carrier and the seller simultaneously",
+      "Report scam sellers to the platform, FTC, your state AG, and the Internet Crime Complaint Center (IC3)",
+      "Use virtual credit card numbers when shopping at unfamiliar online stores - this limits your exposure if the seller is fraudulent",
     ],
     importantDeadlines: [
-      '30 days: FTC Mail Order Rule — seller must ship within this period or offer cancellation',
-      '60 days: Fair Credit Billing Act deadline to dispute credit card charges',
-      '90 days: Amazon A-to-Z Guarantee filing deadline',
-      '180 days: PayPal Purchase Protection filing deadline',
-      '45 days: CCPA deadline for businesses to respond to consumer data requests',
-      '30 days: eBay Money Back Guarantee — request must be filed within 30 days of delivery date',
-      '14 days: Common digital content refund window for many platforms (Steam, Apple)',
+      "30 days: FTC Mail Order Rule - seller must ship within this period or offer cancellation",
+      "60 days: Fair Credit Billing Act deadline to dispute credit card charges",
+      "90 days: Amazon A-to-Z Guarantee filing deadline",
+      "180 days: PayPal Purchase Protection filing deadline",
+      "45 days: CCPA deadline for businesses to respond to consumer data requests",
+      "30 days: eBay Money Back Guarantee - request must be filed within 30 days of delivery date",
+      "14 days: Common digital content refund window for many platforms (Steam, Apple)",
     ],
     federalLaws: [
-      { name: 'FTC Mail, Internet, or Telephone Order Rule', citation: '16 CFR Part 435', description: 'Requires online and catalog sellers to ship within the promised timeframe. If unable to ship, must offer full refund. Refunds must be issued within 7 business days.', url: 'https://www.ftc.gov/legal-library/browse/rules/mail-internet-or-telephone-order-merchandise-rule' },
-      { name: 'FTC Click to Cancel Rule', citation: '16 CFR Part 425 (amended)', description: 'Requires sellers to make subscription cancellation as easy as sign-up. Mandates clear disclosure of recurring charges and pre-renewal reminders. Effective 2025.' },
-      { name: 'CAN-SPAM Act', citation: '15 U.S.C. § 7701', description: 'Sets rules for commercial email including requirement for opt-out mechanisms, honest subject lines, and identification as advertising. Penalties up to $50,120 per violation.' },
-      { name: 'Children\'s Online Privacy Protection Act (COPPA)', citation: '15 U.S.C. § 6501', description: 'Protects children under 13 from unauthorized data collection online. Requires verifiable parental consent and gives parents rights to review and delete their child\'s information.' },
-      { name: 'California Consumer Privacy Act (CCPA)', citation: 'Cal. Civ. Code § 1798.100', description: 'Gives California residents the right to know, delete, and opt out of the sale of their personal data. Provides a private right of action for data breaches. Several states have enacted similar laws.' },
+      {
+        name: "FTC Mail, Internet, or Telephone Order Rule",
+        citation: "16 CFR Part 435",
+        description:
+          "Requires online and catalog sellers to ship within the promised timeframe. If unable to ship, must offer full refund. Refunds must be issued within 7 business days.",
+        url: "https://www.ftc.gov/legal-library/browse/rules/mail-internet-or-telephone-order-merchandise-rule",
+      },
+      {
+        name: "FTC Click to Cancel Rule",
+        citation: "16 CFR Part 425 (amended)",
+        description:
+          "Requires sellers to make subscription cancellation as easy as sign-up. Mandates clear disclosure of recurring charges and pre-renewal reminders. Effective 2025.",
+      },
+      {
+        name: "CAN-SPAM Act",
+        citation: "15 U.S.C. § 7701",
+        description:
+          "Sets rules for commercial email including requirement for opt-out mechanisms, honest subject lines, and identification as advertising. Penalties up to $50,120 per violation.",
+      },
+      {
+        name: "Children's Online Privacy Protection Act (COPPA)",
+        citation: "15 U.S.C. § 6501",
+        description:
+          "Protects children under 13 from unauthorized data collection online. Requires verifiable parental consent and gives parents rights to review and delete their child's information.",
+      },
+      {
+        name: "California Consumer Privacy Act (CCPA)",
+        citation: "Cal. Civ. Code § 1798.100",
+        description:
+          "Gives California residents the right to know, delete, and opt out of the sale of their personal data. Provides a private right of action for data breaches. Several states have enacted similar laws.",
+      },
     ],
     faqItems: [
-      { question: 'What should I do if an online purchase never arrives?', answer: 'Start with the seller — contact them in writing citing the FTC Mail Order Rule, which requires them to ship within the promised timeframe or refund you. If the tracking shows "delivered" but you didn\'t receive it, file a claim with the shipping carrier and ask the seller for a replacement or refund. If the seller is unresponsive, escalate to the platform\'s buyer protection program (Amazon A-to-Z, eBay guarantee). If all else fails, dispute the charge with your credit card company within 60 days of the statement date. File an FTC complaint to help pattern identification.' },
-      { question: 'Can I cancel a subscription I signed up for online?', answer: 'Yes, and recent FTC rules make it easier. The Click to Cancel rule requires that if you signed up online, you must be able to cancel online — sellers can\'t force you to call or visit in person. If a company makes cancellation unreasonably difficult, file a complaint with the FTC. Before canceling, check for: annual vs. monthly billing differences, cancellation fees, and whether you\'ve prepaid for a period. Screenshot the cancellation confirmation for your records.' },
-      { question: 'What data privacy rights do I have as an online shopper?', answer: 'This depends on your state. Under CCPA (California) and similar laws in Colorado, Connecticut, Virginia, and other states, you can: request a copy of all personal data a company has about you; request deletion of your data; opt out of the sale or sharing of your data; and not be penalized for exercising these rights. Submit requests directly to the company (usually through a privacy settings page or by emailing their data protection officer). Companies have 45 days to respond. Even in states without specific privacy laws, the FTC enforces companies\' own privacy policies.' },
-      { question: 'How can I spot a fake or scam online store?', answer: 'Red flags include: prices dramatically below market rate, no physical address or phone number, poor grammar on the website, recently created domain (check whois lookup), no social media presence, only accepts wire transfers or gift cards, too-good-to-be-true deals, and no customer reviews on independent platforms. Verify the business with the Better Business Bureau. Use Google to search for "[company name] scam" or "[company name] reviews." When in doubt, pay with a credit card for maximum chargeback protection and use a virtual card number if your bank offers it.' },
-      { question: 'What happens if a product I bought online is different from the listing?', answer: 'If a product is materially different from what was advertised, you have strong grounds for a refund. This is considered a deceptive practice under the FTC Act. Steps: (1) Compare the listing (use your screenshots) to the actual product; (2) Contact the seller requesting a return and full refund; (3) If on a marketplace, file a buyer protection claim; (4) If the seller refuses, dispute with your credit card company — "item not as described" is a standard chargeback reason; (5) Report the seller to the platform and the FTC.' },
+      {
+        question: "What should I do if an online purchase never arrives?",
+        answer:
+          "Start with the seller - contact them in writing citing the FTC Mail Order Rule, which requires them to ship within the promised timeframe or refund you. If the tracking shows \"delivered\" but you didn't receive it, file a claim with the shipping carrier and ask the seller for a replacement or refund. If the seller is unresponsive, escalate to the platform's buyer protection program (Amazon A-to-Z, eBay guarantee). If all else fails, dispute the charge with your credit card company within 60 days of the statement date. File an FTC complaint to help pattern identification.",
+      },
+      {
+        question: "Can I cancel a subscription I signed up for online?",
+        answer:
+          "Yes, and recent FTC rules make it easier. The Click to Cancel rule requires that if you signed up online, you must be able to cancel online - sellers can't force you to call or visit in person. If a company makes cancellation unreasonably difficult, file a complaint with the FTC. Before canceling, check for: annual vs. monthly billing differences, cancellation fees, and whether you've prepaid for a period. Screenshot the cancellation confirmation for your records.",
+      },
+      {
+        question: "What data privacy rights do I have as an online shopper?",
+        answer:
+          "This depends on your state. Under CCPA (California) and similar laws in Colorado, Connecticut, Virginia, and other states, you can: request a copy of all personal data a company has about you; request deletion of your data; opt out of the sale or sharing of your data; and not be penalized for exercising these rights. Submit requests directly to the company (usually through a privacy settings page or by emailing their data protection officer). Companies have 45 days to respond. Even in states without specific privacy laws, the FTC enforces companies' own privacy policies.",
+      },
+      {
+        question: "How can I spot a fake or scam online store?",
+        answer:
+          'Red flags include: prices dramatically below market rate, no physical address or phone number, poor grammar on the website, recently created domain (check whois lookup), no social media presence, only accepts wire transfers or gift cards, too-good-to-be-true deals, and no customer reviews on independent platforms. Verify the business with the Better Business Bureau. Use Google to search for "[company name] scam" or "[company name] reviews." When in doubt, pay with a credit card for maximum chargeback protection and use a virtual card number if your bank offers it.',
+      },
+      {
+        question: "What happens if a product I bought online is different from the listing?",
+        answer:
+          'If a product is materially different from what was advertised, you have strong grounds for a refund. This is considered a deceptive practice under the FTC Act. Steps: (1) Compare the listing (use your screenshots) to the actual product; (2) Contact the seller requesting a return and full refund; (3) If on a marketplace, file a buyer protection claim; (4) If the seller refuses, dispute with your credit card company - "item not as described" is a standard chargeback reason; (5) Report the seller to the platform and the FTC.',
+      },
     ],
     warningSigns: [
-      'Website only accepts payment via wire transfer, cryptocurrency, or gift cards — these methods have no consumer protections',
-      'Seller has no verifiable physical address, phone number, or legitimate contact information',
-      'Prices are dramatically below market rate with no clear explanation (clearance, liquidation, etc.)',
-      'Website was created very recently and has no independent reviews on third-party sites',
-      'Cancellation process requires calling a phone number during limited hours or mailing a letter',
-      'Privacy policy is missing, vague, or grants the company unlimited rights to your data',
-      'Product reviews seem generic, overly positive, or posted within a narrow timeframe (fake review patterns)',
-      'Checkout adds mandatory extras or fees not shown on the product page',
+      "Website only accepts payment via wire transfer, cryptocurrency, or gift cards - these methods have no consumer protections",
+      "Seller has no verifiable physical address, phone number, or legitimate contact information",
+      "Prices are dramatically below market rate with no clear explanation (clearance, liquidation, etc.)",
+      "Website was created very recently and has no independent reviews on third-party sites",
+      "Cancellation process requires calling a phone number during limited hours or mailing a letter",
+      "Privacy policy is missing, vague, or grants the company unlimited rights to your data",
+      "Product reviews seem generic, overly positive, or posted within a narrow timeframe (fake review patterns)",
+      "Checkout adds mandatory extras or fees not shown on the product page",
     ],
     proTips: [
-      'Use a credit card with purchase protection and extended warranty benefits — these add layers of protection beyond your legal rights at no extra cost',
-      'Create a dedicated email address for online shopping — this limits spam and makes it easier to track purchase confirmations and dispute correspondence',
-      'Before buying from an unfamiliar seller, search "[seller name] reviews" and "[seller name] scam" — other consumers\' experiences are your best early warning system',
-      'For subscriptions, set a calendar reminder before the renewal date — this gives you time to evaluate the service and cancel if needed before being charged',
-      'Use your browser\'s built-in password manager or a dedicated one to create unique passwords for each shopping account — if one site is breached, your other accounts stay secure',
-      'Exercise your data deletion rights periodically — submit CCPA/privacy requests to companies you no longer do business with to reduce your data exposure',
+      "Use a credit card with purchase protection and extended warranty benefits - these add layers of protection beyond your legal rights at no extra cost",
+      "Create a dedicated email address for online shopping - this limits spam and makes it easier to track purchase confirmations and dispute correspondence",
+      'Before buying from an unfamiliar seller, search "[seller name] reviews" and "[seller name] scam" - other consumers\' experiences are your best early warning system',
+      "For subscriptions, set a calendar reminder before the renewal date - this gives you time to evaluate the service and cancel if needed before being charged",
+      "Use your browser's built-in password manager or a dedicated one to create unique passwords for each shopping account - if one site is breached, your other accounts stay secure",
+      "Exercise your data deletion rights periodically - submit CCPA/privacy requests to companies you no longer do business with to reduce your data exposure",
     ],
   },
   {
-    categoryId: 'hoa',
-    title: 'Homeowner Association (HOA) Rights',
-    subtitle: 'State laws and governing documents that protect homeowners from HOA overreach',
-    lastUpdated: '2026-02-01',
-    introduction: 'Homeowner associations (HOAs) govern approximately 75 million Americans across more than 370,000 communities nationwide. While HOAs serve important functions — maintaining common areas, enforcing community standards, and protecting property values — they can also overreach, imposing unfair fines, selective enforcement, and opaque governance. State laws and your community\'s governing documents provide essential protections.\n\nEvery state has laws governing HOA operations, though they vary significantly. States like California (Davis-Stirling Act), Florida (Chapters 718-723), and Texas (Property Code Chapter 209) have comprehensive HOA legislation that sets standards for governance, financial transparency, enforcement procedures, and dispute resolution. Understanding your state\'s specific provisions is critical.\n\nYour HOA\'s governing documents — the Declaration of Covenants, Conditions & Restrictions (CC&Rs), Bylaws, and Rules — create a binding contract between you and the association. However, these documents cannot override state law or violate federal fair housing protections. Provisions that conflict with state statutes are typically unenforceable.\n\nCommon homeowner complaints include selective enforcement of rules, excessive or arbitrary fines, lack of financial transparency, special assessments imposed without proper voting procedures, and boards that operate without adequate homeowner input. Knowing your rights — and the proper procedures for challenging HOA actions — can help you protect your property and your wallet.',
+    categoryId: "hoa",
+    title: "Homeowner Association (HOA) Rights",
+    subtitle: "State laws and governing documents that protect homeowners from HOA overreach",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Homeowner associations (HOAs) govern approximately 75 million Americans across more than 370,000 communities nationwide. While HOAs serve important functions - maintaining common areas, enforcing community standards, and protecting property values - they can also overreach, imposing unfair fines, selective enforcement, and opaque governance. State laws and your community's governing documents provide essential protections.\n\nEvery state has laws governing HOA operations, though they vary significantly. States like California (Davis-Stirling Act), Florida (Chapters 718-723), and Texas (Property Code Chapter 209) have comprehensive HOA legislation that sets standards for governance, financial transparency, enforcement procedures, and dispute resolution. Understanding your state's specific provisions is critical.\n\nYour HOA's governing documents - the Declaration of Covenants, Conditions & Restrictions (CC&Rs), Bylaws, and Rules - create a binding contract between you and the association. However, these documents cannot override state law or violate federal fair housing protections. Provisions that conflict with state statutes are typically unenforceable.\n\nCommon homeowner complaints include selective enforcement of rules, excessive or arbitrary fines, lack of financial transparency, special assessments imposed without proper voting procedures, and boards that operate without adequate homeowner input. Knowing your rights - and the proper procedures for challenging HOA actions - can help you protect your property and your wallet.",
     keyRights: [
-      { title: 'Access to HOA Records', description: 'Most states give homeowners the right to inspect and copy HOA financial records, meeting minutes, insurance policies, contracts, and governing documents. The HOA must make records available within a reasonable time (typically 5-30 days) and cannot charge excessive copying fees. Denying access can result in penalties or court-ordered disclosure.' },
-      { title: 'Due Process Before Fines', description: 'Before imposing fines or penalties, the HOA must provide written notice of the alleged violation, give you an opportunity to be heard (usually at a board hearing), and apply rules consistently across all homeowners. Fines imposed without proper notice and hearing may be void and unenforceable.' },
-      { title: 'Voting Rights on Major Decisions', description: 'Homeowners have the right to vote on significant HOA decisions including board elections, special assessments above certain thresholds, amendments to CC&Rs, and major expenditures. Many states require a supermajority (67% or 75%) for CC&R amendments and special assessments.' },
-      { title: 'Fair and Consistent Enforcement', description: 'HOAs must apply rules uniformly to all homeowners. Selective enforcement — targeting specific homeowners while ignoring identical violations by others — can be challenged as discriminatory and may bar the HOA from enforcing the rule against you.' },
-      { title: 'Right to Display Flags and Signs', description: 'Federal law protects your right to display the American flag (Freedom to Display the American Flag Act). Many states also protect political signs during election periods and "for sale" signs. HOAs that restrict these displays may face legal challenges.' },
-      { title: 'Protection from Foreclosure', description: 'While HOAs in many states can foreclose for unpaid assessments, states increasingly limit this power — requiring minimum debt thresholds, waiting periods, notice requirements, and court involvement. Some states prohibit non-judicial foreclosure by HOAs entirely.' },
-      { title: 'Solar Panel and EV Charger Rights', description: 'Many states prohibit HOAs from banning solar panels, EV chargers, and other energy-efficient improvements. HOAs can set reasonable aesthetic standards but cannot effectively prohibit the installation or charge unreasonable fees.' },
-      { title: 'Right to Attend Board Meetings', description: 'Most states require HOA board meetings to be open to all homeowners. Agendas must be posted in advance, and homeowners typically have the right to speak during designated public comment periods. Executive sessions are limited to specific topics like litigation and personnel.' },
+      {
+        title: "Access to HOA Records",
+        description:
+          "Most states give homeowners the right to inspect and copy HOA financial records, meeting minutes, insurance policies, contracts, and governing documents. The HOA must make records available within a reasonable time (typically 5-30 days) and cannot charge excessive copying fees. Denying access can result in penalties or court-ordered disclosure.",
+      },
+      {
+        title: "Due Process Before Fines",
+        description:
+          "Before imposing fines or penalties, the HOA must provide written notice of the alleged violation, give you an opportunity to be heard (usually at a board hearing), and apply rules consistently across all homeowners. Fines imposed without proper notice and hearing may be void and unenforceable.",
+      },
+      {
+        title: "Voting Rights on Major Decisions",
+        description:
+          "Homeowners have the right to vote on significant HOA decisions including board elections, special assessments above certain thresholds, amendments to CC&Rs, and major expenditures. Many states require a supermajority (67% or 75%) for CC&R amendments and special assessments.",
+      },
+      {
+        title: "Fair and Consistent Enforcement",
+        description:
+          "HOAs must apply rules uniformly to all homeowners. Selective enforcement - targeting specific homeowners while ignoring identical violations by others - can be challenged as discriminatory and may bar the HOA from enforcing the rule against you.",
+      },
+      {
+        title: "Right to Display Flags and Signs",
+        description:
+          'Federal law protects your right to display the American flag (Freedom to Display the American Flag Act). Many states also protect political signs during election periods and "for sale" signs. HOAs that restrict these displays may face legal challenges.',
+      },
+      {
+        title: "Protection from Foreclosure",
+        description:
+          "While HOAs in many states can foreclose for unpaid assessments, states increasingly limit this power - requiring minimum debt thresholds, waiting periods, notice requirements, and court involvement. Some states prohibit non-judicial foreclosure by HOAs entirely.",
+      },
+      {
+        title: "Solar Panel and EV Charger Rights",
+        description:
+          "Many states prohibit HOAs from banning solar panels, EV chargers, and other energy-efficient improvements. HOAs can set reasonable aesthetic standards but cannot effectively prohibit the installation or charge unreasonable fees.",
+      },
+      {
+        title: "Right to Attend Board Meetings",
+        description:
+          "Most states require HOA board meetings to be open to all homeowners. Agendas must be posted in advance, and homeowners typically have the right to speak during designated public comment periods. Executive sessions are limited to specific topics like litigation and personnel.",
+      },
     ],
     commonIssues: [
-      'Arbitrary or excessive fines for minor violations — fines disproportionate to the infraction',
-      'Selective enforcement — rules enforced against some homeowners but not others',
-      'Special assessments imposed without proper homeowner vote',
-      'Board refusing to provide financial records or meeting minutes',
-      'HOA blocking property modifications that comply with applicable laws',
-      'Board members making decisions that benefit their own properties',
-      'Deferred maintenance of common areas while homeowner assessments continue to increase',
-      'Neighbor disputes escalated to HOA with biased or inadequate resolution',
-      'HOA vendor contracts awarded without competitive bidding or proper board authorization',
-      'Fines or violations issued without proper notice and hearing',
+      "Arbitrary or excessive fines for minor violations - fines disproportionate to the infraction",
+      "Selective enforcement - rules enforced against some homeowners but not others",
+      "Special assessments imposed without proper homeowner vote",
+      "Board refusing to provide financial records or meeting minutes",
+      "HOA blocking property modifications that comply with applicable laws",
+      "Board members making decisions that benefit their own properties",
+      "Deferred maintenance of common areas while homeowner assessments continue to increase",
+      "Neighbor disputes escalated to HOA with biased or inadequate resolution",
+      "HOA vendor contracts awarded without competitive bidding or proper board authorization",
+      "Fines or violations issued without proper notice and hearing",
     ],
     actionSteps: [
-      'Read your CC&Rs, Bylaws, and Rules thoroughly — know what the HOA can and cannot regulate',
-      'Attend board meetings regularly and review meeting minutes — active participation prevents board overreach',
-      'Request access to financial records annually — review expenditures, reserves, and vendor contracts',
-      'If you receive a violation notice, respond in writing and request a hearing — never ignore it',
-      'Document selective enforcement by photographing identical violations that the HOA ignores for other homeowners',
-      'Challenge improper fines in writing, citing the specific CC&R provision and your state\'s HOA act',
-      'If the board is unresponsive, organize with other homeowners — many issues require a group effort to resolve',
-      'Consider running for the board yourself — this gives you direct influence over governance decisions',
-      'File complaints with your state\'s attorney general or real estate regulatory agency for serious violations',
-      'For disputes that can\'t be resolved internally, explore mediation before litigation — many states require it',
+      "Read your CC&Rs, Bylaws, and Rules thoroughly - know what the HOA can and cannot regulate",
+      "Attend board meetings regularly and review meeting minutes - active participation prevents board overreach",
+      "Request access to financial records annually - review expenditures, reserves, and vendor contracts",
+      "If you receive a violation notice, respond in writing and request a hearing - never ignore it",
+      "Document selective enforcement by photographing identical violations that the HOA ignores for other homeowners",
+      "Challenge improper fines in writing, citing the specific CC&R provision and your state's HOA act",
+      "If the board is unresponsive, organize with other homeowners - many issues require a group effort to resolve",
+      "Consider running for the board yourself - this gives you direct influence over governance decisions",
+      "File complaints with your state's attorney general or real estate regulatory agency for serious violations",
+      "For disputes that can't be resolved internally, explore mediation before litigation - many states require it",
     ],
     importantDeadlines: [
-      '30 days: Typical response deadline for HOA record requests',
-      '10-30 days: Common deadline to respond to a violation notice or request a hearing',
-      '45-60 days: Typical notice period for assessment increases',
-      '30 days: Common deadline to contest a fine or special assessment',
-      '1-3 years: Statute of limitations for HOA governance challenges (varies by state)',
-      '21-30 days: Typical advance notice for board meetings and elections',
-      '60 days: Common notice period before an HOA can initiate foreclosure proceedings',
+      "30 days: Typical response deadline for HOA record requests",
+      "10-30 days: Common deadline to respond to a violation notice or request a hearing",
+      "45-60 days: Typical notice period for assessment increases",
+      "30 days: Common deadline to contest a fine or special assessment",
+      "1-3 years: Statute of limitations for HOA governance challenges (varies by state)",
+      "21-30 days: Typical advance notice for board meetings and elections",
+      "60 days: Common notice period before an HOA can initiate foreclosure proceedings",
     ],
     federalLaws: [
-      { name: 'Fair Housing Act (HOA Context)', citation: '42 U.S.C. §§ 3601-3631', description: 'Prohibits HOAs from discriminating in rules, enforcement, or governance based on race, color, national origin, religion, sex, familial status, or disability. Includes requirements for reasonable accommodations.', url: 'https://www.hud.gov/program_offices/fair_housing_equal_opp/fair_housing_act_overview' },
-      { name: 'Freedom to Display the American Flag Act', citation: 'P.L. 109-243', description: 'Prohibits HOAs and condominium associations from restricting the display of the U.S. flag on residential property, subject to reasonable time, place, and manner restrictions.' },
-      { name: 'Over-the-Air Reception Devices (OTARD) Rule', citation: '47 CFR § 1.4000', description: 'FCC rule that prohibits HOAs from restricting the installation of TV antennas, satellite dishes (under 1 meter), and certain wireless antennas on property exclusively used by the homeowner.' },
-      { name: 'Americans with Disabilities Act (ADA) — Common Areas', citation: '42 U.S.C. § 12101', description: 'Requires HOA common areas (clubhouses, pools, offices) to be accessible to persons with disabilities. HOAs must make reasonable accommodations in rules and policies for disabled homeowners.' },
+      {
+        name: "Fair Housing Act (HOA Context)",
+        citation: "42 U.S.C. §§ 3601-3631",
+        description:
+          "Prohibits HOAs from discriminating in rules, enforcement, or governance based on race, color, national origin, religion, sex, familial status, or disability. Includes requirements for reasonable accommodations.",
+        url: "https://www.hud.gov/program_offices/fair_housing_equal_opp/fair_housing_act_overview",
+      },
+      {
+        name: "Freedom to Display the American Flag Act",
+        citation: "P.L. 109-243",
+        description:
+          "Prohibits HOAs and condominium associations from restricting the display of the U.S. flag on residential property, subject to reasonable time, place, and manner restrictions.",
+      },
+      {
+        name: "Over-the-Air Reception Devices (OTARD) Rule",
+        citation: "47 CFR § 1.4000",
+        description:
+          "FCC rule that prohibits HOAs from restricting the installation of TV antennas, satellite dishes (under 1 meter), and certain wireless antennas on property exclusively used by the homeowner.",
+      },
+      {
+        name: "Americans with Disabilities Act (ADA) - Common Areas",
+        citation: "42 U.S.C. § 12101",
+        description:
+          "Requires HOA common areas (clubhouses, pools, offices) to be accessible to persons with disabilities. HOAs must make reasonable accommodations in rules and policies for disabled homeowners.",
+      },
     ],
     faqItems: [
-      { question: 'Can the HOA fine me without a hearing?', answer: 'In most states, no. State HOA acts and most governing documents require the HOA to provide: (1) Written notice of the specific violation citing the rule allegedly violated; (2) A reasonable opportunity to cure the violation (typically 10-30 days); (3) A hearing before the board or a violation committee where you can present your side; (4) Written notice of the decision. Fines imposed without this due process are often void and unenforceable. If your HOA fines you without proper procedure, challenge the fine in writing and cite your state\'s HOA act.' },
-      { question: 'Can I access the HOA\'s financial records?', answer: 'Yes. Most states give homeowners the right to inspect and copy HOA financial records including annual budgets, financial statements, bank records, invoices, contracts, and tax returns. The HOA typically must provide access within 5-30 days of your written request and cannot charge more than the actual cost of copying. If the HOA refuses, you may be able to obtain a court order compelling disclosure, often with the HOA paying your attorney\'s fees. Regular financial review is the best way to prevent board mismanagement of funds.' },
-      { question: 'Can the HOA foreclose on my home for unpaid dues?', answer: 'In many states, yes — HOA assessment liens can lead to foreclosure. However, states increasingly restrict this: some require a minimum debt threshold (often $1,000-$2,500 or 6+ months of arrears), court involvement (judicial foreclosure), advance notice periods (often 30-60 days), and the opportunity to enter a payment plan. Some states prohibit non-judicial HOA foreclosure entirely. If you\'re facing potential foreclosure, consult a real estate attorney immediately, request a payment plan in writing, and ensure the HOA followed all required procedures.' },
-      { question: 'What can I do about selective enforcement by the HOA?', answer: 'Document it thoroughly. Photograph identical violations by other homeowners that the HOA has not enforced. Request records of all violation notices issued in the past year. If you can demonstrate a pattern of selective enforcement — the same rule enforced against you but not your neighbors — courts may bar the HOA from enforcing the rule against you. Selective enforcement can also support claims of discrimination under the Fair Housing Act if the targeting appears to be based on a protected characteristic. Present your evidence at a board meeting and in writing.' },
-      { question: 'Can the HOA prevent me from installing solar panels?', answer: 'In most states, no. Over 25 states have laws that prohibit HOAs from effectively banning solar panels, and the number is growing. HOAs may be able to set reasonable aesthetic guidelines (location, angle, visibility) but cannot impose restrictions that significantly increase the cost of the system, reduce its efficiency by more than 10%, or delay installation unreasonably. Similar protections increasingly apply to EV chargers and other green energy improvements. Check your state\'s specific solar access or solar rights law.' },
-      { question: 'Should I attend HOA board meetings?', answer: 'Absolutely. Regular attendance is the single most effective way to protect your interests as a homeowner. Board meetings are where decisions about assessments, rule changes, vendor contracts, and enforcement priorities are made. Most states require meetings to be open to homeowners with advance notice. Even if you don\'t speak, your presence signals that homeowners are engaged and watching. If you notice problems — financial irregularities, biased enforcement, self-dealing — raise them during public comment periods and follow up in writing.' },
+      {
+        question: "Can the HOA fine me without a hearing?",
+        answer:
+          "In most states, no. State HOA acts and most governing documents require the HOA to provide: (1) Written notice of the specific violation citing the rule allegedly violated; (2) A reasonable opportunity to cure the violation (typically 10-30 days); (3) A hearing before the board or a violation committee where you can present your side; (4) Written notice of the decision. Fines imposed without this due process are often void and unenforceable. If your HOA fines you without proper procedure, challenge the fine in writing and cite your state's HOA act.",
+      },
+      {
+        question: "Can I access the HOA's financial records?",
+        answer:
+          "Yes. Most states give homeowners the right to inspect and copy HOA financial records including annual budgets, financial statements, bank records, invoices, contracts, and tax returns. The HOA typically must provide access within 5-30 days of your written request and cannot charge more than the actual cost of copying. If the HOA refuses, you may be able to obtain a court order compelling disclosure, often with the HOA paying your attorney's fees. Regular financial review is the best way to prevent board mismanagement of funds.",
+      },
+      {
+        question: "Can the HOA foreclose on my home for unpaid dues?",
+        answer:
+          "In many states, yes - HOA assessment liens can lead to foreclosure. However, states increasingly restrict this: some require a minimum debt threshold (often $1,000-$2,500 or 6+ months of arrears), court involvement (judicial foreclosure), advance notice periods (often 30-60 days), and the opportunity to enter a payment plan. Some states prohibit non-judicial HOA foreclosure entirely. If you're facing potential foreclosure, consult a real estate attorney immediately, request a payment plan in writing, and ensure the HOA followed all required procedures.",
+      },
+      {
+        question: "What can I do about selective enforcement by the HOA?",
+        answer:
+          "Document it thoroughly. Photograph identical violations by other homeowners that the HOA has not enforced. Request records of all violation notices issued in the past year. If you can demonstrate a pattern of selective enforcement - the same rule enforced against you but not your neighbors - courts may bar the HOA from enforcing the rule against you. Selective enforcement can also support claims of discrimination under the Fair Housing Act if the targeting appears to be based on a protected characteristic. Present your evidence at a board meeting and in writing.",
+      },
+      {
+        question: "Can the HOA prevent me from installing solar panels?",
+        answer:
+          "In most states, no. Over 25 states have laws that prohibit HOAs from effectively banning solar panels, and the number is growing. HOAs may be able to set reasonable aesthetic guidelines (location, angle, visibility) but cannot impose restrictions that significantly increase the cost of the system, reduce its efficiency by more than 10%, or delay installation unreasonably. Similar protections increasingly apply to EV chargers and other green energy improvements. Check your state's specific solar access or solar rights law.",
+      },
+      {
+        question: "Should I attend HOA board meetings?",
+        answer:
+          "Absolutely. Regular attendance is the single most effective way to protect your interests as a homeowner. Board meetings are where decisions about assessments, rule changes, vendor contracts, and enforcement priorities are made. Most states require meetings to be open to homeowners with advance notice. Even if you don't speak, your presence signals that homeowners are engaged and watching. If you notice problems - financial irregularities, biased enforcement, self-dealing - raise them during public comment periods and follow up in writing.",
+      },
     ],
     warningSigns: [
-      'Board meets in "executive session" for most or all of its business — limiting transparency',
-      'HOA refuses or delays requests for financial records',
-      'Fines are issued without written notice of the specific violation or opportunity for a hearing',
-      'Assessment increases exceed inflation significantly without clear justification or capital improvement projects',
-      'Board members award contracts to companies they have a personal relationship with (self-dealing)',
-      'Rules are enforced against you but not your neighbors for identical situations',
-      'HOA requires modifications that have no impact on common areas or other homeowners',
-      'Board election procedures are opaque or make it difficult for non-incumbent candidates to run',
+      'Board meets in "executive session" for most or all of its business - limiting transparency',
+      "HOA refuses or delays requests for financial records",
+      "Fines are issued without written notice of the specific violation or opportunity for a hearing",
+      "Assessment increases exceed inflation significantly without clear justification or capital improvement projects",
+      "Board members award contracts to companies they have a personal relationship with (self-dealing)",
+      "Rules are enforced against you but not your neighbors for identical situations",
+      "HOA requires modifications that have no impact on common areas or other homeowners",
+      "Board election procedures are opaque or make it difficult for non-incumbent candidates to run",
     ],
     proTips: [
-      'Build a coalition of concerned homeowners before confronting the board — collective action is far more effective than individual complaints',
-      'Request the HOA\'s insurance policies and reserve study — these reveal the true financial health of the association and whether your assessments are being managed responsibly',
-      'If you receive a violation, always respond in writing within the deadline — even if you plan to cure the violation. This protects your right to challenge the matter later',
-      'Consider running for the board or attending the annual meeting with proxy votes — it takes a surprisingly small number of votes to change board composition in most HOAs',
-      'Before buying in an HOA, request and read ALL governing documents, recent meeting minutes, financial statements, and the reserve study — problems in these documents are red flags',
-      'Keep a file of all HOA communications, violation notices, and your responses — chronological documentation is essential if any matter reaches mediation or court',
+      "Build a coalition of concerned homeowners before confronting the board - collective action is far more effective than individual complaints",
+      "Request the HOA's insurance policies and reserve study - these reveal the true financial health of the association and whether your assessments are being managed responsibly",
+      "If you receive a violation, always respond in writing within the deadline - even if you plan to cure the violation. This protects your right to challenge the matter later",
+      "Consider running for the board or attending the annual meeting with proxy votes - it takes a surprisingly small number of votes to change board composition in most HOAs",
+      "Before buying in an HOA, request and read ALL governing documents, recent meeting minutes, financial statements, and the reserve study - problems in these documents are red flags",
+      "Keep a file of all HOA communications, violation notices, and your responses - chronological documentation is essential if any matter reaches mediation or court",
     ],
   },
   {
-    categoryId: 'contractors',
-    title: 'Home Improvement & Contractor Rights',
-    subtitle: 'Licensing laws, contract requirements, and remedies for defective contractor work',
-    lastUpdated: '2026-02-01',
-    introduction: 'Hiring a contractor for home improvement is one of the most common — and most complained-about — consumer transactions. State contractor licensing laws, the FTC\'s Cooling-Off Rule, and implied warranties of workmanship provide essential protections. However, the specific requirements vary significantly by state, making it crucial to understand your local regulatory framework.\n\nEvery state regulates contractors to some degree, though the requirements range from comprehensive licensing systems (California, Arizona) to more minimal registration requirements (some states). Licensed contractors are subject to state oversight, bonding requirements, and disciplinary action for substandard work. Hiring an unlicensed contractor when licensing is required can leave you with limited legal remedies and may void your homeowner\'s insurance coverage for related damage.\n\nThe FTC\'s Cooling-Off Rule gives homeowners a 3-business-day right to cancel contracts for home improvement projects that were solicited at your home — for example, if a contractor knocks on your door after a storm. Many states extend this protection with additional home improvement-specific cooling-off periods, some as long as 5 business days.\n\nMechanic\'s lien laws protect contractors\' right to payment, but they also protect homeowners through preliminary notice requirements that ensure you know who\'s working on your project and can manage payments to prevent liens. Understanding the lien process is essential for managing any significant construction project.',
+    categoryId: "contractors",
+    title: "Home Improvement & Contractor Rights",
+    subtitle: "Licensing laws, contract requirements, and remedies for defective contractor work",
+    lastUpdated: "2026-02-01",
+    introduction:
+      "Hiring a contractor for home improvement is one of the most common - and most complained-about - consumer transactions. State contractor licensing laws, the FTC's Cooling-Off Rule, and implied warranties of workmanship provide essential protections. However, the specific requirements vary significantly by state, making it crucial to understand your local regulatory framework.\n\nEvery state regulates contractors to some degree, though the requirements range from comprehensive licensing systems (California, Arizona) to more minimal registration requirements (some states). Licensed contractors are subject to state oversight, bonding requirements, and disciplinary action for substandard work. Hiring an unlicensed contractor when licensing is required can leave you with limited legal remedies and may void your homeowner's insurance coverage for related damage.\n\nThe FTC's Cooling-Off Rule gives homeowners a 3-business-day right to cancel contracts for home improvement projects that were solicited at your home - for example, if a contractor knocks on your door after a storm. Many states extend this protection with additional home improvement-specific cooling-off periods, some as long as 5 business days.\n\nMechanic's lien laws protect contractors' right to payment, but they also protect homeowners through preliminary notice requirements that ensure you know who's working on your project and can manage payments to prevent liens. Understanding the lien process is essential for managing any significant construction project.",
     keyRights: [
-      { title: 'Written Contract Requirement', description: 'Most states require written contracts for home improvement projects above certain thresholds (typically $500-$1,000). Contracts must include the contractor\'s license number, a detailed scope of work, materials specifications, payment schedule, start and completion dates, and warranty terms. Oral agreements are difficult to enforce and leave you vulnerable.' },
-      { title: 'Contractor License Verification', description: 'You have the right to verify a contractor\'s license, bond, and insurance through your state\'s licensing board. Licensed contractors must maintain minimum insurance coverage (typically general liability and workers\' compensation). Hiring an unlicensed contractor may void your homeowner\'s insurance for related claims.' },
-      { title: 'FTC Cooling-Off Rule (Home Sales)', description: 'For home improvement contracts solicited at your home (door-to-door), you have 3 business days to cancel. The contractor must provide you with two copies of a cancellation form and a receipt at the time of signing. Many states provide additional cooling-off periods for home improvement contracts.' },
-      { title: 'Mechanic\'s Lien Protections', description: 'Contractors and subcontractors must provide preliminary notices before they can place a lien on your property. These notices let you know who\'s working on your project so you can manage payments and verify that subcontractors and suppliers are being paid. Failure to provide preliminary notice may invalidate the lien.' },
-      { title: 'Right to Withhold Final Payment', description: 'You have the right to withhold reasonable payment for incomplete or defective work. Final payment should not be made until you\'ve inspected the work, all required permits have been finalized, and any punch list items have been addressed. Many states specifically protect this right.' },
-      { title: 'Implied Warranty of Workmanship', description: 'Even if not stated in the contract, contractors provide an implied warranty that their work will be performed in a workmanlike manner consistent with applicable building codes and industry standards. This warranty typically lasts 1-10 years depending on the type of work and your state.' },
-      { title: 'Right to Obtain Required Permits', description: 'Licensed contractors are typically required to obtain all necessary building permits for the project. Work performed without required permits can fail inspections, affect your ability to sell the home, and void your insurance. You have the right to verify that permits were obtained.' },
-      { title: 'Protection from Abandoned Projects', description: 'If a contractor abandons a project, you may have claims against the contractor\'s surety bond (if bonded), can file complaints with the licensing board (which can revoke licenses), and can pursue damages including the cost to complete the project with another contractor.' },
+      {
+        title: "Written Contract Requirement",
+        description:
+          "Most states require written contracts for home improvement projects above certain thresholds (typically $500-$1,000). Contracts must include the contractor's license number, a detailed scope of work, materials specifications, payment schedule, start and completion dates, and warranty terms. Oral agreements are difficult to enforce and leave you vulnerable.",
+      },
+      {
+        title: "Contractor License Verification",
+        description:
+          "You have the right to verify a contractor's license, bond, and insurance through your state's licensing board. Licensed contractors must maintain minimum insurance coverage (typically general liability and workers' compensation). Hiring an unlicensed contractor may void your homeowner's insurance for related claims.",
+      },
+      {
+        title: "FTC Cooling-Off Rule (Home Sales)",
+        description:
+          "For home improvement contracts solicited at your home (door-to-door), you have 3 business days to cancel. The contractor must provide you with two copies of a cancellation form and a receipt at the time of signing. Many states provide additional cooling-off periods for home improvement contracts.",
+      },
+      {
+        title: "Mechanic's Lien Protections",
+        description:
+          "Contractors and subcontractors must provide preliminary notices before they can place a lien on your property. These notices let you know who's working on your project so you can manage payments and verify that subcontractors and suppliers are being paid. Failure to provide preliminary notice may invalidate the lien.",
+      },
+      {
+        title: "Right to Withhold Final Payment",
+        description:
+          "You have the right to withhold reasonable payment for incomplete or defective work. Final payment should not be made until you've inspected the work, all required permits have been finalized, and any punch list items have been addressed. Many states specifically protect this right.",
+      },
+      {
+        title: "Implied Warranty of Workmanship",
+        description:
+          "Even if not stated in the contract, contractors provide an implied warranty that their work will be performed in a workmanlike manner consistent with applicable building codes and industry standards. This warranty typically lasts 1-10 years depending on the type of work and your state.",
+      },
+      {
+        title: "Right to Obtain Required Permits",
+        description:
+          "Licensed contractors are typically required to obtain all necessary building permits for the project. Work performed without required permits can fail inspections, affect your ability to sell the home, and void your insurance. You have the right to verify that permits were obtained.",
+      },
+      {
+        title: "Protection from Abandoned Projects",
+        description:
+          "If a contractor abandons a project, you may have claims against the contractor's surety bond (if bonded), can file complaints with the licensing board (which can revoke licenses), and can pursue damages including the cost to complete the project with another contractor.",
+      },
     ],
     commonIssues: [
-      'Substandard workmanship that doesn\'t meet building codes or industry standards',
-      'Project abandonment — contractor disappears with deposit money and work incomplete',
-      'Significant cost overruns without proper change order authorization',
-      'Unlicensed contractor performing work that requires a license',
-      'Damage to existing property during the project (plumbing, electrical, landscaping)',
-      'Failure to obtain required building permits',
-      'Subcontractors or suppliers placing liens on property because the general contractor didn\'t pay them',
-      'Contractor demanding full payment upfront (a major red flag)',
-      'Using inferior materials or substituting cheaper alternatives than specified in the contract',
-      'Project timeline delays far beyond the contract completion date with no communication',
+      "Substandard workmanship that doesn't meet building codes or industry standards",
+      "Project abandonment - contractor disappears with deposit money and work incomplete",
+      "Significant cost overruns without proper change order authorization",
+      "Unlicensed contractor performing work that requires a license",
+      "Damage to existing property during the project (plumbing, electrical, landscaping)",
+      "Failure to obtain required building permits",
+      "Subcontractors or suppliers placing liens on property because the general contractor didn't pay them",
+      "Contractor demanding full payment upfront (a major red flag)",
+      "Using inferior materials or substituting cheaper alternatives than specified in the contract",
+      "Project timeline delays far beyond the contract completion date with no communication",
     ],
     actionSteps: [
-      'Verify contractor licenses, insurance (liability + workers\' comp), and bonding before hiring — check your state licensing board\'s website',
-      'Get detailed written contracts specifying scope, materials, payment schedule, timeline, and warranty terms',
-      'Never pay more than 10-15% as a deposit (some states cap the maximum deposit by law)',
-      'Document all work progress with dated photos and maintain a project log',
-      'Get written change orders for any modifications to the original contract — including the additional cost and revised timeline',
-      'Verify that building permits are obtained and displayed at the project site',
-      'Before making final payment, walk through the project and create a written punch list of any deficiencies',
-      'If work is defective, send a formal demand letter via certified mail citing the specific contract provisions, building code violations, and applicable state law',
-      'File complaints with your state contractor licensing board — they can investigate, discipline, and revoke licenses',
-      'For abandoned projects or contractor fraud, file a claim against the contractor\'s bond and report to your state attorney general',
+      "Verify contractor licenses, insurance (liability + workers' comp), and bonding before hiring - check your state licensing board's website",
+      "Get detailed written contracts specifying scope, materials, payment schedule, timeline, and warranty terms",
+      "Never pay more than 10-15% as a deposit (some states cap the maximum deposit by law)",
+      "Document all work progress with dated photos and maintain a project log",
+      "Get written change orders for any modifications to the original contract - including the additional cost and revised timeline",
+      "Verify that building permits are obtained and displayed at the project site",
+      "Before making final payment, walk through the project and create a written punch list of any deficiencies",
+      "If work is defective, send a formal demand letter via certified mail citing the specific contract provisions, building code violations, and applicable state law",
+      "File complaints with your state contractor licensing board - they can investigate, discipline, and revoke licenses",
+      "For abandoned projects or contractor fraud, file a claim against the contractor's bond and report to your state attorney general",
     ],
     importantDeadlines: [
-      '3 business days: FTC Cooling-Off Rule cancellation period for door-to-door solicited contracts',
-      '5 business days: Extended cooling-off period in some states for home improvement contracts',
-      '20 days: Common preliminary lien notice deadline (from start of work — varies by state)',
-      '60-90 days: Typical mechanic\'s lien filing deadline after project completion (varies significantly by state)',
-      '1-10 years: Implied warranty of workmanship period (depends on work type and state)',
-      '4-6 years: Typical statute of limitations for breach of construction contract',
-      '10 years: Common statute of repose for construction defect claims (varies by state)',
-      '30 days: Reasonable deadline to provide in a demand letter for contractor to remedy defective work',
+      "3 business days: FTC Cooling-Off Rule cancellation period for door-to-door solicited contracts",
+      "5 business days: Extended cooling-off period in some states for home improvement contracts",
+      "20 days: Common preliminary lien notice deadline (from start of work - varies by state)",
+      "60-90 days: Typical mechanic's lien filing deadline after project completion (varies significantly by state)",
+      "1-10 years: Implied warranty of workmanship period (depends on work type and state)",
+      "4-6 years: Typical statute of limitations for breach of construction contract",
+      "10 years: Common statute of repose for construction defect claims (varies by state)",
+      "30 days: Reasonable deadline to provide in a demand letter for contractor to remedy defective work",
     ],
     federalLaws: [
-      { name: 'FTC Cooling-Off Rule (Home Improvement)', citation: '16 CFR Part 429', description: 'Gives homeowners 3 business days to cancel home improvement contracts that were solicited at their home. Contractor must provide cancellation forms and honor cancellation requests without penalty.', url: 'https://www.ftc.gov/legal-library/browse/rules/cooling-rule' },
-      { name: 'FTC Act Section 5 (Contractor Fraud)', citation: '15 U.S.C. § 45', description: 'Prohibits unfair and deceptive business practices by contractors, including false advertising, misrepresentation of qualifications, and deceptive pricing practices.' },
-      { name: 'OSHA Construction Standards', citation: '29 CFR Part 1926', description: 'Sets workplace safety standards for construction sites. While primarily protecting workers, these standards also protect homeowners from hazards created by unsafe construction practices on their property.' },
-      { name: 'EPA Lead Renovation, Repair, and Painting Rule', citation: '40 CFR Part 745', description: 'Requires contractors working in pre-1978 homes to be EPA-certified for lead-safe work practices. Contractors must provide lead paint information pamphlet to homeowners before renovation begins.', url: 'https://www.epa.gov/lead/lead-renovation-repair-and-painting-program' },
+      {
+        name: "FTC Cooling-Off Rule (Home Improvement)",
+        citation: "16 CFR Part 429",
+        description:
+          "Gives homeowners 3 business days to cancel home improvement contracts that were solicited at their home. Contractor must provide cancellation forms and honor cancellation requests without penalty.",
+        url: "https://www.ftc.gov/legal-library/browse/rules/cooling-rule",
+      },
+      {
+        name: "FTC Act Section 5 (Contractor Fraud)",
+        citation: "15 U.S.C. § 45",
+        description:
+          "Prohibits unfair and deceptive business practices by contractors, including false advertising, misrepresentation of qualifications, and deceptive pricing practices.",
+      },
+      {
+        name: "OSHA Construction Standards",
+        citation: "29 CFR Part 1926",
+        description:
+          "Sets workplace safety standards for construction sites. While primarily protecting workers, these standards also protect homeowners from hazards created by unsafe construction practices on their property.",
+      },
+      {
+        name: "EPA Lead Renovation, Repair, and Painting Rule",
+        citation: "40 CFR Part 745",
+        description:
+          "Requires contractors working in pre-1978 homes to be EPA-certified for lead-safe work practices. Contractors must provide lead paint information pamphlet to homeowners before renovation begins.",
+        url: "https://www.epa.gov/lead/lead-renovation-repair-and-painting-program",
+      },
     ],
     faqItems: [
-      { question: 'How much should I pay upfront as a deposit?', answer: 'Never pay more than 10-15% of the total project cost as a deposit — and some states set legal maximums (California caps deposits at $1,000 or 10%, whichever is less). A contractor who demands full payment or a very large deposit upfront is a major red flag. Structure payments around completion milestones: deposit at contract signing, progress payments as specific work phases are completed and inspected, and final payment (10-15%) only after all work passes inspection and punch list items are resolved. Never make cash payments — use checks or electronic transfers that create a paper trail.' },
-      { question: 'What should I do if a contractor abandons my project?', answer: 'Act quickly: (1) Send a formal written notice via certified mail demanding the contractor return to complete the work within a specific deadline (typically 7-10 days); (2) If no response, file a complaint with your state licensing board; (3) File a claim against the contractor\'s surety bond for your losses; (4) Get written bids from other licensed contractors to complete the project; (5) Document the abandoned state of the project with photos; (6) Consider filing in small claims or civil court for damages including the cost to complete, repair defective work, and any resulting property damage. If you paid by credit card, dispute the charges for unperformed work.' },
-      { question: 'Can I withhold payment for defective work?', answer: 'Yes — you have the right to withhold reasonable payment for work that doesn\'t meet the contract specifications, applicable building codes, or industry workmanship standards. Before withholding, document the deficiencies in writing and give the contractor reasonable notice and opportunity to correct the problems. Never withhold the entire payment for minor deficiencies — withhold only the portion reasonably related to the defective work. Your contract may specify dispute resolution procedures that should be followed.' },
-      { question: 'What is a mechanic\'s lien and how do I protect myself?', answer: 'A mechanic\'s lien is a legal claim against your property by a contractor, subcontractor, or supplier who hasn\'t been paid. Even if YOU paid your general contractor in full, a sub or supplier who wasn\'t paid by the GC can lien your property. To protect yourself: (1) Require preliminary notices from all subs and suppliers; (2) Require lien waivers from the GC, subs, and suppliers with each payment; (3) For large projects, consider using a joint-check arrangement; (4) Verify that the GC is paying subs by checking with them directly. If a lien is filed, consult a construction attorney — there are often technical defenses based on filing deadlines and notice requirements.' },
-      { question: 'Should I hire a licensed or unlicensed contractor?', answer: 'Always hire a licensed contractor for work that requires licensing in your state. Benefits of a licensed contractor include: state oversight and accountability; surety bond that provides financial protection; required insurance coverage; disciplinary action available through the licensing board; and typically more recourse if problems arise. Hiring an unlicensed contractor when a license is required may: void your homeowner\'s insurance for related damage; make it harder to enforce the contract; and expose you to liability for worker injuries (no workers\' comp coverage). Some minor work (painting, basic landscaping) may not require licensing — check your state\'s requirements.' },
-      { question: 'How do I handle cost overruns and change orders?', answer: 'Your contract should include a change order process: any modification to the scope, materials, or timeline must be documented in a written change order signed by both parties BEFORE the work is performed. The change order should specify: what changed, why, the additional cost (or credit), and the revised completion date. Never agree to verbal change orders. If the contractor claims unforeseen conditions require additional work, get an independent assessment before agreeing. Some states require that change orders exceeding a certain percentage of the original contract be in writing. A well-written contract limits your exposure to "cost overrun" claims.' },
+      {
+        question: "How much should I pay upfront as a deposit?",
+        answer:
+          "Never pay more than 10-15% of the total project cost as a deposit - and some states set legal maximums (California caps deposits at $1,000 or 10%, whichever is less). A contractor who demands full payment or a very large deposit upfront is a major red flag. Structure payments around completion milestones: deposit at contract signing, progress payments as specific work phases are completed and inspected, and final payment (10-15%) only after all work passes inspection and punch list items are resolved. Never make cash payments - use checks or electronic transfers that create a paper trail.",
+      },
+      {
+        question: "What should I do if a contractor abandons my project?",
+        answer:
+          "Act quickly: (1) Send a formal written notice via certified mail demanding the contractor return to complete the work within a specific deadline (typically 7-10 days); (2) If no response, file a complaint with your state licensing board; (3) File a claim against the contractor's surety bond for your losses; (4) Get written bids from other licensed contractors to complete the project; (5) Document the abandoned state of the project with photos; (6) Consider filing in small claims or civil court for damages including the cost to complete, repair defective work, and any resulting property damage. If you paid by credit card, dispute the charges for unperformed work.",
+      },
+      {
+        question: "Can I withhold payment for defective work?",
+        answer:
+          "Yes - you have the right to withhold reasonable payment for work that doesn't meet the contract specifications, applicable building codes, or industry workmanship standards. Before withholding, document the deficiencies in writing and give the contractor reasonable notice and opportunity to correct the problems. Never withhold the entire payment for minor deficiencies - withhold only the portion reasonably related to the defective work. Your contract may specify dispute resolution procedures that should be followed.",
+      },
+      {
+        question: "What is a mechanic's lien and how do I protect myself?",
+        answer:
+          "A mechanic's lien is a legal claim against your property by a contractor, subcontractor, or supplier who hasn't been paid. Even if YOU paid your general contractor in full, a sub or supplier who wasn't paid by the GC can lien your property. To protect yourself: (1) Require preliminary notices from all subs and suppliers; (2) Require lien waivers from the GC, subs, and suppliers with each payment; (3) For large projects, consider using a joint-check arrangement; (4) Verify that the GC is paying subs by checking with them directly. If a lien is filed, consult a construction attorney - there are often technical defenses based on filing deadlines and notice requirements.",
+      },
+      {
+        question: "Should I hire a licensed or unlicensed contractor?",
+        answer:
+          "Always hire a licensed contractor for work that requires licensing in your state. Benefits of a licensed contractor include: state oversight and accountability; surety bond that provides financial protection; required insurance coverage; disciplinary action available through the licensing board; and typically more recourse if problems arise. Hiring an unlicensed contractor when a license is required may: void your homeowner's insurance for related damage; make it harder to enforce the contract; and expose you to liability for worker injuries (no workers' comp coverage). Some minor work (painting, basic landscaping) may not require licensing - check your state's requirements.",
+      },
+      {
+        question: "How do I handle cost overruns and change orders?",
+        answer:
+          'Your contract should include a change order process: any modification to the scope, materials, or timeline must be documented in a written change order signed by both parties BEFORE the work is performed. The change order should specify: what changed, why, the additional cost (or credit), and the revised completion date. Never agree to verbal change orders. If the contractor claims unforeseen conditions require additional work, get an independent assessment before agreeing. Some states require that change orders exceeding a certain percentage of the original contract be in writing. A well-written contract limits your exposure to "cost overrun" claims.',
+      },
     ],
     warningSigns: [
-      'Contractor demands full payment or a very large deposit before starting work',
-      'No written contract offered — contractor wants to work on a handshake',
-      'Contractor cannot provide a valid license number, insurance certificate, or references',
-      'Door-to-door solicitation after a storm — especially with pressure to "sign today" for a discount',
+      "Contractor demands full payment or a very large deposit before starting work",
+      "No written contract offered - contractor wants to work on a handshake",
+      "Contractor cannot provide a valid license number, insurance certificate, or references",
+      'Door-to-door solicitation after a storm - especially with pressure to "sign today" for a discount',
       'Contractor suggests skipping building permits to "save money"',
-      'Materials are significantly different (cheaper) than what was specified in the contract',
-      'Contractor is impossible to reach by phone or email once work begins',
-      'Work crew has no visible contractor identification, and workers can\'t identify who their employer is',
+      "Materials are significantly different (cheaper) than what was specified in the contract",
+      "Contractor is impossible to reach by phone or email once work begins",
+      "Work crew has no visible contractor identification, and workers can't identify who their employer is",
     ],
     proTips: [
-      'Get at least 3 written bids for any project over $5,000 — and be skeptical of any bid that\'s dramatically lower than the others (it usually means corners will be cut)',
-      'Check your state licensing board for any complaints, disciplinary actions, or license suspensions against the contractor',
-      'Include a "time is of the essence" clause in your contract with a specific completion date and liquidated damages for delays — this gives you leverage if the project drags on',
-      'Create a payment schedule tied to inspection milestones — pay for each phase only after you\'ve verified the work meets standards',
-      'For projects over $25,000, consider hiring an independent building inspector to review work at key stages (foundation, framing, final) — the $500-$1,000 cost can prevent $50,000+ in problems',
-      'Get lien waivers from the general contractor AND all subcontractors and suppliers with each progress payment — this is your protection against mechanic\'s liens',
+      "Get at least 3 written bids for any project over $5,000 - and be skeptical of any bid that's dramatically lower than the others (it usually means corners will be cut)",
+      "Check your state licensing board for any complaints, disciplinary actions, or license suspensions against the contractor",
+      'Include a "time is of the essence" clause in your contract with a specific completion date and liquidated damages for delays - this gives you leverage if the project drags on',
+      "Create a payment schedule tied to inspection milestones - pay for each phase only after you've verified the work meets standards",
+      "For projects over $25,000, consider hiring an independent building inspector to review work at key stages (foundation, framing, final) - the $500-$1,000 cost can prevent $50,000+ in problems",
+      "Get lien waivers from the general contractor AND all subcontractors and suppliers with each progress payment - this is your protection against mechanic's liens",
     ],
   },
 ];
 
 export function getGuideByCategory(categoryId: string): CategoryGuide | undefined {
-  return consumerRightsGuides.find(g => g.categoryId === categoryId);
+  return consumerRightsGuides.find((g) => g.categoryId === categoryId);
 }
