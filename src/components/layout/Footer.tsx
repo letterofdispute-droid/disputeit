@@ -12,7 +12,7 @@ const Footer = () => {
               <img 
                 src="/ld-logo.svg" 
                 alt="Letter of Dispute" 
-                className="h-9"
+                className="h-10 w-auto"
               />
             </Link>
             <p className="text-sm text-muted-foreground">
