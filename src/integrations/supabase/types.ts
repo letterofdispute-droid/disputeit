@@ -812,6 +812,8 @@ export type Database = {
           email: string
           evidence_photos: Json | null
           feedback_vote: string | null
+          follow_up_due_at: string | null
+          follow_up_sent_at: string | null
           id: string
           last_edited_at: string | null
           last_edited_content: string | null
@@ -820,6 +822,7 @@ export type Database = {
           purchase_type: string
           refund_reason: string | null
           refunded_at: string | null
+          resolution_status: string | null
           status: string
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
@@ -836,6 +839,8 @@ export type Database = {
           email: string
           evidence_photos?: Json | null
           feedback_vote?: string | null
+          follow_up_due_at?: string | null
+          follow_up_sent_at?: string | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
@@ -844,6 +849,7 @@ export type Database = {
           purchase_type: string
           refund_reason?: string | null
           refunded_at?: string | null
+          resolution_status?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -860,6 +866,8 @@ export type Database = {
           email?: string
           evidence_photos?: Json | null
           feedback_vote?: string | null
+          follow_up_due_at?: string | null
+          follow_up_sent_at?: string | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
@@ -868,6 +876,7 @@ export type Database = {
           purchase_type?: string
           refund_reason?: string | null
           refunded_at?: string | null
+          resolution_status?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
