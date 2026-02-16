@@ -811,6 +811,7 @@ export type Database = {
           edit_expires_at: string | null
           email: string
           evidence_photos: Json | null
+          feedback_vote: string | null
           id: string
           last_edited_at: string | null
           last_edited_content: string | null
@@ -834,6 +835,7 @@ export type Database = {
           edit_expires_at?: string | null
           email: string
           evidence_photos?: Json | null
+          feedback_vote?: string | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
@@ -857,6 +859,7 @@ export type Database = {
           edit_expires_at?: string | null
           email?: string
           evidence_photos?: Json | null
+          feedback_vote?: string | null
           id?: string
           last_edited_at?: string | null
           last_edited_content?: string | null
@@ -1203,6 +1206,39 @@ export type Database = {
         }
         Relationships: []
       }
+      template_stats: {
+        Row: {
+          created_at: string
+          id: string
+          positive_votes: number
+          satisfaction_score: number
+          template_slug: string
+          total_votes: number
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          positive_votes?: number
+          satisfaction_score?: number
+          template_slug: string
+          total_votes?: number
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          positive_votes?: number
+          satisfaction_score?: number
+          template_slug?: string
+          total_votes?: number
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           expires_at: string
@@ -1524,6 +1560,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: string
+      }
+      submit_template_vote: {
+        Args: { p_positive: boolean; p_purchase_id: string; p_slug: string }
+        Returns: Json
       }
     }
     Enums: {

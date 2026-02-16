@@ -175,6 +175,24 @@ serve(async (req) => {
       // Don't throw - email failure shouldn't block purchase success
     }
 
+    // Increment usage count in template_stats (non-blocking)
+    try {
+      const { data: currentStats } = await supabaseClient
+        .from("template_stats")
+        .select("usage_count")
+        .eq("template_slug", purchase.template_slug)
+        .maybeSingle();
+      
+      if (currentStats) {
+        await supabaseClient
+          .from("template_stats")
+          .update({ usage_count: (currentStats.usage_count || 0) + 1 })
+          .eq("template_slug", purchase.template_slug);
+      }
+    } catch (statsErr) {
+      console.error("Stats increment error (non-blocking):", statsErr);
+    }
+
     // Return purchase details with document URLs
     return new Response(JSON.stringify({
       success: true,
