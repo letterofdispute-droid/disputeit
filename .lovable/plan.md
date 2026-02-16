@@ -1,42 +1,64 @@
 
 
-# Clean Up Dead Pricing Data and Fix SEO Currency
+# Fix: Always Insert a Sentence Instead of Rejecting Links
 
-## What's happening
+## Problem
+5,791 link suggestions were auto-rejected with "Could not find suitable insertion point" because:
+1. The Smart Scan AI marked them as `mode: 'existing'` (anchor exists verbatim in the body)
+2. During application, the phrase-matching logic couldn't find the anchor in a suitable paragraph (too short, first/last paragraph, already has 2 links)
+3. With no `generated_sentence` stored, there was no fallback -- so they got rejected
 
-Your admin dashboard pricing works perfectly -- the `PricingModal` and homepage `Pricing` section both read from `useSiteSettings()` which pulls from the database. The Stripe checkout uses proper Price IDs. Everything that matters is dynamic.
+## Fix
 
-The `standardPricing` arrays duplicated across 72 template files are **dead code** -- no component ever reads `template.pricing`. They're leftover from an earlier design.
+### `supabase/functions/apply-links-bulk/index.ts`
 
-## Changes
+Update `insertLinkContextually` so that when both the phrase-matching AND AI-generation paths return nothing, it falls back to creating a simple natural sentence containing the anchor text as a link and appending it to a suitable paragraph.
 
-### 1. Fix the one real bug: SEOHead currency
-`src/components/SEOHead.tsx` -- Change the default `currency` prop from `'EUR'` to `'USD'` so Google structured data shows the correct currency.
+The fallback logic:
+1. Find eligible paragraphs (same rules: not first/last, fewer than 2 links, 40+ chars)
+2. Pick one in the middle of the article
+3. Construct a simple sentence like: `For more details, see our guide on <a href="...">anchor text</a>.`
+4. Append it to the chosen paragraph
 
-### 2. Remove dead `pricing` property from template type
-`src/data/letterTemplates.ts` -- Remove the `pricing` field from the `LetterTemplate` interface since nothing uses it.
+This ensures no suggestion is ever rejected solely because the system couldn't find a natural insertion -- it always has the option to add a brief contextual sentence.
 
-### 3. Remove `standardPricing` from all 72 template files
-Strip out the `standardPricing` array definition and every `pricing: standardPricing` assignment across all template data files. This removes ~300 lines of dead code that could cause future confusion.
+### Also: Relax paragraph eligibility slightly
 
-Affected directories:
-- `src/data/templates/contractors/` (10 files)
-- `src/data/templates/damagedGoods/` (5 files)
-- `src/data/templates/ecommerce/` (5 files)
-- `src/data/templates/employment/` (5 files)
-- `src/data/templates/financial/` (5 files)
-- `src/data/templates/hoa/` (5 files + parent)
-- `src/data/templates/housing/` (5 files)
-- `src/data/templates/insurance/` (6 files)
-- `src/data/templates/refunds/` (5 files)
-- `src/data/templates/utilities/` (5 files)
-- `src/data/templates/vehicle/` (6 files)
-- `src/data/templates/travelTemplates.ts`
-- `src/data/templates/healthcareTemplates.ts`
+Currently `insertGeneratedSentence` (the path for suggestions that DO have a pre-generated sentence) also rejects when no paragraph meets the strict criteria. This accounts for 13 of the rejected suggestions. The same fallback should apply there too -- if no "ideal" paragraph exists, pick the best available one.
 
-### What stays the same
-- Admin dashboard pricing controls -- already working correctly
-- PricingModal -- already uses `useSiteSettings()`
-- Stripe checkout -- already uses correct Price IDs
-- Homepage pricing section -- already dynamic
+## Technical Details
+
+**In `insertLinkContextually` (around line 345):**
+
+Replace the final `return null` with:
+```typescript
+// Final fallback: create a simple linking sentence
+const fallbackParagraphs = parseParagraphs(updatedContent);
+const fallbackEligible = fallbackParagraphs.filter(p =>
+  p.index > 0 &&
+  p.index < fallbackParagraphs.length - 1 &&
+  p.linkCount < 2 &&
+  p.textLower.trim().length >= 40
+);
+
+if (fallbackEligible.length > 0) {
+  const midIdx = Math.floor(fallbackEligible.length / 2);
+  const para = fallbackEligible[midIdx];
+  const linkHtml = `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${suggestion.anchor_text}</a>`;
+  const sentence = `For further guidance, see our resource on ${linkHtml}.`;
+  const modifiedPara = para.html.replace(/<\/p>$/i, ` ${sentence}</p>`);
+  return content.replace(para.html, modifiedPara);
+}
+
+return null;
+```
+
+**In `insertGeneratedSentence` (around line 266):**
+
+When `eligible.length === 0`, relax criteria to allow first or last paragraph as a last resort, rather than returning null.
+
+## What stays the same
+- Relevance scoring, anchor quality gates, outbound caps -- all unchanged
+- The system still prefers natural phrase-matching first, then pre-generated sentences, then AI generation
+- This is purely a last-resort fallback to prevent mass rejections
 
