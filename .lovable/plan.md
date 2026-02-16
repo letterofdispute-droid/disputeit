@@ -1,58 +1,45 @@
 
 
-# Fix: Ensure Fallback Sentence Logic is Actually Deployed and Running
+# Fix: Backfill Outbound/Inbound Counters + Ensure Future Counting Works
 
-## Root Cause
+## Problem
 
-The code in the repository contains the fallback logic, but the **deployed** edge function is clearly not executing it. Proof:
-- Articles with 12 paragraphs and only 3 existing links are being rejected with "Could not find suitable insertion point"
-- These articles have plenty of eligible paragraphs for the fallback
-- The only explanation is the deployed code does not include the fallback
+Every link card shows "0/8 links" because the `article_embeddings.outbound_count` column is 0 for all 4,627 articles, despite 24,530 links already applied. This happened because the `.catch()` bug (now fixed) was crashing the `increment_link_counters` RPC call silently for every single application.
 
-This likely happened because the previous deployment failed silently or the running job cached an older version.
+## Fix (Two Parts)
 
-## Fix
+### 1. Backfill counters from existing applied data
 
-### 1. Add diagnostic logging to `apply-links-bulk/index.ts`
+Run a SQL migration that computes accurate outbound/inbound counts from the `link_suggestions` table (where `status = 'applied'`) and writes them to `article_embeddings`.
 
-Add `console.log` statements at key decision points in `insertLinkContextually` so we can verify via logs:
-- Log when the function enters (with suggestion ID)
-- Log when the duplicate URL check triggers (`return null`)
-- Log the paragraph count and fallback eligibility count
-- Log when the fallback sentence is used vs when it returns null
+```sql
+-- Backfill outbound counts
+UPDATE article_embeddings ae
+SET outbound_count = sub.cnt
+FROM (
+  SELECT source_post_id, COUNT(*) as cnt
+  FROM link_suggestions
+  WHERE status = 'applied'
+  GROUP BY source_post_id
+) sub
+WHERE ae.content_id = sub.source_post_id;
 
-### 2. Force re-deploy the function
-
-Use the deploy tool to push the function, ensuring the latest code (including fallback + logging) is live.
-
-### 3. Reset rejected suggestions and re-run
-
-After verifying the deployment via logs:
-- Reset the 2,520 "Could not find suitable insertion point" rejections back to `approved`
-- The user can then hit "Apply to Articles" again
-
-## Technical Details
-
-**Logging additions in `insertLinkContextually`:**
-
-```typescript
-// After line 316 (parseParagraphs)
-console.log(`[INSERT] Suggestion ${suggestion.id}: ${paragraphs.length} paragraphs found`);
-
-// After line 319 (duplicate check)  
-console.log(`[INSERT] Suggestion ${suggestion.id}: duplicate URL, skipping`);
-
-// Before line 363 (fallback section)
-console.log(`[INSERT] Suggestion ${suggestion.id}: reaching fallback. Eligible: ${fallbackEligible.length}, relaxed: ${eligibleForFallback.length}`);
-
-// At line 385 (final return null)
-console.log(`[INSERT] Suggestion ${suggestion.id}: ALL paths exhausted, 0 eligible paragraphs`);
+-- Backfill inbound counts
+UPDATE article_embeddings ae
+SET inbound_count = sub.cnt
+FROM (
+  SELECT ls.target_slug, COUNT(*) as cnt
+  FROM link_suggestions ls
+  WHERE ls.status = 'applied'
+  GROUP BY ls.target_slug
+) sub
+WHERE ae.slug = sub.target_slug;
 ```
 
-These logs will confirm whether the fallback is executing in the deployed version and why any remaining suggestions still fail.
+### 2. Verify the try/catch fix in the edge function
 
-## What stays the same
-- All fallback logic remains as previously implemented
-- Only diagnostic logging is added
-- No changes to scoring, caps, or quality gates
+The `.catch()` to `try/catch` fix from the last deployment should now correctly call `increment_link_counters` for the 5,775 approved suggestions being processed. The diagnostic logs will confirm this.
 
+## No code changes needed
+
+The edge function fix is already deployed. Only a database migration is needed to backfill the historical counter data.
