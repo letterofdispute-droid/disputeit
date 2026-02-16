@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { ChevronRight, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MethodologyBadge } from '@/components/letter/MethodologyBadge';
+import TemplateSocialProof from '@/components/letter/TemplateSocialProof';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -256,9 +257,12 @@ const LetterPage = () => {
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
               {seoOverride?.meta_title || template.seoTitle}
             </h1>
-            <p className="text-lg text-primary-foreground/80 mb-6">
+            <p className="text-lg text-primary-foreground/80 mb-4">
               {seoOverride?.meta_description || template.seoDescription}
             </p>
+            <div className="mb-6">
+              <TemplateSocialProof templateSlug={template.slug} variant="dark" />
+            </div>
             <Button
               variant="accent"
               size="lg"

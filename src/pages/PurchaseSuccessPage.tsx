@@ -4,7 +4,7 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Check, Download, FileText, Edit, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Download, FileText, Edit, Loader2, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { trackPurchaseComplete, trackDownloadPdf } from '@/hooks/useGTM';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -23,6 +23,8 @@ const PurchaseSuccessPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchase, setPurchase] = useState<PurchaseData | null>(null);
+  const [voteSubmitted, setVoteSubmitted] = useState<'positive' | 'negative' | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
   const purchaseTrackedRef = useRef(false);
   const { trackCheckoutCompleted } = useAnalytics();
 
@@ -241,7 +243,64 @@ const PurchaseSuccessPage = () => {
                 </div>
               )}
 
-              <div className="mt-8 pt-6 border-t border-border text-center">
+              {/* Post-purchase feedback */}
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg text-center">
+                {voteSubmitted ? (
+                  <p className="text-sm text-muted-foreground">
+                    Thanks for your feedback! {voteSubmitted === 'positive' ? '👍' : '👎'}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-foreground mb-3">
+                      Did this letter meet your expectations?
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isVoting}
+                        onClick={async () => {
+                          setIsVoting(true);
+                          try {
+                            await supabase.rpc('submit_template_vote' as any, {
+                              p_slug: purchase.templateName.replace(/\s+/g, '-').toLowerCase(),
+                              p_positive: true,
+                              p_purchase_id: purchase.id,
+                            });
+                            setVoteSubmitted('positive');
+                          } catch (e) { console.error(e); }
+                          setIsVoting(false);
+                        }}
+                      >
+                        <ThumbsUp className="h-4 w-4 mr-1.5" />
+                        Yes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isVoting}
+                        onClick={async () => {
+                          setIsVoting(true);
+                          try {
+                            await supabase.rpc('submit_template_vote' as any, {
+                              p_slug: purchase.templateName.replace(/\s+/g, '-').toLowerCase(),
+                              p_positive: false,
+                              p_purchase_id: purchase.id,
+                            });
+                            setVoteSubmitted('negative');
+                          } catch (e) { console.error(e); }
+                          setIsVoting(false);
+                        }}
+                      >
+                        <ThumbsDown className="h-4 w-4 mr-1.5" />
+                        No
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-border text-center">
                 <p className="text-sm text-muted-foreground mb-4">
                   A copy has also been sent to your email address.
                 </p>
