@@ -69,6 +69,7 @@ CRITICAL OUTPUT REQUIREMENTS:
 3. Use these HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>
 4. NEVER use <h1> tags - the title is displayed separately
 5. NEVER include "Conclusion", "FAQ", "TL;DR", "Summary" sections
+6. NEVER use em dashes (—). Use regular hyphens (-) instead.
 ${middleImageInstructions}
 
 CONTENT REQUIREMENTS:

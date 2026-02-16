@@ -346,7 +346,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
               )}
 
               <p className="text-xs text-muted-foreground mt-2 border-t pt-2">
-                💡 New articles are automatically queued when published — just come back and tap <strong>Process Now</strong>.
+                💡 New articles are automatically queued when published - just come back and tap <strong>Process Now</strong>.
               </p>
             </div>
           </div>
@@ -403,7 +403,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     {activeScanJob.processed_items === 0 && activeScanJob.total_items > 0 ? (
                       <>
                         <span className="font-medium text-primary">
-                          Scan complete — all {activeScanJob.total_items.toLocaleString()} articles within cooldown period
+                          Scan complete - all {activeScanJob.total_items.toLocaleString()} articles within cooldown period
                         </span>
                         <p className="text-muted-foreground mt-0.5">
                           Check <strong>Force re-scan</strong> to override the 7-day cooldown.
@@ -412,7 +412,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     ) : (
                       <>
                         <span className="font-medium text-primary">
-                          Scan complete — {activeScanJob.total_suggestions.toLocaleString()} new suggestions from this scan
+                          Scan complete - {activeScanJob.total_suggestions.toLocaleString()} new suggestions from this scan
                         </span>
                         <p className="text-muted-foreground mt-0.5">
                           Scanned {Math.min(activeScanJob.processed_items, activeScanJob.total_items).toLocaleString()} articles. Review them in the Link Review tab.
@@ -484,7 +484,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     }
                     return (
                       <p className="text-[11px] text-emerald-600 ml-1">
-                        Last scanned: {dateStr} — {info.total_suggestions.toLocaleString()} suggestions found
+                        Last scanned: {dateStr} - {info.total_suggestions.toLocaleString()} suggestions found
                       </p>
                     );
                   }
@@ -656,7 +656,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                           variant={job.status === 'completed' ? 'default' : job.status === 'cancelled' ? 'secondary' : 'destructive'}
                           className="text-[10px] h-4 px-1 shrink-0"
                         >
-                          {job.status === 'completed' ? '✓' : job.status === 'cancelled' ? '—' : '✗'}
+                          {job.status === 'completed' ? '✓' : job.status === 'cancelled' ? '-' : '✗'}
                         </Badge>
                         <span className="text-muted-foreground shrink-0">{dateStr}</span>
                         <span className="truncate flex-1" title={catLabel}>{catLabel}</span>
@@ -728,7 +728,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   max={15}
                   step={1}
                 />
-                <p className="text-xs text-muted-foreground">Cumulative cap — articles at this limit are skipped during scans</p>
+                <p className="text-xs text-muted-foreground">Cumulative cap - articles at this limit are skipped during scans</p>
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t">

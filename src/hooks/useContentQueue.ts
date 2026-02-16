@@ -106,7 +106,7 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
         }
       }
       
-      throw new Error(lastError?.message || 'Failed to connect to the server. The function may be busy — try again in a moment.');
+      throw new Error(lastError?.message || 'Failed to connect to the server. The function may be busy - try again in a moment.');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['generation-job-active'] });

@@ -253,25 +253,25 @@ const AdminUsers = () => {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.total ?? '—'}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.total ?? '-'}</div>
             <p className="text-sm text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.admins ?? '—'}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.admins ?? '-'}</div>
             <p className="text-sm text-muted-foreground">Administrators</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.pro ?? '—'}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.pro ?? '-'}</div>
             <p className="text-sm text-muted-foreground">Pro Subscribers</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-foreground">{stats?.unlimited ?? '—'}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.unlimited ?? '-'}</div>
             <p className="text-sm text-muted-foreground">Unlimited Subscribers</p>
           </CardContent>
         </Card>

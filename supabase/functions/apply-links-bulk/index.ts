@@ -186,7 +186,7 @@ async function generateContextualSentence(
           {
             role: 'system',
             content: `You are an SEO content editor. Your job is to write ONE sentence that naturally continues a given paragraph. The sentence must:
-- Feel like the original author wrote it — same tone, same topic flow
+- Feel like the original author wrote it - same tone, same topic flow
 - Contain a short phrase (2-5 words) related to the target topic that works as anchor text
 - NOT use generic phrases like "learn more", "check out", "see our guide", "for more details", "explore our", "read about"
 - Be informative and add value to the paragraph
@@ -663,7 +663,7 @@ serve(async (req) => {
         });
 
         if (result.processed === 0) {
-          // No more approved suggestions — complete the job
+          // No more approved suggestions - complete the job
           await supabaseAdmin
             .from('semantic_scan_jobs')
             .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })

@@ -302,7 +302,7 @@ const CategoryGuidePage = () => {
                             </div>
                           ))}
                           <p className="text-xs text-muted-foreground/60 italic">
-                            These are examples — always check your specific state's consumer protection statutes for the most current rules.
+                            These are examples - always check your specific state's consumer protection statutes for the most current rules.
                           </p>
                         </div>
                       </CollapsibleContent>

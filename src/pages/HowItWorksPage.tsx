@@ -183,7 +183,7 @@ const howToSchema = {
       "@type": "HowToStep",
       "position": 2,
       "name": "Fill in Your Details",
-      "text": "Answer simple questions about your situation. Our smart forms guide you through exactly what information you need—no legal knowledge required."
+      "text": "Answer simple questions about your situation. Our smart forms guide you through exactly what information you need - no legal knowledge required."
     },
     {
       "@type": "HowToStep",
@@ -239,7 +239,7 @@ const HowItWorksPage = () => {
               How Letter of Dispute Works
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-8">
-              Create professional dispute letters in minutes—not hours. No legal expertise needed. 
+              Create professional dispute letters in minutes - not hours. No legal expertise needed. 
               Our guided process helps you write letters that businesses take seriously.
             </p>
             <div className="flex flex-wrap justify-center gap-4">

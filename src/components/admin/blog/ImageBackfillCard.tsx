@@ -170,7 +170,7 @@ const ImageBackfillCard = () => {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-amber-600 text-sm">
               <AlertTriangle className="h-4 w-4" />
-              Paused — {job?.last_error || 'API rate limits hit'}
+              Paused - {job?.last_error || 'API rate limits hit'}
             </div>
             {job && (
               <p className="text-xs text-muted-foreground">

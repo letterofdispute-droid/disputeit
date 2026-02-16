@@ -44,7 +44,7 @@ const ACRONYMS = new Set(['atm', 'hoa', 'mot', 'sms', 'pcp', 'fscs', 'hvac', 'hr
 
 function cleanTemplateName(name: string): string {
   let cleaned = name
-    // Only strip "Letter", "Template", and compound suffixes — keep Dispute/Complaint/Claim
+    // Only strip "Letter", "Template", and compound suffixes - keep Dispute/Complaint/Claim
     .replace(/\s*(Complaint Letter|Dispute Letter|Claim Letter|Letter|Template)(\s*\(.*?\))?\s*$/i, '')
     // Convert slashes to "and"
     .replace(/\//g, ' and ')

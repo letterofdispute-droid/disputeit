@@ -53,7 +53,7 @@ async function selfChainWithRetry(body: object): Promise<void> {
       console.log(`[SELF-CHAIN] Attempt ${attempt}: status ${res.status}`)
       // Read body to fully close the connection
       await res.text()
-      // 504 = function IS running, just exceeded gateway timeout — treat as success
+      // 504 = function IS running, just exceeded gateway timeout - treat as success
       if (res.ok || res.status === 504) return
       if (attempt < 2) {
         await new Promise(r => setTimeout(r, 2000))
@@ -65,7 +65,7 @@ async function selfChainWithRetry(body: object): Promise<void> {
       }
     }
   }
-  console.error('[SELF-CHAIN] Both attempts failed — pg_cron recovery will pick up the job')
+  console.error('[SELF-CHAIN] Both attempts failed - pg_cron recovery will pick up the job')
 }
 
 // Per-image timeout wrapper
@@ -194,7 +194,7 @@ function getOversizedFiles(allFiles: any[]): any[] {
   })
 }
 
-// Fetch batch via RPC — only gets the slice needed
+// Fetch batch via RPC - only gets the slice needed
 async function getBatch(supabase: any, jobId: string, offset: number): Promise<{ path: string; size: number }[]> {
   const { data, error } = await supabase.rpc('get_optimization_batch', {
     p_job_id: jobId,
@@ -284,7 +284,7 @@ async function handleOptimize(supabase: any, jobId: string) {
     await updateJob(supabase, jobId, { status: 'optimizing', deleted: 0 })
   }
 
-  // Atomically claim a batch offset — no two instances can get the same range
+  // Atomically claim a batch offset - no two instances can get the same range
   const { data: claimedOffset, error: claimErr } = await supabase.rpc('claim_optimization_batch', {
     p_job_id: jobId,
     p_batch_size: BATCH_SIZE,
@@ -292,7 +292,7 @@ async function handleOptimize(supabase: any, jobId: string) {
   if (claimErr) throw claimErr
 
   if (claimedOffset === -1) {
-    // Nothing left to claim — mark complete
+    // Nothing left to claim - mark complete
     await updateJob(supabase, jobId, {
       status: 'completed',
       completed_at: new Date().toISOString(),
@@ -337,7 +337,7 @@ async function handleOptimize(supabase: any, jobId: string) {
       }
     }
 
-    // Atomic increment — no offset needed, claim already advanced it
+    // Atomic increment - no offset needed, claim already advanced it
     await supabase.rpc('increment_optimization_progress', {
       p_job_id: jobId,
       p_processed: batchProcessed,
@@ -360,7 +360,7 @@ async function handleOptimize(supabase: any, jobId: string) {
     }
   }
 
-  // Always chain — the next invocation will claim its own batch.
+  // Always chain - the next invocation will claim its own batch.
   // If there's nothing left, claim returns -1 and it marks complete.
   try {
     const freshJob = await getJobLite(supabase, jobId)
