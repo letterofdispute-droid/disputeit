@@ -22,8 +22,8 @@ const Index = () => {
   return (
     <Layout>
       <SEOHead
-        title="Letter of Dispute - Professional Complaint Letter Generator | 500+ Templates"
-        description="Generate professional complaint letters for refunds, housing issues, travel compensation, insurance claims, and more. 500+ legally-referenced templates ready in minutes."
+        title="Dispute Letter Templates - Professional Complaint Letters That Get Results | Letter of Dispute"
+        description="Stop guessing what to write. 500+ professionally written complaint letter templates with legal-safe phrasing for refunds, insurance claims, housing issues and more."
         canonicalPath="/"
         type="website"
       />
