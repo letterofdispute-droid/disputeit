@@ -1,64 +1,58 @@
 
 
-# Fix: Always Insert a Sentence Instead of Rejecting Links
+# Fix: Ensure Fallback Sentence Logic is Actually Deployed and Running
 
-## Problem
-5,791 link suggestions were auto-rejected with "Could not find suitable insertion point" because:
-1. The Smart Scan AI marked them as `mode: 'existing'` (anchor exists verbatim in the body)
-2. During application, the phrase-matching logic couldn't find the anchor in a suitable paragraph (too short, first/last paragraph, already has 2 links)
-3. With no `generated_sentence` stored, there was no fallback -- so they got rejected
+## Root Cause
+
+The code in the repository contains the fallback logic, but the **deployed** edge function is clearly not executing it. Proof:
+- Articles with 12 paragraphs and only 3 existing links are being rejected with "Could not find suitable insertion point"
+- These articles have plenty of eligible paragraphs for the fallback
+- The only explanation is the deployed code does not include the fallback
+
+This likely happened because the previous deployment failed silently or the running job cached an older version.
 
 ## Fix
 
-### `supabase/functions/apply-links-bulk/index.ts`
+### 1. Add diagnostic logging to `apply-links-bulk/index.ts`
 
-Update `insertLinkContextually` so that when both the phrase-matching AND AI-generation paths return nothing, it falls back to creating a simple natural sentence containing the anchor text as a link and appending it to a suitable paragraph.
+Add `console.log` statements at key decision points in `insertLinkContextually` so we can verify via logs:
+- Log when the function enters (with suggestion ID)
+- Log when the duplicate URL check triggers (`return null`)
+- Log the paragraph count and fallback eligibility count
+- Log when the fallback sentence is used vs when it returns null
 
-The fallback logic:
-1. Find eligible paragraphs (same rules: not first/last, fewer than 2 links, 40+ chars)
-2. Pick one in the middle of the article
-3. Construct a simple sentence like: `For more details, see our guide on <a href="...">anchor text</a>.`
-4. Append it to the chosen paragraph
+### 2. Force re-deploy the function
 
-This ensures no suggestion is ever rejected solely because the system couldn't find a natural insertion -- it always has the option to add a brief contextual sentence.
+Use the deploy tool to push the function, ensuring the latest code (including fallback + logging) is live.
 
-### Also: Relax paragraph eligibility slightly
+### 3. Reset rejected suggestions and re-run
 
-Currently `insertGeneratedSentence` (the path for suggestions that DO have a pre-generated sentence) also rejects when no paragraph meets the strict criteria. This accounts for 13 of the rejected suggestions. The same fallback should apply there too -- if no "ideal" paragraph exists, pick the best available one.
+After verifying the deployment via logs:
+- Reset the 2,520 "Could not find suitable insertion point" rejections back to `approved`
+- The user can then hit "Apply to Articles" again
 
 ## Technical Details
 
-**In `insertLinkContextually` (around line 345):**
+**Logging additions in `insertLinkContextually`:**
 
-Replace the final `return null` with:
 ```typescript
-// Final fallback: create a simple linking sentence
-const fallbackParagraphs = parseParagraphs(updatedContent);
-const fallbackEligible = fallbackParagraphs.filter(p =>
-  p.index > 0 &&
-  p.index < fallbackParagraphs.length - 1 &&
-  p.linkCount < 2 &&
-  p.textLower.trim().length >= 40
-);
+// After line 316 (parseParagraphs)
+console.log(`[INSERT] Suggestion ${suggestion.id}: ${paragraphs.length} paragraphs found`);
 
-if (fallbackEligible.length > 0) {
-  const midIdx = Math.floor(fallbackEligible.length / 2);
-  const para = fallbackEligible[midIdx];
-  const linkHtml = `<a href="${targetUrl}" title="${escapeHtml(suggestion.target_title)}">${suggestion.anchor_text}</a>`;
-  const sentence = `For further guidance, see our resource on ${linkHtml}.`;
-  const modifiedPara = para.html.replace(/<\/p>$/i, ` ${sentence}</p>`);
-  return content.replace(para.html, modifiedPara);
-}
+// After line 319 (duplicate check)  
+console.log(`[INSERT] Suggestion ${suggestion.id}: duplicate URL, skipping`);
 
-return null;
+// Before line 363 (fallback section)
+console.log(`[INSERT] Suggestion ${suggestion.id}: reaching fallback. Eligible: ${fallbackEligible.length}, relaxed: ${eligibleForFallback.length}`);
+
+// At line 385 (final return null)
+console.log(`[INSERT] Suggestion ${suggestion.id}: ALL paths exhausted, 0 eligible paragraphs`);
 ```
 
-**In `insertGeneratedSentence` (around line 266):**
-
-When `eligible.length === 0`, relax criteria to allow first or last paragraph as a last resort, rather than returning null.
+These logs will confirm whether the fallback is executing in the deployed version and why any remaining suggestions still fail.
 
 ## What stays the same
-- Relevance scoring, anchor quality gates, outbound caps -- all unchanged
-- The system still prefers natural phrase-matching first, then pre-generated sentences, then AI generation
-- This is purely a last-resort fallback to prevent mass rejections
+- All fallback logic remains as previously implemented
+- Only diagnostic logging is added
+- No changes to scoring, caps, or quality gates
 
