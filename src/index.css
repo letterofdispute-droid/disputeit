@@ -384,4 +384,24 @@
       transform: scale(1);
     }
   }
+
+  /* Nav trigger underline animation */
+  .nav-underline {
+    position: relative;
+  }
+  .nav-underline::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: hsl(var(--accent));
+    transition: width 0.25s ease, left 0.25s ease;
+    border-radius: 1px;
+  }
+  .nav-underline:hover::after {
+    width: 60%;
+    left: 20%;
+  }
 }
