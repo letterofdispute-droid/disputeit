@@ -1510,6 +1510,7 @@ export type Database = {
               title: string
             }[]
           }
+      reconcile_link_counts: { Args: never; Returns: Json }
       recover_stale_backfill_jobs: { Args: never; Returns: undefined }
       recover_stale_generating_items: { Args: never; Returns: undefined }
       recover_stale_generation_jobs: { Args: never; Returns: undefined }

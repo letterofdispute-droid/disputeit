@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Loader2, CheckCheck, X, CheckCircle2, XCircle, Trash2, Upload, Square } from 'lucide-react';
+import { Loader2, CheckCheck, X, CheckCircle2, XCircle, Trash2, Upload, Square, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -71,11 +74,33 @@ export default function LinkActions({
   onCancelApplyJob,
 }: LinkActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
+  const queryClient = useQueryClient();
 
   const isApplyJobRunning = activeApplyJob?.status === 'processing';
   const applyProgress = isApplyJobRunning && activeApplyJob.total_items > 0
     ? Math.min(100, Math.round((activeApplyJob.processed_items / activeApplyJob.total_items) * 100))
     : 0;
+
+  const handleReconcileCounts = async () => {
+    setIsReconciling(true);
+    try {
+      const { data, error } = await supabase.rpc('reconcile_link_counts' as any);
+      if (error) throw error;
+      const result = data as any;
+      toast({
+        title: 'Counts reconciled',
+        description: `Updated ${result.inbound_updated} inbound and ${result.outbound_updated} outbound counts from actual HTML.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['link-counts'] });
+    } catch (err: any) {
+      toast({ title: 'Reconciliation failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsReconciling(false);
+    }
+  };
 
   return (
     <TooltipProvider>
@@ -196,6 +221,24 @@ export default function LinkActions({
             <span className="sm:hidden">All ✓</span>
           </Button>
         )}
+
+        {/* Reconcile Counts */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReconcileCounts}
+              disabled={isReconciling}
+            >
+              {isReconciling ? <Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 sm:mr-1" />}
+              <span className="hidden sm:inline">Reconcile Counts</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Re-count inbound/outbound links from actual article HTML to fix orphan misreports</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Clear All - always available when there are items */}
         {totalForStatus > 0 && (
