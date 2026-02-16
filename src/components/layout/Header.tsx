@@ -43,7 +43,7 @@ const Header = () => {
             <img 
               src="/ld-logo.svg" 
               alt="DisputeLetters" 
-              className="h-9 transition-opacity group-hover:opacity-80" 
+              className="h-10 w-auto transition-opacity group-hover:opacity-80" 
             />
           </Link>
 
