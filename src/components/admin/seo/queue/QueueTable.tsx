@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/tooltip';
 import { ARTICLE_TYPES } from '@/config/articleTypes';
 import { ContentQueueItem } from '@/hooks/useContentQueue';
+import { Link2 } from 'lucide-react';
 
 interface QueueTableProps {
   items: ContentQueueItem[];
@@ -102,7 +103,20 @@ export default function QueueTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{articleType?.name || item.article_type}</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline">{articleType?.name || item.article_type}</Badge>
+                      {item.article_type === 'pillar' && (
+                        <Badge variant="default" className="text-[10px] px-1">Hub</Badge>
+                      )}
+                      {(item as any).parent_queue_id && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Link2 className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>Linked to pillar</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="text-xs capitalize">

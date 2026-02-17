@@ -16,6 +16,8 @@ export interface ContentQueueItem {
   published_at: string | null;
   error_message: string | null;
   created_at: string;
+  parent_queue_id: string | null;
+  pillar_link_anchor: string | null;
   content_plans?: {
     template_slug: string;
     template_name: string;
