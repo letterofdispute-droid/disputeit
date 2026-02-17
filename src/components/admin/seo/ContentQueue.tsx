@@ -15,14 +15,13 @@ import GenerationProgress from './queue/GenerationProgress';
 import QueuePagination from './queue/QueuePagination';
 import FailureSummary from './queue/FailureSummary';
 
-const ITEMS_PER_PAGE = 50;
-
 export default function ContentQueue() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [batchSize, setBatchSize] = useState<number>(5);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(50);
 
   const { 
     queueItems, 
@@ -70,10 +69,10 @@ export default function ContentQueue() {
   }) || [];
 
   // Pagination
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
   const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const handleStatusChange = (status: string) => {
@@ -97,11 +96,17 @@ export default function ContentQueue() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredItems.length) {
+    if (selectedIds.size === paginatedItems.length && paginatedItems.every(i => selectedIds.has(i.id))) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+      setSelectedIds(new Set(paginatedItems.map(i => i.id)));
     }
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
   const handleGenerateSelected = () => {
@@ -244,7 +249,8 @@ export default function ContentQueue() {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         totalItems={filteredItems.length}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );
