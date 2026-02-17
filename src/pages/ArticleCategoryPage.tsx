@@ -181,7 +181,19 @@ const ArticleCategoryPage = () => {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {posts.map((post) => (
-                  <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300">
+                  <Card key={post.slug} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                    {post.featured_image_url && (
+                      <Link to={`/articles/${post.category_slug}/${post.slug}`} className="block">
+                        <div className="aspect-[16/9] overflow-hidden">
+                          <img 
+                            src={post.featured_image_url} 
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        </div>
+                      </Link>
+                    )}
                     <CardHeader>
                       <Badge variant="secondary" className="w-fit mb-2">{post.category}</Badge>
                       <CardTitle className="font-serif text-lg group-hover:text-primary transition-colors">

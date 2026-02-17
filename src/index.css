@@ -227,36 +227,36 @@
     @apply mb-0 text-base;
   }
 
-  /* Unordered lists with proper spacing */
+  /* Unordered lists with compact, readable spacing */
   .prose ul {
-    @apply list-none pl-0 my-8 space-y-4;
+    @apply list-none pl-0 my-5 space-y-1.5;
   }
 
   .prose ul > li {
-    @apply pl-8 relative leading-relaxed;
+    @apply pl-6 relative leading-relaxed py-0.5;
     color: hsl(var(--muted-foreground));
   }
 
   .prose ul > li::before {
     content: "";
-    @apply absolute left-0 top-2.5 w-2 h-2 bg-primary rounded-full;
+    @apply absolute left-0 top-[0.6em] w-1.5 h-1.5 bg-primary rounded-full;
   }
 
   /* Ordered lists with styled counters */
   .prose ol {
     counter-reset: item;
-    @apply list-none pl-0 my-8 space-y-4;
+    @apply list-none pl-0 my-5 space-y-1.5;
   }
 
   .prose ol > li {
     counter-increment: item;
-    @apply pl-12 relative leading-relaxed;
+    @apply pl-8 relative leading-relaxed py-0.5;
     color: hsl(var(--muted-foreground));
   }
 
   .prose ol > li::before {
     content: counter(item);
-    @apply absolute left-0 top-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold;
+    @apply absolute left-0 top-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold;
   }
 
   /* Nested lists */
@@ -264,7 +264,7 @@
   .prose ol ol,
   .prose ul ol,
   .prose ol ul {
-    @apply my-3 ml-4;
+    @apply my-2 ml-3;
   }
 
   /* Code styling */
