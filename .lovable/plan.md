@@ -1,42 +1,27 @@
 
 
-# Fix: Pillars Hidden at Bottom of Queue Due to Wrong Priority
+# Add "Items Per Page" Dropdown to Content Queue
 
-## The Real Problem
+## What This Does
+Adds a dropdown selector next to the pagination that lets you choose how many articles to display per page (20, 50, 100, 200, 500). When you click "Select All", it only selects the items visible on the current page -- so you can control exactly how many articles get generated in one batch.
 
-The code logic is actually correct -- pillars show a "Pillar" badge, clusters show the link icon. But you can't see it because:
+## Changes
 
-- All 61 pillars have `priority = 1` (lowest)
-- All 751 clusters have `priority = 50` (higher)
-- The queue sorts by `priority DESC`, so clusters always appear above pillars
-- Pillars get buried at the bottom of the list, invisible
+### 1. ContentQueue.tsx
+- Replace the hardcoded `ITEMS_PER_PAGE = 50` with a state variable `itemsPerPage` (default 50)
+- Pass `itemsPerPage` and its setter to `QueuePagination`
+- Update `toggleSelectAll` to only select items on the current **page** (`paginatedItems`) instead of all `filteredItems`
+- Reset to page 1 when items-per-page changes
 
-## Fix
+### 2. QueuePagination.tsx
+- Add a `Select` dropdown showing options: 20, 50, 100, 200, 500
+- Accept new props: `onItemsPerPageChange` callback
+- Display the dropdown inline next to the "Showing X-Y of Z" text
 
-### Step 1: Update pillar priorities in the database
+### 3. QueueTable.tsx
+- Update the header checkbox to reflect whether all **visible page items** are selected (it already receives `items` as the paginated subset, so the existing logic should work correctly once ContentQueue passes the right data)
 
-Set all pillar articles to `priority = 100` so they sort to the TOP of the queue, above their clusters.
+## Technical Detail
 
-```sql
-UPDATE content_queue 
-SET priority = 100 
-WHERE parent_queue_id IS NULL 
-  AND plan_id IN (
-    SELECT id FROM content_plans WHERE template_slug LIKE '%-kw-%'
-  );
-```
-
-This moves all 61 pillars from priority 1 to 100, ensuring they appear at the top of the queue list.
-
-### Step 2: No code changes needed
-
-The QueueTable component already has the correct logic:
-- Items with no `parent_queue_id` on keyword plans show a **"Pillar"** badge
-- Items with `parent_queue_id` show the cluster link icon with tooltip
-
-Once pillars sort to the top, you will see the "Pillar" badge clearly on the hub articles, followed by their cluster articles with the link icon beneath them.
-
-## Files Changed
-
-- **SQL only**: Update priority from 1 to 100 for 61 pillar rows
+The key behavioral fix: `toggleSelectAll` currently selects from `filteredItems` (all items across all pages). It will be changed to select from `paginatedItems` (only the current page), so "Generate (N)" always matches what you see on screen.
 
