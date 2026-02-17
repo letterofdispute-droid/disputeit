@@ -529,9 +529,8 @@ const AdminBlog = () => {
                         onCheckedChange={toggleSelectAll}
                       />
                     </TableHead>
-                    <TableHead className="w-[35%]">Title</TableHead>
+                    <TableHead className="w-[45%]">Title</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead className="w-[20%]">Keywords</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Links</TableHead>
                     <TableHead>Date</TableHead>
@@ -562,35 +561,31 @@ const AdminBlog = () => {
                               {post.meta_description}
                             </p>
                           )}
+                          {post.keyword_counts && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {Object.entries(post.keyword_counts)
+                                .sort(([a], [b]) => (a === post.primary_keyword ? -1 : b === post.primary_keyword ? 1 : 0))
+                                .slice(0, 3)
+                                .map(([kw, count]) => (
+                                  <Badge
+                                    key={kw}
+                                    variant={kw === post.primary_keyword ? 'default' : 'outline'}
+                                    className="text-[10px] px-1.5 py-0 font-normal"
+                                  >
+                                    {kw} ({count})
+                                  </Badge>
+                                ))}
+                              {Object.keys(post.keyword_counts).length > 3 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
+                                  +{Object.keys(post.keyword_counts).length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{post.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {post.keyword_counts ? (
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {Object.entries(post.keyword_counts)
-                              .sort(([a], [b]) => (a === post.primary_keyword ? -1 : b === post.primary_keyword ? 1 : 0))
-                              .slice(0, 3)
-                              .map(([kw, count]) => (
-                                <Badge
-                                  key={kw}
-                                  variant={kw === post.primary_keyword ? 'default' : 'outline'}
-                                  className="text-[10px] px-1.5 py-0 font-normal"
-                                >
-                                  {kw} ({count})
-                                </Badge>
-                              ))}
-                            {Object.keys(post.keyword_counts).length > 3 && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
-                                +{Object.keys(post.keyword_counts).length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
