@@ -95,6 +95,13 @@ export function useKeywordTargets() {
     }
   }, [planningJob?.status]);
 
+  // Refresh stats as each vertical completes (not just at job end)
+  useEffect(() => {
+    if (planningJob?.status === 'processing' && planningJob.completed_verticals.length > 0) {
+      queryClient.invalidateQueries({ queryKey: ['keyword-targets-stats'] });
+    }
+  }, [planningJob?.completed_verticals.length]);
+
   // Check for any active planning job on mount
   useEffect(() => {
     (async () => {
