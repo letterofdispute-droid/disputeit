@@ -182,12 +182,53 @@ export default function KeywordManager() {
           </div>
 
           {/* Planning progress */}
-          {isPlanning && (
-            <div className="space-y-2">
-              <Progress value={undefined} className="h-2" />
-              <p className="text-sm text-muted-foreground">
-                AI is clustering keywords into pillar/cluster articles...
-              </p>
+          {planningJob && (planningJob.status === 'processing' || planningJob.status === 'completed' || planningJob.status === 'failed') && (
+            <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {planningJob.status === 'processing' 
+                    ? `Planning Keywords (${planningJob.completed_verticals.length + planningJob.failed_verticals.length} / ${planningJob.verticals.length} verticals)`
+                    : planningJob.status === 'completed'
+                    ? `Planning Complete — ${planningJob.total_planned} articles planned`
+                    : 'Planning Failed'}
+                </span>
+                {planningJob.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              </div>
+              <Progress 
+                value={planningJob.verticals.length > 0 
+                  ? ((planningJob.completed_verticals.length + planningJob.failed_verticals.length) / planningJob.verticals.length) * 100 
+                  : 0} 
+                className="h-2" 
+              />
+              {planningJob.status === 'processing' && planningJob.verticals[planningJob.current_vertical_index] && (
+                <p className="text-sm text-muted-foreground">
+                  Currently processing: <span className="font-medium capitalize">{planningJob.verticals[planningJob.current_vertical_index]}</span>
+                </p>
+              )}
+              {planningJob.total_planned > 0 && (
+                <p className="text-sm text-muted-foreground">Articles planned so far: <span className="font-medium">{planningJob.total_planned}</span></p>
+              )}
+              {planningJob.completed_verticals.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {planningJob.completed_verticals.map((v) => {
+                    const count = (planningJob.vertical_results as Record<string, any>)?.[v]?.planned || 0;
+                    return (
+                      <Badge key={v} variant="outline" className="text-xs bg-green-500/10 text-green-700 border-green-300">
+                        ✓ {v} {count > 0 && `(${count})`}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+              {planningJob.failed_verticals.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {planningJob.failed_verticals.map((v) => (
+                    <Badge key={v} variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                      ✗ {v}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
