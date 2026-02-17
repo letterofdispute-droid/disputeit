@@ -75,7 +75,8 @@ ${middleImageInstructions}
 CONTENT REQUIREMENTS:
 - CRITICAL: Write MINIMUM ${targetWordCount} words. Articles under ${targetWordCount} words will be rejected.
 - This is a LONG-FORM article - include 5-7 substantial sections with detailed explanations
-- Where content involves steps, tips, options, or enumerable items, present them as <ul> or <ol> lists instead of dense paragraphs. Lists improve readability and break up text.
+- MANDATORY: Every article MUST contain at least 1-2 structured lists using \`<ul>\` or \`<ol>\` tags. Use numbered lists for sequential steps and bullet lists for tips, options, features, or criteria. Lists are MORE impactful than paragraphs - prefer them whenever presenting multiple items, requirements, rights, deadlines, or action steps.
+- When the article topic involves evaluating a product, service, approach, or decision, include a clearly labeled Pros and Cons section using this structure: \`<h3>Pros</h3><ul><li>...</li></ul><h3>Cons</h3><ul><li>...</li></ul>\`. This applies to comparison articles, service reviews, method evaluations, and any "should you" type content.
 - ${toneInstruction}
 - Naturally incorporate the primary keywords 2-3+ times each throughout the article
 - Generate and naturally use 10-15 LSI (Latent Semantic Indexing) keywords
