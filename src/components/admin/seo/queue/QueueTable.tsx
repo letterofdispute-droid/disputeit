@@ -62,6 +62,7 @@ export default function QueueTable({
             </TableHead>
             <TableHead>Title</TableHead>
             <TableHead className="w-28">Type</TableHead>
+            <TableHead className="w-[180px]">Keywords</TableHead>
             <TableHead className="w-28">Category</TableHead>
             <TableHead className="w-36">Template</TableHead>
             <TableHead className="w-24">Status</TableHead>
@@ -71,7 +72,7 @@ export default function QueueTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 No items in queue
               </TableCell>
             </TableRow>
@@ -115,6 +116,28 @@ export default function QueueTable({
                           </TooltipTrigger>
                           <TooltipContent>Cluster → linked to pillar</TooltipContent>
                         </Tooltip>
+                      )}
+                  </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[180px]">
+                      {item.primary_keyword && (
+                        <Badge variant="default" className="text-[10px] px-1.5 py-0 font-normal">
+                          {item.primary_keyword}
+                        </Badge>
+                      )}
+                      {(item.secondary_keywords || []).slice(0, 2).map((kw) => (
+                        <Badge key={kw} variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                          {kw}
+                        </Badge>
+                      ))}
+                      {(item.secondary_keywords || []).length > 2 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
+                          +{(item.secondary_keywords || []).length - 2}
+                        </Badge>
+                      )}
+                      {!item.primary_keyword && !(item.secondary_keywords?.length) && (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </div>
                   </TableCell>

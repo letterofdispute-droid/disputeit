@@ -110,6 +110,23 @@ function logStep(title: string, step: string, message: string, data?: any) {
 }
 
 // ============================================
+// KEYWORD COUNTING HELPER
+// ============================================
+
+function countKeywords(content: string, keywords: string[]): Record<string, number> {
+  const text = content.toLowerCase().replace(/<[^>]+>/g, ' ');
+  const counts: Record<string, number> = {};
+  for (const kw of keywords) {
+    if (!kw) continue;
+    const escaped = kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
+    const matches = text.match(regex);
+    counts[kw] = matches ? matches.length : 0;
+  }
+  return counts;
+}
+
+// ============================================
 // UNIQUE SLUG GENERATION (Collision Handling)
 // ============================================
 
@@ -1048,6 +1065,9 @@ Respond with ONLY this JSON:
     const finalMetaTitle = item.meta_title || parsedContent.seo_title;
     const finalMetaDescription = item.meta_description || parsedContent.seo_description;
 
+    // Compute keyword occurrence counts
+    const keywordCountsData = countKeywords(parsedContent.content, allKeywords);
+
     // Insert blog post
     const { data: blogPost, error: postError } = await insertBlogPostWithRetry(supabaseAdmin, {
       title: parsedContent.title,
@@ -1058,6 +1078,7 @@ Respond with ONLY this JSON:
       meta_description: finalMetaDescription,
       primary_keyword: realPrimaryKeyword || null,
       secondary_keywords: realSecondaryKeywords || null,
+      keyword_counts: keywordCountsData,
       category: blogCategory.name,
       category_slug: blogCategory.slug,
       tags: parsedContent.suggested_tags?.slice(0, 3) || [],
