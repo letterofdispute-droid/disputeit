@@ -767,10 +767,18 @@ async function generateSingleArticle(
       ? `7. Include TWO image placeholders:\n   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 33% through the content\n   - Insert {{MIDDLE_IMAGE_2}} on its own line at approximately 66% through the content`
       : `7. Include ONE image placeholder:\n   - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
     
-    const keywordList = item.suggested_keywords?.join(', ') || 'consumer rights, dispute letter';
-    const keywordInstruction = item.suggested_keywords && item.suggested_keywords.length > 0
-      ? `MANDATORY KEYWORDS - Each of these MUST appear 2-3 times in the article:\n${item.suggested_keywords.map((kw: string, i: number) => `   ${i + 1}. "${kw}"`).join('\n')}`
-      : `- Naturally incorporate consumer rights and dispute-related terms`;
+    // Use real keyword data from plan-from-keywords if available, fallback to suggested_keywords
+    const realPrimaryKeyword = item.primary_keyword;
+    const realSecondaryKeywords = item.secondary_keywords as string[] | null;
+    const allKeywords = realPrimaryKeyword 
+      ? [realPrimaryKeyword, ...(realSecondaryKeywords || [])]
+      : (item.suggested_keywords || []);
+    const keywordList = allKeywords.join(', ') || 'consumer rights, dispute letter';
+    const keywordInstruction = realPrimaryKeyword
+      ? `MANDATORY PRIMARY KEYWORD - Must appear 3-5 times: "${realPrimaryKeyword}"\nSECONDARY KEYWORDS - Each must appear 1-2 times:\n${(realSecondaryKeywords || []).map((kw: string, i: number) => `   ${i + 1}. "${kw}"`).join('\n')}`
+      : item.suggested_keywords && item.suggested_keywords.length > 0
+        ? `MANDATORY KEYWORDS - Each of these MUST appear 2-3 times in the article:\n${item.suggested_keywords.map((kw: string, i: number) => `   ${i + 1}. "${kw}"`).join('\n')}`
+        : `- Naturally incorporate consumer rights and dispute-related terms`;
     
     const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
 a US platform specializing in consumer rights, dispute resolution, and complaint letters.
@@ -907,14 +915,15 @@ Respond with ONLY this JSON:
     const validationResult = validateContent(parsedContent.content);
     console.log(`Content validation for "${item.suggested_title}":`, getViolationSummary(validationResult));
 
-    // Keyword remediation
-    const keywordValidation = validateKeywordUsage(parsedContent.content, item.suggested_keywords || []);
+    // Keyword remediation - use real keywords if available
+    const remediationKeywords = allKeywords.length > 0 ? allKeywords : (item.suggested_keywords || []);
+    const keywordValidation = validateKeywordUsage(parsedContent.content, remediationKeywords);
     console.log(`Keyword coverage: ${keywordValidation.coverage.toFixed(0)}%`);
     
     if (keywordValidation.missing.length > 0) {
       console.log(`Triggering keyword remediation for ${keywordValidation.missing.length} missing keywords...`);
       parsedContent.content = await remediateKeywords(apiKey, parsedContent.content, keywordValidation.missing, parsedContent.title);
-      const recheckValidation = validateKeywordUsage(parsedContent.content, item.suggested_keywords || []);
+      const recheckValidation = validateKeywordUsage(parsedContent.content, remediationKeywords);
       console.log(`After remediation - Coverage: ${recheckValidation.coverage.toFixed(0)}%`);
     }
 
@@ -991,14 +1000,20 @@ Respond with ONLY this JSON:
       }
     }
 
+    // Use pre-generated meta from keyword planning if available
+    const finalMetaTitle = item.meta_title || parsedContent.seo_title;
+    const finalMetaDescription = item.meta_description || parsedContent.seo_description;
+
     // Insert blog post
     const { data: blogPost, error: postError } = await insertBlogPostWithRetry(supabaseAdmin, {
       title: parsedContent.title,
       slug,
       content: parsedContent.content,
       excerpt: parsedContent.excerpt,
-      meta_title: parsedContent.seo_title,
-      meta_description: parsedContent.seo_description,
+      meta_title: finalMetaTitle,
+      meta_description: finalMetaDescription,
+      primary_keyword: realPrimaryKeyword || null,
+      secondary_keywords: realSecondaryKeywords || null,
       category: blogCategory.name,
       category_slug: blogCategory.slug,
       tags: parsedContent.suggested_tags?.slice(0, 3) || [],

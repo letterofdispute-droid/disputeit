@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Target, Settings } from 'lucide-react';
+import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Target, Settings, KeyRound } from 'lucide-react';
 import TemplateCoverageMap from '@/components/admin/seo/TemplateCoverageMap';
 import ContentQueue from '@/components/admin/seo/ContentQueue';
 import LinkSuggestions from '@/components/admin/seo/LinkSuggestions';
@@ -8,6 +8,7 @@ import CoverageStats from '@/components/admin/seo/CoverageStats';
 import ContentPerformance from '@/components/admin/seo/analytics/ContentPerformance';
 import GapAnalysis from '@/components/admin/seo/analytics/GapAnalysis';
 import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
+import KeywordManager from '@/components/admin/seo/KeywordManager';
 
 export default function SEODashboard() {
   return (
@@ -27,7 +28,7 @@ export default function SEODashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="coverage" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-flex">
           <TabsTrigger value="coverage" className="gap-2">
             <LayoutGrid className="h-4 w-4" />
             <span className="hidden sm:inline">Coverage</span>
@@ -51,6 +52,10 @@ export default function SEODashboard() {
           <TabsTrigger value="gaps" className="gap-2">
             <Target className="h-4 w-4" />
             <span className="hidden sm:inline">Gaps</span>
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className="hidden sm:inline">Keywords</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -80,6 +85,10 @@ export default function SEODashboard() {
 
         <TabsContent value="gaps" className="mt-4">
           <GapAnalysis />
+        </TabsContent>
+
+        <TabsContent value="keywords" className="mt-4">
+          <KeywordManager />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-4">
