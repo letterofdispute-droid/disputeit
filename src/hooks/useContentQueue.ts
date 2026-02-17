@@ -210,6 +210,17 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     return data?.map(i => i.id) || [];
   }, []);
 
+  // Fetch all queued IDs directly from DB (for "Generate All" action)
+  const fetchAllQueuedIds = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('content_queue')
+      .select('id')
+      .eq('status', 'queued')
+      .limit(2000);
+    if (error) throw error;
+    return data?.map(i => i.id) || [];
+  }, []);
+
   return {
     queueItems,
     isLoading,
@@ -223,5 +234,6 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     deleteItems: deleteItemsMutation.mutate,
     getFailedIds,
     fetchAllFailedIds,
+    fetchAllQueuedIds,
   };
 }
