@@ -1,0 +1,1 @@
+ALTER TABLE content_plans ADD CONSTRAINT content_plans_template_slug_key UNIQUE (template_slug);
