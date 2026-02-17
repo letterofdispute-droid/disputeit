@@ -73,14 +73,8 @@ serve(async (req) => {
     let verticalsToProcess: string[] = [];
 
     if (allVerticals) {
-      const { data: verticalData } = await supabase
-        .from('keyword_targets')
-        .select('vertical')
-        .is('used_in_queue_id', null);
-
-      if (verticalData) {
-        verticalsToProcess = [...new Set(verticalData.map((d: any) => d.vertical))].sort();
-      }
+      const { data: verticalData } = await supabase.rpc('get_unused_keyword_verticals');
+      verticalsToProcess = (verticalData || []).map((d: any) => d.vertical);
     } else if (vertical) {
       verticalsToProcess = [vertical];
     } else {

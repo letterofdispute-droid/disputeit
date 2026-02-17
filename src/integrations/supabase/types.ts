@@ -1596,6 +1596,12 @@ export type Database = {
           total: number
         }[]
       }
+      get_unused_keyword_verticals: {
+        Args: never
+        Returns: {
+          vertical: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
