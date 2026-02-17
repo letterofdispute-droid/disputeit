@@ -1,60 +1,50 @@
 
-# Add Real Progress Tracking UI for Keyword Planning
 
-## What's Wrong
+# Improve Queue UI: Add Category Column + Guided Next Steps
 
-The planning job backend works (self-chaining edge function, `keyword_planning_jobs` table, polling hook) but the UI only shows a generic spinner with "AI is clustering keywords..." -- no actual progress numbers, no vertical-by-vertical status, no way to tell if it's working.
+## Problems
 
-## What Changes
+1. **No category column in queue table** -- you can't see which blog category each article belongs to, so you can't verify correctness at a glance.
+2. **No guidance after planning** -- after "Plan All Keywords" creates 184 queued items, you land on the Queue tab with no clear indication of what to do next.
+3. **"Generate" button is unclear** -- it says "Generate (0)" because nothing is selected, but selecting 184 items one by one is impractical.
 
-### 1. Update `KeywordManager.tsx` -- Replace generic spinner with real progress panel
+## Data Check
 
-When a planning job is active, show:
-- A determinate progress bar (e.g., 5/13 verticals = 38%)
-- Current vertical being processed (e.g., "Processing: insurance")
-- Count of completed vs total verticals
-- Total articles planned so far
-- List of completed verticals with their article counts (green checkmarks)
-- List of failed verticals (red X marks)
-- When complete: summary toast already works, but also show final results inline
+I verified the database: all 184 queued items have **correct** category assignments via their content_plans (contractors: 28, insurance: 40, travel: 29, healthcare: 29, vehicle: 27, housing: 26, employment: 5). The categories are fine -- the issue is just that you can't see them.
 
-### 2. Update `useKeywordTargets.ts` -- Minor improvements
+## Changes
 
-- Expose `planningJob` data more cleanly (already mostly done)
-- No major changes needed, the hook already polls every 3 seconds
+### 1. Add Category column to QueueTable (`src/components/admin/seo/queue/QueueTable.tsx`)
 
-## No backend changes needed
+- Add a "Category" column between "Type" and "Template"
+- Display the `content_plans.category_id` as a capitalized label (e.g., "Contractors", "Insurance")
+- Color-code with a subtle badge so categories are visually scannable
 
-The edge function and database table are already correctly implemented with:
-- One-vertical-at-a-time processing (no timeout risk)
-- Self-chaining with fire-and-forget pattern
-- Progress tracked in `keyword_planning_jobs` table
-- Hook already polls every 3 seconds
+### 2. Add "Next Steps" action banner to ContentQueue (`src/components/admin/seo/ContentQueue.tsx`)
 
-## File Changes
-
-**Modified**: `src/components/admin/seo/KeywordManager.tsx`
-- Replace the indeterminate `<Progress>` + generic text (lines 185-192) with a detailed progress panel that reads from `planningJob`
-- Show: progress bar with percentage, current vertical name, completed/failed lists, total articles planned
-- Use existing `planningJob` data from the hook (verticals, current_vertical_index, completed_verticals, failed_verticals, total_planned, vertical_results)
-
-## Technical Details
-
-The progress panel will render when `planningJob` is truthy and status is `'processing'`:
+When there are queued items and nothing is currently generating, show a prominent banner:
 
 ```text
-+-----------------------------------------------+
-| Planning Keywords (5 / 13 verticals)           |
-| [=========>........................] 38%        |
-|                                                 |
-| Currently processing: financial                 |
-| Articles planned so far: 42                     |
-|                                                 |
-| Done: insurance (8), healthcare (6),            |
-|       employment (7), contractors (5),          |
-|       housing (8)                               |
-| Failed: (none)                                  |
-+-----------------------------------------------+
++----------------------------------------------------------+
+| 184 articles ready to generate                           |
+|                                                           |
+| [Select All Queued]  [Generate All 184]                  |
++----------------------------------------------------------+
 ```
 
-When status becomes `'completed'` or `'failed'`, show a summary with green/red styling before the panel auto-dismisses (existing toast handles notification).
+- "Select All Queued" selects all items with status=queued
+- "Generate All" fires bulk generation for all queued items directly (no need to manually select)
+- Banner disappears when generation starts or queue is empty
+
+### 3. Add "Generate All Queued" button to QueueActions (`src/components/admin/seo/queue/QueueActions.tsx`)
+
+- Add a prominent "Generate All (184)" button that doesn't require manual selection
+- Keep the existing selection-based generate for partial generation
+
+## Files Changed
+
+- **Modified**: `src/components/admin/seo/queue/QueueTable.tsx` -- add Category column
+- **Modified**: `src/components/admin/seo/ContentQueue.tsx` -- add action banner for queued items
+- **Modified**: `src/components/admin/seo/queue/QueueActions.tsx` -- add "Generate All Queued" button
+- **Modified**: `src/hooks/useContentQueue.ts` -- add helper to fetch all queued IDs for "Generate All"
+
