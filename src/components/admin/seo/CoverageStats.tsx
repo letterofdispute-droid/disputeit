@@ -26,7 +26,10 @@ export default function CoverageStats() {
 
   const stats = useMemo(() => {
     const totalTemplates = allTemplates.length;
-    const templatesWithPlans = plans?.length || 0;
+    // Only count plans that match actual template slugs (exclude keyword-based plans)
+    const templateSlugs = new Set(allTemplates.map(t => t.slug));
+    const templatePlans = plans?.filter(p => templateSlugs.has(p.template_slug)) || [];
+    const templatesWithPlans = templatePlans.length;
     const templatesWithoutPlans = totalTemplates - templatesWithPlans;
 
     const articlesGenerated = (queueStats?.generated || 0) + (queueStats?.published || 0);
@@ -38,9 +41,9 @@ export default function CoverageStats() {
 
     // Calculate tier distribution
     const tierCounts = {
-      high: plans?.filter(p => p.value_tier === 'high').length || 0,
-      medium: plans?.filter(p => p.value_tier === 'medium').length || 0,
-      longtail: plans?.filter(p => p.value_tier === 'longtail').length || 0,
+      high: templatePlans.filter(p => p.value_tier === 'high').length,
+      medium: templatePlans.filter(p => p.value_tier === 'medium').length,
+      longtail: templatePlans.filter(p => p.value_tier === 'longtail').length,
     };
 
     // Calculate average articles per template

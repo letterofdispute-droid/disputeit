@@ -145,9 +145,10 @@ export default function GapAnalysis() {
       }
     });
 
-    // Calculate overall stats
+    // Calculate overall stats - only count plans that match actual template slugs
     const totalTemplates = allTemplates.length;
-    const templatesWithPlans = contentPlans?.length || 0;
+    const templateSlugs = new Set(allTemplates.map(t => t.slug));
+    const templatesWithPlans = contentPlans?.filter(p => templateSlugs.has(p.template_slug)).length || 0;
     const coveragePercent = totalTemplates > 0 ? Math.round((templatesWithPlans / totalTemplates) * 100) : 0;
 
     return {
