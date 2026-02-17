@@ -25,28 +25,19 @@ export function useKeywordTargets() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch keyword stats per vertical
+  // Fetch keyword stats per vertical via server-side aggregation (no row limit)
   const { data: verticalStats, isLoading } = useQuery({
     queryKey: ['keyword-targets-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('keyword_targets' as any)
-        .select('vertical, is_seed, used_in_queue_id');
-      
+      const { data, error } = await supabase.rpc('get_keyword_stats' as any);
       if (error) throw error;
-
-      const stats: Record<string, VerticalStats> = {};
-      for (const row of (data as any[] || [])) {
-        if (!stats[row.vertical]) {
-          stats[row.vertical] = { vertical: row.vertical, total: 0, seeds: 0, used: 0, unused: 0 };
-        }
-        stats[row.vertical].total++;
-        if (row.is_seed) stats[row.vertical].seeds++;
-        if (row.used_in_queue_id) stats[row.vertical].used++;
-        else stats[row.vertical].unused++;
-      }
-
-      return Object.values(stats).sort((a, b) => a.vertical.localeCompare(b.vertical));
+      return (data as any[] || []).map((row: any) => ({
+        vertical: row.vertical,
+        total: Number(row.total),
+        seeds: Number(row.seeds),
+        used: Number(row.used),
+        unused: Number(row.unused),
+      })) as VerticalStats[];
     },
   });
 

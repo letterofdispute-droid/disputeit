@@ -1467,6 +1467,16 @@ export type Database = {
         Args: { p_batch_size: number; p_job_id: string }
         Returns: number
       }
+      get_keyword_stats: {
+        Args: never
+        Returns: {
+          seeds: number
+          total: number
+          unused: number
+          used: number
+          vertical: string
+        }[]
+      }
       get_next_backfill_post: {
         Args: never
         Returns: {
