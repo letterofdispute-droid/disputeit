@@ -817,14 +817,23 @@ SEO REQUIREMENTS:
     // For pillar articles, fetch sibling cluster articles to reference
     let pillarClusterContext = '';
     if (item.article_type === 'pillar' && item.plan_id) {
+      // Fetch clusters that reference this pillar via parent_queue_id
+      const { data: childClusters } = await supabaseAdmin
+        .from('content_queue')
+        .select('suggested_title, suggested_keywords, article_type, blog_post_id, parent_queue_id')
+        .eq('parent_queue_id', item.id);
+
+      // Also fetch plan-based siblings as fallback
       const { data: siblingArticles } = await supabaseAdmin
         .from('content_queue')
         .select('suggested_title, suggested_keywords, article_type, blog_post_id')
         .eq('plan_id', item.plan_id)
         .neq('article_type', 'pillar');
+
+      const allClusters = childClusters?.length ? childClusters : siblingArticles;
       
-      if (siblingArticles && siblingArticles.length > 0) {
-        const publishedIds = siblingArticles
+      if (allClusters && allClusters.length > 0) {
+        const publishedIds = allClusters
           .filter(s => s.blog_post_id)
           .map(s => s.blog_post_id!);
         
@@ -845,10 +854,43 @@ This is a PILLAR article - a comprehensive hub page that covers the full topic a
 - The pillar should serve as the definitive resource that ties all these subtopics together
 
 CLUSTER ARTICLES TO REFERENCE (include natural mentions of each):
-${siblingArticles.map((s, i) => {
+${allClusters.map((s, i) => {
   const published = publishedPosts.find(p => p.id === s.blog_post_id);
   return `${i + 1}. "${s.suggested_title}" (${s.article_type})${published ? ` [slug: ${published.slug}]` : ''}`;
 }).join('\n')}`;
+      }
+    }
+
+    // For cluster articles with a parent pillar, add linking instructions
+    let clusterLinkContext = '';
+    if (item.parent_queue_id) {
+      const { data: pillarItem } = await supabaseAdmin
+        .from('content_queue')
+        .select('suggested_title, blog_post_id, pillar_link_anchor')
+        .eq('id', item.parent_queue_id)
+        .single();
+
+      if (pillarItem) {
+        let pillarSlug = '';
+        if (pillarItem.blog_post_id) {
+          const { data: pillarPost } = await supabaseAdmin
+            .from('blog_posts')
+            .select('slug, category_slug')
+            .eq('id', pillarItem.blog_post_id)
+            .single();
+          if (pillarPost) {
+            pillarSlug = `/articles/${pillarPost.category_slug}/${pillarPost.slug}`;
+          }
+        }
+
+        const anchorText = item.pillar_link_anchor || pillarItem.suggested_title.split(' ').slice(0, 5).join(' ').toLowerCase();
+        clusterLinkContext = `\n\nCLUSTER LINKING REQUIREMENT:
+This is a CLUSTER article. You MUST include a contextual link to the parent pillar article:
+- Pillar title: "${pillarItem.suggested_title}"
+${pillarSlug ? `- Link URL: ${pillarSlug}` : '- (pillar not yet published, include a mention by title only)'}
+- Suggested anchor text: "${anchorText}"
+- Place the link naturally within the content, not as a standalone section
+- Example: <p>For a comprehensive overview, see our <a href="${pillarSlug || '#'}">${anchorText}</a> guide.</p>`;
       }
     }
 
@@ -860,6 +902,7 @@ Category: ${plan.category_id}
 ${plan.subcategory_slug ? `Subcategory: ${plan.subcategory_slug}` : ''}
 Keywords: ${keywordList}
 ${pillarClusterContext}
+${clusterLinkContext}
 
 Respond with ONLY this JSON:
 {

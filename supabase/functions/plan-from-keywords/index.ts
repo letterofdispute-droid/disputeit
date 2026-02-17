@@ -26,24 +26,10 @@ const VERTICAL_TO_CATEGORY: Record<string, string> = {
   'e-commerce': 'ecommerce',
 };
 
-const CATEGORY_TO_BLOG: Record<string, { slug: string; name: string }> = {
-  'refunds': { slug: 'consumer-rights', name: 'Consumer Rights' },
-  'damaged-goods': { slug: 'consumer-rights', name: 'Consumer Rights' },
-  'ecommerce': { slug: 'ecommerce', name: 'E-commerce & Online Services' },
-  'housing': { slug: 'housing', name: 'Landlord & Housing' },
-  'hoa': { slug: 'hoa', name: 'Neighbor & HOA Disputes' },
-  'contractors': { slug: 'contractors', name: 'Contractors' },
-  'financial': { slug: 'financial', name: 'Financial Services' },
-  'insurance': { slug: 'insurance', name: 'Insurance Claims' },
-  'employment': { slug: 'employment', name: 'Employment & Workplace' },
-  'travel': { slug: 'travel', name: 'Travel & Transportation' },
-  'vehicle': { slug: 'vehicle', name: 'Vehicle & Auto' },
-  'utilities': { slug: 'utilities', name: 'Utilities & Telecommunications' },
-  'healthcare': { slug: 'healthcare', name: 'Healthcare & Medical Billing' },
-  'consumer-rights': { slug: 'consumer-rights', name: 'Consumer Rights' },
-};
-
 const VALID_ARTICLE_TYPES = ['how-to', 'mistakes', 'rights', 'sample', 'faq', 'case-study', 'comparison', 'checklist'] as const;
+
+// Max keywords per AI call to stay within token limits
+const MAX_KEYWORDS_PER_BATCH = 50;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -149,6 +135,10 @@ serve(async (req) => {
   }
 });
 
+// ============================================
+// JOB CHAINING
+// ============================================
+
 async function processNextVertical(
   supabase: any,
   apiKey: string,
@@ -156,7 +146,6 @@ async function processNextVertical(
   serviceRoleKey: string,
   jobId: string,
 ) {
-  // Load job
   const { data: job, error: jobError } = await supabase
     .from('keyword_planning_jobs')
     .select('*')
@@ -247,95 +236,116 @@ function chainNext(supabaseUrl: string, serviceRoleKey: string, jobId: string) {
   });
 }
 
+// ============================================
+// CORE: Process one vertical with smart intent clustering
+// ============================================
+
+interface VerticalResult {
+  success: boolean;
+  planned: number;
+  pillars: number;
+  clusters: number;
+  error?: string;
+}
+
 async function processOneVertical(
   supabase: any,
   apiKey: string,
   jobId: string,
   vert: string,
-): Promise<{ success: boolean; planned: number; pillars: number; clusters: number; error?: string }> {
+): Promise<VerticalResult> {
   try {
     const categoryId = VERTICAL_TO_CATEGORY[vert.toLowerCase()] || vert.toLowerCase();
 
-    const { data: seedKeywords } = await supabase
+    // Fetch ALL unused keywords for this vertical (seeds + variations)
+    const { data: allKeywords } = await supabase
       .from('keyword_targets')
       .select('*')
       .eq('vertical', vert)
-      .eq('is_seed', true)
       .is('used_in_queue_id', null)
-      .order('priority', { ascending: false });
+      .order('priority', { ascending: false })
+      .limit(2000);
 
-    if (!seedKeywords || seedKeywords.length === 0) {
-      console.log(`[PLAN] No unused seeds for ${vert}, skipping`);
+    if (!allKeywords || allKeywords.length === 0) {
+      console.log(`[PLAN] No unused keywords for ${vert}, skipping`);
       return { success: true, planned: 0, pillars: 0, clusters: 0 };
     }
 
-    const { data: variationKeywords } = await supabase
-      .from('keyword_targets')
-      .select('*')
-      .eq('vertical', vert)
-      .eq('is_seed', false)
-      .is('used_in_queue_id', null)
-      .order('priority', { ascending: false });
-
-    const variationsByGroup: Record<string, any[]> = {};
-    for (const v of (variationKeywords || [])) {
-      const group = v.column_group || 'ungrouped';
-      if (!variationsByGroup[group]) variationsByGroup[group] = [];
-      variationsByGroup[group].push(v);
+    // Group keywords by column_group
+    const groupedKeywords: Record<string, any[]> = {};
+    for (const kw of allKeywords) {
+      const group = kw.column_group || 'ungrouped';
+      if (!groupedKeywords[group]) groupedKeywords[group] = [];
+      groupedKeywords[group].push(kw);
     }
 
-    const keywordContext = seedKeywords.map((seed: any) => {
-      const variations = variationsByGroup[seed.column_group || seed.keyword] || [];
-      return `SEED: "${seed.keyword}" (${seed.column_group || 'standalone'})\n  Variations: ${variations.map((v: any) => `"${v.keyword}"`).join(', ') || 'none'}`;
-    }).join('\n\n');
+    const groupNames = Object.keys(groupedKeywords);
+    console.log(`[PLAN] ${vert}: ${allKeywords.length} keywords across ${groupNames.length} groups`);
 
-    const prompt = `You are an SEO content strategist. Given the following seed keywords and their variations for the "${vert}" vertical, create a content plan with pillar and cluster articles.
+    let totalPillars = 0;
+    let totalClusters = 0;
 
-SEED KEYWORDS AND VARIATIONS:
-${keywordContext}
+    // Process each column_group separately
+    for (const groupName of groupNames) {
+      const keywords = groupedKeywords[groupName];
+      console.log(`[PLAN] Processing group "${groupName}" with ${keywords.length} keywords`);
 
-RULES:
-1. Each seed keyword becomes a PILLAR article - a comprehensive guide (2000-3000 words)
-2. For each pillar, create 3-6 CLUSTER articles from its variations (long-tail focused)
-3. Each article needs:
-   - title: Compelling, SEO-optimized title targeting the keyword
-   - article_type: One of: ${VALID_ARTICLE_TYPES.join(', ')}
-   - primary_keyword: The main keyword to target (must be from the provided list)
-   - secondary_keywords: 3-5 related keywords from the variations list
-   - meta_title: 50-60 characters, include primary keyword
-   - meta_description: 150-160 characters, compelling with keyword
-4. Pillar titles should be comprehensive ("Complete Guide to...", "Everything About...")
-5. Cluster titles should be specific and long-tail focused
-6. Use American English
-7. Titles must NOT start with: "Understanding", "Navigating", "Mastering", "Demystifying", "Unlocking"
-
-Respond with ONLY valid JSON:
-{
-  "pillars": [
-    {
-      "seed_keyword": "the original seed keyword",
-      "title": "Pillar article title",
-      "article_type": "how-to",
-      "primary_keyword": "main keyword",
-      "secondary_keywords": ["kw1", "kw2", "kw3"],
-      "meta_title": "SEO title under 60 chars",
-      "meta_description": "Meta description under 160 chars",
-      "clusters": [
-        {
-          "variation_keyword": "the variation keyword used",
-          "title": "Cluster article title",
-          "article_type": "faq",
-          "primary_keyword": "variation keyword",
-          "secondary_keywords": ["kw1", "kw2"],
-          "meta_title": "SEO title",
-          "meta_description": "Meta description"
-        }
-      ]
+      try {
+        const result = await processColumnGroup(
+          supabase, apiKey, vert, categoryId, groupName, keywords
+        );
+        totalPillars += result.pillars;
+        totalClusters += result.clusters;
+      } catch (err) {
+        console.error(`[PLAN] Error processing group "${groupName}":`, err);
+        // Continue with other groups
+      }
     }
-  ]
-}`;
 
-    console.log(`[PLAN] Calling AI for ${vert} with ${seedKeywords.length} seeds, ${variationKeywords?.length || 0} variations`);
+    console.log(`[PLAN] ${vert}: ${totalPillars} pillars, ${totalClusters} clusters`);
+    return { success: true, planned: totalPillars + totalClusters, pillars: totalPillars, clusters: totalClusters };
+
+  } catch (error) {
+    console.error(`[PLAN] Error processing ${vert}:`, error);
+    return { success: false, planned: 0, pillars: 0, clusters: 0, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ============================================
+// Process a single column_group with AI intent clustering
+// ============================================
+
+async function processColumnGroup(
+  supabase: any,
+  apiKey: string,
+  vert: string,
+  categoryId: string,
+  groupName: string,
+  keywords: any[],
+): Promise<{ pillars: number; clusters: number }> {
+  // For large groups, batch keywords to stay within token limits
+  // First batch always includes all keywords for pillar designation
+  // But we cap at MAX_KEYWORDS_PER_BATCH per AI call
+  const keywordTexts = keywords.map((kw: any) => kw.keyword);
+
+  let pillarQueueId: string | null = null;
+  let pillarTitle: string | null = null;
+  let totalPillars = 0;
+  let totalClusters = 0;
+
+  // Split into batches if needed
+  const batches: string[][] = [];
+  for (let i = 0; i < keywordTexts.length; i += MAX_KEYWORDS_PER_BATCH) {
+    batches.push(keywordTexts.slice(i, i + MAX_KEYWORDS_PER_BATCH));
+  }
+
+  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+    const batch = batches[batchIdx];
+    const isFirstBatch = batchIdx === 0;
+
+    const prompt = buildClusteringPrompt(vert, groupName, batch, isFirstBatch, pillarTitle);
+
+    console.log(`[PLAN] AI call for "${groupName}" batch ${batchIdx + 1}/${batches.length} (${batch.length} keywords)`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -353,18 +363,13 @@ Respond with ONLY valid JSON:
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[PLAN] AI error for ${vert}: ${response.status} - ${errText}`);
-      return { success: false, planned: 0, pillars: 0, clusters: 0, error: `AI error: ${response.status}` };
+      console.error(`[PLAN] AI error for ${groupName}: ${response.status} - ${errText}`);
+      continue;
     }
 
     const aiData = await response.json();
     let content = aiData.choices[0]?.message?.content || '';
-
-    content = content.trim();
-    if (content.startsWith('```json')) content = content.slice(7);
-    else if (content.startsWith('```')) content = content.slice(3);
-    if (content.endsWith('```')) content = content.slice(0, -3);
-    content = content.trim();
+    content = cleanJsonResponse(content);
 
     let plan;
     try {
@@ -374,112 +379,193 @@ Respond with ONLY valid JSON:
       if (match) {
         plan = JSON.parse(match[0]);
       } else {
-        console.error(`[PLAN] Failed to parse AI response for ${vert}`);
-        return { success: false, planned: 0, pillars: 0, clusters: 0, error: 'Failed to parse AI response' };
-      }
-    }
-
-    if (!plan.pillars || !Array.isArray(plan.pillars)) {
-      return { success: false, planned: 0, pillars: 0, clusters: 0, error: 'Invalid plan structure' };
-    }
-
-    let pillarCount = 0;
-    let clusterCount = 0;
-
-    for (const pillar of plan.pillars) {
-      const templateSlug = `${categoryId}-keyword-${pillar.seed_keyword?.replace(/\s+/g, '-').toLowerCase().slice(0, 40) || 'unknown'}`;
-
-      const { data: contentPlan, error: planError } = await supabase
-        .from('content_plans')
-        .insert({
-          template_slug: templateSlug,
-          template_name: pillar.seed_keyword || templateSlug,
-          category_id: categoryId,
-          value_tier: 'high',
-          target_article_count: 1 + (pillar.clusters?.length || 0),
-        })
-        .select()
-        .single();
-
-      if (planError) {
-        console.error(`[PLAN] Failed to create content plan: ${planError.message}`);
+        console.error(`[PLAN] Failed to parse AI response for ${groupName}`);
         continue;
       }
+    }
 
-      const { data: pillarQueueItem, error: pillarError } = await supabase
+    // Create content_plan for this group (once)
+    const templateSlug = `${categoryId}-kw-${groupName.replace(/\s+/g, '-').toLowerCase().slice(0, 40)}`;
+
+    const { data: contentPlan, error: planError } = await supabase
+      .from('content_plans')
+      .upsert({
+        template_slug: templateSlug,
+        template_name: groupName,
+        category_id: categoryId,
+        value_tier: 'high',
+        target_article_count: (plan.pillar ? 1 : 0) + (plan.clusters?.length || 0),
+      }, { onConflict: 'template_slug' })
+      .select()
+      .single();
+
+    if (planError) {
+      console.error(`[PLAN] Failed to create content plan: ${planError.message}`);
+      continue;
+    }
+
+    // Insert pillar (only on first batch)
+    if (isFirstBatch && plan.pillar) {
+      const pillarType = VALID_ARTICLE_TYPES.includes(plan.pillar.article_type)
+        ? plan.pillar.article_type : 'how-to';
+
+      const { data: pillarItem, error: pillarError } = await supabase
         .from('content_queue')
         .insert({
           plan_id: contentPlan.id,
           article_type: 'pillar',
-          suggested_title: pillar.title,
-          suggested_keywords: pillar.secondary_keywords || [],
-          primary_keyword: pillar.primary_keyword,
-          secondary_keywords: pillar.secondary_keywords || [],
-          meta_title: pillar.meta_title,
-          meta_description: pillar.meta_description,
+          suggested_title: plan.pillar.title,
+          suggested_keywords: plan.pillar.secondary_keywords || [],
+          primary_keyword: plan.pillar.primary_keyword,
+          secondary_keywords: plan.pillar.secondary_keywords || [],
+          meta_title: plan.pillar.meta_title,
+          meta_description: plan.pillar.meta_description,
           priority: 1,
           status: 'queued',
+          parent_queue_id: null,
         })
         .select('id')
         .single();
 
       if (pillarError) {
-        console.error(`[PLAN] Failed to create pillar queue item: ${pillarError.message}`);
-        continue;
-      }
+        console.error(`[PLAN] Failed to create pillar: ${pillarError.message}`);
+      } else {
+        pillarQueueId = pillarItem.id;
+        pillarTitle = plan.pillar.title;
+        totalPillars++;
 
-      if (pillar.seed_keyword) {
-        await supabase
-          .from('keyword_targets')
-          .update({ used_in_queue_id: pillarQueueItem.id })
-          .eq('vertical', vert)
-          .eq('keyword', pillar.seed_keyword.toLowerCase());
-      }
-
-      pillarCount++;
-
-      for (const cluster of (pillar.clusters || [])) {
-        const clusterType = VALID_ARTICLE_TYPES.includes(cluster.article_type) ? cluster.article_type : 'faq';
-
-        const { data: clusterQueueItem, error: clusterError } = await supabase
-          .from('content_queue')
-          .insert({
-            plan_id: contentPlan.id,
-            article_type: clusterType,
-            suggested_title: cluster.title,
-            suggested_keywords: cluster.secondary_keywords || [],
-            primary_keyword: cluster.primary_keyword,
-            secondary_keywords: cluster.secondary_keywords || [],
-            meta_title: cluster.meta_title,
-            meta_description: cluster.meta_description,
-            priority: 50,
-            status: 'queued',
-          })
-          .select('id')
-          .single();
-
-        if (clusterError) {
-          console.error(`[PLAN] Failed to create cluster: ${clusterError.message}`);
-          continue;
-        }
-
-        if (cluster.variation_keyword) {
-          await supabase
-            .from('keyword_targets')
-            .update({ used_in_queue_id: clusterQueueItem.id })
-            .eq('vertical', vert)
-            .eq('keyword', cluster.variation_keyword.toLowerCase());
-        }
-
-        clusterCount++;
+        // Mark all targeted keywords as used
+        await markKeywordsUsed(supabase, vert, plan.pillar.all_targeted_keywords || [plan.pillar.primary_keyword], pillarItem.id);
       }
     }
 
-    console.log(`[PLAN] ${vert}: ${pillarCount} pillars, ${clusterCount} clusters`);
-    return { success: true, planned: pillarCount + clusterCount, pillars: pillarCount, clusters: clusterCount };
+    // Insert clusters
+    for (const cluster of (plan.clusters || [])) {
+      const clusterType = VALID_ARTICLE_TYPES.includes(cluster.article_type)
+        ? cluster.article_type : 'faq';
 
-  } catch (error) {
-    console.error(`[PLAN] Error processing ${vert}:`, error);
-    return { success: false, planned: 0, pillars: 0, clusters: 0, error: error instanceof Error ? error.message : 'Unknown error' };
+      const { data: clusterItem, error: clusterError } = await supabase
+        .from('content_queue')
+        .insert({
+          plan_id: contentPlan.id,
+          article_type: clusterType,
+          suggested_title: cluster.title,
+          suggested_keywords: cluster.secondary_keywords || [],
+          primary_keyword: cluster.primary_keyword,
+          secondary_keywords: cluster.secondary_keywords || [],
+          meta_title: cluster.meta_title,
+          meta_description: cluster.meta_description,
+          priority: 50,
+          status: 'queued',
+          parent_queue_id: pillarQueueId,
+          pillar_link_anchor: cluster.link_to_pillar_anchor || null,
+        })
+        .select('id')
+        .single();
+
+      if (clusterError) {
+        console.error(`[PLAN] Failed to create cluster: ${clusterError.message}`);
+        continue;
+      }
+
+      // Mark all targeted keywords as used
+      await markKeywordsUsed(supabase, vert, cluster.all_targeted_keywords || [cluster.primary_keyword], clusterItem.id);
+      totalClusters++;
+    }
+  }
+
+  return { pillars: totalPillars, clusters: totalClusters };
+}
+
+// ============================================
+// AI PROMPT BUILDER
+// ============================================
+
+function buildClusteringPrompt(
+  vertical: string,
+  groupName: string,
+  keywords: string[],
+  includePillar: boolean,
+  existingPillarTitle: string | null,
+): string {
+  const keywordList = keywords.map((kw, i) => `${i + 1}. "${kw}"`).join('\n');
+
+  const pillarInstruction = includePillar
+    ? `Create ONE PILLAR article (the broadest, most comprehensive topic covering "${groupName}") and multiple CLUSTER articles.
+The pillar should be "how-to" or "rights" type (2000-3000 word comprehensive guide).`
+    : `The PILLAR article already exists: "${existingPillarTitle}". Create only CLUSTER articles from these keywords.
+Each cluster should reference the pillar via link_to_pillar_anchor.`;
+
+  return `You are an expert SEO content strategist. Given these ${keywords.length} keywords for the "${groupName}" topic in the "${vertical}" vertical, create a content cluster by grouping them by SEARCH INTENT.
+
+KEYWORDS:
+${keywordList}
+
+RULES:
+1. Group keywords by SEARCH INTENT — keywords asking the same question in different ways belong to the SAME article
+2. ${pillarInstruction}
+3. Each article should target 3-8 keywords (primary + secondaries). If a group has fewer keywords, 1-3 is acceptable.
+4. EVERY keyword above must be assigned to exactly ONE article's all_targeted_keywords array. Do NOT skip any.
+5. Clusters must link UP to the pillar. Use link_to_pillar_anchor for the suggested anchor text (2-6 natural words).
+6. Article types: how-to, mistakes, rights, sample, faq, case-study, comparison, checklist
+7. Titles must NOT start with: "Understanding", "Navigating", "Mastering", "Demystifying", "Unlocking"
+8. Use American English
+
+Respond with ONLY valid JSON:
+{
+  ${includePillar ? `"pillar": {
+    "title": "Comprehensive pillar title",
+    "article_type": "how-to",
+    "primary_keyword": "broadest keyword from list",
+    "secondary_keywords": ["kw1", "kw2", "kw3"],
+    "all_targeted_keywords": ["every keyword this article targets"],
+    "meta_title": "under 60 chars with primary keyword",
+    "meta_description": "under 160 chars, compelling"
+  },` : ''}
+  "clusters": [
+    {
+      "title": "Specific cluster title",
+      "article_type": "faq",
+      "primary_keyword": "most specific keyword",
+      "secondary_keywords": ["kw1", "kw2"],
+      "all_targeted_keywords": ["every keyword this cluster targets"],
+      "meta_title": "under 60 chars",
+      "meta_description": "under 160 chars",
+      "link_to_pillar_anchor": "2-6 word anchor text for pillar link"
+    }
+  ]
+}`;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function cleanJsonResponse(content: string): string {
+  let cleaned = content.trim();
+  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+  else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
+  return cleaned.trim();
+}
+
+async function markKeywordsUsed(
+  supabase: any,
+  vertical: string,
+  keywords: string[],
+  queueItemId: string,
+) {
+  if (!keywords || keywords.length === 0) return;
+
+  // Batch update in chunks of 20 to avoid URL length issues
+  const normalizedKeywords = keywords.map(k => k.toLowerCase());
+  for (let i = 0; i < normalizedKeywords.length; i += 20) {
+    const chunk = normalizedKeywords.slice(i, i + 20);
+    await supabase
+      .from('keyword_targets')
+      .update({ used_in_queue_id: queueItemId })
+      .eq('vertical', vertical)
+      .in('keyword', chunk)
+      .is('used_in_queue_id', null);
   }
 }

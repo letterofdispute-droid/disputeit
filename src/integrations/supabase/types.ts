@@ -526,6 +526,8 @@ export type Database = {
           id: string
           meta_description: string | null
           meta_title: string | null
+          parent_queue_id: string | null
+          pillar_link_anchor: string | null
           plan_id: string | null
           primary_keyword: string | null
           priority: number | null
@@ -545,6 +547,8 @@ export type Database = {
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          parent_queue_id?: string | null
+          pillar_link_anchor?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
           priority?: number | null
@@ -564,6 +568,8 @@ export type Database = {
           id?: string
           meta_description?: string | null
           meta_title?: string | null
+          parent_queue_id?: string | null
+          pillar_link_anchor?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
           priority?: number | null
@@ -580,6 +586,13 @@ export type Database = {
             columns: ["blog_post_id"]
             isOneToOne: false
             referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_queue_parent_queue_id_fkey"
+            columns: ["parent_queue_id"]
+            isOneToOne: false
+            referencedRelation: "content_queue"
             referencedColumns: ["id"]
           },
           {
