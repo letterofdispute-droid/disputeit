@@ -69,7 +69,7 @@ const Header = () => {
                   </Link>
                 </Button>
                 <Button variant="accent" size="sm" asChild onClick={() => trackCTAClick('create_letter', 'header')}>
-                  <Link to="/#letters">Create Letter</Link>
+                  <a href="/#letters">Create Letter</a>
                 </Button>
               </>
             )}
@@ -274,9 +274,9 @@ const Header = () => {
                         </Link>
                       </Button>
                       <Button variant="accent" size="sm" className="w-full" asChild>
-                        <Link to="/#letters" onClick={() => setOpen(false)}>
+                        <a href="/#letters" onClick={() => setOpen(false)}>
                           Create Letter
-                        </Link>
+                        </a>
                       </Button>
                     </>
                   )}
