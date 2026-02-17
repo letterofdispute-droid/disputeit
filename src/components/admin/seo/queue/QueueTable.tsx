@@ -105,15 +105,15 @@ export default function QueueTable({
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Badge variant="outline">{articleType?.name || item.article_type}</Badge>
-                      {item.article_type === 'pillar' && (
-                        <Badge variant="default" className="text-[10px] px-1">Hub</Badge>
+                      {!item.parent_queue_id && item.content_plans?.template_slug?.includes('-kw-') && (
+                        <Badge variant="default" className="text-[10px] px-1">Pillar</Badge>
                       )}
-                      {(item as any).parent_queue_id && (
+                      {item.parent_queue_id && (
                         <Tooltip>
                           <TooltipTrigger>
                             <Link2 className="h-3 w-3 text-muted-foreground" />
                           </TooltipTrigger>
-                          <TooltipContent>Linked to pillar</TooltipContent>
+                          <TooltipContent>Cluster → linked to pillar</TooltipContent>
                         </Tooltip>
                       )}
                     </div>

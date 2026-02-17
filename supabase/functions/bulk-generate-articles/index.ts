@@ -816,7 +816,7 @@ SEO REQUIREMENTS:
 
     // For pillar articles, fetch sibling cluster articles to reference
     let pillarClusterContext = '';
-    if (item.article_type === 'pillar' && item.plan_id) {
+    if (!item.parent_queue_id && item.plan_id) {
       // Fetch clusters that reference this pillar via parent_queue_id
       const { data: childClusters } = await supabaseAdmin
         .from('content_queue')
@@ -828,7 +828,7 @@ SEO REQUIREMENTS:
         .from('content_queue')
         .select('suggested_title, suggested_keywords, article_type, blog_post_id')
         .eq('plan_id', item.plan_id)
-        .neq('article_type', 'pillar');
+        .not('parent_queue_id', 'is', null);
 
       const allClusters = childClusters?.length ? childClusters : siblingArticles;
       
