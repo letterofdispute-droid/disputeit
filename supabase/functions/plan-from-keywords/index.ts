@@ -413,7 +413,7 @@ async function processColumnGroup(
         .from('content_queue')
         .insert({
           plan_id: contentPlan.id,
-          article_type: 'pillar',
+          article_type: pillarType,
           suggested_title: plan.pillar.title,
           suggested_keywords: plan.pillar.secondary_keywords || [],
           primary_keyword: plan.pillar.primary_keyword,
