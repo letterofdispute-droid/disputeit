@@ -61,6 +61,7 @@ export default function QueueTable({
             </TableHead>
             <TableHead>Title</TableHead>
             <TableHead className="w-28">Type</TableHead>
+            <TableHead className="w-28">Category</TableHead>
             <TableHead className="w-36">Template</TableHead>
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-16">Actions</TableHead>
@@ -69,7 +70,7 @@ export default function QueueTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 No items in queue
               </TableCell>
             </TableRow>
@@ -102,6 +103,11 @@ export default function QueueTable({
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{articleType?.name || item.article_type}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs capitalize">
+                      {item.content_plans?.category_id?.replace(/-/g, ' ') || '-'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <span className="truncate block max-w-36 text-sm text-muted-foreground">

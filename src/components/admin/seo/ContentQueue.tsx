@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Play } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useContentQueue, ContentQueueItem } from '@/hooks/useContentQueue';
@@ -34,6 +35,7 @@ export default function ContentQueue() {
     deleteItems,
     getFailedIds,
     fetchAllFailedIds,
+    fetchAllQueuedIds,
   } = useContentQueue(undefined, undefined, statusFilter);
 
   const { activeJob, lastCompletedJob, isRunning, stopJob, isStopping, resumeJob, isResuming } = useGenerationJob();
@@ -143,6 +145,17 @@ export default function ContentQueue() {
     }
   };
 
+  const handleGenerateAllQueued = async () => {
+    try {
+      const queuedIds = await fetchAllQueuedIds();
+      if (queuedIds.length > 0) {
+        bulkGenerate({ queueItemIds: queuedIds });
+      }
+    } catch (e) {
+      console.error('Failed to fetch queued IDs:', e);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -178,6 +191,20 @@ export default function ContentQueue() {
       {/* Failure Summary Banner */}
       {stats.failed > 0 && (
         <FailureSummary failedItems={queueItems?.filter(i => i.status === 'failed') || []} />
+      )}
+
+      {/* Action Banner for queued items */}
+      {stats.queued > 0 && !isRunning && !isBulkGenerating && !isRetrying && (
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div>
+            <p className="font-medium text-sm">{stats.queued} articles ready to generate</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Click Generate All to start processing the entire queue</p>
+          </div>
+          <Button size="sm" onClick={handleGenerateAllQueued}>
+            <Play className="h-4 w-4 mr-1" />
+            Generate All {stats.queued}
+          </Button>
+        </div>
       )}
 
       {/* Filters and Actions */}
