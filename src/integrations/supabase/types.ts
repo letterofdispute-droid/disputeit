@@ -218,6 +218,7 @@ export type Database = {
           featured_image_alt: string | null
           featured_image_url: string | null
           id: string
+          keyword_counts: Json | null
           last_link_scan_at: string | null
           meta_description: string | null
           meta_title: string | null
@@ -253,6 +254,7 @@ export type Database = {
           featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
+          keyword_counts?: Json | null
           last_link_scan_at?: string | null
           meta_description?: string | null
           meta_title?: string | null
@@ -288,6 +290,7 @@ export type Database = {
           featured_image_alt?: string | null
           featured_image_url?: string | null
           id?: string
+          keyword_counts?: Json | null
           last_link_scan_at?: string | null
           meta_description?: string | null
           meta_title?: string | null
@@ -1505,6 +1508,7 @@ export type Database = {
         }
         Returns: string
       }
+      backfill_keyword_counts: { Args: never; Returns: number }
       bulk_delete_link_suggestions: {
         Args: { p_category_slug?: string; p_status?: string }
         Returns: number
@@ -1552,6 +1556,7 @@ export type Database = {
           featured_image_alt: string | null
           featured_image_url: string | null
           id: string
+          keyword_counts: Json | null
           last_link_scan_at: string | null
           meta_description: string | null
           meta_title: string | null

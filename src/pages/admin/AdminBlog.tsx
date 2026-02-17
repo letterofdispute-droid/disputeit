@@ -60,6 +60,9 @@ interface BlogPost {
   views: number;
   meta_title: string | null;
   meta_description: string | null;
+  primary_keyword: string | null;
+  secondary_keywords: string[] | null;
+  keyword_counts: Record<string, number> | null;
 }
 
 const POSTS_PER_PAGE = 100;
@@ -158,7 +161,7 @@ const AdminBlog = () => {
     
     let query = supabase
       .from('blog_posts')
-      .select('id, title, slug, category, category_slug, status, author, created_at, views, meta_title, meta_description', { count: 'exact' });
+      .select('id, title, slug, category, category_slug, status, author, created_at, views, meta_title, meta_description, primary_keyword, secondary_keywords, keyword_counts', { count: 'exact' });
     
     // Apply filters on backend
     if (statusFilter !== 'all') {
@@ -182,7 +185,7 @@ const AdminBlog = () => {
         variant: 'destructive',
       });
     } else {
-      setPosts(data || []);
+      setPosts((data || []).map((p: any) => ({ ...p, keyword_counts: p.keyword_counts as Record<string, number> | null })) as BlogPost[]);
       setTotalCount(count || 0);
       fetchLinkCounts((data || []).map(p => p.id));
     }
@@ -526,8 +529,9 @@ const AdminBlog = () => {
                         onCheckedChange={toggleSelectAll}
                       />
                     </TableHead>
-                    <TableHead className="w-[45%]">Title</TableHead>
+                    <TableHead className="w-[35%]">Title</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead className="w-[20%]">Keywords</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Links</TableHead>
                     <TableHead>Date</TableHead>
@@ -562,6 +566,31 @@ const AdminBlog = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{post.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {post.keyword_counts ? (
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {Object.entries(post.keyword_counts)
+                              .sort(([a], [b]) => (a === post.primary_keyword ? -1 : b === post.primary_keyword ? 1 : 0))
+                              .slice(0, 3)
+                              .map(([kw, count]) => (
+                                <Badge
+                                  key={kw}
+                                  variant={kw === post.primary_keyword ? 'default' : 'outline'}
+                                  className="text-[10px] px-1.5 py-0 font-normal"
+                                >
+                                  {kw} ({count})
+                                </Badge>
+                              ))}
+                            {Object.keys(post.keyword_counts).length > 3 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
+                                +{Object.keys(post.keyword_counts).length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
