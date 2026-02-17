@@ -18,13 +18,18 @@ const SHEET_NAME_MAP: Record<string, string> = {
   'hoa': 'hoa',
   'contractors': 'contractors',
   'vehicle': 'vehicle',
+  'vehicleandauto': 'vehicle',
   'utilities': 'utilities',
   'travel': 'travel',
   'refunds': 'refunds',
   'damaged goods': 'damaged-goods',
   'damaged-goods': 'damaged-goods',
+  'damagedgoods': 'damaged-goods',
   'ecommerce': 'ecommerce',
   'e-commerce': 'ecommerce',
+  'consumerrights': 'consumer-rights',
+  'consumer-rights': 'consumer-rights',
+  'consumer rights': 'consumer-rights',
 };
 
 function normalizeSheetName(name: string): string | null {
