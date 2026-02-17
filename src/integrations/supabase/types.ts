@@ -524,9 +524,13 @@ export type Database = {
           error_message: string | null
           generated_at: string | null
           id: string
+          meta_description: string | null
+          meta_title: string | null
           plan_id: string | null
+          primary_keyword: string | null
           priority: number | null
           published_at: string | null
+          secondary_keywords: string[] | null
           started_at: string | null
           status: string
           suggested_keywords: string[] | null
@@ -539,9 +543,13 @@ export type Database = {
           error_message?: string | null
           generated_at?: string | null
           id?: string
+          meta_description?: string | null
+          meta_title?: string | null
           plan_id?: string | null
+          primary_keyword?: string | null
           priority?: number | null
           published_at?: string | null
+          secondary_keywords?: string[] | null
           started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
@@ -554,9 +562,13 @@ export type Database = {
           error_message?: string | null
           generated_at?: string | null
           id?: string
+          meta_description?: string | null
+          meta_title?: string | null
           plan_id?: string | null
+          primary_keyword?: string | null
           priority?: number | null
           published_at?: string | null
+          secondary_keywords?: string[] | null
           started_at?: string | null
           status?: string
           suggested_keywords?: string[] | null
@@ -578,6 +590,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_publish_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_log: Json
+          failed_count: number
+          id: string
+          published_count: number
+          status: string
+          target_count: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json
+          failed_count?: number
+          id?: string
+          published_count?: number
+          status?: string
+          target_count?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json
+          failed_count?: number
+          id?: string
+          published_count?: number
+          status?: string
+          target_count?: number
+        }
+        Relationships: []
       }
       embedding_jobs: {
         Row: {
@@ -802,6 +847,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      keyword_targets: {
+        Row: {
+          column_group: string | null
+          created_at: string
+          id: string
+          is_seed: boolean | null
+          keyword: string
+          priority: number | null
+          used_in_queue_id: string | null
+          vertical: string
+        }
+        Insert: {
+          column_group?: string | null
+          created_at?: string
+          id?: string
+          is_seed?: boolean | null
+          keyword: string
+          priority?: number | null
+          used_in_queue_id?: string | null
+          vertical: string
+        }
+        Update: {
+          column_group?: string | null
+          created_at?: string
+          id?: string
+          is_seed?: boolean | null
+          keyword?: string
+          priority?: number | null
+          used_in_queue_id?: string | null
+          vertical?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyword_targets_used_in_queue_id_fkey"
+            columns: ["used_in_queue_id"]
+            isOneToOne: false
+            referencedRelation: "content_queue"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       letter_purchases: {
         Row: {

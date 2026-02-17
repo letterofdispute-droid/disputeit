@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Save, Loader2, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import AutoPublishSettings from './AutoPublishSettings';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -58,6 +59,8 @@ export default function CategoryTierSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Auto-Publish Settings */}
+      <AutoPublishSettings />
       {/* Header with explanation */}
       <Card>
         <CardHeader>
