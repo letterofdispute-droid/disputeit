@@ -848,6 +848,51 @@ export type Database = {
         }
         Relationships: []
       }
+      keyword_planning_jobs: {
+        Row: {
+          completed_at: string | null
+          completed_verticals: string[]
+          created_at: string
+          current_vertical_index: number
+          error_message: string | null
+          failed_verticals: string[]
+          id: string
+          status: string
+          total_planned: number
+          updated_at: string
+          vertical_results: Json
+          verticals: string[]
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_verticals?: string[]
+          created_at?: string
+          current_vertical_index?: number
+          error_message?: string | null
+          failed_verticals?: string[]
+          id?: string
+          status?: string
+          total_planned?: number
+          updated_at?: string
+          vertical_results?: Json
+          verticals?: string[]
+        }
+        Update: {
+          completed_at?: string | null
+          completed_verticals?: string[]
+          created_at?: string
+          current_vertical_index?: number
+          error_message?: string | null
+          failed_verticals?: string[]
+          id?: string
+          status?: string
+          total_planned?: number
+          updated_at?: string
+          vertical_results?: Json
+          verticals?: string[]
+        }
+        Relationships: []
+      }
       keyword_targets: {
         Row: {
           column_group: string | null
