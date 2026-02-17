@@ -1,42 +1,56 @@
 
 
-# Fix: Add Unique Constraint on content_plans.template_slug
+# Fix Pillar Identification and article_type Constraint
 
-## Root Cause
+## Problems Found
 
-The `plan-from-keywords` edge function uses `.upsert()` with `onConflict: 'template_slug'` on the `content_plans` table (line 392-398), but `template_slug` only has a regular (non-unique) index. PostgreSQL requires a unique constraint for ON CONFLICT to work.
+1. **67 queued items have `article_type: 'pillar'`** - these will FAIL when generation runs because the database check constraint only allows: how-to, mistakes, rights, sample, faq, case-study, comparison, checklist. The fix in `plan-from-keywords` was applied but the 67 already-inserted pillar items still have the invalid type.
 
-Every single column group across all 13 verticals hit this error:
-```
-Failed to create content plan: there is no unique or exclusion constraint matching the ON CONFLICT specification
-```
+2. **No way to tell pillars from clusters in the UI** - the queue table checks `item.article_type === 'pillar'` (line 108) to show a "Hub" badge, but since that type is invalid, we need a different identification method. Pillars are items where `parent_queue_id IS NULL` within a keyword-based plan.
 
-Result: 0 articles planned despite the AI successfully clustering keywords.
+3. **Keyword inclusion is already handled** - the `bulk-generate-articles` function already has keyword validation (lines 301-328) and a remediation pass (lines 330-395) that re-prompts the AI to weave in any missing keywords. Primary keywords get 3-5x density, secondaries 1-2x. This system is already working.
 
-## Fix
+## Fix Plan
 
-Two changes needed:
+### Step 1: Database Cleanup - Fix the 67 Invalid article_type Rows
 
-### 1. Database Migration
-Add a unique constraint on `content_plans.template_slug`:
+Run SQL to update the 67 pillar items from `'pillar'` to their AI-suggested type. Since we can't recover the original AI suggestion, default them to `'how-to'` (which is the correct type for comprehensive pillar/hub guides):
+
 ```sql
-ALTER TABLE content_plans ADD CONSTRAINT content_plans_template_slug_key UNIQUE (template_slug);
+UPDATE content_queue SET article_type = 'how-to' WHERE article_type = 'pillar';
 ```
 
-### 2. Fix article_type for pillars
-Looking at the code, pillar articles are inserted with `article_type: 'pillar'` (line 416), but the `content_queue` table has a check constraint limiting valid types to: `how-to`, `mistakes`, `rights`, `sample`, `faq`, `case-study`, `comparison`, `checklist`. The value `'pillar'` is not in that list and would cause another insertion failure.
+### Step 2: Update Queue Table UI to Identify Pillars Correctly
 
-The fix: use the AI-suggested article_type (e.g., `how-to`) for the pillar queue item, and store the pillar/cluster role via the `parent_queue_id` relationship (pillars have `parent_queue_id = null`, clusters have it set).
+**File: `src/components/admin/seo/queue/QueueTable.tsx`**
 
-**File: `supabase/functions/plan-from-keywords/index.ts` (line 416)**
-Change `article_type: 'pillar'` to `article_type: pillarType` (which is already correctly computed on line 409).
+Replace the `article_type === 'pillar'` check (line 108) with a check for `parent_queue_id IS NULL` on keyword-based plans. Items without a parent are pillars (hubs); items with a parent are clusters.
+
+- Show a **"Pillar"** badge on items where `parent_queue_id` is null AND the plan's `template_slug` contains `-kw-` (keyword-based plans)
+- Show a **"Cluster"** badge with the link icon on items where `parent_queue_id` is set
+
+This makes it visually clear in the queue which articles are hub pages vs supporting cluster articles.
+
+### Step 3: Update Generation Logic for Pillar Detection
+
+**File: `supabase/functions/bulk-generate-articles/index.ts`** (line 819)
+
+Change the pillar detection from `item.article_type === 'pillar'` to `!item.parent_queue_id` (items without a parent are pillars). This ensures the comprehensive pillar prompt (2000-3000 words, cluster references) is used for hub articles even though their article_type is now `'how-to'`.
+
+Also update line 831 where it filters siblings with `.neq('article_type', 'pillar')` to use `.not('parent_queue_id', 'is', null)` instead (clusters are items that HAVE a parent).
 
 ## Files Changed
 
-- **New migration**: Add unique constraint on `content_plans.template_slug`
-- **Modified**: `supabase/functions/plan-from-keywords/index.ts` -- Fix line 416 to use `pillarType` instead of hardcoded `'pillar'`
+- **SQL**: Update 67 rows from `article_type = 'pillar'` to `'how-to'`
+- **Modified**: `src/components/admin/seo/queue/QueueTable.tsx` - pillar/cluster badges based on `parent_queue_id`
+- **Modified**: `supabase/functions/bulk-generate-articles/index.ts` - pillar detection via `parent_queue_id` instead of `article_type`
 
-## After Fix
+## Keyword Assurance
 
-Re-running "Plan All Keywords" should successfully create 800-1,200+ articles from all 3,931 unused keywords with proper pillar/cluster hierarchy.
+The existing system already ensures keywords appear in articles:
+1. AI prompt explicitly lists every keyword with density targets
+2. After generation, `validateKeywordUsage()` checks if all keywords appear
+3. If any are missing, `remediateKeywords()` makes a second AI call to weave them in
+4. Final coverage is logged per article
 
+No changes needed for keyword inclusion - it is already robust.
