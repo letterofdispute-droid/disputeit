@@ -1,46 +1,60 @@
 
-
-# Fix Keyword Import: Add Missing Sheet Mappings + Server-Side Stats
+# Add Real Progress Tracking UI for Keyword Planning
 
 ## What's Wrong
 
-1. **2 verticals missing**: Your tabs `vehicleAndauto` and likely `consumerRights` don't match any entry in the sheet name map, so those keywords are silently skipped during import.
-
-2. **Incorrect keyword counts in UI**: The stats query fetches all rows client-side but hits a 1,000-row database limit, showing wrong numbers for your 4,527 keywords.
+The planning job backend works (self-chaining edge function, `keyword_planning_jobs` table, polling hook) but the UI only shows a generic spinner with "AI is clustering keywords..." -- no actual progress numbers, no vertical-by-vertical status, no way to tell if it's working.
 
 ## What Changes
 
-### 1. Update sheet name map in `KeywordManager.tsx`
+### 1. Update `KeywordManager.tsx` -- Replace generic spinner with real progress panel
 
-Add all the exact tab names from your new file:
+When a planning job is active, show:
+- A determinate progress bar (e.g., 5/13 verticals = 38%)
+- Current vertical being processed (e.g., "Processing: insurance")
+- Count of completed vs total verticals
+- Total articles planned so far
+- List of completed verticals with their article counts (green checkmarks)
+- List of failed verticals (red X marks)
+- When complete: summary toast already works, but also show final results inline
 
-| Tab Name | Maps To |
-|---|---|
-| `vehicleAndauto` | `vehicle` |
-| `consumerRights` | `consumer-rights` |
-| `HOA` (case-sensitive) | `hoa` |
-| `Travel` (case-sensitive) | `travel` |
-| `Refunds` (case-sensitive) | `refunds` |
+### 2. Update `useKeywordTargets.ts` -- Minor improvements
 
-The existing lowercase entries stay for backward compatibility.
+- Expose `planningJob` data more cleanly (already mostly done)
+- No major changes needed, the hook already polls every 3 seconds
 
-### 2. Create `get_keyword_stats()` database function
+## No backend changes needed
 
-A server-side SQL function that counts keywords per vertical directly in the database (no row limit). Returns `vertical, total, seeds, used, unused` for each vertical.
+The edge function and database table are already correctly implemented with:
+- One-vertical-at-a-time processing (no timeout risk)
+- Self-chaining with fire-and-forget pattern
+- Progress tracked in `keyword_planning_jobs` table
+- Hook already polls every 3 seconds
 
-### 3. Update `useKeywordTargets.ts` hook
+## File Changes
 
-Replace the current `.from('keyword_targets').select(...)` approach with a single `.rpc('get_keyword_stats')` call.
+**Modified**: `src/components/admin/seo/KeywordManager.tsx`
+- Replace the indeterminate `<Progress>` + generic text (lines 185-192) with a detailed progress panel that reads from `planningJob`
+- Show: progress bar with percentage, current vertical name, completed/failed lists, total articles planned
+- Use existing `planningJob` data from the hook (verticals, current_vertical_index, completed_verticals, failed_verticals, total_planned, vertical_results)
 
-## After the Fix
+## Technical Details
 
-1. Re-upload your new XLSX file using the "Upload XLSX" button in the Keywords tab
-2. All 13 verticals will import correctly with accurate counts
-3. Click "Plan All Keywords" to start AI clustering
+The progress panel will render when `planningJob` is truthy and status is `'processing'`:
 
-## Files Changed
+```text
++-----------------------------------------------+
+| Planning Keywords (5 / 13 verticals)           |
+| [=========>........................] 38%        |
+|                                                 |
+| Currently processing: financial                 |
+| Articles planned so far: 42                     |
+|                                                 |
+| Done: insurance (8), healthcare (6),            |
+|       employment (7), contractors (5),          |
+|       housing (8)                               |
+| Failed: (none)                                  |
++-----------------------------------------------+
+```
 
-- **New migration**: `get_keyword_stats()` SQL function
-- **Modified**: `src/components/admin/seo/KeywordManager.tsx` -- expanded sheet name map
-- **Modified**: `src/hooks/useKeywordTargets.ts` -- use RPC instead of client-side aggregation
-
+When status becomes `'completed'` or `'failed'`, show a summary with green/red styling before the panel auto-dismisses (existing toast handles notification).
