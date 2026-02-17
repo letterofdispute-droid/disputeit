@@ -289,7 +289,9 @@ const ArticlePage = () => {
       .replace(/^- (.+)$/gm, "<li>$1</li>")
       .replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>")
       .replace(/\n\n/g, "</p><p>")
-      .replace(/\n/g, "<br>");
+      .replace(/\n/g, "<br>")
+      .replace(/<br\s*\/?>\s*(?=<\/?(?:li|ul|ol)>)/gi, '')
+      .replace(/(<\/?(?:li|ul|ol)>)\s*<br\s*\/?>/gi, '$1');
 
     // Replace middle image placeholders with actual images
     const hasPlaceholder1 = html.includes("{{MIDDLE_IMAGE_1}}");
