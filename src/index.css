@@ -227,36 +227,39 @@
     @apply mb-0 text-base;
   }
 
-  /* Unordered lists with compact, readable spacing */
+  /* Unordered lists – clean, tight, premium */
   .prose ul {
-    @apply list-none pl-0 my-5 space-y-1.5;
+    @apply list-none pl-0 my-4 space-y-0.5;
   }
 
   .prose ul > li {
-    @apply pl-6 relative leading-relaxed py-0.5;
+    @apply pl-5 relative leading-relaxed py-[3px];
     color: hsl(var(--muted-foreground));
   }
 
   .prose ul > li::before {
     content: "";
-    @apply absolute left-0 top-[0.6em] w-1.5 h-1.5 bg-primary rounded-full;
+    @apply absolute left-0 top-[0.65em] w-[6px] h-[6px] rounded-full;
+    background: hsl(var(--accent));
   }
 
-  /* Ordered lists with styled counters */
+  /* Ordered lists – numbered badges */
   .prose ol {
     counter-reset: item;
-    @apply list-none pl-0 my-5 space-y-1.5;
+    @apply list-none pl-0 my-4 space-y-0.5;
   }
 
   .prose ol > li {
     counter-increment: item;
-    @apply pl-8 relative leading-relaxed py-0.5;
+    @apply pl-7 relative leading-relaxed py-[3px];
     color: hsl(var(--muted-foreground));
   }
 
   .prose ol > li::before {
     content: counter(item);
-    @apply absolute left-0 top-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold;
+    @apply absolute left-0 top-[2px] w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold;
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
   }
 
   /* Nested lists */
@@ -264,7 +267,7 @@
   .prose ol ol,
   .prose ul ol,
   .prose ol ul {
-    @apply my-2 ml-3;
+    @apply my-1 ml-2;
   }
 
   /* Code styling */
