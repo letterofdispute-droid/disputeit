@@ -38,7 +38,7 @@ function normalizeSheetName(name: string): string | null {
 }
 
 export default function KeywordManager() {
-  const { verticalStats, isLoading, importKeywords, isImporting, planFromKeywords, isPlanning, clearKeywords } = useKeywordTargets();
+  const { verticalStats, isLoading, importKeywords, isImporting, planFromKeywords, isPlanning, clearKeywords, planningJob } = useKeywordTargets();
   const [parseResult, setParseResult] = useState<{ vertical: string; total: number; seeds: number }[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
