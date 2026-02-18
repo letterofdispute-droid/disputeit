@@ -364,7 +364,7 @@ export function useSemanticLinkScan() {
   const fetchEmbeddingStats = useCallback(async (): Promise<EmbeddingStats> => {
     try {
       const [totalRes, completedRes, failedRes] = await Promise.all([
-        supabase.from('article_embeddings').select('*', { count: 'exact', head: true }),
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
         supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'completed'),
         supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'failed'),
       ]);
