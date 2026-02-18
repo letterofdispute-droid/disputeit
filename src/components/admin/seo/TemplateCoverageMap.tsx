@@ -104,18 +104,22 @@ export default function TemplateCoverageMap() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Filter plans to only those matching actual templates (exclude keyword-based plans)
+  const templateSlugs = useMemo(() => new Set(allTemplates.map(t => t.slug)), []);
+  const templatePlans = useMemo(
+    () => plans?.filter(p => templateSlugs.has(p.template_slug)) || [],
+    [plans, templateSlugs]
+  );
+
   // Count plans missing pillar articles in the queue
   const { data: missingPillarCount } = useQuery({
-    queryKey: ['missing-pillar-count'],
+    queryKey: ['missing-pillar-count', templatePlans.length],
     queryFn: async () => {
-      const { count: totalPlans } = await supabase
-        .from('content_plans')
-        .select('id', { count: 'exact', head: true });
       const { count: pillarCount } = await supabase
         .from('content_queue')
         .select('id', { count: 'exact', head: true })
         .eq('article_type', 'pillar');
-      return Math.max(0, (totalPlans || 0) - (pillarCount || 0));
+      return Math.max(0, templatePlans.length - (pillarCount || 0));
     },
   });
 
@@ -382,11 +386,11 @@ export default function TemplateCoverageMap() {
         <div>
           <h3 className="text-lg font-semibold">Template Coverage</h3>
           <p className="text-sm text-muted-foreground">
-            {plans?.length || 0} of {allTemplates.length} templates with content plans
+            {templatePlans.length} of {allTemplates.length} templates with content plans
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {plans && plans.length < allTemplates.length && (
+          {templatePlans.length < allTemplates.length && (
             <Button
               onClick={() => createMissingPlansMutation.mutate()}
               disabled={createMissingPlansMutation.isPending}
@@ -396,14 +400,14 @@ export default function TemplateCoverageMap() {
               {createMissingPlansMutation.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Creating...</>
               ) : (
-                <><Plus className="h-4 w-4 mr-1.5" /> Create {allTemplates.length - plans.length} Missing Plans</>
+                <><Plus className="h-4 w-4 mr-1.5" /> Create {allTemplates.length - templatePlans.length} Missing Plans</>
               )}
             </Button>
           )}
           {(missingPillarCount ?? 0) > 0 && (
             <Button
               onClick={() => createAllPillarsMutation.mutate()}
-              disabled={createAllPillarsMutation.isPending || !plans || plans.length === 0}
+              disabled={createAllPillarsMutation.isPending || templatePlans.length === 0}
               size="sm"
               variant="outline"
             >
