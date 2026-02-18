@@ -1,46 +1,56 @@
-# Move Keywords Inline with Title (Remove Separate Column)
 
-## Problem
 
-The Keywords column takes up too much horizontal space and looks ugly with long keyword badges stacking vertically. The user wants keywords displayed inline under the meta description within the Title cell instead. In the SEO Command - Queue tab, also fix the list not to show them in column.
+# Fix Embedding Stats to Show New Articles + Linking Workflow Guide
 
-## Changes
+## The Problem
 
-### `src/pages/admin/AdminBlog.tsx`
+You have 5,780 published articles but only 4,627 embeddings. The UI shows "4627 / 4627" (100% complete) because it only counts rows in the embeddings table -- it does not know about the 1,153 new published posts that have no embedding yet. Since it thinks everything is at 100%, the "Process Now" button is hidden.
 
-1. **Remove the Keywords column header** (line 534) and the Keywords `<TableCell>` block (lines 570-594).
-2. **Move keyword badges into the Title cell** (after the meta description lines, around line 564). Display them as small inline tags below the meta info:
+## The Fix
 
-```
-{post.keyword_counts && (
-  <div className="flex flex-wrap gap-1 mt-1">
-    {Object.entries(post.keyword_counts)
-      .sort(([a], [b]) => (a === post.primary_keyword ? -1 : b === post.primary_keyword ? 1 : 0))
-      .slice(0, 3)
-      .map(([kw, count]) => (
-        <Badge key={kw} variant={kw === post.primary_keyword ? 'default' : 'outline'}
-          className="text-[10px] px-1.5 py-0 font-normal">
-          {kw} ({count})
-        </Badge>
-      ))}
-    {Object.keys(post.keyword_counts).length > 3 && (
-      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
-        +{Object.keys(post.keyword_counts).length - 3} more
-      </Badge>
-    )}
-  </div>
-)}
+### 1. Update `fetchEmbeddingStats` in `src/hooks/useSemanticLinkScan.ts`
+
+Change the "total" count from counting `article_embeddings` rows to counting all **published blog posts**. This way:
+- Total = 5,780 (all published posts)
+- Completed = 4,627 (posts with embeddings)
+- Progress = 80% (not 100%)
+- The "Process Now" button will appear
+
+The change is small -- replace the `totalRes` query:
+```typescript
+// Before: counts article_embeddings rows (misses new posts)
+supabase.from('article_embeddings').select('*', { count: 'exact', head: true })
+
+// After: counts all published blog posts (the real total)
+supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published')
 ```
 
-3. **Update colSpan** if used anywhere for empty states.
-4. **Adjust Title column width** from `w-[35%]` to `w-[45%]` to accommodate the inline keywords.
+### 2. Fix the UI condition in `SemanticScanPanel.tsx`
 
-### Result
+The "New articles pending" banner (line 314) has an extra guard `embeddingProgress < 100` that blocks it when stats look complete. Remove that condition so the pending queue banner always shows when there are pending items:
 
-- Title cell shows: Title, Author, Meta title, Meta description, then keyword badges
-- One fewer column means the table is less cramped
-- Keywords are visually grouped with the content they describe
+```typescript
+// Before
+{hasPendingQueue && !isJobProcessing && embeddingProgress < 100 && (
+
+// After  
+{hasPendingQueue && !isJobProcessing && (
+```
+
+Also update the "fully complete" state (line 257) to additionally require no pending queue items -- it already checks `isFullyComplete` which includes `!hasPendingQueue`, so this should work once the stats are correct.
+
+## What To Do After the Fix
+
+Once the fix is deployed, the workflow is:
+
+1. **Step 1 -- Generate Embeddings**: You will now see "1,153 new articles ready to process" with a "Process Now" button. Click it. The system processes in batches of 10; it self-chains so you just wait.
+
+2. **Step 2 -- Discover Links**: Once embeddings are at 5,780/5,780, run a **Smart Scan (AI)** with "All Categories" to find linking opportunities for the new articles. Check "Force re-scan" since the new articles have never been scanned.
+
+3. **Step 3 -- Review and Apply**: Switch to the Link Review tab, review suggestions, approve good ones, then click "Apply to Articles."
+
+Pillar articles already have some links because the generation system adds pillar-to-cluster links during content creation. The scan will find additional cross-cluster and reverse links.
 
 ## Files Changed
-
-- `src/pages/admin/AdminBlog.tsx` -- remove Keywords column, move badges into Title cell
+- `src/hooks/useSemanticLinkScan.ts` -- fix total count to use published blog_posts
+- `src/components/admin/seo/links/SemanticScanPanel.tsx` -- remove redundant guard on pending banner
