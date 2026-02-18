@@ -6,8 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform",
 };
 
-// Batch size for processing
-const BATCH_SIZE = 5;
+// Batch size - keep small to avoid timeouts (bidirectional scan is heavy)
+const BATCH_SIZE = 2;
+const SELF_CHAIN_TIMEOUT_MS = 10_000;
 
 interface QueueItem {
   id: string;
@@ -311,8 +312,14 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
     const body: ProcessRequest = await req.json().catch(() => ({}));
-    const limit = body.limit || BATCH_SIZE;
-    const triggerBidirectionalScan = body.triggerBidirectionalScan !== false;
+    const limit = Math.min(body.limit || BATCH_SIZE, BATCH_SIZE);
+    // Skip expensive bidirectional scan during bulk processing (>10 pending)
+    const { count: totalPending } = await supabase
+      .from('embedding_queue')
+      .select('*', { count: 'exact', head: true })
+      .is('processed_at', null);
+    const isBulkMode = (totalPending || 0) > 10;
+    const triggerBidirectionalScan = !isBulkMode && body.triggerBidirectionalScan !== false;
 
     // Fetch pending queue items (highest priority first)
     const { data: queueItems, error: fetchError } = await supabase
@@ -337,7 +344,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[QUEUE] Processing ${queueItems.length} items`);
+    console.log(`[QUEUE] Processing ${queueItems.length} items (bulk=${isBulkMode}, bidirectional=${triggerBidirectionalScan})`);
 
     let processed = 0;
     let failed = 0;
@@ -516,18 +523,37 @@ serve(async (req) => {
       console.log(`[QUEUE] ${remainingCount} items remaining, triggering continuation...`);
       try {
         const functionUrl = `${SUPABASE_URL}/functions/v1/process-embedding-queue`;
-        fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ limit: BATCH_SIZE, triggerBidirectionalScan: true }),
-        }).catch(err => console.error('[QUEUE] Continuation trigger failed:', err));
-        continuationTriggered = true;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SELF_CHAIN_TIMEOUT_MS);
+        
+        try {
+          const chainResp = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ limit: BATCH_SIZE }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          console.log(`[QUEUE] Continuation triggered, status: ${chainResp.status}`);
+          continuationTriggered = true;
+        } catch (fetchErr: unknown) {
+          clearTimeout(timeoutId);
+          const errName = fetchErr instanceof Error ? fetchErr.name : '';
+          if (errName === 'AbortError') {
+            console.log('[QUEUE] Continuation fire-and-forget (aborted ok)');
+            continuationTriggered = true;
+          } else {
+            console.error('[QUEUE] Continuation fetch error:', fetchErr);
+          }
+        }
       } catch (err) {
         console.error('[QUEUE] Failed to trigger continuation:', err);
       }
+    } else {
+      console.log('[QUEUE] All items processed, no continuation needed.');
     }
 
     return new Response(JSON.stringify({
@@ -537,6 +563,7 @@ serve(async (req) => {
       linksCreated,
       remaining: remainingCount || 0,
       continuationTriggered,
+      isBulkMode,
       results,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
