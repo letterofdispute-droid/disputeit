@@ -16,19 +16,19 @@ export default function CoverageStats() {
     queryKey: ['link-counts-overview'],
     queryFn: async () => {
       const [applied, pending] = await Promise.all([
-        supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'applied'),
-        supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-      ]);
+      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'applied'),
+      supabase.from('link_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending')]
+      );
       return { applied: applied.count || 0, pending: pending.count || 0 };
     },
-    staleTime: 30000,
+    staleTime: 30000
   });
 
   const stats = useMemo(() => {
     const totalTemplates = allTemplates.length;
     // Only count plans that match actual template slugs (exclude keyword-based plans)
-    const templateSlugs = new Set(allTemplates.map(t => t.slug));
-    const templatePlans = plans?.filter(p => templateSlugs.has(p.template_slug)) || [];
+    const templateSlugs = new Set(allTemplates.map((t) => t.slug));
+    const templatePlans = plans?.filter((p) => templateSlugs.has(p.template_slug)) || [];
     const templatesWithPlans = templatePlans.length;
     const templatesWithoutPlans = totalTemplates - templatesWithPlans;
 
@@ -41,24 +41,24 @@ export default function CoverageStats() {
 
     // Calculate tier distribution
     const tierCounts = {
-      high: templatePlans.filter(p => p.value_tier === 'high').length,
-      medium: templatePlans.filter(p => p.value_tier === 'medium').length,
-      longtail: templatePlans.filter(p => p.value_tier === 'longtail').length,
+      high: templatePlans.filter((p) => p.value_tier === 'high').length,
+      medium: templatePlans.filter((p) => p.value_tier === 'medium').length,
+      longtail: templatePlans.filter((p) => p.value_tier === 'longtail').length
     };
 
     // Calculate average articles per template
-    const avgArticlesPerTemplate = templatesWithPlans > 0 
-      ? ((articlesGenerated + articlesQueued) / templatesWithPlans).toFixed(1)
-      : '0';
+    const avgArticlesPerTemplate = templatesWithPlans > 0 ?
+    ((articlesGenerated + articlesQueued) / templatesWithPlans).toFixed(1) :
+    '0';
 
     // Coverage percentage
-    const coveragePercent = Math.round((templatesWithPlans / totalTemplates) * 100);
+    const coveragePercent = Math.round(templatesWithPlans / totalTemplates * 100);
 
     // Format tier distribution string
-    const tierDistribution = Object.entries(tierCounts)
-      .filter(([_, count]) => count > 0)
-      .map(([tier, count]) => `${count} ${VALUE_TIERS[tier as ValueTier].name.toLowerCase()}`)
-      .join(' • ');
+    const tierDistribution = Object.entries(tierCounts).
+    filter(([_, count]) => count > 0).
+    map(([tier, count]) => `${count} ${VALUE_TIERS[tier as ValueTier].name.toLowerCase()}`).
+    join(' • ');
 
     return {
       totalTemplates,
@@ -72,47 +72,47 @@ export default function CoverageStats() {
       avgArticlesPerTemplate,
       coveragePercent,
       tierCounts,
-      tierDistribution,
+      tierDistribution
     };
   }, [plans, queueStats, linkCounts]);
 
   const statCards = [
-    {
-      title: 'Template Coverage',
-      value: `${stats.coveragePercent}%`,
-      description: `${stats.templatesWithPlans} of ${stats.totalTemplates} templates`,
-      icon: LayoutGrid,
-      color: 'text-blue-500',
-    },
-    {
-      title: 'Tier Distribution',
-      value: stats.templatesWithPlans.toString(),
-      description: stats.tierDistribution || 'No plans yet',
-      icon: TrendingUp,
-      color: 'text-emerald-500',
-    },
-    {
-      title: 'Articles Generated',
-      value: stats.articlesGenerated.toString(),
-      description: `${stats.articlesQueued} queued • ${stats.articlesPublished} published`,
-      icon: FileText,
-      color: 'text-green-500',
-    },
-    {
-      title: 'Avg Articles/Template',
-      value: stats.avgArticlesPerTemplate,
-      description: 'Target: 5-10 per template',
-      icon: CheckCircle2,
-      color: 'text-purple-500',
-    },
-    {
-      title: 'Internal Links',
-      value: stats.linksApplied.toString(),
-      description: `${stats.linksPending} pending review`,
-      icon: Link2,
-      color: 'text-orange-500',
-    },
-  ];
+  {
+    title: 'Template Coverage',
+    value: `${stats.coveragePercent}%`,
+    description: `${stats.templatesWithPlans} of ${stats.totalTemplates} templates`,
+    icon: LayoutGrid,
+    color: 'text-blue-500'
+  },
+  {
+    title: 'Tier Distribution',
+    value: stats.templatesWithPlans.toString(),
+    description: stats.tierDistribution || 'No plans yet',
+    icon: TrendingUp,
+    color: 'text-emerald-500'
+  },
+  {
+    title: 'Articles Generated',
+    value: stats.articlesGenerated.toString(),
+    description: `${stats.articlesQueued} queued • ${stats.articlesPublished} published`,
+    icon: FileText,
+    color: 'text-green-500'
+  },
+  {
+    title: 'Avg Articles/Template',
+    value: stats.avgArticlesPerTemplate,
+    description: 'Target: 5-10 per template',
+    icon: CheckCircle2,
+    color: 'text-purple-500'
+  },
+  {
+    title: 'Internal Links',
+    value: stats.linksApplied.toString(),
+    description: `${stats.linksPending} pending review`,
+    icon: Link2,
+    color: 'text-orange-500'
+  }];
+
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -126,7 +126,7 @@ export default function CoverageStats() {
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                     {stat.title}
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold mt-1">{stat.value}</p>
+                  <p className="text-2xl font-bold mt-1 sm:text-2xl">{stat.value}</p>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
                     {stat.description}
                   </p>
@@ -136,9 +136,9 @@ export default function CoverageStats() {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        );
+          </Card>);
+
       })}
-    </div>
-  );
+    </div>);
+
 }
