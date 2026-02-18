@@ -1,56 +1,70 @@
 
 
-# Fix Embedding Stats to Show New Articles + Linking Workflow Guide
+# Fix: Coverage Map Counting Keyword-Based Plans as Template Plans
 
-## The Problem
+## Problem
 
-You have 5,780 published articles but only 4,627 embeddings. The UI shows "4627 / 4627" (100% complete) because it only counts rows in the embeddings table -- it does not know about the 1,153 new published posts that have no embedding yet. Since it thinks everything is at 100%, the "Process Now" button is hidden.
+The Template Coverage Map shows "675 of 547 templates" and a "Create 675 Missing Pillars" button because:
 
-## The Fix
+1. The `content_plans` table has 675 rows -- 547 for actual templates + 128 for keyword-based content plans.
+2. The Coverage Map uses `plans?.length` (675) without filtering out keyword-based plans, unlike `CoverageStats` and `GapAnalysis` which already filter correctly.
+3. The "Missing Pillars" count queries ALL `content_plans` rows (675) minus pillar queue items (0) = 675, which is wildly wrong.
 
-### 1. Update `fetchEmbeddingStats` in `src/hooks/useSemanticLinkScan.ts`
+## Root Cause
 
-Change the "total" count from counting `article_embeddings` rows to counting all **published blog posts**. This way:
-- Total = 5,780 (all published posts)
-- Completed = 4,627 (posts with embeddings)
-- Progress = 80% (not 100%)
-- The "Process Now" button will appear
-
-The change is small -- replace the `totalRes` query:
+The `CoverageStats` component already has the correct pattern (line 29-31):
 ```typescript
-// Before: counts article_embeddings rows (misses new posts)
-supabase.from('article_embeddings').select('*', { count: 'exact', head: true })
-
-// After: counts all published blog posts (the real total)
-supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published')
+const templateSlugs = new Set(allTemplates.map(t => t.slug));
+const templatePlans = plans?.filter(p => templateSlugs.has(p.template_slug)) || [];
 ```
 
-### 2. Fix the UI condition in `SemanticScanPanel.tsx`
+But the `TemplateCoverageMap` component never adopted this filter.
 
-The "New articles pending" banner (line 314) has an extra guard `embeddingProgress < 100` that blocks it when stats look complete. Remove that condition so the pending queue banner always shows when there are pending items:
+## Fix: `src/components/admin/seo/TemplateCoverageMap.tsx`
+
+### Change 1: Filter plans to template-only throughout the component
+
+Add a `templatePlans` filtered list (same pattern as CoverageStats) and use it in place of raw `plans` everywhere:
+
+- **Header subtitle** (line 385): Change `plans?.length` to `templatePlans.length`
+- **"Create Missing Plans" button condition** (line 389): Use `templatePlans.length < allTemplates.length`
+- **"Create Missing Plans" button label** (line 399): Use `allTemplates.length - templatePlans.length`
+- **`getPlanForTemplate`** (line 283-284): Already searches `plans` by slug match, so it naturally filters -- no change needed here.
+
+### Change 2: Fix `missingPillarCount` query (lines 108-120)
+
+The query must only count template-based plans, not keyword plans. Two options:
+
+**Option A (chosen -- server-side filter):** Join `content_plans` against the known template slugs. Since template slugs are client-side data, the simplest approach is to count pillar queue items that have a matching `plan_id` from only template-based plans.
+
+Actually, the cleanest fix: change the `missingPillarCount` to be computed client-side using `templatePlans` and remove the separate query:
 
 ```typescript
-// Before
-{hasPendingQueue && !isJobProcessing && embeddingProgress < 100 && (
-
-// After  
-{hasPendingQueue && !isJobProcessing && (
+const missingPillarCount = useMemo(() => {
+  // Will be recalculated once pillar count query returns
+  // For now, this counts template plans that lack a pillar in the queue
+  // But since pillar count comes from a query, we keep the query approach
+  // but filter to template plans only
+  return templatePlans.length - (pillarCount || 0);
+}, [templatePlans, pillarCount]);
 ```
 
-Also update the "fully complete" state (line 257) to additionally require no pending queue items -- it already checks `isFullyComplete` which includes `!hasPendingQueue`, so this should work once the stats are correct.
+Better approach: Keep the pillar count query but compute missing as `templatePlans.length - pillarQueueCount`. The pillar queue query stays as-is (counting `article_type = 'pillar'` items), and we just subtract from the filtered template plan count instead of from all plans.
 
-## What To Do After the Fix
+### Change 3: Fix "Create Missing Plans" mutation (lines 183-226)
 
-Once the fix is deployed, the workflow is:
+The `createMissingPlansMutation` fetches all existing plan slugs and compares against `allTemplates`. This is actually already correct -- it finds templates NOT in plans. But if all 547 templates already have plans, the button shouldn't show. The button visibility depends on Change 1 being applied.
 
-1. **Step 1 -- Generate Embeddings**: You will now see "1,153 new articles ready to process" with a "Process Now" button. Click it. The system processes in batches of 10; it self-chains so you just wait.
+## Summary of Changes
 
-2. **Step 2 -- Discover Links**: Once embeddings are at 5,780/5,780, run a **Smart Scan (AI)** with "All Categories" to find linking opportunities for the new articles. Check "Force re-scan" since the new articles have never been scanned.
+**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**
 
-3. **Step 3 -- Review and Apply**: Switch to the Link Review tab, review suggestions, approve good ones, then click "Apply to Articles."
+1. Add a `templatePlans` memo that filters `plans` to only slugs in `allTemplates`
+2. Replace all `plans?.length` / `plans.length` references with `templatePlans.length` in the header and button areas
+3. Compute `missingPillarCount` as `templatePlans.length - pillarQueueCount` instead of `totalPlans - pillarQueueCount`
 
-Pillar articles already have some links because the generation system adds pillar-to-cluster links during content creation. The scan will find additional cross-cluster and reverse links.
+## Expected Result
 
-## Files Changed
-- `src/hooks/useSemanticLinkScan.ts` -- fix total count to use published blog_posts
-- `src/components/admin/seo/links/SemanticScanPanel.tsx` -- remove redundant guard on pending banner
+- Header shows "547 of 547 templates with content plans" (100%)
+- "Create Missing Plans" button disappears (all templates are planned)
+- "Create Missing Pillars" button shows correct count based on template plans only, not keyword plans
