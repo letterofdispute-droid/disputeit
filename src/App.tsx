@@ -25,6 +25,8 @@ import NotFound from "./pages/NotFound";
 
 // Lazily loaded - less critical pages
 const StateRightsPage = lazy(() => import("./pages/StateRightsPage"));
+const StateRightsStatePage = lazy(() => import("./pages/StateRightsStatePage"));
+const StateRightsCategoryPage = lazy(() => import("./pages/StateRightsCategoryPage"));
 const DeadlinesPage = lazy(() => import("./pages/DeadlinesPage"));
 const ConsumerNewsPage = lazy(() => import("./pages/ConsumerNewsPage"));
 const LetterAnalyzerPage = lazy(() => import("./pages/LetterAnalyzerPage"));
@@ -122,6 +124,8 @@ const App = () => (
             <Route path="/guides" element={<GuidesPage />} />
             <Route path="/guides/:categoryId" element={<CategoryGuidePage />} />
             <Route path="/state-rights" element={<StateRightsPage />} />
+            <Route path="/state-rights/:stateSlug" element={<StateRightsStatePage />} />
+            <Route path="/state-rights/:stateSlug/:categorySlug" element={<StateRightsCategoryPage />} />
             <Route path="/deadlines" element={<DeadlinesPage />} />
             <Route path="/consumer-news" element={<ConsumerNewsPage />} />
             <Route path="/analyze-letter" element={<LetterAnalyzerPage />} />

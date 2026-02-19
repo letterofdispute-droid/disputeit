@@ -438,6 +438,46 @@ export const stateSpecificLaws: Record<string, StateLawEntry> = {
 };
 
 /**
+ * Category labels for the 13 dispute categories — used across state-rights pages.
+ */
+export const CATEGORY_LABELS: Record<string, string> = {
+  vehicle: 'Vehicle (Lemon Law)',
+  housing: 'Housing & Tenant Rights',
+  insurance: 'Insurance Claims',
+  financial: 'Financial & Debt',
+  contractors: 'Contractors & Home Improvement',
+  'damaged-goods': 'Damaged Goods',
+  refunds: 'Refunds & Returns',
+  travel: 'Travel',
+  utilities: 'Utilities',
+  employment: 'Employment',
+  ecommerce: 'E-Commerce',
+  hoa: 'HOA',
+  healthcare: 'Healthcare',
+};
+
+/**
+ * Convert a state code to a URL slug.
+ * e.g. "CA" → "california", "NY" → "new-york", "DC" → "district-of-columbia"
+ */
+export function getStateSlug(stateCode: string): string {
+  const state = US_STATES.find(s => s.code === stateCode);
+  if (!state) return stateCode.toLowerCase();
+  return state.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+/**
+ * Convert a URL slug back to a state code.
+ * e.g. "california" → "CA", "new-york" → "NY"
+ */
+export function getStateFromSlug(slug: string): string | null {
+  const state = US_STATES.find(s =>
+    s.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+  );
+  return state ? state.code : null;
+}
+
+/**
  * Get state-specific statutes relevant to a dispute category.
  */
 export function getStateStatutesForCategory(

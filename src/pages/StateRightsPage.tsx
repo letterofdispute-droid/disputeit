@@ -11,7 +11,7 @@ import {
   Scale, MapPin, ExternalLink, Shield, BookOpen, 
   ArrowRight, CheckCircle2, FileText, AlertCircle, Gavel, Users, Clock
 } from 'lucide-react';
-import { US_STATES, stateSpecificLaws, getStateStatutesForCategory } from '@/data/stateSpecificLaws';
+import { US_STATES, stateSpecificLaws, getStateStatutesForCategory, getStateSlug } from '@/data/stateSpecificLaws';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -356,7 +356,15 @@ const StateRightsPage = () => {
                     )}
                     <p className="text-xs text-muted-foreground mt-1">Last reviewed: February 2026</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">Real Statute Citations</Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">Real Statute Citations</Badge>
+                    <Button asChild variant="outline" size="sm" className="gap-1 text-xs">
+                      <Link to={`/state-rights/${getStateSlug(selectedState)}${selectedCategory ? `/${selectedCategory}` : ''}`}>
+                        <ArrowRight className="h-3 w-3" />
+                        View dedicated page →
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -475,7 +483,7 @@ const StateRightsPage = () => {
                       <tr key={row.area} className={i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}>
                         <td className="px-5 py-3 font-medium text-foreground">{row.area}</td>
                         <td className="px-5 py-3 text-muted-foreground">{row.fed}</td>
-                        <td className="px-5 py-3 text-green-700 dark:text-green-400 font-medium">{row.state}</td>
+                        <td className="px-5 py-3 text-accent font-medium">{row.state}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -547,9 +555,9 @@ const StateRightsPage = () => {
                   <p className={`text-xs font-mono mb-2 ${s.labelColor}`}>{s.statute}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">{s.highlight}</p>
                   <Button asChild variant="ghost" size="sm" className="mt-3 h-7 text-xs px-2">
-                    <span onClick={() => setSelectedState(s.code)} style={{ cursor: 'pointer' }}>
+                    <Link to={`/state-rights/${getStateSlug(s.code)}`}>
                       View {s.name} laws →
-                    </span>
+                    </Link>
                   </Button>
                 </div>
               ))}
