@@ -127,6 +127,70 @@ IMPORTANT: Only output the [RECOMMENDATION] block when you have gathered enough 
 a confident recommendation. If unsure, ask clarifying questions. If nothing fits, offer the custom letter option.
 `;
 
+// State Rights pages: maps template category IDs to their state-rights URL segment
+// Format: /state-rights/{state-slug}/{category-slug}
+// State slugs: california, texas, new-york, florida, illinois, pennsylvania, ohio, georgia, north-carolina, michigan
+export const STATE_RIGHTS_CATEGORY_MAP: Record<string, string> = {
+  'vehicle': 'vehicle',
+  'housing': 'housing',
+  'financial': 'financial',
+  'employment': 'employment',
+  'insurance': 'insurance',
+  'healthcare': 'healthcare',
+  'ecommerce': 'ecommerce',
+  'utilities': 'utilities',
+  'contractors': 'contractors',
+  'refunds': 'refunds',
+  'travel': 'travel',
+  'hoa': 'hoa',
+  'damaged-goods': 'damaged-goods',
+};
+
+// High-traffic states to use as examples in linking instructions
+export const NOTABLE_STATES = [
+  { name: 'California', slug: 'california' },
+  { name: 'Texas', slug: 'texas' },
+  { name: 'New York', slug: 'new-york' },
+  { name: 'Florida', slug: 'florida' },
+  { name: 'Illinois', slug: 'illinois' },
+  { name: 'Pennsylvania', slug: 'pennsylvania' },
+  { name: 'Ohio', slug: 'ohio' },
+  { name: 'Georgia', slug: 'georgia' },
+];
+
+export function buildStateRightsLinkingContext(categoryId?: string): string {
+  const categorySlug = categoryId ? STATE_RIGHTS_CATEGORY_MAP[categoryId] : null;
+
+  const exampleLinks = NOTABLE_STATES.slice(0, 5).map(s =>
+    categorySlug
+      ? `https://letterofdispute.com/state-rights/${s.slug}/${categorySlug} (${s.name} ${categorySlug} rights)`
+      : `https://letterofdispute.com/state-rights/${s.slug} (${s.name} consumer rights hub)`
+  ).join('\n');
+
+  return `
+STATE RIGHTS INTERNAL LINKING:
+Letter Of Dispute provides dedicated state-specific consumer rights pages at:
+  /state-rights/{state-slug} — state hub covering all categories
+  /state-rights/{state-slug}/{category-slug} — category-specific state law page
+
+WHEN TO LINK:
+- Whenever the article mentions a specific US state's laws, statutes, rights, or regulations
+- When discussing state-level consumer protections (e.g., "California lemon law", "Texas DTPA", "New York tenant rights")
+- When advising readers to check their state's specific rules or deadlines
+- When comparing federal vs state protections
+
+HOW TO LINK (use natural inline <a> tags in the HTML content):
+- For state + category context: <a href="/state-rights/{state-slug}/${categorySlug || '{category-slug}'}">your state's {category} rights</a>
+- For general state context: <a href="/state-rights/{state-slug}">{State Name} consumer rights</a>
+- Use descriptive anchor text - NEVER use "click here" or "learn more"
+- Maximum 2-3 state rights links per article to avoid over-linking
+
+EXAMPLE URLS for this article's category${categorySlug ? ` (${categorySlug})` : ''}:
+${exampleLinks}
+
+IMPORTANT: Only link to states that are DIRECTLY relevant to the article's content. Do not force links where they do not fit naturally.`;
+}
+
 export const WRITING_STYLE_GUIDELINES = `
 CRITICAL WRITING RULES - FOLLOW EXACTLY:
 

@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
+import { BLOG_WRITER_CONTEXT, SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES, buildStateRightsLinkingContext } from "../_shared/siteContext.ts";
 import { validateContent, getViolationSummary, type ValidationResult } from "../_shared/contentValidator.ts";
 
 const corsHeaders = {
@@ -59,9 +59,13 @@ serve(async (req) => {
       : `6. Include ONE image placeholder:
    - Insert {{MIDDLE_IMAGE_1}} on its own line at approximately 45% through the content`;
 
+    const stateRightsContext = buildStateRightsLinkingContext(categorySlug || undefined);
+
     const systemPrompt = `${BLOG_WRITER_CONTEXT}
 
 ${WRITING_STYLE_GUIDELINES}
+
+${stateRightsContext}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks, no explanations
