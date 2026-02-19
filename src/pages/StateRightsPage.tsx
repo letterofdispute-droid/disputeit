@@ -566,6 +566,29 @@ const StateRightsPage = () => {
         </div>
       </section>
 
+      {/* Static crawlable state directory — all 51 state hubs as real <a> links for Google */}
+      <section className="py-12 bg-card border-t">
+        <div className="container-wide">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-serif text-xl font-bold text-foreground mb-2">Browse Consumer Rights by State</h2>
+            <p className="text-sm text-muted-foreground mb-6">Select your state to see its specific consumer protection statutes, AG contact, and filing deadlines.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+              {US_STATES.map((state) => (
+                <Link
+                  key={state.code}
+                  to={`/state-rights/${getStateSlug(state.code)}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors group"
+                >
+                  <span className="text-xs font-mono text-muted-foreground w-6 flex-shrink-0">{state.code}</span>
+                  <span className="truncate">{state.name}</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary ml-auto flex-shrink-0 transition-colors" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How to File an AG Complaint */}
       <section className="py-12">
         <div className="container-wide">

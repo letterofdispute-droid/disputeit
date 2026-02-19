@@ -358,6 +358,45 @@ export default function StateRightsCategoryPage() {
               </CardContent>
             </Card>
 
+            {/* Same category, other popular states — horizontal peer linking */}
+            <Card>
+              <CardContent className="pt-5">
+                <h3 className="font-semibold text-foreground mb-3 text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {categoryLabel} Rights by State
+                </h3>
+                <ul className="space-y-1">
+                  {[
+                    { code: 'CA', name: 'California', slug: 'california' },
+                    { code: 'TX', name: 'Texas', slug: 'texas' },
+                    { code: 'NY', name: 'New York', slug: 'new-york' },
+                    { code: 'FL', name: 'Florida', slug: 'florida' },
+                    { code: 'IL', name: 'Illinois', slug: 'illinois' },
+                    { code: 'MA', name: 'Massachusetts', slug: 'massachusetts' },
+                  ]
+                    .filter((s) => s.code !== stateCode)
+                    .slice(0, 5)
+                    .map((s) => (
+                      <li key={s.code}>
+                        <Link
+                          to={`/state-rights/${s.slug}/${categorySlug}`}
+                          className="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors group"
+                        >
+                          <span className="text-foreground text-xs">{s.name}</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Link>
+                      </li>
+                    ))}
+                </ul>
+                <Link
+                  to={`/state-rights`}
+                  className="mt-3 flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  All 50 states → <ChevronRight className="h-3 w-3" />
+                </Link>
+              </CardContent>
+            </Card>
+
             {/* Key facts */}
             <Card>
               <CardContent className="pt-5">

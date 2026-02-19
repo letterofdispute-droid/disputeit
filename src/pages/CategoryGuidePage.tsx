@@ -257,18 +257,40 @@ const CategoryGuidePage = () => {
                 </Card>
               </div>
 
-              {/* State Rights cross-link CTA */}
-              <div className="mb-8 p-4 bg-primary/5 border border-primary/15 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-foreground text-sm">Check your state's specific laws</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">State protections may be stronger than federal minimums for {category.name.toLowerCase()} disputes.</p>
+              {/* State Rights cross-link CTA — deep links to targeted state+category pages */}
+              <div className="mb-8 p-4 bg-primary/5 border border-primary/15 rounded-xl">
+                <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Check your state's specific {category.name.toLowerCase()} laws</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">State protections may be stronger than federal minimums for {category.name.toLowerCase()} disputes.</p>
+                  </div>
+                  <Link
+                    to={`/state-rights`}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+                  >
+                    All 50 states <ArrowRight className="h-3 w-3" />
+                  </Link>
                 </div>
-                <Link
-                  to={`/state-rights?category=${categoryId}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
-                >
-                  State Rights Lookup for {category.name} <ArrowRight className="h-4 w-4" />
-                </Link>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {[
+                    { code: 'CA', name: 'California', slug: 'california' },
+                    { code: 'TX', name: 'Texas', slug: 'texas' },
+                    { code: 'NY', name: 'New York', slug: 'new-york' },
+                    { code: 'FL', name: 'Florida', slug: 'florida' },
+                    { code: 'IL', name: 'Illinois', slug: 'illinois' },
+                    { code: 'MA', name: 'Massachusetts', slug: 'massachusetts' },
+                  ].map((state) => (
+                    <Link
+                      key={state.code}
+                      to={`/state-rights/${state.slug}/${categoryId}`}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-card border border-border rounded-lg text-xs font-medium text-foreground hover:text-primary hover:border-primary/30 transition-colors"
+                    >
+                      <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      {state.name}
+                      <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto" />
+                    </Link>
+                  ))}
+                </div>
               </div>
 
               {/* Important Deadlines */}
