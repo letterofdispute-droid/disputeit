@@ -478,7 +478,58 @@ export function getStateFromSlug(slug: string): string | null {
 }
 
 /**
+ * Federal fallback statutes for categories where most states lack specific legislation.
+ * These ensure every state+category combo surfaces meaningful, specific content
+ * rather than falling back to the generic state consumer protection act.
+ */
+export const FEDERAL_FALLBACK_STATUTES: Record<string, StateStatute> = {
+  'damaged-goods': {
+    name: 'Magnuson-Moss Warranty Act',
+    citation: '15 U.S.C. § 2301 et seq.',
+    summary: 'Federal law guaranteeing that written warranties on consumer products are available before purchase; requires full or limited warranty designation; allows consumers to sue for breach with attorney fees',
+  },
+  refunds: {
+    name: 'FTC Mail, Internet, or Telephone Order Merchandise Rule',
+    citation: '16 C.F.R. Part 435',
+    summary: 'Requires sellers to ship within the promised time (or within 30 days if no time is stated); mandates prompt refunds if items cannot be shipped on time; applies to all mail, internet, and phone orders',
+  },
+  travel: {
+    name: 'FTC Consumer Protection — Travel & Vacation Fraud',
+    citation: '15 U.S.C. § 45(a) / 16 C.F.R. Part 310',
+    summary: 'The FTC Act prohibits deceptive travel promotions, bait-and-switch vacation offers, and undisclosed fees. The Telemarketing Sales Rule (16 C.F.R. § 310) additionally requires upfront disclosure of total costs and cancellation rights for travel sold by phone',
+  },
+  utilities: {
+    name: 'Public Utility Regulatory Policies Act (PURPA)',
+    citation: '16 U.S.C. § 2601 et seq.',
+    summary: 'Federal framework governing retail utility service; each state\'s Public Utility Commission (PUC) enforces billing accuracy, service discontinuance notice requirements (typically 10–15 days written notice), and dispute processes. PURPA requires states to establish procedures for consumer complaints',
+  },
+  employment: {
+    name: 'Fair Labor Standards Act (FLSA)',
+    citation: '29 U.S.C. § 201 et seq.',
+    summary: 'Sets federal minimum wage ($7.25/hr; many states higher), overtime pay at 1.5× regular rate for hours over 40/week, and recordkeeping requirements. Enforced by the Department of Labor Wage and Hour Division; employees may file private lawsuits and recover back wages plus an equal amount as liquidated damages',
+  },
+  ecommerce: {
+    name: 'FTC Act — Unfair or Deceptive Acts or Practices (Online Commerce)',
+    citation: '15 U.S.C. § 45(a) / 16 C.F.R. Part 435',
+    summary: 'The FTC Act prohibits deceptive practices in e-commerce including hidden fees, misleading subscription terms, and false reviews. The FTC\'s Mail Order Rule (16 C.F.R. § 435) requires online sellers to ship within stated timeframes or provide refunds. The Restore Online Shoppers\' Confidence Act (ROSCA, 15 U.S.C. § 8401) bans negative-option subscriptions without clear disclosure',
+  },
+  hoa: {
+    name: 'Fair Housing Act — HOA Enforcement',
+    citation: '42 U.S.C. § 3604 et seq.',
+    summary: 'Prohibits HOAs from enforcing rules in a discriminatory manner based on race, color, religion, sex, national origin, disability, or familial status. HUD enforces complaints against HOAs; state law also governs HOA dispute procedures (typically through the state\'s Common Interest Community or Planned Unit Development statutes)',
+  },
+  healthcare: {
+    name: 'Affordable Care Act — Consumer Protections',
+    citation: '42 U.S.C. § 300gg et seq.',
+    summary: 'Prohibits denial for pre-existing conditions, lifetime coverage limits, and rescissions for minor application errors. Requires coverage of preventive services at no cost. Grants the right to appeal insurer denials through internal and external review processes. Each state insurance commissioner enforces ACA provisions locally',
+  },
+};
+
+/**
  * Get state-specific statutes relevant to a dispute category.
+ * Returns the state-specific statute first (if available), followed by
+ * a targeted federal fallback for categories without widespread state coverage.
+ * Always surfaces meaningful, specific content — never just the generic consumer protection act alone.
  */
 export function getStateStatutesForCategory(
   stateCode: string,
@@ -487,8 +538,7 @@ export function getStateStatutesForCategory(
   const state = stateSpecificLaws[stateCode];
   if (!state) return [];
 
-  const statutes: StateStatute[] = [state.consumerProtection];
-
+  // State-specific statute keys for each category
   const categoryMap: Record<string, (keyof StateLawEntry)[]> = {
     vehicle: ['lemonLaw'],
     housing: ['landlordTenant'],
@@ -505,6 +555,8 @@ export function getStateStatutesForCategory(
     healthcare: ['insurance'],
   };
 
+  // Start with the state-specific statute(s) for this category
+  const statutes: StateStatute[] = [];
   const relevantKeys = categoryMap[category] || [];
   for (const key of relevantKeys) {
     const statute = state[key];
@@ -513,7 +565,21 @@ export function getStateStatutesForCategory(
     }
   }
 
-  return statutes;
+  // Always include the federal fallback for categories that have one,
+  // positioned BEFORE the generic state consumer protection act so it
+  // surfaces as the primary specific authority for that dispute type.
+  const federalFallback = FEDERAL_FALLBACK_STATUTES[category];
+
+  if (statutes.length > 0) {
+    // State has a specific statute — list it first, then federal, then state general
+    return [...statutes, ...(federalFallback ? [federalFallback] : []), state.consumerProtection];
+  } else if (federalFallback) {
+    // No state-specific law — lead with the federal authority, then state general
+    return [federalFallback, state.consumerProtection];
+  } else {
+    // Pure fallback (should not happen with current category set)
+    return [state.consumerProtection];
+  }
 }
 
 /**
@@ -524,3 +590,4 @@ export function getStateAGInfo(stateCode: string): { name: string; website: stri
   if (!state) return null;
   return { name: state.agOffice, website: state.agWebsite };
 }
+
