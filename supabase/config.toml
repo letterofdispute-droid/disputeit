@@ -116,3 +116,9 @@ verify_jwt = false
 
 [functions.rescue-orphans]
 verify_jwt = false
+
+[functions.fetch-consumer-news]
+verify_jwt = false
+
+[functions.analyze-letter-strength]
+verify_jwt = false
