@@ -1,59 +1,45 @@
 
 
-# Fix: Rescue Orphans Cooldown Bypass and Missing Feedback
+# Fix: Reconcile Counts Statement Timeout
 
 ## Problem
+The `reconcile_link_counts` database function is timing out. It regex-scans 68 MB of HTML content across 5,780 published articles -- far too heavy for the default PostgREST statement timeout (~8 seconds).
 
-All 198 orphan articles have `next_scan_due_at` set 30 days in the future from the previous rescue run. The `rescue-orphans` function filters for orphans where `next_scan_due_at` is null or in the past, finds 0 scannable orphans, and returns immediately with `"No orphan articles found"`. No job is created, no toast is shown -- the user sees the progress bar briefly, then nothing changes.
+## Solution: Set a longer statement timeout inside the function
 
-The previous rescue only found 16 suggestions for 285 orphans, meaning 269 orphans were scanned but no matches were found. Setting a 30-day cooldown on these makes sense for regular scans, but when the user explicitly clicks "Rescue Orphans", it should override the cooldown.
-
-## Root Causes
-
-1. **`rescue-orphans/index.ts`**: The orphan count query includes the `next_scan_due_at` filter, blocking all 198 cooldown orphans from being re-scanned.
-2. **`rescue-orphans/index.ts`**: When the function returns early ("No orphan articles found"), the response is a 200 with `success: true` but the UI mutation's `onSuccess` handler only shows a generic "started" toast and doesn't account for the "nothing to do" case.
-3. **`useSemanticLinkScan.ts`**: The `rescueOrphans` mutation doesn't check the response message or differentiate between "job started" and "nothing found".
+PostgreSQL allows setting `statement_timeout` at the function level using `SET statement_timeout`. This only affects the function execution and does not change the global timeout. The reconciliation is a legitimate heavy operation that should be allowed to run longer.
 
 ## Changes
 
-### 1. `supabase/functions/rescue-orphans/index.ts` -- Reset cooldown before counting
+### Migration: Update `reconcile_link_counts` function with extended timeout
 
-When no `jobId` is provided (fresh start), first reset `next_scan_due_at` to null for all orphan articles (inbound_count <= 0). This ensures the user's explicit "Rescue" action always processes all current orphans regardless of cooldown.
+Add `SET statement_timeout = '120s'` to the function definition. This gives the function up to 2 minutes to complete, which is sufficient for 68 MB of content.
 
+The function body remains identical -- only the function signature changes to include the timeout setting.
+
+```sql
+CREATE OR REPLACE FUNCTION public.reconcile_link_counts()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+SET statement_timeout = '120s'   -- <-- new line
+AS $function$
+-- ... existing body unchanged ...
+$function$
 ```
--- Before counting orphans, reset cooldown for articles that are still orphans
-UPDATE article_embeddings
-SET next_scan_due_at = NULL
-WHERE embedding_status = 'completed'
-  AND content_type = 'article'
-  AND inbound_count <= 0
-  AND embedding IS NOT NULL
-  AND next_scan_due_at > NOW();
-```
 
-This is safe because:
-- Only affects articles with 0 inbound links (still genuinely orphaned)
-- Only triggers on a fresh start (no jobId), not during self-chaining batches
-- The cooldown will be re-set after each scan attempt
-
-### 2. `src/hooks/useSemanticLinkScan.ts` -- Handle "nothing found" response
-
-Update the `rescueOrphans` mutation's `onSuccess` to check for the `message` field. If it says "No orphan articles found", show a specific toast and don't set `justStartedRescue`.
-
-### 3. `src/components/admin/seo/links/SemanticScanPanel.tsx` -- Pass response handling
-
-Update the rescue button click handler to handle the "nothing to do" case by resetting `justStartedRescue` when the mutation returns without creating a job.
-
-## Files to Change
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/rescue-orphans/index.ts` | Reset `next_scan_due_at` for still-orphaned articles before counting (lines ~27-44) |
-| `src/hooks/useSemanticLinkScan.ts` | Update `rescueOrphans` mutation onSuccess to detect "no orphans" vs "job started" |
-| `src/components/admin/seo/links/SemanticScanPanel.tsx` | Use mutation callbacks to reset `justStartedRescue` on "nothing found" |
+| New migration SQL | Re-create `reconcile_link_counts` with `SET statement_timeout = '120s'` |
 
-## Expected Outcome
+### No UI changes needed
+The existing UI code (`LinkActions.tsx` and `useSemanticLinkScan.ts`) already handles success/error states correctly. Once the timeout is extended, the function will complete and return results as expected.
 
-- Clicking "Rescue Orphans" will always process all current orphans (bypasses cooldown for articles that are still unlinked)
-- If genuinely no orphans exist, a clear toast says "No orphan articles to rescue"
-- The progress bar and completion feedback work as designed for the full 198 orphan set
+### Expected Outcome
+- "Reconcile Counts" will complete successfully instead of timing out
+- All 5,780 published articles will be scanned for link references
+- Inbound/outbound counts and ghost suggestions will be corrected
+- The orphan count of 198 will be updated based on the newly applied links from the rescue operation
