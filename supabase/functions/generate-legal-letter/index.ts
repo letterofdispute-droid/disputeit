@@ -395,6 +395,46 @@ const STATE_LAWS: Record<string, Record<string, { name: string; citation: string
   },
 };
 
+// Maps 2-letter state codes to URL slugs for /state-rights pages
+const STATE_CODE_TO_SLUG: Record<string, string> = {
+  AL: 'alabama', AK: 'alaska', AZ: 'arizona', AR: 'arkansas', CA: 'california',
+  CO: 'colorado', CT: 'connecticut', DE: 'delaware', DC: 'washington-dc', FL: 'florida',
+  GA: 'georgia', HI: 'hawaii', ID: 'idaho', IL: 'illinois', IN: 'indiana',
+  IA: 'iowa', KS: 'kansas', KY: 'kentucky', LA: 'louisiana', ME: 'maine',
+  MD: 'maryland', MA: 'massachusetts', MI: 'michigan', MN: 'minnesota', MS: 'mississippi',
+  MO: 'missouri', MT: 'montana', NE: 'nebraska', NV: 'nevada', NH: 'new-hampshire',
+  NJ: 'new-jersey', NM: 'new-mexico', NY: 'new-york', NC: 'north-carolina', ND: 'north-dakota',
+  OH: 'ohio', OK: 'oklahoma', OR: 'oregon', PA: 'pennsylvania', RI: 'rhode-island',
+  SC: 'south-carolina', SD: 'south-dakota', TN: 'tennessee', TX: 'texas', UT: 'utah',
+  VT: 'vermont', VA: 'virginia', WA: 'washington', WV: 'west-virginia', WI: 'wisconsin', WY: 'wyoming',
+};
+
+// Maps template category IDs to state-rights URL segments
+const CATEGORY_TO_RIGHTS_SLUG: Record<string, string> = {
+  vehicle: 'vehicle', housing: 'housing', financial: 'financial', employment: 'employment',
+  insurance: 'insurance', healthcare: 'healthcare', ecommerce: 'ecommerce',
+  utilities: 'utilities', contractors: 'contractors', refunds: 'refunds',
+  travel: 'travel', hoa: 'hoa', 'damaged-goods': 'damaged-goods',
+};
+
+/**
+ * Build a state rights page reference to include in the letter closing, if applicable.
+ * Returns a short instruction for the AI to mention the URL as a resource.
+ */
+function getStateRightsReference(stateCode: string, category: string): string {
+  const stateSlug = STATE_CODE_TO_SLUG[stateCode];
+  const categorySlug = CATEGORY_TO_RIGHTS_SLUG[category];
+  if (!stateSlug || !categorySlug) return '';
+
+  const url = `https://letterofdispute.com/state-rights/${stateSlug}/${categorySlug}`;
+  const stateName = stateCode === 'DC' ? 'Washington D.C.' : (STATE_LAWS[stateCode]?._general?.[0]?.citation?.split(' ')[0] ?? stateCode);
+
+  return `\n\nSTATE RIGHTS RESOURCE:
+In the NOTICE OF FURTHER ACTION section, naturally mention that the recipient can review full ${stateName} ${category} consumer rights at: ${url}
+Use phrasing such as: "For a full overview of your rights under ${stateName} law, refer to ${url}"
+Only include this if it fits naturally — do not force it if the letter flow does not support it.`;
+}
+
 /**
  * Get state-specific statutes for the system prompt
  */
@@ -441,6 +481,9 @@ function buildSystemPrompt(category: string, jurisdiction: string, tone: string,
 
   // Add state-specific statutes if available
   const stateSection = usState ? getStateStatutes(usState, category) : '';
+
+  // Add state rights page reference for the letter closing
+  const stateRightsRef = usState ? getStateRightsReference(usState, category) : '';
 
   return `You are an experienced consumer rights attorney drafting a formal dispute letter for a client.
 
@@ -489,7 +532,7 @@ CRITICAL RESTRICTIONS:
 
 OUTPUT FORMAT:
 Return ONLY the letter body text, starting with "Re:" line.
-Do not include any preamble or explanation.`;
+Do not include any preamble or explanation.${stateRightsRef ? `\n${stateRightsRef}` : ''}`;
 }
 
 /**
