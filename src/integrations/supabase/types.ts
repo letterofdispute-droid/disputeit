@@ -483,6 +483,39 @@ export type Database = {
         }
         Relationships: []
       }
+      consumer_news_cache: {
+        Row: {
+          category_tags: string[] | null
+          excerpt: string | null
+          fetched_at: string
+          id: string
+          published_at: string | null
+          source: string
+          title: string
+          url: string
+        }
+        Insert: {
+          category_tags?: string[] | null
+          excerpt?: string | null
+          fetched_at?: string
+          id?: string
+          published_at?: string | null
+          source: string
+          title: string
+          url: string
+        }
+        Update: {
+          category_tags?: string[] | null
+          excerpt?: string | null
+          fetched_at?: string
+          id?: string
+          published_at?: string | null
+          source?: string
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
       content_plans: {
         Row: {
           category_id: string
@@ -637,6 +670,45 @@ export type Database = {
           published_count?: number
           status?: string
           target_count?: number
+        }
+        Relationships: []
+      }
+      dispute_outcomes: {
+        Row: {
+          amount_disputed: number | null
+          amount_recovered: number | null
+          category: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_disputed?: number | null
+          amount_recovered?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_disputed?: number | null
+          amount_recovered?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -949,6 +1021,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      letter_analyses: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          ip_hash: string
+          score: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          ip_hash: string
+          score?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string
+          score?: number | null
+        }
+        Relationships: []
       }
       letter_purchases: {
         Row: {
