@@ -728,7 +728,17 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                       className="text-xs"
                       onClick={() => {
                         setJustStartedRescue(true);
-                        rescueOrphans({ maxLinksPerArticle: maxOutboundLinks });
+                        rescueOrphans({ maxLinksPerArticle: maxOutboundLinks }, {
+                          onSuccess: (data: any) => {
+                            // If nothing to do, reset the loading state
+                            if (!data.jobId) {
+                              setJustStartedRescue(false);
+                            }
+                          },
+                          onError: () => {
+                            setJustStartedRescue(false);
+                          },
+                        });
                       }}
                       disabled={isRescuing || isRescueRunning || isScanJobRunning || justStartedRescue}
                     >

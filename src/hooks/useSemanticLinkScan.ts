@@ -537,12 +537,22 @@ export function useSemanticLinkScan() {
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Rescue scan failed');
-      return data as { success: boolean; jobId?: string };
+      return data as { success: boolean; jobId?: string; message?: string };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
       queryClient.invalidateQueries({ queryKey: ['rescue-job-active'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      
+      // Check if the function found nothing to do
+      if (data.message === 'No orphan articles found' || (!data.jobId && data.message)) {
+        toast({
+          title: 'No orphan articles to rescue',
+          description: data.message || 'All articles already have inbound links.',
+        });
+        return;
+      }
+      
       toast({
         title: 'Orphan rescue started',
         description: 'Scanning orphan articles for inbound link opportunities...',
