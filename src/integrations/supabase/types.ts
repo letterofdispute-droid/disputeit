@@ -1686,6 +1686,7 @@ export type Database = {
               id: string
               inbound_count: number
               max_inbound: number
+              outbound_count: number
               primary_keyword: string
               secondary_keywords: string[]
               similarity: number
@@ -1712,6 +1713,7 @@ export type Database = {
               id: string
               inbound_count: number
               max_inbound: number
+              outbound_count: number
               primary_keyword: string
               secondary_keywords: string[]
               similarity: number
