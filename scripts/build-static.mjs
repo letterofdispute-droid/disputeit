@@ -334,6 +334,10 @@ function generateSitemapIndex(blogPageCount) {
     <loc>${SITE_URL}/sitemap-templates.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>${SITE_URL}/sitemap-state-rights.xml</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+  </sitemap>
 ${blogEntries.join('\n')}
 </sitemapindex>`;
 }
@@ -467,6 +471,106 @@ function generateBlogSitemaps(blogPosts) {
 }
 
 // ============================================
+// State Rights Data (mirrors stateSpecificLaws.ts — plain JS for build script)
+// ============================================
+
+const US_STATES_BUILD = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' },
+  { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
+  { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' },
+  { code: 'FL', name: 'Florida' }, { code: 'GA', name: 'Georgia' },
+  { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' },
+  { code: 'IA', name: 'Iowa' }, { code: 'KS', name: 'Kansas' },
+  { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
+  { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' }, { code: 'MI', name: 'Michigan' },
+  { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' },
+  { code: 'NE', name: 'Nebraska' }, { code: 'NV', name: 'Nevada' },
+  { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
+  { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' }, { code: 'ND', name: 'North Dakota' },
+  { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' },
+  { code: 'RI', name: 'Rhode Island' }, { code: 'SC', name: 'South Carolina' },
+  { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
+  { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' }, { code: 'VA', name: 'Virginia' },
+  { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' },
+  { code: 'DC', name: 'District of Columbia' },
+];
+
+const STATE_RIGHTS_CATEGORIES = [
+  'vehicle', 'housing', 'insurance', 'financial', 'contractors',
+  'damaged-goods', 'refunds', 'travel', 'utilities', 'employment',
+  'ecommerce', 'hoa', 'healthcare',
+];
+
+function getStateBuildSlug(stateName) {
+  return stateName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// ============================================
+// State Rights Sitemap Generator
+// ============================================
+
+/**
+ * Generates sitemap-state-rights.xml covering:
+ *   - 1 hub page  (/state-rights)
+ *   - 51 state hub pages  (/state-rights/:stateSlug)
+ *   - 51 × 13 = 663 state+category pages  (/state-rights/:stateSlug/:categorySlug)
+ * Total: 715 URLs
+ *
+ * Priority tiers:
+ *   Hub page        → 0.8  (high-authority root)
+ *   State hubs      → 0.7  (state-level pillar pages)
+ *   Category pages  → 0.6  (long-tail leaf pages — the SEO volume)
+ */
+function generateStateRightsSitemap() {
+  const urls = [];
+
+  // Hub page
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/state-rights</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+
+  for (const state of US_STATES_BUILD) {
+    const stateSlug = getStateBuildSlug(state.name);
+
+    // State hub page
+    urls.push(`
+  <url>
+    <loc>${SITE_URL}/state-rights/${stateSlug}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
+    // State + category leaf pages
+    for (const cat of STATE_RIGHTS_CATEGORIES) {
+      urls.push(`
+  <url>
+    <loc>${SITE_URL}/state-rights/${stateSlug}/${cat}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+    }
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}
+</urlset>`;
+}
+
+// ============================================
 // Main Build Function
 // ============================================
 
@@ -484,11 +588,16 @@ async function buildSitemaps() {
   console.log('📝 Loading blog posts...');
   const blogPosts = await loadBlogPosts();
   console.log(`   ✅ Found ${blogPosts.length} blog posts`);
+
+  // State rights: 1 hub + 51 state hubs + 51×13 category pages = 715 URLs
+  const stateRightsUrlCount = 1 + US_STATES_BUILD.length + (US_STATES_BUILD.length * STATE_RIGHTS_CATEGORIES.length);
+  console.log(`🗺️  State rights pages: ${stateRightsUrlCount} URLs (1 hub + ${US_STATES_BUILD.length} state hubs + ${US_STATES_BUILD.length * STATE_RIGHTS_CATEGORIES.length} category pages)`);
   
   // Generate content
   const sitemapStatic = generateStaticSitemap();
   const sitemapCategories = generateCategoriesSitemap();
   const sitemapTemplates = generateTemplatesSitemap(templates);
+  const sitemapStateRights = generateStateRightsSitemap();
   const blogSitemapPages = generateBlogSitemaps(blogPosts);
   const sitemapIndex = generateSitemapIndex(blogSitemapPages.length);
   
@@ -502,6 +611,7 @@ async function buildSitemaps() {
     fs.writeFileSync(path.join(dir, 'sitemap-static.xml'), sitemapStatic);
     fs.writeFileSync(path.join(dir, 'sitemap-categories.xml'), sitemapCategories);
     fs.writeFileSync(path.join(dir, 'sitemap-templates.xml'), sitemapTemplates);
+    fs.writeFileSync(path.join(dir, 'sitemap-state-rights.xml'), sitemapStateRights);
     
     // Write paginated blog sitemaps
     for (let i = 0; i < blogSitemapPages.length; i++) {
@@ -512,8 +622,9 @@ async function buildSitemaps() {
   
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   const blogUrlCount = blogCategories.length + blogPosts.length;
-  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogUrlCount;
-  console.log(`\n✨ Generated ${totalUrls} URLs across ${3 + blogSitemapPages.length} sitemap files (in both dist/ and public/)\n`);
+  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogUrlCount + stateRightsUrlCount;
+  console.log(`\n✨ Generated ${totalUrls} URLs across ${4 + blogSitemapPages.length} sitemap files (in both dist/ and public/)`);
+  console.log(`   📍 State rights: ${stateRightsUrlCount} URLs in sitemap-state-rights.xml\n`);
 }
 
 buildSitemaps().catch(console.error);
