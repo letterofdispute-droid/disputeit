@@ -24,6 +24,10 @@ import LegacyCategoryRedirect from "./components/LegacyCategoryRedirect";
 import NotFound from "./pages/NotFound";
 
 // Lazily loaded - less critical pages
+const StateRightsPage = lazy(() => import("./pages/StateRightsPage"));
+const DeadlinesPage = lazy(() => import("./pages/DeadlinesPage"));
+const ConsumerNewsPage = lazy(() => import("./pages/ConsumerNewsPage"));
+const LetterAnalyzerPage = lazy(() => import("./pages/LetterAnalyzerPage"));
 const ArticlesPage = lazy(() => import("./pages/ArticlesPage"));
 const ArticleCategoryPage = lazy(() => import("./pages/ArticleCategoryPage"));
 const ArticlePage = lazy(() => import("./pages/ArticlePage"));
@@ -117,6 +121,10 @@ const App = () => (
             <Route path="/cookie-policy" element={<CookiePolicyPage />} />
             <Route path="/guides" element={<GuidesPage />} />
             <Route path="/guides/:categoryId" element={<CategoryGuidePage />} />
+            <Route path="/state-rights" element={<StateRightsPage />} />
+            <Route path="/deadlines" element={<DeadlinesPage />} />
+            <Route path="/consumer-news" element={<ConsumerNewsPage />} />
+            <Route path="/analyze-letter" element={<LetterAnalyzerPage />} />
             <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
             <Route path="/letters/:purchaseId/edit" element={<LetterEditorPage />} />
             

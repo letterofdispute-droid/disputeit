@@ -8,7 +8,7 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-card">
       <div className="container-wide py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center mb-4">
@@ -62,6 +62,33 @@ const Footer = () => {
               <li>
                 <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
                   Pricing
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Free Tools */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Free Tools</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/state-rights" className="text-muted-foreground hover:text-foreground transition-colors">
+                  State Rights Lookup
+                </Link>
+              </li>
+              <li>
+                <Link to="/deadlines" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Deadlines Calculator
+                </Link>
+              </li>
+              <li>
+                <Link to="/analyze-letter" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Analyze My Letter
+                </Link>
+              </li>
+              <li>
+                <Link to="/consumer-news" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Consumer News
                 </Link>
               </li>
             </ul>

@@ -257,6 +257,20 @@ const CategoryGuidePage = () => {
                 </Card>
               </div>
 
+              {/* State Rights cross-link CTA */}
+              <div className="mb-8 p-4 bg-primary/5 border border-primary/15 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-foreground text-sm">Check your state's specific laws</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">State protections may be stronger than federal minimums for {category.name.toLowerCase()} disputes.</p>
+                </div>
+                <Link
+                  to={`/state-rights?category=${categoryId}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+                >
+                  State Rights Lookup for {category.name} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+
               {/* Important Deadlines */}
               {guide.importantDeadlines && guide.importantDeadlines.length > 0 && (
                 <Card className="mb-8 border-amber-200 bg-amber-50/50 dark:bg-amber-950/10" id="deadlines">

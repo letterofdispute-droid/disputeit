@@ -10,7 +10,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale, ArrowRight } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale, ArrowRight, MapPin, Clock, Newspaper, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
@@ -44,6 +44,33 @@ const resources = [
     description: 'Get in touch with our team',
     href: '/contact',
     icon: Mail,
+  },
+];
+
+const freeTools = [
+  {
+    title: 'State Rights Lookup',
+    description: 'Find laws for your state and dispute type',
+    href: '/state-rights',
+    icon: MapPin,
+  },
+  {
+    title: 'Deadlines Calculator',
+    description: 'See how long you have to act',
+    href: '/deadlines',
+    icon: Clock,
+  },
+  {
+    title: 'Consumer News',
+    description: 'Latest FTC, CFPB & recall alerts',
+    href: '/consumer-news',
+    icon: Newspaper,
+  },
+  {
+    title: 'Analyze My Letter',
+    description: 'Free AI score on your draft letter',
+    href: '/analyze-letter',
+    icon: Search,
   },
 ];
 
@@ -261,18 +288,40 @@ const MegaMenu = () => {
               Resources
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-2 p-4">
-                {resources.map((resource) => (
-                  <ResourceListItem
-                    key={resource.title}
-                    title={resource.title}
-                    href={resource.href}
-                    icon={resource.icon}
-                  >
-                    {resource.description}
-                  </ResourceListItem>
-                ))}
-              </ul>
+              <div className="w-[520px] p-4">
+                <div className="grid grid-cols-2 gap-1">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">General</p>
+                    <ul className="space-y-1">
+                      {resources.map((resource) => (
+                        <ResourceListItem
+                          key={resource.title}
+                          title={resource.title}
+                          href={resource.href}
+                          icon={resource.icon}
+                        >
+                          {resource.description}
+                        </ResourceListItem>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Free Tools</p>
+                    <ul className="space-y-1">
+                      {freeTools.map((tool) => (
+                        <ResourceListItem
+                          key={tool.title}
+                          title={tool.title}
+                          href={tool.href}
+                          icon={tool.icon}
+                        >
+                          {tool.description}
+                        </ResourceListItem>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
 

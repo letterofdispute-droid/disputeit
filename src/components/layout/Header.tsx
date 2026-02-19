@@ -197,6 +197,37 @@ const Header = () => {
                         >
                           Contact
                         </Link>
+                        <div className="border-t border-border my-1 pt-1">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1">Free Tools</p>
+                        </div>
+                        <Link 
+                          to="/state-rights" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          State Rights Lookup
+                        </Link>
+                        <Link 
+                          to="/deadlines" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Deadlines Calculator
+                        </Link>
+                        <Link 
+                          to="/consumer-news" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Consumer News
+                        </Link>
+                        <Link 
+                          to="/analyze-letter" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Analyze My Letter
+                        </Link>
                       </div>
                     </AccordionContent>
                   </AccordionItem>

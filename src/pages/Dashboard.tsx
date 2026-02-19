@@ -11,12 +11,13 @@ import {
   FileText, Download, Clock, CheckCircle, 
   AlertCircle, ArrowRight, User, Shield,
   Plus, Loader2, ShoppingBag, Sparkles,
-  Settings, HelpCircle, FileSearch
+  Settings, HelpCircle, FileSearch, Target
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import PurchasedLetterCard from '@/components/dashboard/PurchasedLetterCard';
 import CreditsCard from '@/components/dashboard/CreditsCard';
+import DisputeTracker from '@/components/dashboard/DisputeTracker';
 import { trackDashboardView } from '@/hooks/useGTM';
 
 interface UserLetter {
@@ -306,7 +307,7 @@ const Dashboard = () => {
                   transition={{ duration: 0.4, delay: 0.3 }}
                 >
                   <Tabs defaultValue="purchases" className="w-full">
-                    <TabsList className="mb-4">
+                     <TabsList className="mb-4">
                       <TabsTrigger value="purchases" className="gap-2">
                         <ShoppingBag className="h-4 w-4" />
                         All Purchases ({purchases.length})
@@ -314,6 +315,10 @@ const Dashboard = () => {
                       <TabsTrigger value="drafts" className="gap-2">
                         <FileText className="h-4 w-4" />
                         Drafts ({letters.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="disputes" className="gap-2">
+                        <Target className="h-4 w-4" />
+                        My Disputes
                       </TabsTrigger>
                     </TabsList>
 
@@ -412,6 +417,10 @@ const Dashboard = () => {
                           )}
                         </CardContent>
                       </Card>
+                    </TabsContent>
+
+                    <TabsContent value="disputes">
+                      <DisputeTracker />
                     </TabsContent>
                   </Tabs>
                 </motion.div>

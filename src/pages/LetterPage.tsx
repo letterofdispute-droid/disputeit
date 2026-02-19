@@ -297,6 +297,16 @@ const LetterPage = () => {
           </div>
           
           <LetterGenerator template={template} />
+
+          {/* Deadline cross-link CTA */}
+          <div className="max-w-5xl mx-auto mt-6">
+            <p className="text-sm text-muted-foreground text-center">
+              ⏱ <strong>Not sure how long you have to act?</strong>{' '}
+              <Link to={`/deadlines?category=${categoryId}`} className="text-primary hover:underline font-medium">
+                Check your deadline →
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
 
