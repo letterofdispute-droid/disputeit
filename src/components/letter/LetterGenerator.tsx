@@ -261,6 +261,23 @@ const LetterGenerator = ({
                     <p className="text-xs text-muted-foreground">
                       Selecting your state adds specific state statute citations to strengthen your letter.
                     </p>
+                    {/* Dynamic state rights link — shown once a state is selected */}
+                    {selectedState && (() => {
+                      const stateInfo = US_STATES.find(s => s.code === selectedState);
+                      if (!stateInfo) return null;
+                      const stateSlug = stateInfo.name.toLowerCase().replace(/\s+/g, '-');
+                      const categorySlug = template.category;
+                      return (
+                        <a
+                          href={`/state-rights/${stateSlug}/${categorySlug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                        >
+                          📋 View your {stateInfo.name} {template.category} consumer rights →
+                        </a>
+                      );
+                    })()}
                   </div>
                 )}
               </div>}
