@@ -82,7 +82,15 @@ export default function DisputeTracker() {
       } else {
         const { error } = await supabase
           .from('dispute_outcomes')
-          .insert({ ...(payload as Record<string, unknown>), user_id: user!.id });
+          .insert({
+            title: payload.title!,
+            category: payload.category ?? null,
+            status: payload.status ?? 'in_progress',
+            amount_disputed: payload.amount_disputed ?? null,
+            amount_recovered: payload.amount_recovered ?? null,
+            notes: payload.notes ?? null,
+            user_id: user!.id,
+          });
         if (error) throw error;
       }
     },
