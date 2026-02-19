@@ -11,6 +11,23 @@ const corsHeaders = {
 const ARTICLE_TIMEOUT_MS = 30_000; // 30s max per article
 const BATCH_SIZE_DEFAULT = 20;
 
+// ── State Rights configuration ──
+const STATE_RIGHTS_CATEGORY_MAP: Record<string, string> = {
+  vehicle: 'vehicle', housing: 'housing', financial: 'financial', employment: 'employment',
+  insurance: 'insurance', healthcare: 'healthcare', ecommerce: 'ecommerce',
+  utilities: 'utilities', contractors: 'contractors', refunds: 'refunds',
+  travel: 'travel', hoa: 'hoa', 'damaged-goods': 'damaged-goods',
+};
+
+// Top-traffic states to suggest links for
+const STATE_RIGHTS_TARGETS = [
+  { name: 'California', slug: 'california' },
+  { name: 'Texas', slug: 'texas' },
+  { name: 'New York', slug: 'new-york' },
+  { name: 'Florida', slug: 'florida' },
+  { name: 'Illinois', slug: 'illinois' },
+];
+
 // ── Types ──
 interface ScanRequest {
   jobId?: string;
@@ -307,6 +324,67 @@ async function processOneArticle(
       suggestions += newSuggestions.length;
     } else {
       console.error(`[SCAN] Insert error for "${source.title}":`, insertError.message);
+    }
+  }
+
+  // ── STATE RIGHTS PHASE: Suggest /state-rights/{state}/{category} links ──
+  // Only for US-relevant categories; max 2 per article to avoid diluting link equity
+  if (source.content_id) {
+    const categoryRightsSlug = STATE_RIGHTS_CATEGORY_MAP[source.category_id];
+    if (categoryRightsSlug) {
+      // How many state-rights suggestions already exist for this source?
+      const { count: existingStateRights } = await supabaseAdmin
+        .from('link_suggestions')
+        .select('id', { count: 'exact', head: true })
+        .eq('source_post_id', source.content_id)
+        .like('target_slug', `state-rights/%`)
+        .in('status', ['approved', 'applied', 'pending']);
+
+      const stateRightsSlotsRemaining = 2 - (existingStateRights || 0);
+
+      if (stateRightsSlotsRemaining > 0) {
+        const stateRightsSuggestions = [];
+
+        for (const state of STATE_RIGHTS_TARGETS.slice(0, stateRightsSlotsRemaining + 1)) {
+          if (stateRightsSuggestions.length >= stateRightsSlotsRemaining) break;
+
+          const stateSlug = `state-rights/${state.slug}/${categoryRightsSlug}`;
+
+          // Skip if already suggested/applied
+          const { data: alreadyExists } = await supabaseAdmin
+            .from('link_suggestions')
+            .select('id')
+            .eq('source_post_id', source.content_id)
+            .eq('target_slug', stateSlug)
+            .maybeSingle();
+          if (alreadyExists) continue;
+
+          const anchorText = `${state.name} ${categoryRightsSlug} consumer rights`;
+
+          stateRightsSuggestions.push({
+            source_post_id: source.content_id,
+            target_type: 'state-rights',
+            target_slug: stateSlug,
+            target_title: `${state.name} ${categoryRightsSlug} consumer rights guide`,
+            target_embedding_id: null,
+            anchor_text: anchorText,
+            anchor_source: 'contextual',
+            relevance_score: 70,
+            hierarchy_valid: true,
+            status: 'pending',
+          });
+        }
+
+        if (stateRightsSuggestions.length > 0) {
+          const { error: srInsertError } = await supabaseAdmin
+            .from('link_suggestions')
+            .insert(stateRightsSuggestions);
+          if (!srInsertError) {
+            suggestions += stateRightsSuggestions.length;
+            console.log(`[SCAN] Added ${stateRightsSuggestions.length} state-rights suggestions for "${source.title}"`);
+          }
+        }
+      }
     }
   }
 

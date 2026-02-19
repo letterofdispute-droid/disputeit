@@ -12,6 +12,24 @@ const BATCH_SIZE = 5; // Process 5 articles concurrently per invocation
 const ARTICLE_TIMEOUT_MS = 45_000; // 45s per article (AI call takes longer)
 const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
+// ── State Rights configuration ──
+// Maps template category IDs to their state-rights URL segment
+const STATE_RIGHTS_CATEGORY_MAP: Record<string, string> = {
+  vehicle: 'vehicle', housing: 'housing', financial: 'financial', employment: 'employment',
+  insurance: 'insurance', healthcare: 'healthcare', ecommerce: 'ecommerce',
+  utilities: 'utilities', contractors: 'contractors', refunds: 'refunds',
+  travel: 'travel', hoa: 'hoa', 'damaged-goods': 'damaged-goods',
+};
+
+// Top-traffic states to suggest links for — ordered by search volume priority
+const STATE_RIGHTS_TARGETS = [
+  { name: 'California', slug: 'california' },
+  { name: 'Texas', slug: 'texas' },
+  { name: 'New York', slug: 'new-york' },
+  { name: 'Florida', slug: 'florida' },
+  { name: 'Illinois', slug: 'illinois' },
+];
+
 // ── Types ──
 interface SmartScanRequest {
   jobId?: string;
@@ -219,7 +237,8 @@ STRICT RULES:
 8. Anchors must be SPECIFIC - avoid vague 2-word phrases like "insurance coverage"
 9. Return a "confidence" score (1-100) for how well the anchor matches the specific target
 10. For "generated" mode, do NOT use generic phrases like "learn more", "check out", "see our guide", "explore our", "read about", "for more details"
-11. Return ONLY valid JSON - no markdown, no explanation
+11. IMPORTANT: Targets with role "state-rights" MUST use "generated" mode — write a natural sentence mentioning state-specific consumer rights
+12. Return ONLY valid JSON - no markdown, no explanation
 
 Return a JSON array:
 [
@@ -462,6 +481,47 @@ async function processOneArticle(
   // Fix indices to match array position
   candidates.forEach((c, i) => { c.index = i + 1; });
 
+  // ── Inject state rights pages as additional AI candidates ──
+  // These use 'generated' mode only — AI must write a sentence that naturally
+  // references the state rights page. Max 2 per article to avoid over-linking.
+  const categoryRightsSlug = STATE_RIGHTS_CATEGORY_MAP[article.category_slug];
+  if (categoryRightsSlug) {
+    // Check how many state-rights links already exist for this article
+    const { count: existingStateRightsCount } = await supabaseAdmin
+      .from('link_suggestions')
+      .select('id', { count: 'exact', head: true })
+      .eq('source_post_id', article.id)
+      .like('target_slug', `state-rights/%/${categoryRightsSlug}`)
+      .in('status', ['approved', 'applied', 'pending']);
+
+    if ((existingStateRightsCount || 0) < 2) {
+      const slotsForStateRights = 2 - (existingStateRightsCount || 0);
+      for (const state of STATE_RIGHTS_TARGETS.slice(0, slotsForStateRights + 1)) {
+        const stateSlug = `state-rights/${state.slug}/${categoryRightsSlug}`;
+        // Skip if already linked
+        const { data: alreadyLinked } = await supabaseAdmin
+          .from('link_suggestions')
+          .select('id')
+          .eq('source_post_id', article.id)
+          .eq('target_slug', stateSlug)
+          .maybeSingle();
+        if (alreadyLinked) continue;
+
+        if (candidates.find(c => c.slug === stateSlug)) continue;
+        candidates.push({
+          index: idx++,
+          role: 'state-rights',
+          title: `${state.name} ${article.category_slug} consumer rights`,
+          slug: stateSlug,
+          embeddingId: '', // no embedding for state rights pages
+          contentType: 'state-rights',
+        });
+      }
+      // Re-fix indices after adding state rights candidates
+      candidates.forEach((c, i) => { c.index = i + 1; });
+    }
+  }
+
   if (candidates.length < 2) {
     console.log(`[SMART] Too few candidates for "${article.title}"`);
     return 0;
@@ -522,7 +582,7 @@ async function processOneArticle(
     target_type: candidate.contentType,
     target_slug: candidate.slug,
     target_title: candidate.title,
-    target_embedding_id: candidate.embeddingId,
+    target_embedding_id: candidate.embeddingId || null,
     anchor_text: anchor,
     anchor_source: 'ai_suggested',
     relevance_score: Math.max(55, Math.min(95, confidence)),
