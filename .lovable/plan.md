@@ -1,45 +1,47 @@
 
 
-# Fix: Reconcile Counts Statement Timeout
+# Make Rescue Orphans Actually Fix All Orphans
 
-## Problem
-The `reconcile_link_counts` database function is timing out. It regex-scans 68 MB of HTML content across 5,780 published articles -- far too heavy for the default PostgREST statement timeout (~8 seconds).
+## Why 130 Orphans Remain
 
-## Solution: Set a longer statement timeout inside the function
-
-PostgreSQL allows setting `statement_timeout` at the function level using `SET statement_timeout`. This only affects the function execution and does not change the global timeout. The reconciliation is a legitimate heavy operation that should be allowed to run longer.
+The rescue function found matches but 73% of suggestions were rejected because the source articles already had 8+ outbound links (the default cap). With 1,650 articles at the cap and another 2,939 at 6-7, there simply aren't enough "low-outbound" sources available at the current 0.70 similarity threshold.
 
 ## Changes
 
-### Migration: Update `reconcile_link_counts` function with extended timeout
+### 1. `supabase/functions/rescue-orphans/index.ts` -- More aggressive matching
 
-Add `SET statement_timeout = '120s'` to the function definition. This gives the function up to 2 minutes to complete, which is sufficient for 68 MB of content.
+| Parameter | Current | New | Why |
+|-----------|---------|-----|-----|
+| `similarity_threshold` | 0.70 | 0.55 | Widens the candidate pool significantly |
+| `max_results` | 15 | 40 | More candidates means more chances to find one under the cap |
+| `maxLinksPerArticle` | 8 | 12 | Rescue-specific cap -- articles with 8-11 outbound links can still be sources |
+| Max suggestions per orphan | 3 | 5 | More inbound link options per orphan |
 
-The function body remains identical -- only the function signature changes to include the timeout setting.
+These relaxed parameters only apply during rescue operations, not during regular scans.
 
-```sql
-CREATE OR REPLACE FUNCTION public.reconcile_link_counts()
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-SET statement_timeout = '120s'   -- <-- new line
-AS $function$
--- ... existing body unchanged ...
-$function$
-```
+### 2. `supabase/functions/rescue-orphans/index.ts` -- Prioritize low-outbound sources
 
-### Files Changed
+Sort candidates by outbound_count ascending so we prefer sources that have room, rather than picking the most semantically similar first. This is a simple change to the candidate loop -- check outbound_count and prefer lower values.
+
+### 3. `match_semantic_links` RPC -- Return outbound_count
+
+Currently the RPC doesn't return `outbound_count`, forcing the rescue function to make an extra DB query per candidate. Add `outbound_count` to the return columns. This also eliminates the N+1 query problem (currently one extra query per candidate).
+
+### 4. Auto-approve rescue suggestions
+
+Currently rescue suggestions are created as "pending", requiring manual approval and another "Apply Links" click. For rescue operations specifically, auto-set status to "approved" so they're ready for immediate bulk application. This eliminates the manual review step for rescue-generated links since the whole point is automated orphan fixing.
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| New migration SQL | Re-create `reconcile_link_counts` with `SET statement_timeout = '120s'` |
+| `supabase/functions/rescue-orphans/index.ts` | Lower threshold to 0.55, raise cap to 12, increase max_results to 40, max 5 suggestions per orphan, sort by outbound_count, auto-approve suggestions |
+| New migration SQL | Update `match_semantic_links` RPC to include `ae.outbound_count` in the return columns |
 
-### No UI changes needed
-The existing UI code (`LinkActions.tsx` and `useSemanticLinkScan.ts`) already handles success/error states correctly. Once the timeout is extended, the function will complete and return results as expected.
+## Expected Outcome
 
-### Expected Outcome
-- "Reconcile Counts" will complete successfully instead of timing out
-- All 5,780 published articles will be scanned for link references
-- Inbound/outbound counts and ghost suggestions will be corrected
-- The orphan count of 198 will be updated based on the newly applied links from the rescue operation
+- One click on "Rescue Orphans" will find viable sources for most of the 130 remaining orphans
+- Suggestions are auto-approved, so the next "Apply Links" click immediately inserts them
+- The outbound cap of 12 for rescue means articles with 8-11 links can still serve as sources (a pool of 2,939 articles at 6-7 outbound becomes available)
+- The lower 0.55 threshold catches topically adjacent articles that 0.70 missed
+
