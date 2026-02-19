@@ -874,7 +874,7 @@ This is a PILLAR article - a comprehensive hub page that covers the full topic a
 CLUSTER ARTICLES TO REFERENCE (include natural mentions of each):
 ${allClusters.map((s, i) => {
   const published = publishedPosts.find(p => p.id === s.blog_post_id);
-  return `${i + 1}. "${s.suggested_title}" (${s.article_type})${published ? ` [slug: ${published.slug}]` : ''}`;
+  return `${i + 1}. "${s.suggested_title}" (${s.article_type})${published ? ` [URL: /articles/${plan.category_id}/${published.slug}]` : ''}`;
 }).join('\n')}`;
       }
     }
@@ -1065,6 +1065,9 @@ Respond with ONLY this JSON:
     const finalMetaTitle = item.meta_title || parsedContent.seo_title;
     const finalMetaDescription = item.meta_description || parsedContent.seo_description;
 
+    // Sanitize any bare slug links created by AI into proper /articles/category/slug format
+    parsedContent.content = await sanitizeBareSlugLinks(supabaseAdmin, parsedContent.content);
+
     // Compute keyword occurrence counts
     const keywordCountsData = countKeywords(parsedContent.content, allKeywords);
 
@@ -1148,6 +1151,59 @@ Respond with ONLY this JSON:
 
     return { success: false, error: errorMsg };
   }
+}
+
+// ============================================
+// LINK SANITIZER - rewrites bare slug links to /articles/category/slug
+// ============================================
+
+async function sanitizeBareSlugLinks(supabaseAdmin: any, content: string): Promise<string> {
+  // Match href="/some-slug" that are NOT already /articles/, /templates/, /guides/, /admin/, etc.
+  const bareSlugPattern = /href="\/([a-z0-9][a-z0-9-]{8,})"/gi;
+  const knownPrefixes = ['articles/', 'templates/', 'guides/', 'admin/', 'auth/', 'dashboard/', 'login/', 'signup/', 'pricing/', 'about/', 'contact/', 'faq/', 'privacy/', 'terms/', 'disclaimer/', 'cookie-policy/', 'how-it-works/', 'settings/'];
+  
+  const matches: { full: string; slug: string }[] = [];
+  let match;
+  while ((match = bareSlugPattern.exec(content)) !== null) {
+    const path = match[1];
+    if (!knownPrefixes.some(p => path.startsWith(p))) {
+      matches.push({ full: match[0], slug: path });
+    }
+  }
+
+  if (matches.length === 0) return content;
+
+  // Look up all matched slugs in article_embeddings
+  const slugs = [...new Set(matches.map(m => m.slug))];
+  const { data: embeddings } = await supabaseAdmin
+    .from('article_embeddings')
+    .select('slug, category_id')
+    .in('slug', slugs);
+
+  if (!embeddings || embeddings.length === 0) return content;
+
+  const slugToCategory = new Map<string, string>();
+  for (const e of embeddings) {
+    slugToCategory.set(e.slug, e.category_id);
+  }
+
+  let result = content;
+  for (const m of matches) {
+    const category = slugToCategory.get(m.slug);
+    if (category) {
+      result = result.replaceAll(
+        `href="/${m.slug}"`,
+        `href="/articles/${category}/${m.slug}"`
+      );
+    }
+  }
+
+  const fixed = matches.filter(m => slugToCategory.has(m.slug)).length;
+  if (fixed > 0) {
+    console.log(`[SANITIZER] Rewrote ${fixed} bare slug links to /articles/category/slug format`);
+  }
+
+  return result;
 }
 
 // ============================================
