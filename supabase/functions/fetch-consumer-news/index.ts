@@ -51,7 +51,7 @@ function parseRSS(xmlText: string): RSSItem[] {
     const title = getField('title');
     const link = getField('link') || getField('guid');
     const pubDate = getField('pubDate');
-    const description = getField('description').replace(/<[^>]*>/g, '').slice(0, 500);
+    const description = getField('description').replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]*>/g, '').slice(0, 500);
 
     if (title && link) {
       items.push({ title, link, pubDate, description });

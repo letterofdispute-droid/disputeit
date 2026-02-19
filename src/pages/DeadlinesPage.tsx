@@ -164,12 +164,12 @@ const DeadlinesPage = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Your State <span className="text-muted-foreground text-xs">(optional)</span></label>
-                    <Select value={selectedState} onValueChange={setSelectedState}>
+                    <Select value={selectedState || 'all'} onValueChange={v => setSelectedState(v === 'all' ? '' : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select state..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All States (Federal)</SelectItem>
+                        <SelectItem value="all">All States (Federal)</SelectItem>
                         {US_STATES.map((s) => (
                           <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
                         ))}

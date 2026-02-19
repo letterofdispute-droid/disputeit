@@ -184,12 +184,12 @@ export default function LetterAnalyzerPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Dispute Category <span className="text-muted-foreground">(optional — improves scoring accuracy)</span></label>
-                    <Select value={category} onValueChange={setCategory}>
+                    <Select value={category || 'general'} onValueChange={v => setCategory(v === 'general' ? '' : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select dispute type..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">General Dispute Letter</SelectItem>
+                        <SelectItem value="general">General Dispute Letter</SelectItem>
                         {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
                           <SelectItem key={id} value={id}>{label}</SelectItem>
                         ))}
