@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES } from "../_shared/siteContext.ts";
+import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES, buildStateRightsLinkingContext } from "../_shared/siteContext.ts";
 import { validateContent, getViolationSummary, validateTitle, BANNED_TITLE_STARTERS } from "../_shared/contentValidator.ts";
 import { generateImageWithGoogle, imageResultToBuffer, isGoogleImageError, shouldBailOut } from "../_shared/googleImageGen.ts";
 
@@ -797,6 +797,8 @@ async function generateSingleArticle(
         ? `MANDATORY KEYWORDS - Each of these MUST appear 2-3 times in the article:\n${item.suggested_keywords.map((kw: string, i: number) => `   ${i + 1}. "${kw}"`).join('\n')}`
         : `- Naturally incorporate consumer rights and dispute-related terms`;
     
+    const stateRightsContext = buildStateRightsLinkingContext(plan.category_id);
+
     const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
 a US platform specializing in consumer rights, dispute resolution, and complaint letters.
 
@@ -805,6 +807,8 @@ ${WRITING_STYLE_GUIDELINES}
 ABOUT LETTER OF DISPUTE:
 We provide ${SITE_CONFIG.templateCount} professionally written dispute letter templates across ${SITE_CONFIG.categoryCount} categories:
 ${CATEGORY_CONTEXT}
+
+${stateRightsContext}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks
