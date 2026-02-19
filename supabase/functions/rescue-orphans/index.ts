@@ -26,6 +26,15 @@ Deno.serve(async (req) => {
 
     // Step 1: Create or resume job
     if (!jobId) {
+      // Reset cooldown for articles that are still orphans so explicit rescue always works
+      await supabase
+        .from('article_embeddings')
+        .update({ next_scan_due_at: null })
+        .eq('embedding_status', 'completed')
+        .eq('content_type', 'article')
+        .lte('inbound_count', 0)
+        .not('embedding', 'is', null);
+
       // Count orphans
       const now = new Date().toISOString();
       const { count: orphanCount } = await supabase
