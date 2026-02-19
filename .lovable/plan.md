@@ -1,174 +1,142 @@
 
-# Consumer Rights Hub — Visual Overhaul, Content Enrichment & Legal Pages Update
+# State Rights Lookup: From 1 Page to 650+ Indexable URLs
 
-## What This Plan Addresses
+## Current State — What Exists
 
-Three distinct areas of improvement, implemented in one coherent pass:
+The `/state-rights` page is fully built and working as an interactive SPA tool:
+- State selector (51 options including DC)
+- Category selector (13 categories)
+- Live results: statute cards, AG office link, federal vs. state table, notable states strip, AG complaint guide
+- URL params update on selection: `/state-rights?state=CA&category=vehicle`
+- Data lives in `stateSpecificLaws.ts` — all 51 states have real statute citations
 
-1. **Deadlines Calculator** — Complete visual and content rebuild: rich hero, illustrated SVG graphic, "What happens if I miss it?" educational content, a "Know Your Rights" quick-reference grid, and an expanded FAQ below the results
-2. **State Rights Lookup** — Richer content: state map SVG illustration, a "3 Reasons State Law Matters" explainer with icons, a comparison table of state vs. federal protections, and a "Top 5 States with Strongest Consumer Laws" highlight panel
-3. **Consumer News Hub** — Visual upgrade: source agency logos as inline SVG badges, a "Why this matters" contextual panel in the sidebar, improved card layout with category pill color-coding
-4. **Letter Analyzer** — Visual upgrade: animated score ring instead of a flat bar, a "before/after" example snippet panel showing a weak vs. strong letter for the selected category, improved dimension icon set
-5. **Privacy, Terms, Cookie Policy pages** — Visual refresh: add a branded header banner with shield icon + gradient, table-of-contents sticky sidebar on desktop, improve callout box styling for AI disclosure / GDPR / CCPA sections, update dates and add the new free tools to the Service Description in Terms
+## The Gap — What "650 Index Targets" Actually Means
 
----
+Right now, Google sees **1 URL**: `/state-rights`. The query string (`?state=CA&category=vehicle`) is not indexed as a separate page — search engines treat query strings as parameters, not separate documents.
 
-## Part 1: Deadlines Calculator — Full Rebuild
+To capture the SEO value of 650+ distinct searches ("California lemon law consumer rights", "Texas housing tenant rights statute", etc.), each combination needs its **own route with its own HTML, title, description, and canonical tag**.
 
-### Visual Hero Upgrade
-Replace the plain primary-color banner with a split-layout hero:
-- Left: headline + subhead + key stats ("**60 days** to dispute a credit card charge · **30 days** FTC mail order rule · **3 years** typical FTC statute")
-- Right: an inline SVG hourglass / countdown illustration (custom, no external asset needed) with animated sand fill using CSS
+The target architecture is:
 
-### New "Clock Is Ticking" SVG Component
-A self-contained SVG `<DeadlineHeroIllustration />` component showing:
-- A large hourglass with gradient fill
-- Three floating badge labels: "60 Days", "3 Years", "Act Now" 
-- Subtle CSS animation on the sand particles
-- Renders inline — no image file, no network request
+```text
+/state-rights                              → Hub page (existing)
+/state-rights/california                   → State hub (50 pages)
+/state-rights/california/vehicle           → State + category (650 pages)
+```
 
-### Calculator UI — Enhanced
-- Step indicator: "Step 1 → Step 2 → Step 3" progress bar above the 3 selectors
-- Incident date now shows: "You have **47 days** from today to the soonest deadline" as a live summary badge beneath the date picker (computed from the earliest extractable deadline in the list)
-- Color-coded countdown ring (SVG circle) for each deadline card showing % of time elapsed
+That is **701 total crawlable URLs** (1 hub + 50 state hubs + 650 state+category pages).
 
-### Content Sections Below Results
+## Data Coverage Assessment
 
-**"What Happens If I Miss My Deadline?"** — A structured panel explaining:
-- Federal claims: rights are generally barred (no exceptions for ignorance)
-- State claims: "tolling" doctrines may apply (fraud concealment, discovery rule)
-- When to consult an attorney immediately
-- Source: general consumer protection law principles (not fabricated)
+The existing `stateSpecificLaws.ts` covers:
+- All 51 jurisdictions (50 states + DC) ✅
+- `consumerProtection` statute for every state ✅
+- `lemonLaw` for most states ✅
+- `landlordTenant` for most states ✅
+- `insurance` for some states (CA, FL, AL)
+- `debtCollection` for some states (CA, IL)
+- `homeImprovement` for some states (CA, CT)
 
-**"Common Deadlines at a Glance"** — Always-visible quick-reference table (no category selection needed), showing the 8 most commonly looked-up federal deadlines pulled from the existing `consumerRightsContent.ts` data across all guides (FCBA 60 days, FTC mail 30 days, HUD 180 days, etc.)
+For categories where a state has no specific statute (`damaged-goods`, `refunds`, `travel`, `utilities`, `employment`, `ecommerce`), the page falls back to the general `consumerProtection` statute — which is correct and sufficient for indexing.
 
-**FAQ Accordion** — 6 questions drawn from real scenarios:
-- "Can I dispute a charge after 60 days?"
-- "What is the discovery rule?"
-- "Does the deadline reset if the company promises to fix it?"
-- "How do I find my state's statute of limitations?"
-- "What if the company has gone out of business?"
-- "Does sending a letter pause the clock?"
+The 13 categories are already defined in `CATEGORY_LABELS` in `StateRightsPage.tsx`.
 
----
+## Implementation Plan
 
-## Part 2: State Rights Lookup — Content & Visual Enrichment
+### Step 1 — Slug Utilities
 
-### Hero Upgrade
-- Same split-layout approach: left text, right SVG US map outline with the selected state highlighted
-- **`<USMapIllustration />`** — inline SVG of simplified US state outlines (path-based, static)
-- When a state is selected, that state's path gets `fill` set to `hsl(var(--primary))` via React state; all others remain muted
+Add two helper functions to `stateSpecificLaws.ts`:
+- `getStateSlug(stateCode)` → converts "CA" to "california", "NY" to "new-york"
+- `getStateFromSlug(slug)` → reverse lookup: "new-york" → "NY"
 
-### New Content Panels
+Also export a `CATEGORY_SLUGS` constant — the 13 category IDs already used as slugs.
 
-**"Federal vs. State: What's Different?"** — A 2-column comparison card:
+### Step 2 — New Route Components
 
-| Protection | Federal Floor | State Can Add |
-|---|---|---|
-| Damages | Actual damages | Treble (3×) damages |
-| Attorney fees | Sometimes | Often mandatory |
-| Deadline to sue | 3-4 years typical | Can be shorter or longer |
-| Who enforces | FTC, CFPB | State AG |
+**`src/pages/StateRightsStatePage.tsx`** — handles `/state-rights/:stateSlug`
 
-**"States with Notable Consumer Protections"** — A highlight strip of 5 states known for strongest laws (CA, NY, MA, IL, TX), each with their signature statute and one key difference from federal law. Data sourced from `stateSpecificLaws.ts`.
+- Reads `stateSlug` from `useParams`
+- Resolves to state code via `getStateFromSlug`
+- Unique `<title>`: "California Consumer Rights Laws & Statutes | Letter of Dispute"
+- Unique `<meta description>`: "Find all California consumer protection statutes — lemon law, tenant rights, debt collection — with Attorney General contact info."
+- Shows the state's full data: all available statutes, AG info, cross-links to each category page
+- Renders a grid of 13 "category cards" linking to `/state-rights/california/vehicle`, etc.
+- Breadcrumb: Home → State Rights → California
 
-**"How to File an AG Complaint"** — A numbered step guide (4 steps) explaining what information to gather, how to submit, and what to expect. This content is currently absent and directly serves users who land on this page.
+**`src/pages/StateRightsCategoryPage.tsx`** — handles `/state-rights/:stateSlug/:categorySlug`
 
----
+- Reads both params
+- Unique `<title>`: "California Lemon Law & Vehicle Consumer Rights | Letter of Dispute"
+- Unique `<meta description>`: "California vehicle consumer protection under Cal. Civ. Code § 1790 (Song-Beverly). Find your rights, deadlines, and how to file a complaint."
+- Shows: the specific statute(s) for that state+category combo, AG office, federal vs. state comparison, CTA to the matching letter template category
+- FAQ structured data: 3 questions specific to state + category (e.g. "What is California's lemon law?")
+- Breadcrumb: Home → State Rights → California → Vehicle (Lemon Law)
 
-## Part 3: Consumer News Hub — Visual Upgrade
+### Step 3 — Register Routes in `App.tsx`
 
-### Source Badge Redesign
-Replace text badges with inline SVG government seal–style badges for FTC, CFPB, NHTSA — official color schemes (blue, green, orange) with subtle seal texture via SVG pattern.
+```tsx
+<Route path="/state-rights/:stateSlug" element={<StateRightsStatePage />} />
+<Route path="/state-rights/:stateSlug/:categorySlug" element={<StateRightsCategoryPage />} />
+```
 
-### Card Improvement
-- Larger card with a left accent border in the source's brand color
-- "Impact level" pill (High / Medium) based on whether the title contains enforcement keywords ("action", "ban", "recall", "fine", "penalty")
-- Category tag now links directly to the matching template category
+Both lazy-loaded. The existing `/state-rights` route remains unchanged as the interactive hub.
 
-### Sidebar — "Why This Matters" Panel
-New sidebar card explaining: when the FTC takes enforcement action → companies often change their practices → now is the right time to dispute if you were affected. With a link to the letter templates.
+### Step 4 — Register 701 Routes in `routes.ts`
 
----
+Generate the full list programmatically at build time:
 
-## Part 4: Letter Analyzer — Visual Upgrade
+```ts
+// 50 state hub pages
+US_STATES.map(s => `/state-rights/${getStateSlug(s.code)}`)
 
-### Animated Score Ring
-Replace the flat progress bar with a circular SVG score ring component `<ScoreRing />`:
-- Large circular gauge (like a speedometer)
-- Number in center: "74%"
-- Ring fills from 0 to score over 0.8s using CSS `stroke-dashoffset` animation
-- Color: green ≥ 75%, amber 50–74%, red < 50%
+// 650 state+category pages
+US_STATES.flatMap(s =>
+  Object.keys(CATEGORY_LABELS).map(cat =>
+    `/state-rights/${getStateSlug(s.code)}/${cat}`
+  )
+)
+```
 
-### "Weak vs. Strong" Example Panel
-New sidebar card showing a 2-line before/after snippet for the selected category:
-- **Weak:** "I am writing to complain about the product I bought."
-- **Strong:** "Pursuant to 15 U.S.C. § 2310 (Magnuson-Moss Warranty Act), I hereby demand..."
-Examples pulled from a small static lookup object keyed by category.
+This tells the static site generator (vite-ssg) to pre-render all 701 pages with their unique HTML at build time.
 
----
+### Step 5 — Update Hub Page (`StateRightsPage.tsx`) for Internal Linking
 
-## Part 5: Privacy, Terms & Cookie Policy — Visual Refresh
+When a user selects a state, instead of just updating query params, also show a prominent link: "View full California consumer rights page →" pointing to `/state-rights/california`.
 
-### All Three Pages — Shared Improvements
+The 51 state entries in the selector become clickable links to their hub pages, which massively increases crawl depth and internal link equity.
 
-**Branded Header Banner**: Each page gets a gradient header section (matching the tool pages) with:
-- Relevant icon (Shield for Privacy, Scale for Terms, Cookie for Cookie Policy)
-- Page title + "Last Updated" date badge
-- One-line summary of what the page covers
-- Quick-action button (e.g., "Manage Cookie Settings" for Cookie Policy; "Contact Privacy Team" for Privacy; no action for Terms)
+### Step 6 — SEO Metadata Strategy per Page Type
 
-**Sticky Table of Contents (desktop only)**:
-- On `md:` and above, the ToC moves to a `sticky top-24` left sidebar column
-- Main content occupies the right 3/4
-- Active section highlighted via scroll intersection observer
+**State hub** (`/state-rights/california`):
+- Title: `{StateName} Consumer Rights Laws — All Statutes & AG Contact`
+- Description: `Find {StateName}'s consumer protection law ({citation}), lemon law, tenant rights, and more. Includes {AG office name} contact details.`
+- H1: "{StateName} Consumer Protection Laws"
 
-**Improved Callout Box Styling**:
-- AI Disclosure (Privacy §5): amber callout gets an AI chip icon + cleaner list styling
-- GDPR Rights (Privacy §10): blue callout with EU stars icon (SVG inline)
-- CCPA Rights (Privacy §11): amber callout with CA bear icon (SVG inline)
-- No Government Affiliation (Terms §6): destructive callout gets a bold ⚠ warning banner header
-- Cookie categories (Cookie Policy §3–5): each category card gets a status chip ("Always On" / "Requires Consent")
+**State+category** (`/state-rights/california/vehicle`):
+- Title: `{StateName} {CategoryLabel} Rights — {PrimaryStatuteName}`
+- Description: `{StateName} consumers: your rights under {citation}. Find statute text, deadlines, and how to file a complaint with the {AG office name}.`
+- H1: "{StateName} {CategoryLabel} Consumer Rights"
+- FAQ schema: 3 questions auto-generated from the statute data
 
-**Terms of Service — Content Update**:
-Update §3 (Service Description) to include the 5 free tools:
-- State Consumer Rights Lookup
-- Statute of Limitations Calculator
-- Consumer News Hub
-- Free Letter Strength Analyzer
-- Dispute Outcome Tracker
+### No New Data Required
 
-Update `lastUpdated` to `February 19, 2026`.
-
-**Privacy Policy — Content Update**:
-- Add a §5 sub-point about the Letter Analyzer: "When you use the free Letter Analyzer, your submitted text is processed by AI for scoring but is not stored after analysis."
-- Add the Dispute Outcome Tracker data to §2 (data we collect): "Dispute outcome data you voluntarily log in the Dispute Tracker, including dispute titles, categories, amounts, and status."
-- Update `lastUpdated` to `February 19, 2026`.
-
-**Cookie Policy** — already well-structured, just gets the visual header banner.
-
----
+All statute data already exists in `stateSpecificLaws.ts`. The category-to-statute mapping already exists in `getStateStatutesForCategory()`. No new edge functions, no database changes.
 
 ## Files to Create / Modify
 
 | File | Action | Description |
 |---|---|---|
-| `src/pages/DeadlinesPage.tsx` | Edit | Full visual/content rebuild — SVG hero, step indicator, quick-reference table, FAQ accordion, "what if I miss it" panel |
-| `src/pages/StateRightsPage.tsx` | Edit | SVG map illustration, federal vs. state comparison card, AG complaint steps, notable states strip |
-| `src/pages/ConsumerNewsPage.tsx` | Edit | SVG source badges, impact level pill, improved card layout, "Why This Matters" sidebar panel |
-| `src/pages/LetterAnalyzerPage.tsx` | Edit | Animated SVG score ring, weak/strong example panel |
-| `src/pages/PrivacyPage.tsx` | Edit | Gradient header, sticky ToC layout, improved callout boxes, content updates, new date |
-| `src/pages/TermsPage.tsx` | Edit | Gradient header, sticky ToC, improved callout boxes, add free tools to §3, new date |
-| `src/pages/CookiePolicyPage.tsx` | Edit | Gradient header, sticky ToC layout on desktop |
+| `src/data/stateSpecificLaws.ts` | Edit | Add `getStateSlug()`, `getStateFromSlug()`, export `CATEGORY_LABELS` |
+| `src/pages/StateRightsStatePage.tsx` | Create | New page for `/state-rights/:stateSlug` — state hub with all statute types and category grid |
+| `src/pages/StateRightsCategoryPage.tsx` | Create | New page for `/state-rights/:stateSlug/:categorySlug` — targeted statute page with FAQ schema |
+| `src/App.tsx` | Edit | Add 2 new lazy route registrations |
+| `src/routes.ts` | Edit | Add 701 pre-rendered route strings |
+| `src/pages/StateRightsPage.tsx` | Edit | Add "View full page" links for each state selection; update state list items to link to hub pages |
 
-No new dependencies required — all SVG illustrations are inline React components. No new routes, no database changes, no edge functions.
+## What This Unlocks
 
----
-
-## Design Principles
-
-- All SVG illustrations are **inline React JSX** — no image files, no external requests, no loading states
-- Color palette strictly uses existing CSS variables (`hsl(var(--primary))`, `hsl(var(--accent))`, etc.) — no hardcoded hex
-- Animations use CSS transitions only (`transition-all`, `stroke-dashoffset`) — no JS animation libraries
-- All new content text is derived from the existing verified data in `consumerRightsContent.ts` and `stateSpecificLaws.ts` — no fabrication
-- Mobile-first: SVG illustrations are hidden on `sm:` breakpoint; text content always visible
+- **701 crawlable, pre-rendered HTML pages** each with unique title, description, H1, and canonical
+- **Targeting 650+ long-tail queries**: "Texas lemon law consumer rights", "Florida tenant rights statute", "California debt collection laws", etc.
+- **Internal link equity**: the hub page links to 51 state pages; each state page links to 13 category pages; each category page links to the matching letter template
+- **Featured snippet potential**: each state+category page's statute summary is structured for Google to pull as a definition answer
+- **Zero additional data entry** — all content comes from the existing verified dataset
