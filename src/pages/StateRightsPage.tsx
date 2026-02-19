@@ -45,7 +45,7 @@ const StateRightsPage = () => {
 
   const stateData = selectedState ? stateSpecificLaws[selectedState] : null;
   const statutes = selectedState && selectedCategory
-    ? getStatutesForCategory(selectedState, selectedCategory)
+    ? getStateStatutesForCategory(selectedState, selectedCategory)
     : selectedState && stateData
     ? [stateData.consumerProtection]
     : [];
