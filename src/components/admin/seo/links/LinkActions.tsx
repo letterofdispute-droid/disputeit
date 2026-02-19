@@ -88,12 +88,20 @@ export default function LinkActions({
       const { data, error } = await supabase.rpc('reconcile_link_counts' as any);
       if (error) throw error;
       const result = data as any;
+      const parts = [];
+      if (result.inbound_updated > 0 || result.outbound_updated > 0) {
+        parts.push(`Updated ${result.inbound_updated} inbound + ${result.outbound_updated} outbound counts`);
+      }
+      if (result.ghosts_reset > 0) {
+        parts.push(`Reset ${result.ghosts_reset} ghost suggestions back to approved`);
+      }
       toast({
         title: 'Counts reconciled',
-        description: `Updated ${result.inbound_updated} inbound and ${result.outbound_updated} outbound counts from actual HTML.`,
+        description: parts.length > 0 ? parts.join('. ') : 'All counts already accurate',
       });
       queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
       queryClient.invalidateQueries({ queryKey: ['link-counts'] });
     } catch (err: any) {
       toast({ title: 'Reconciliation failed', description: err.message, variant: 'destructive' });

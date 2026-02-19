@@ -501,16 +501,23 @@ export function useSemanticLinkScan() {
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('reconcile_link_counts');
       if (error) throw error;
-      return data as { inbound_updated: number; outbound_updated: number };
+      return data as { inbound_updated: number; outbound_updated: number; ghosts_reset: number };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
       queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+      const parts = [];
+      if (data.inbound_updated > 0 || data.outbound_updated > 0) {
+        parts.push(`Updated ${data.inbound_updated} inbound + ${data.outbound_updated} outbound counts`);
+      }
+      if (data.ghosts_reset > 0) {
+        parts.push(`Reset ${data.ghosts_reset} ghost suggestions back to approved`);
+      }
       toast({
         title: 'Counts reconciled',
-        description: `Updated ${data.inbound_updated} inbound + ${data.outbound_updated} outbound counts from actual HTML`,
+        description: parts.length > 0 ? parts.join('. ') : 'All counts already accurate, no changes needed',
       });
     },
     onError: (error) => {
