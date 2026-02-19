@@ -496,6 +496,90 @@ export function useSemanticLinkScan() {
 
   const isScanJobRunning = activeScanJob?.status === 'processing';
 
+  // Reconcile link counts mutation
+  const reconcileMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('reconcile_link_counts');
+      if (error) throw error;
+      return data as { inbound_updated: number; outbound_updated: number };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
+      queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+      toast({
+        title: 'Counts reconciled',
+        description: `Updated ${data.inbound_updated} inbound + ${data.outbound_updated} outbound counts from actual HTML`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Reconciliation failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Rescue orphans mutation
+  const rescueOrphansMutation = useMutation({
+    mutationFn: async (params?: { maxLinksPerArticle?: number }) => {
+      const { data, error } = await supabase.functions.invoke('rescue-orphans', {
+        body: params || {},
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Rescue scan failed');
+      return data as { success: boolean; jobId?: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['semantic-scan-job-active'] });
+      queryClient.invalidateQueries({ queryKey: ['rescue-job-active'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      toast({
+        title: 'Orphan rescue started',
+        description: 'Scanning orphan articles for inbound link opportunities...',
+      });
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (msg.includes('Failed to send') || msg.includes('Failed to fetch')) {
+        queryClient.invalidateQueries({ queryKey: ['rescue-job-active'] });
+        toast({
+          title: 'Rescue scan continues in background',
+          description: 'The scan is running. Suggestions will appear as they are found.',
+        });
+      } else {
+        toast({
+          title: 'Rescue scan failed',
+          description: msg,
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
+  // Fetch active rescue job
+  const { data: activeRescueJob } = useQuery({
+    queryKey: ['rescue-job-active'],
+    queryFn: async (): Promise<SemanticScanJob | null> => {
+      const { data, error } = await supabase
+        .from('semantic_scan_jobs')
+        .select('*')
+        .eq('category_filter', '__rescue_orphans__')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as SemanticScanJob | null;
+    },
+    refetchInterval: (query) => {
+      const job = query.state.data as SemanticScanJob | null;
+      return job?.status === 'processing' ? 2000 : false;
+    },
+  });
+
   // Smart scan mutation (AI-powered)
   const smartScanMutation = useMutation({
     mutationFn: async (params: {
@@ -600,5 +684,18 @@ export function useSemanticLinkScan() {
     // Reset scan timestamps
     resetScanTimestamps: resetScanTimestampsMutation.mutateAsync,
     isResettingScanTimestamps: resetScanTimestampsMutation.isPending,
+
+    // Reconcile link counts
+    reconcileCounts: reconcileMutation.mutate,
+    isReconciling: reconcileMutation.isPending,
+
+    // Rescue orphans
+    rescueOrphans: rescueOrphansMutation.mutate,
+    isRescuing: rescueOrphansMutation.isPending,
+    activeRescueJob,
+    isRescueRunning: activeRescueJob?.status === 'processing',
+    rescueJobProgress: activeRescueJob && activeRescueJob.total_items > 0
+      ? Math.min(100, Math.round((activeRescueJob.processed_items / activeRescueJob.total_items) * 100))
+      : 0,
   };
 }

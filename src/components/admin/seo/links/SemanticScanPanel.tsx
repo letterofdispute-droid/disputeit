@@ -65,6 +65,13 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     isRunningMaintenance,
     resetScanTimestamps,
     isResettingScanTimestamps,
+    reconcileCounts,
+    isReconciling,
+    rescueOrphans,
+    isRescuing,
+    activeRescueJob,
+    isRescueRunning,
+    rescueJobProgress,
   } = useSemanticLinkScan();
 
   useEffect(() => {
@@ -600,6 +607,21 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
+                  {/* Rescue job progress */}
+                  {isRescueRunning && activeRescueJob && (
+                    <div className="bg-primary/5 rounded-md p-2 border border-primary/20 space-y-1.5 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        <span className="text-xs font-medium">Rescuing orphans...</span>
+                      </div>
+                      <Progress value={rescueJobProgress} className="h-1.5" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{activeRescueJob.processed_items} / {activeRescueJob.total_items} orphans</span>
+                        <span>{activeRescueJob.total_suggestions} suggestions</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-2 max-h-32 overflow-y-auto space-y-0.5">
                     {orphanArticles.slice(0, 10).map((article) => (
                       <div key={article.id} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-background/50">
@@ -613,8 +635,31 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                       </p>
                     )}
                   </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => reconcileCounts()}
+                      disabled={isReconciling || isRescueRunning}
+                    >
+                      {isReconciling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                      Reconcile Counts
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => rescueOrphans({ maxLinksPerArticle: maxOutboundLinks })}
+                      disabled={isRescuing || isRescueRunning || isScanJobRunning}
+                    >
+                      {isRescuing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                      Rescue Orphans
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Run a scan in Step 2 to generate inbound link suggestions.
+                    <strong>Reconcile</strong> first to fix phantom orphans, then <strong>Rescue</strong> to create inbound links for truly unlinked articles.
                   </p>
                 </CollapsibleContent>
               </div>
