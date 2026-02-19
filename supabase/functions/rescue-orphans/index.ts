@@ -6,7 +6,10 @@ const corsHeaders = {
 };
 
 const BATCH_SIZE = 10;
-const MAX_OUTBOUND = 8;
+const RESCUE_MAX_OUTBOUND = 12;
+const RESCUE_SIMILARITY = 0.55;
+const RESCUE_MAX_RESULTS = 40;
+const RESCUE_MAX_SUGGESTIONS_PER_ORPHAN = 5;
 const SELF_CHAIN_TIMEOUT_MS = 10_000;
 
 Deno.serve(async (req) => {
@@ -22,7 +25,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     let jobId: string | undefined = body.jobId;
-    const maxLinksPerArticle = body.maxLinksPerArticle || MAX_OUTBOUND;
+    const maxLinksPerArticle = body.maxLinksPerArticle || RESCUE_MAX_OUTBOUND;
 
     // Step 1: Create or resume job
     if (!jobId) {
@@ -59,7 +62,7 @@ Deno.serve(async (req) => {
           total_items: orphanCount,
           processed_items: 0,
           total_suggestions: 0,
-          similarity_threshold: 0.70,
+          similarity_threshold: RESCUE_SIMILARITY,
           category_filter: '__rescue_orphans__',
         })
         .select('id')
@@ -99,7 +102,6 @@ Deno.serve(async (req) => {
     if (orphErr) throw orphErr;
 
     if (!orphans || orphans.length === 0) {
-      // No more orphans - complete job
       await supabase
         .from('semantic_scan_jobs')
         .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -123,8 +125,8 @@ Deno.serve(async (req) => {
           query_embedding: orphan.embedding,
           source_category: orphan.category_id,
           source_role: orphan.article_role || 'cluster',
-          similarity_threshold: 0.70,
-          max_results: 15,
+          similarity_threshold: RESCUE_SIMILARITY,
+          max_results: RESCUE_MAX_RESULTS,
           exclude_content_id: orphan.content_id,
         });
 
@@ -134,8 +136,6 @@ Deno.serve(async (req) => {
         }
 
         if (!candidates || candidates.length === 0) {
-          // No candidates - mark as processed by bumping inbound to -1 (sentinel) then back
-          // Actually just update next_scan_due_at so we skip it
           await supabase
             .from('article_embeddings')
             .update({ next_scan_due_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
@@ -144,18 +144,18 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // For each candidate, create a suggestion where candidate is source and orphan is target
+        // Sort candidates by outbound_count ascending to prefer sources with room
+        const sortedCandidates = [...candidates].sort(
+          (a: any, b: any) => (a.outbound_count ?? 0) - (b.outbound_count ?? 0)
+        );
+
         const suggestions: any[] = [];
-        for (const candidate of candidates) {
-          // Skip if candidate IS the orphan
+        for (const candidate of sortedCandidates) {
           if (candidate.slug === orphan.slug) continue;
 
-          // Skip if candidate has too many outbound links
-          const candidateOutbound = candidate.inbound_count ?? 0; // Note: we need outbound, not inbound
-          // We need to check the candidate's outbound_count separately
-          // The match_semantic_links RPC doesn't return outbound_count, so check directly
-          // Actually, for efficiency, just check existing suggestions count
-          
+          // Use outbound_count from the RPC result directly (no N+1 query needed)
+          if ((candidate.outbound_count ?? 0) >= maxLinksPerArticle) continue;
+
           // Check if suggestion already exists
           const { count: existingCount } = await supabase
             .from('link_suggestions')
@@ -165,16 +165,15 @@ Deno.serve(async (req) => {
 
           if (existingCount && existingCount > 0) continue;
 
-          // We need the source's content_id (blog post id) to create the suggestion
-          // candidate.id is the article_embeddings id, we need the blog_post id
+          // We need the source's content_id (blog post id) for source_post_id
+          // candidate.id is article_embeddings.id; we need the blog_post id
           const { data: sourceEmbed } = await supabase
             .from('article_embeddings')
-            .select('content_id, outbound_count')
+            .select('content_id')
             .eq('id', candidate.id)
             .single();
 
           if (!sourceEmbed?.content_id) continue;
-          if ((sourceEmbed.outbound_count ?? 0) >= maxLinksPerArticle) continue;
 
           // Pick best anchor text
           const anchorText = (orphan.anchor_variants && orphan.anchor_variants.length > 0)
@@ -192,12 +191,11 @@ Deno.serve(async (req) => {
             semantic_score: candidate.similarity,
             hierarchy_valid: candidate.hierarchy_valid,
             hierarchy_violation: candidate.hierarchy_note || null,
-            status: 'pending',
+            status: 'approved',
             context_snippet: `Rescue scan: linking from "${candidate.title}" to orphan article`,
           });
 
-          // Limit to 3 inbound suggestions per orphan to avoid over-linking
-          if (suggestions.length >= 3) break;
+          if (suggestions.length >= RESCUE_MAX_SUGGESTIONS_PER_ORPHAN) break;
         }
 
         // Insert suggestions
