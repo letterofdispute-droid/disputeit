@@ -8,7 +8,7 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-card">
       <div className="container-wide py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center mb-4">
@@ -89,6 +89,43 @@ const Footer = () => {
               <li>
                 <Link to="/consumer-news" className="text-muted-foreground hover:text-foreground transition-colors">
                   Consumer News
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* State Laws */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">State Laws</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/state-rights/california" className="text-muted-foreground hover:text-foreground transition-colors">
+                  California Consumer Rights
+                </Link>
+              </li>
+              <li>
+                <Link to="/state-rights/texas" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Texas Consumer Rights
+                </Link>
+              </li>
+              <li>
+                <Link to="/state-rights/new-york" className="text-muted-foreground hover:text-foreground transition-colors">
+                  New York Consumer Rights
+                </Link>
+              </li>
+              <li>
+                <Link to="/state-rights/florida" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Florida Consumer Rights
+                </Link>
+              </li>
+              <li>
+                <Link to="/state-rights/california/vehicle" className="text-muted-foreground hover:text-foreground transition-colors">
+                  CA Lemon Law Rights
+                </Link>
+              </li>
+              <li>
+                <Link to="/state-rights/texas/housing" className="text-muted-foreground hover:text-foreground transition-colors">
+                  TX Housing Rights
                 </Link>
               </li>
             </ul>

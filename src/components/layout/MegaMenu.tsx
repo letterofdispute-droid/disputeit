@@ -74,6 +74,15 @@ const freeTools = [
   },
 ];
 
+const notableStateLinks = [
+  { code: 'CA', name: 'California', slug: 'california' },
+  { code: 'TX', name: 'Texas', slug: 'texas' },
+  { code: 'NY', name: 'New York', slug: 'new-york' },
+  { code: 'FL', name: 'Florida', slug: 'florida' },
+  { code: 'MA', name: 'Massachusetts', slug: 'massachusetts' },
+  { code: 'IL', name: 'Illinois', slug: 'illinois' },
+];
+
 interface ListItemProps extends React.ComponentPropsWithoutRef<'a'> {
   title: string;
   description?: string;
@@ -319,6 +328,31 @@ const MegaMenu = () => {
                         </ResourceListItem>
                       ))}
                     </ul>
+                    {/* Notable state hub links */}
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Popular State Laws</p>
+                      <ul className="space-y-0.5">
+                        {notableStateLinks.map((s) => (
+                          <li key={s.code}>
+                            <Link
+                              to={`/state-rights/${s.slug}`}
+                              className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
+                            >
+                              <span className="font-mono text-[10px] w-5">{s.code}</span>
+                              {s.name}
+                            </Link>
+                          </li>
+                        ))}
+                        <li>
+                          <Link
+                            to="/state-rights"
+                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-primary hover:underline transition-colors"
+                          >
+                            Browse all 50 states →
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>

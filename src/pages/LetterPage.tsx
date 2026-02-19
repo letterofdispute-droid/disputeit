@@ -312,6 +312,45 @@ const LetterPage = () => {
 
       <Separator />
 
+      {/* State-Specific Laws Panel — cross-links to /state-rights/{state}/{categoryId} */}
+      <section className="py-8 bg-muted/20 border-b">
+        <div className="container-wide">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+              <div>
+                <h2 className="font-semibold text-foreground text-base">Know your state's specific rights before sending</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  State protections for {category.name.toLowerCase()} disputes are often stronger than federal law.
+                </p>
+              </div>
+              <Link
+                to={`/state-rights`}
+                className="text-sm text-primary hover:underline whitespace-nowrap"
+              >
+                All 50 states →
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { name: 'California', slug: 'california' },
+                { name: 'Texas', slug: 'texas' },
+                { name: 'Florida', slug: 'florida' },
+                { name: 'New York', slug: 'new-york' },
+                { name: 'Illinois', slug: 'illinois' },
+              ].map((state) => (
+                <Link
+                  key={state.slug}
+                  to={`/state-rights/${state.slug}/${categoryId}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                >
+                  {state.name} {category.name} Rights →
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SEO Content Section - Crawlable, informational */}
       <section className="py-12 md:py-16 bg-background">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
