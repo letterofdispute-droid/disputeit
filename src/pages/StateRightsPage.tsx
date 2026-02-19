@@ -135,12 +135,12 @@ const StateRightsPage = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Dispute Type <span className="text-muted-foreground">(optional)</span></label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <Select value={selectedCategory || 'all'} onValueChange={v => setSelectedCategory(v === 'all' ? '' : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="All consumer protection..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Consumer Protection</SelectItem>
+                        <SelectItem value="all">All Consumer Protection</SelectItem>
                         {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
                           <SelectItem key={id} value={id}>{label}</SelectItem>
                         ))}
