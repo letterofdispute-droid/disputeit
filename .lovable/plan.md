@@ -1,81 +1,59 @@
 
-# Fix Rescue Orphans Feedback Loop
+
+# Fix: Rescue Orphans Cooldown Bypass and Missing Feedback
 
 ## Problem
-When the user clicks "Rescue Orphans", the only feedback is an initial "started" toast. The self-chaining edge function runs in the background, but the UI never shows:
-- A progress bar during processing (it may flash too briefly or the polling misses the processing window)
-- A completion toast when the job finishes
-- An auto-refresh of the orphan list after completion
 
-The rescue job that just ran completed successfully (285 orphans processed, 16 suggestions found), but the user saw nothing.
+All 198 orphan articles have `next_scan_due_at` set 30 days in the future from the previous rescue run. The `rescue-orphans` function filters for orphans where `next_scan_due_at` is null or in the past, finds 0 scannable orphans, and returns immediately with `"No orphan articles found"`. No job is created, no toast is shown -- the user sees the progress bar briefly, then nothing changes.
 
-## Root Cause
-The `useSemanticLinkScan` hook has no `useEffect` watching `activeRescueJob` for state transitions. The discovery scan job (`activeScanJob`) has the same gap but is less noticeable because it takes longer. There is no mechanism to detect when a rescue job transitions from `processing` to `completed` and trigger a completion toast + data refresh.
+The previous rescue only found 16 suggestions for 285 orphans, meaning 269 orphans were scanned but no matches were found. Setting a 30-day cooldown on these makes sense for regular scans, but when the user explicitly clicks "Rescue Orphans", it should override the cooldown.
+
+## Root Causes
+
+1. **`rescue-orphans/index.ts`**: The orphan count query includes the `next_scan_due_at` filter, blocking all 198 cooldown orphans from being re-scanned.
+2. **`rescue-orphans/index.ts`**: When the function returns early ("No orphan articles found"), the response is a 200 with `success: true` but the UI mutation's `onSuccess` handler only shows a generic "started" toast and doesn't account for the "nothing to do" case.
+3. **`useSemanticLinkScan.ts`**: The `rescueOrphans` mutation doesn't check the response message or differentiate between "job started" and "nothing found".
 
 ## Changes
 
-### 1. Add completion detection effect in `SemanticScanPanel.tsx`
+### 1. `supabase/functions/rescue-orphans/index.ts` -- Reset cooldown before counting
 
-Add a `useEffect` that watches `activeRescueJob` status. When it transitions to `completed`:
-- Show a success toast with the results (X orphans processed, Y suggestions found)
-- Auto-refresh the orphan articles list
-- Auto-refresh link suggestions
+When no `jobId` is provided (fresh start), first reset `next_scan_due_at` to null for all orphan articles (inbound_count <= 0). This ensures the user's explicit "Rescue" action always processes all current orphans regardless of cooldown.
 
-Similarly, handle the `failed` status to show an error toast.
-
-```typescript
-// Track previous rescue job status to detect transitions
-const [prevRescueStatus, setPrevRescueStatus] = useState<string | null>(null);
-
-useEffect(() => {
-  if (!activeRescueJob) return;
-  const currentStatus = activeRescueJob.status;
-  
-  if (prevRescueStatus === 'processing' && currentStatus === 'completed') {
-    toast({
-      title: 'Orphan rescue complete',
-      description: `Processed ${activeRescueJob.processed_items} orphans, found ${activeRescueJob.total_suggestions} link suggestions`,
-    });
-    refetchOrphans();
-    // invalidate link suggestions
-  }
-  
-  if (prevRescueStatus === 'processing' && currentStatus === 'failed') {
-    toast({
-      title: 'Orphan rescue failed',
-      description: 'The rescue job encountered an error. Check scan history for details.',
-      variant: 'destructive',
-    });
-  }
-  
-  setPrevRescueStatus(currentStatus);
-}, [activeRescueJob?.status]);
+```
+-- Before counting orphans, reset cooldown for articles that are still orphans
+UPDATE article_embeddings
+SET next_scan_due_at = NULL
+WHERE embedding_status = 'completed'
+  AND content_type = 'article'
+  AND inbound_count <= 0
+  AND embedding IS NOT NULL
+  AND next_scan_due_at > NOW();
 ```
 
-### 2. Show rescue completion summary even after job finishes
+This is safe because:
+- Only affects articles with 0 inbound links (still genuinely orphaned)
+- Only triggers on a fresh start (no jobId), not during self-chaining batches
+- The cooldown will be re-set after each scan attempt
 
-In the orphan section UI, add a "recently completed" state (similar to the scan job's `scanJobRecentlyCompleted` logic) that shows:
-- "Rescue complete - 16 new suggestions found from 285 orphans"
-- A note to review them in the Link Review tab
-- This persists for 1 hour after completion so the user always sees the result
+### 2. `src/hooks/useSemanticLinkScan.ts` -- Handle "nothing found" response
 
-### 3. Ensure progress bar visibility during short jobs
+Update the `rescueOrphans` mutation's `onSuccess` to check for the `message` field. If it says "No orphan articles found", show a specific toast and don't set `justStartedRescue`.
 
-The rescue job self-chains in batches of 10. If batches process quickly, the polling (every 2s) might miss the `processing` state entirely. To handle this:
-- Show a "Rescue in progress..." indicator immediately after clicking the button (use local state `justStartedRescue`)  
-- Keep it visible until either the polling picks up the job or 10 seconds pass
-- This bridges the gap between the button click and the first poll response
+### 3. `src/components/admin/seo/links/SemanticScanPanel.tsx` -- Pass response handling
+
+Update the rescue button click handler to handle the "nothing to do" case by resetting `justStartedRescue` when the mutation returns without creating a job.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/admin/seo/links/SemanticScanPanel.tsx` | Add completion detection effect, "recently completed" rescue summary, and immediate progress indicator |
+| `supabase/functions/rescue-orphans/index.ts` | Reset `next_scan_due_at` for still-orphaned articles before counting (lines ~27-44) |
+| `src/hooks/useSemanticLinkScan.ts` | Update `rescueOrphans` mutation onSuccess to detect "no orphans" vs "job started" |
+| `src/components/admin/seo/links/SemanticScanPanel.tsx` | Use mutation callbacks to reset `justStartedRescue` on "nothing found" |
 
 ## Expected Outcome
-After clicking "Rescue Orphans":
-1. Immediate visual indicator shows "Rescue in progress..."
-2. If the job takes time, the progress bar with processed/total count appears
-3. When complete, a toast appears: "Rescue complete - 16 suggestions found from 285 orphans"  
-4. The orphan count auto-refreshes
-5. A completion summary persists in the UI for review
+
+- Clicking "Rescue Orphans" will always process all current orphans (bypasses cooldown for articles that are still unlinked)
+- If genuinely no orphans exist, a clear toast says "No orphan articles to rescue"
+- The progress bar and completion feedback work as designed for the full 198 orphan set
