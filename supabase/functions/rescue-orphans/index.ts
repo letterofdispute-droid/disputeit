@@ -27,13 +27,15 @@ Deno.serve(async (req) => {
     // Step 1: Create or resume job
     if (!jobId) {
       // Count orphans
+      const now = new Date().toISOString();
       const { count: orphanCount } = await supabase
         .from('article_embeddings')
         .select('*', { count: 'exact', head: true })
         .eq('embedding_status', 'completed')
         .eq('content_type', 'article')
         .lte('inbound_count', 0)
-        .not('embedding', 'is', null);
+        .not('embedding', 'is', null)
+        .or(`next_scan_due_at.is.null,next_scan_due_at.lte.${now}`);
 
       if (!orphanCount || orphanCount === 0) {
         return new Response(JSON.stringify({ success: true, message: 'No orphan articles found' }), {
@@ -73,6 +75,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 3: Fetch a batch of orphans with embeddings
+    const nowStr = new Date().toISOString();
     const { data: orphans, error: orphErr } = await supabase
       .from('article_embeddings')
       .select('id, content_id, slug, title, category_id, article_role, embedding, anchor_variants, primary_keyword, secondary_keywords')
@@ -80,6 +83,7 @@ Deno.serve(async (req) => {
       .eq('content_type', 'article')
       .lte('inbound_count', 0)
       .not('embedding', 'is', null)
+      .or(`next_scan_due_at.is.null,next_scan_due_at.lte.${nowStr}`)
       .order('id')
       .limit(BATCH_SIZE);
 
