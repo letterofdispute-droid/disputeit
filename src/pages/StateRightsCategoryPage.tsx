@@ -43,20 +43,50 @@ const FEDERAL_CONTEXT: Record<string, { law: string; citation: string; agency: s
   healthcare: { law: 'Affordable Care Act — Consumer Protections', citation: '42 U.S.C. § 300gg', agency: 'HHS' },
 };
 
-function generateFAQItems(stateName: string, categoryLabel: string, statutes: { name: string; citation: string; summary: string }[], agOffice: string) {
+// Category-specific statute-of-limitations context for deadline FAQ answers
+const CATEGORY_DEADLINES: Record<string, string> = {
+  vehicle: '4 years for warranty claims under the Magnuson-Moss Warranty Act; state lemon law deadlines vary but typically range from 18 months to 4 years from delivery or the end of the warranty period',
+  housing: '1 to 3 years depending on whether the claim is for breach of contract or a statutory violation such as security deposit wrongful withholding',
+  insurance: '1 to 5 years depending on the policy type and state law; most states require you to first exhaust the insurer\'s internal appeals process before suing',
+  financial: '1 year under the Fair Debt Collection Practices Act (FDCPA); state debt collection statutes typically allow 2 to 4 years',
+  contractors: '3 to 10 years for construction defects depending on state law; most states require a written notice of defect before filing suit',
+  'damaged-goods': '4 years under the Magnuson-Moss Warranty Act for written warranties; implied warranty claims vary by state but are typically 4 years',
+  refunds: '3 to 4 years for consumer fraud or unfair business practice claims; some states impose a 30-day or 3-month window for specific refund rights',
+  travel: '2 to 4 years depending on whether the claim is against an airline (federal), travel agency (state contract law), or cruise line (admiralty law, often 1 year)',
+  utilities: '2 to 4 years for billing disputes; most states require you to exhaust the utility company\'s internal dispute process and then file with the state utility commission before suing',
+  employment: '2 years for minimum wage and overtime claims under the FLSA (3 years for willful violations); state law may provide longer windows',
+  ecommerce: '3 to 4 years under most state consumer protection statutes; credit card chargeback rights must be exercised within 60 to 120 days of the statement date',
+  hoa: '1 to 4 years depending on whether the claim involves a covenant violation, discrimination, or breach of fiduciary duty',
+  healthcare: '2 to 3 years for insurance claim appeals; federal law (ACA) requires insurers to resolve internal appeals within 30 days for non-urgent claims',
+};
+
+function generateFAQItems(
+  stateName: string,
+  categoryLabel: string,
+  statutes: { name: string; citation: string; summary: string }[],
+  agOffice: string,
+  agWebsite: string,
+  categorySlug: string,
+  federalContext?: { law: string; citation: string; agency: string } | null,
+) {
   const primaryStatute = statutes[0];
+  const deadline = CATEGORY_DEADLINES[categorySlug] || '1 to 4 years depending on the specific claim type and applicable state or federal law';
+  const federalNote = federalContext
+    ? ` Federal law — specifically the ${federalContext.law} (${federalContext.citation}), enforced by the ${federalContext.agency} — may also apply and can be pursued simultaneously with your ${stateName} claim.`
+    : '';
+
   return [
     {
-      q: `What is the main ${stateName} ${categoryLabel} consumer protection law?`,
-      a: `The primary law governing ${categoryLabel.toLowerCase()} disputes in ${stateName} is the ${primaryStatute.name} (${primaryStatute.citation}). ${primaryStatute.summary}.`,
+      q: `What is ${stateName}'s ${categoryLabel.toLowerCase()} consumer protection law?`,
+      a: `${stateName}'s primary ${categoryLabel.toLowerCase()} consumer protection law is the ${primaryStatute.name} (${primaryStatute.citation}). ${primaryStatute.summary}. This law is enforced by the ${agOffice} and gives consumers the right to seek remedies including refunds, damages, and in many cases attorney fees if they prevail.${federalNote}`,
     },
     {
-      q: `How do I file a ${categoryLabel.toLowerCase()} complaint in ${stateName}?`,
-      a: `You can file a complaint with the ${agOffice} through their official consumer complaint portal. Before filing, it is recommended to send a formal dispute letter to the business citing ${primaryStatute.citation}, giving them an opportunity to resolve the matter. The AG office typically responds within 1–2 weeks.`,
+      q: `How long do I have to file a ${categoryLabel.toLowerCase()} claim in ${stateName}?`,
+      a: `In ${stateName}, the time limit (statute of limitations) for ${categoryLabel.toLowerCase()} claims is typically ${deadline}. It is strongly recommended to send a formal written demand letter citing ${primaryStatute.citation} as soon as possible after the dispute arises — this creates a record, puts the business on notice, and may resolve the matter without litigation. Waiting too long can permanently bar your right to sue.`,
     },
     {
-      q: `Can I sue under both ${stateName} and federal law for ${categoryLabel.toLowerCase()} issues?`,
-      a: `Yes. ${stateName} law and federal consumer protection laws are complementary, not exclusive. You may be able to assert claims under both, potentially increasing available remedies such as damages, attorney fees, and injunctive relief. Many ${stateName} courts allow plaintiffs to plead both state and federal claims simultaneously.`,
+      q: `How do I file a ${categoryLabel.toLowerCase()} complaint with the ${agOffice}?`,
+      a: `You can file a ${categoryLabel.toLowerCase()} complaint with the ${agOffice} online through their official consumer complaint portal at ${agWebsite}. Before filing, send a formal dispute letter to the business citing ${primaryStatute.citation} — this gives them a final opportunity to resolve the matter and strengthens your complaint if escalation is needed. The ${agOffice} typically acknowledges complaints within 1–2 weeks; if a pattern of violations exists, your complaint may trigger a broader investigation or enforcement action.`,
     },
   ];
 }
@@ -87,7 +117,7 @@ export default function StateRightsCategoryPage() {
     { name: categoryLabel, url: `https://letterofdispute.com/state-rights/${stateSlug}/${categorySlug}` },
   ];
 
-  const faqItems = generateFAQItems(stateName, categoryLabel, statutes, stateData.agOffice);
+  const faqItems = generateFAQItems(stateName, categoryLabel, statutes, stateData.agOffice, stateData.agWebsite, categorySlug!, federalContext);
 
   // JSON-LD FAQ schema
   const faqSchema = {
