@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { SITE_CONFIG, CATEGORIES, WRITING_STYLE_GUIDELINES, buildStateRightsLinkingContext } from "../_shared/siteContext.ts";
 import { validateContent, getViolationSummary, validateTitle, BANNED_TITLE_STARTERS } from "../_shared/contentValidator.ts";
 import { generateImageWithGoogle, imageResultToBuffer, isGoogleImageError, shouldBailOut } from "../_shared/googleImageGen.ts";
