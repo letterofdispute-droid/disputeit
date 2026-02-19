@@ -1,75 +1,81 @@
 
-# Fix Orphan Article Count: Complete Solution
+# Fix Rescue Orphans Feedback Loop
 
-## Root Causes Identified
+## Problem
+When the user clicks "Rescue Orphans", the only feedback is an initial "started" toast. The self-chaining edge function runs in the background, but the UI never shows:
+- A progress bar during processing (it may flash too briefly or the polling misses the processing window)
+- A completion toast when the job finishes
+- An auto-refresh of the orphan list after completion
 
-### Problem 1: `apply-links-bulk` doesn't fetch target category
-**File**: `supabase/functions/apply-links-bulk/index.ts`, line 431
+The rescue job that just ran completed successfully (285 orphans processed, 16 suggestions found), but the user saw nothing.
 
-The join `article_embeddings:target_embedding_id(primary_keyword, secondary_keywords)` does NOT select `category_id`. So line 510 (`targetEmbed?.category_id`) is always `undefined`, and it falls back to the source post's category -- which is wrong for cross-category links.
+## Root Cause
+The `useSemanticLinkScan` hook has no `useEffect` watching `activeRescueJob` for state transitions. The discovery scan job (`activeScanJob`) has the same gap but is less noticeable because it takes longer. There is no mechanism to detect when a rescue job transitions from `processing` to `completed` and trigger a completion toast + data refresh.
 
-**Fix**: Add `category_id` to the join select list.
+## Changes
 
-### Problem 2: AI content generator creates short-format links
-**File**: `supabase/functions/bulk-generate-articles/index.ts`, line 877
+### 1. Add completion detection effect in `SemanticScanPanel.tsx`
 
-When generating pillar articles, the AI is given cluster article slugs like `[slug: my-article-slug]` but not the full URL path. The AI then creates links as `<a href="/my-article-slug">Title</a>` instead of `/articles/category/slug`. There are **2,832** such short-format links in the database.
+Add a `useEffect` that watches `activeRescueJob` status. When it transitions to `completed`:
+- Show a success toast with the results (X orphans processed, Y suggestions found)
+- Auto-refresh the orphan articles list
+- Auto-refresh link suggestions
 
-**Fix**: Provide the full URL path to the AI instead of bare slugs, and add a post-processing step to fix any remaining bare slug links.
+Similarly, handle the `failed` status to show an error toast.
 
-### Problem 3: `reconcile_link_counts` regex only matches `/articles/category/slug`
-The reconciliation function misses the 2,832 short-format links when counting inbound links, causing those target articles to show zero inbound and appear as orphans.
+```typescript
+// Track previous rescue job status to detect transitions
+const [prevRescueStatus, setPrevRescueStatus] = useState<string | null>(null);
 
-**Fix**: Expand the regex to also match short-format links and validate them against known article slugs.
-
-## Implementation Plan
-
-### Step 1: Fix `apply-links-bulk` join (prevents future wrong URLs)
-
-In `supabase/functions/apply-links-bulk/index.ts`, change line 431:
+useEffect(() => {
+  if (!activeRescueJob) return;
+  const currentStatus = activeRescueJob.status;
+  
+  if (prevRescueStatus === 'processing' && currentStatus === 'completed') {
+    toast({
+      title: 'Orphan rescue complete',
+      description: `Processed ${activeRescueJob.processed_items} orphans, found ${activeRescueJob.total_suggestions} link suggestions`,
+    });
+    refetchOrphans();
+    // invalidate link suggestions
+  }
+  
+  if (prevRescueStatus === 'processing' && currentStatus === 'failed') {
+    toast({
+      title: 'Orphan rescue failed',
+      description: 'The rescue job encountered an error. Check scan history for details.',
+      variant: 'destructive',
+    });
+  }
+  
+  setPrevRescueStatus(currentStatus);
+}, [activeRescueJob?.status]);
 ```
-article_embeddings:target_embedding_id(primary_keyword, secondary_keywords)
-```
-to:
-```
-article_embeddings:target_embedding_id(primary_keyword, secondary_keywords, category_id)
-```
 
-### Step 2: Fix pillar article generation (prevents future short links)
+### 2. Show rescue completion summary even after job finishes
 
-In `supabase/functions/bulk-generate-articles/index.ts`, change line 877 to provide full URLs:
-```
-return `${i + 1}. "${s.suggested_title}" (${s.article_type})${published ? ` [URL: /articles/${plan.category_id}/${published.slug}]` : ''}`;
-```
+In the orphan section UI, add a "recently completed" state (similar to the scan job's `scanJobRecentlyCompleted` logic) that shows:
+- "Rescue complete - 16 new suggestions found from 285 orphans"
+- A note to review them in the Link Review tab
+- This persists for 1 hour after completion so the user always sees the result
 
-Also add a post-generation content sanitizer that rewrites any bare `<a href="/slug">` links to `/articles/category/slug` format by looking up the slug in `article_embeddings`.
+### 3. Ensure progress bar visibility during short jobs
 
-### Step 3: Update `reconcile_link_counts` RPC to handle ALL link formats
+The rescue job self-chains in batches of 10. If batches process quickly, the polling (every 2s) might miss the `processing` state entirely. To handle this:
+- Show a "Rescue in progress..." indicator immediately after clicking the button (use local state `justStartedRescue`)  
+- Keep it visible until either the polling picks up the job or 10 seconds pass
+- This bridges the gap between the button click and the first poll response
 
-New migration to update the database function. The updated function will:
-
-1. Extract links in `/articles/category/slug` format (existing)
-2. Extract short-format links (`href="/slug-name"`) and validate them against `article_embeddings.slug` to confirm they are real articles (new)
-3. UNION both sets for complete inbound/outbound counting
-4. Continue detecting and resetting ghost suggestions
-
-### Step 4: One-time cleanup of existing short-format links
-
-Create a one-off database query (not a permanent feature) that rewrites the 2,832 short-format article links in `blog_posts.content` to the correct `/articles/category/slug` format using data from `article_embeddings`. This will be run via the backend SQL tool.
-
-### Files Changed
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/apply-links-bulk/index.ts` | Add `category_id` to the embeddings join (line 431) |
-| `supabase/functions/bulk-generate-articles/index.ts` | Provide full URLs to AI, add post-generation link sanitizer |
-| New migration SQL | Update `reconcile_link_counts()` RPC to match short-format links |
-| One-time data fix | Rewrite existing short links to correct format |
+| `src/components/admin/seo/links/SemanticScanPanel.tsx` | Add completion detection effect, "recently completed" rescue summary, and immediate progress indicator |
 
-### Expected Outcome
-
-After deploying these changes:
-- Running "Reconcile Counts" will correctly detect ALL inbound links (both formats), immediately reducing the orphan count
-- The one-time cleanup rewrites the 2,832 short links to correct format, so future reconciliation uses one consistent pattern
-- Future article generation and link application will always produce `/articles/category/slug` format
-- No more ghost links or phantom orphans
+## Expected Outcome
+After clicking "Rescue Orphans":
+1. Immediate visual indicator shows "Rescue in progress..."
+2. If the job takes time, the progress bar with processed/total count appears
+3. When complete, a toast appears: "Rescue complete - 16 suggestions found from 285 orphans"  
+4. The orphan count auto-refreshes
+5. A completion summary persists in the UI for review
