@@ -428,7 +428,7 @@ async function processBatch(
     .select(`
       *,
       blog_posts!inner(id, content, slug, category_slug, article_type, content_plan_id),
-      article_embeddings:target_embedding_id(primary_keyword, secondary_keywords)
+      article_embeddings:target_embedding_id(primary_keyword, secondary_keywords, category_id)
     `)
     .eq('status', 'approved')
     .order('relevance_score', { ascending: false })
