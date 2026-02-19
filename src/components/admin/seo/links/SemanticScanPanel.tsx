@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Brain, Loader2, Sparkles, Database, RefreshCw, ChevronDown, ChevronUp, X, Play, RotateCcw, AlertTriangle, Trash2, Zap, Wrench, Link2Off, Search, CheckCircle2, Wand2, History, Clock, Check, Minus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,11 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [blogCategories, setBlogCategories] = useState<{ id: string; label: string }[]>([]);
   const [scanCategory, setScanCategory] = useState<string>('all');
   const [forceRescan, setForceRescan] = useState(false);
+  const [justStartedRescue, setJustStartedRescue] = useState(false);
+  const prevRescueStatusRef = useRef<string | null>(null);
 
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     semanticScan,
     isSemanticScanning,
@@ -73,6 +78,48 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     isRescueRunning,
     rescueJobProgress,
   } = useSemanticLinkScan();
+
+  // Detect rescue job completion
+  useEffect(() => {
+    const currentStatus = activeRescueJob?.status ?? null;
+    const prev = prevRescueStatusRef.current;
+
+    if (prev === 'processing' && currentStatus === 'completed') {
+      toast({
+        title: 'Orphan rescue complete',
+        description: `Processed ${activeRescueJob!.processed_items} orphans, found ${activeRescueJob!.total_suggestions} link suggestions`,
+      });
+      refetchOrphans();
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+      setJustStartedRescue(false);
+    }
+
+    if (prev === 'processing' && currentStatus === 'failed') {
+      toast({
+        title: 'Orphan rescue failed',
+        description: 'The rescue job encountered an error. Check scan history for details.',
+        variant: 'destructive',
+      });
+      setJustStartedRescue(false);
+    }
+
+    prevRescueStatusRef.current = currentStatus;
+  }, [activeRescueJob?.status]);
+
+  // Clear justStartedRescue once polling picks up the job
+  useEffect(() => {
+    if (justStartedRescue && isRescueRunning) {
+      setJustStartedRescue(false);
+    }
+  }, [justStartedRescue, isRescueRunning]);
+
+  // Auto-clear justStartedRescue after 15 seconds as fallback
+  useEffect(() => {
+    if (!justStartedRescue) return;
+    const timer = setTimeout(() => setJustStartedRescue(false), 15000);
+    return () => clearTimeout(timer);
+  }, [justStartedRescue]);
 
   useEffect(() => {
     fetchEmbeddingStats().then(setEmbeddingStats);
@@ -607,6 +654,17 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
+                  {/* Immediate progress indicator (before polling picks up) */}
+                  {justStartedRescue && !isRescueRunning && (
+                    <div className="bg-primary/5 rounded-md p-2 border border-primary/20 space-y-1.5 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        <span className="text-xs font-medium">Rescue in progress — waiting for first batch...</span>
+                      </div>
+                      <Progress value={0} className="h-1.5" />
+                    </div>
+                  )}
+
                   {/* Rescue job progress */}
                   {isRescueRunning && activeRescueJob && (
                     <div className="bg-primary/5 rounded-md p-2 border border-primary/20 space-y-1.5 mt-2">
@@ -618,6 +676,23 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{activeRescueJob.processed_items} / {activeRescueJob.total_items} orphans</span>
                         <span>{activeRescueJob.total_suggestions} suggestions</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rescue recently completed summary */}
+                  {!isRescueRunning && !justStartedRescue && activeRescueJob?.status === 'completed' && 
+                   activeRescueJob.completed_at && 
+                   (Date.now() - new Date(activeRescueJob.completed_at).getTime()) < 60 * 60 * 1000 && (
+                    <div className="flex items-center gap-2 text-xs p-2 bg-primary/10 rounded-md mt-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <div>
+                        <span className="font-medium text-primary">
+                          Rescue complete — {activeRescueJob.total_suggestions} suggestions from {activeRescueJob.processed_items} orphans
+                        </span>
+                        <p className="text-muted-foreground mt-0.5">
+                          Review new suggestions in the <strong>Link Review</strong> tab, then apply.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -651,10 +726,13 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
                     <Button
                       size="sm"
                       className="text-xs"
-                      onClick={() => rescueOrphans({ maxLinksPerArticle: maxOutboundLinks })}
-                      disabled={isRescuing || isRescueRunning || isScanJobRunning}
+                      onClick={() => {
+                        setJustStartedRescue(true);
+                        rescueOrphans({ maxLinksPerArticle: maxOutboundLinks });
+                      }}
+                      disabled={isRescuing || isRescueRunning || isScanJobRunning || justStartedRescue}
                     >
-                      {isRescuing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                      {(isRescuing || justStartedRescue) ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
                       Rescue Orphans
                     </Button>
                   </div>
