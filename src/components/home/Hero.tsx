@@ -64,20 +64,21 @@ const Hero = () => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/[0.06] text-primary text-sm font-medium mb-6 animate-fade-in">
               <ShieldCheck className="h-4 w-4" />
-              <span>Pre-Validated Letter Templates</span>
+              <span>Your Step-by-Step Dispute System</span>
             </div>
 
             {/* Headline */}
             <h1 className="font-serif text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold text-foreground leading-[1.1] mb-6 animate-fade-up">
-              Professional Dispute Letters,{' '}
-              <span className="text-accent">Without the Guesswork</span>
+              Resolve Your Dispute{' '}
+              <span className="text-accent">Step-by-Step</span>
+              {' '}— Without a Lawyer
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              Pre-validated letter templates with controlled language, consistent structure, and legal precision. 
-              No trial and error. Just predictable, professional results.
+              Describe your situation. Get the right letter, the fastest resolution path, and every agency complaint link — all in one place.
             </p>
+
 
             {/* AI Search Prompt */}
             <div className="animate-fade-up pb-4" style={{ animationDelay: '0.15s' }}>
