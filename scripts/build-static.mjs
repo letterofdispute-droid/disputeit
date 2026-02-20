@@ -62,13 +62,22 @@ const subcategoriesByCategory = {
   'hoa': ['fees', 'violations', 'maintenance', 'neighbor', 'governance'],
 };
 
-// Blog categories (from blogPosts.ts)
+// Blog categories (from blogPosts.ts) — all 14 active slugs
 const blogCategories = [
   'consumer-rights',
-  'landlord-tenant',
-  'travel-disputes',
-  'financial-tips',
-  'legal-guides',
+  'insurance',
+  'healthcare',
+  'utilities',
+  'vehicle',
+  'employment',
+  'housing',
+  'travel',
+  'financial',
+  'ecommerce',
+  'hoa',
+  'contractors',
+  'complaint-guides',
+  'legal-tips',
 ];
 
 // ============================================
@@ -356,6 +365,10 @@ function generateStaticSitemap() {
     { loc: '/privacy', priority: '0.3', changefreq: 'monthly' },
     { loc: '/terms', priority: '0.3', changefreq: 'monthly' },
     { loc: '/disclaimer', priority: '0.3', changefreq: 'monthly' },
+    { loc: '/deadlines', priority: '0.7', changefreq: 'weekly' },
+    { loc: '/consumer-news', priority: '0.6', changefreq: 'daily' },
+    { loc: '/analyze-letter', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/cookie-policy', priority: '0.3', changefreq: 'monthly' },
   ];
   
   const urls = staticPages.map(page => `
