@@ -1,5 +1,8 @@
 project_id = "koulmtfnkuapzigcplov"
 
+[auth]
+enable_manual_linking = true
+
 [functions.dispute-assistant]
 verify_jwt = false
 
