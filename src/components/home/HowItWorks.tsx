@@ -1,4 +1,4 @@
-import { FileText, Edit3, Download, Send } from 'lucide-react';
+import { MessageSquare, ClipboardList, FileCheck, CheckCircle } from 'lucide-react';
 
 interface Step {
   icon: React.ElementType;
@@ -9,27 +9,27 @@ interface Step {
 
 const steps: Step[] = [
   {
-    icon: FileText,
-    title: 'Choose Your Letter Type',
-    description: 'Select a letter template designed for your exact dispute type. No prompt engineering required.',
+    icon: MessageSquare,
+    title: 'Describe Your Dispute',
+    description: 'Answer a few guided questions about your situation. No legal jargon. Our AI identifies the right approach instantly.',
     step: '01',
   },
   {
-    icon: Edit3,
-    title: 'Fill in the Details',
-    description: 'Answer guided questions. No guessing what information is needed or how to phrase it.',
+    icon: ClipboardList,
+    title: 'Get Your Resolution Plan',
+    description: 'Receive a step-by-step strategy: the right letter, relevant agency links (CFPB, FTC, State AG), and chargeback guidance if applicable.',
     step: '02',
   },
   {
-    icon: Download,
+    icon: FileCheck,
     title: 'Generate Your Letter',
-    description: 'Get a pre-validated letter template with correct legal tone, proper structure, and appropriate deadlines.',
+    description: 'Your letter is built with legal-safe language, correct tone, and the exact citations needed for your dispute type and state.',
     step: '03',
   },
   {
-    icon: Send,
-    title: 'Send & Get Results',
-    description: 'Ready to send immediately. No editing, proofreading, or second-guessing required.',
+    icon: CheckCircle,
+    title: 'Track Until Resolved',
+    description: 'Use the Dispute Tracker to log progress, check off resolution steps, and mark your dispute resolved when you win.',
     step: '04',
   },
 ];
@@ -79,8 +79,7 @@ const HowItWorks = () => {
             How It Works
           </h2>
           <p className="text-lg text-muted-foreground">
-            Create a professional dispute letter in four simple steps. 
-            No legal knowledge required.
+            From first description to final resolution - your complete dispute toolkit in four steps.
           </p>
         </div>
 

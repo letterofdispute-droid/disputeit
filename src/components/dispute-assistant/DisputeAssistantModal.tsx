@@ -249,7 +249,7 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       INITIAL_MESSAGE,
       {
         role: 'assistant',
-        content: `Got it — you're dealing with ${disputeLabel}.${chargebackHint}${escalationHint}\n\nTell me the specifics of what happened and I'll find the right letter and resolution strategy for your situation.`,
+        content: `Got it - you're dealing with ${disputeLabel}.${chargebackHint}${escalationHint}\n\nTell me the specifics of what happened and I'll find the right letter and resolution strategy for your situation.`,
       },
     ]);
 

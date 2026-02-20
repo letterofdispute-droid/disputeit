@@ -36,7 +36,7 @@ export default function StateRightsStatePage() {
   const stateName = US_STATES.find(s => s.code === stateCode)?.name || stateCode;
   const primaryStatute = stateData.consumerProtection;
 
-  const title = `${stateName} Consumer Rights Laws — All Statutes & AG Contact | Letter of Dispute`;
+  const title = `${stateName} Consumer Rights Laws | All Statutes & AG Contact | Letter of Dispute`;
   const description = `Find ${stateName}'s consumer protection law (${primaryStatute.citation}), lemon law, tenant rights, and more. Includes ${stateData.agOffice} contact details.`;
 
   const breadcrumbs = [
@@ -108,7 +108,7 @@ export default function StateRightsStatePage() {
               {stateName} Consumer Protection Laws
             </h1>
             <p className="text-lg text-primary-foreground/80 mb-6 leading-relaxed max-w-2xl">
-              Your complete guide to {stateName}'s consumer protection statutes — primary law, lemon law, tenant rights, and your Attorney General's contact.
+              Your complete guide to {stateName}'s consumer protection statutes: primary law, lemon law, tenant rights, and your Attorney General's contact.
             </p>
             <div className="flex flex-wrap gap-3">
               <div className="bg-primary-foreground/10 rounded-lg px-3 py-2 text-center">
@@ -283,7 +283,7 @@ export default function StateRightsStatePage() {
         {/* All 13 Category Cards */}
         <div>
           <h2 className="font-serif text-2xl font-bold text-foreground mb-2">
-            {stateName} Consumer Rights — All 13 Categories
+            {stateName} Consumer Rights: All 13 Categories
           </h2>
           <p className="text-muted-foreground mb-6">
             Each category page shows the specific statutes, deadlines, and a direct link to write a dispute letter.

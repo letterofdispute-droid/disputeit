@@ -208,7 +208,7 @@ export default function LetterAnalyzerPage() {
   return (
     <Layout>
       <SEOHead
-        title="Free AI Dispute Letter Analyzer — Score Your Letter | Letter of Dispute"
+        title="Free AI Dispute Letter Analyzer | Score Your Letter | Letter of Dispute"
         description="Paste your draft dispute letter and get a free AI score across 5 key dimensions: legal citations, deadlines, evidence, tone, and clarity. No signup required."
         canonicalPath="/analyze-letter"
         breadcrumbs={breadcrumbs}
@@ -234,13 +234,13 @@ export default function LetterAnalyzerPage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-primary-foreground/10 rounded-full px-4 py-1.5 mb-5">
                 <Sparkles className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-sm text-primary-foreground/80">Free AI Tool — 3 Analyses Per Day</span>
+                <span className="text-sm text-primary-foreground/80">Free AI Tool - 3 Analyses Per Day</span>
               </div>
               <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary-foreground mb-4 leading-tight">
                 Is Your Dispute Letter Strong Enough?
               </h1>
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Paste your draft and get an instant AI score across 5 key dimensions. Know exactly what to improve before you send — for free.
+                Paste your draft and get an instant AI score across 5 key dimensions. Know exactly what to improve before you send, for free.
               </p>
             </div>
             {/* Score ring preview */}
@@ -278,7 +278,7 @@ export default function LetterAnalyzerPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Dispute Category <span className="text-muted-foreground">(optional — improves scoring accuracy)</span></label>
+                    <label className="text-sm font-medium text-foreground">Dispute Category <span className="text-muted-foreground">(optional - improves scoring accuracy)</span></label>
                     <Select value={category || 'general'} onValueChange={v => setCategory(v === 'general' ? '' : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select dispute type..." />

@@ -75,7 +75,7 @@ const CategoryGuidePage = () => {
   return (
     <Layout>
       <SEOHead
-        title={`${guide.title} | Consumer Rights Guide — Letter of Dispute`}
+        title={`${guide.title} | Consumer Rights Guide | Letter of Dispute`}
         description={guide.introduction.slice(0, 155) + '...'}
         canonicalPath={`/guides/${categoryId}`}
         faqItems={guide.faqItems}
