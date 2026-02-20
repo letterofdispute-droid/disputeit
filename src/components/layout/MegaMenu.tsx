@@ -79,8 +79,6 @@ const notableStateLinks = [
   { code: 'TX', name: 'Texas', slug: 'texas' },
   { code: 'NY', name: 'New York', slug: 'new-york' },
   { code: 'FL', name: 'Florida', slug: 'florida' },
-  { code: 'MA', name: 'Massachusetts', slug: 'massachusetts' },
-  { code: 'IL', name: 'Illinois', slug: 'illinois' },
 ];
 
 interface ListItemProps extends React.ComponentPropsWithoutRef<'a'> {
@@ -126,27 +124,20 @@ interface ResourceListItemProps extends React.ComponentPropsWithoutRef<'a'> {
   children?: React.ReactNode;
 }
 
-const ResourceListItem = ({ className, title, children, icon: Icon, href, ...props }: ResourceListItemProps) => {
+const ResourceListItem = ({ className, title, icon: Icon, href, ...props }: ResourceListItemProps) => {
   return (
     <li>
       <NavigationMenuLink asChild>
         <Link
           to={href}
           className={cn(
-            'block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground',
+            'flex items-center gap-2 select-none rounded-lg px-3 py-2 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground',
             className
           )}
           {...props}
         >
-          <div className="flex items-center gap-2">
-            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-            <div className="text-sm font-medium leading-none">{title}</div>
-          </div>
-          {children && (
-            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground mt-1">
-              {children}
-            </p>
-          )}
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+          <div className="text-sm font-medium leading-none">{title}</div>
         </Link>
       </NavigationMenuLink>
     </li>
@@ -186,7 +177,7 @@ const MegaMenu = () => {
               Letter Templates
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[800px] p-4">
+              <div className="w-[800px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 {/* AI Helper Prompt */}
                 <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
                   <p className="text-sm text-muted-foreground mb-1.5">Not sure which letter you need?</p>
@@ -199,15 +190,16 @@ const MegaMenu = () => {
                   </button>
                 </div>
 
-                {/* Category grid with descriptions - 3 columns */}
+                {/* Category grid - compact icon + name + short tagline */}
                 <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
+                    const shortDesc = category.description.split(',')[0].slice(0, 45);
                     return (
                       <ListItem
                         key={category.id}
                         title={category.name}
-                        description={category.description}
+                        description={shortDesc}
                         href={`/templates/${category.id}`}
                         icon={Icon}
                       />
@@ -235,7 +227,7 @@ const MegaMenu = () => {
               Guides
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[750px] p-4">
+              <div className="w-[750px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 {/* Top pick banner */}
                 <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
                   <p className="text-xs text-muted-foreground mb-1">Popular guide</p>
@@ -248,10 +240,11 @@ const MegaMenu = () => {
                   </Link>
                 </div>
 
-                {/* Category grid with descriptions - 3 columns */}
+                {/* Category grid - compact, 3 columns */}
                 <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
+                    const shortDesc = category.description.split(',')[0].slice(0, 45);
                     return (
                       <li key={category.id}>
                         <NavigationMenuLink asChild>
@@ -263,11 +256,9 @@ const MegaMenu = () => {
                               <Icon className="h-3.5 w-3.5" style={{ color: category.color }} />
                             </div>
                             <div className="flex flex-col gap-0.5 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-medium leading-tight">{category.name.replace(' & ', ' ')}</span>
-                              </div>
+                              <span className="text-sm font-medium leading-tight">{category.name}</span>
                               <span className="text-xs text-muted-foreground line-clamp-1 leading-snug">
-                                {category.description.split('.')[0]}
+                                {shortDesc}
                               </span>
                             </div>
                           </Link>
@@ -297,40 +288,36 @@ const MegaMenu = () => {
               Resources
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[520px] p-4">
+              <div className="w-[520px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-1">
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">General</p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-0.5">
                       {resources.map((resource) => (
                         <ResourceListItem
                           key={resource.title}
                           title={resource.title}
                           href={resource.href}
                           icon={resource.icon}
-                        >
-                          {resource.description}
-                        </ResourceListItem>
+                        />
                       ))}
                     </ul>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Free Tools</p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-0.5">
                       {freeTools.map((tool) => (
                         <ResourceListItem
                           key={tool.title}
                           title={tool.title}
                           href={tool.href}
                           icon={tool.icon}
-                        >
-                          {tool.description}
-                        </ResourceListItem>
+                        />
                       ))}
                     </ul>
                     {/* Notable state hub links */}
                     <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Popular State Laws</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-2">Popular State Laws</p>
                       <ul className="space-y-0.5">
                         {notableStateLinks.map((s) => (
                           <li key={s.code}>
