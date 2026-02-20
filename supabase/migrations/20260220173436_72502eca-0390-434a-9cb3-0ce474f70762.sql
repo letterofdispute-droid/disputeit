@@ -1,0 +1,1 @@
+ALTER TABLE public.dispute_outcomes ADD COLUMN IF NOT EXISTS resolution_steps JSONB DEFAULT '[]'::jsonb;

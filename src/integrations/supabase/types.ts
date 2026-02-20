@@ -681,6 +681,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          resolution_steps: Json | null
           status: string
           title: string
           updated_at: string
@@ -693,6 +694,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          resolution_steps?: Json | null
           status?: string
           title: string
           updated_at?: string
@@ -705,6 +707,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          resolution_steps?: Json | null
           status?: string
           title?: string
           updated_at?: string
