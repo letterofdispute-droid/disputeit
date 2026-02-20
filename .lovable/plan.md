@@ -1,72 +1,68 @@
 
-# Megamenu Visual Redesign — Reference-Matched Card Layout
+# Sitemap Gaps — 3 Categories of Missing URLs
 
-## What the Reference Images Show (vs. Current)
+The current sitemap is missing URLs in three areas. Here is the full audit.
 
-The reference designs (image-219, image-220, image-221) share a clear visual pattern that's very different from the current implementation:
+## Gap 1 — Static Pages (4 missing routes)
 
-| Attribute | Current | Reference Target |
+The `generateStaticSitemap()` function in `scripts/build-static.mjs` lists 12 pages. Comparing against `App.tsx`, four public indexable routes are absent:
+
+| Route | Priority | Why it matters |
 |---|---|---|
-| Icon size | Tiny (3.5 × 3.5 in a small box) | Large icon tile (~32–40px) with a soft colored/neutral square background |
-| Description | 1-line clamp, very short | Full 2-line description — readable, informative |
-| Row spacing | Tight `gap-1` / `p-2.5` | Generous — items breathe, ~`py-3` between rows |
-| Column headers | Styled "uppercase tracking-wider" labels | Plain gray text, left-aligned, larger than current |
-| Item density | 3 columns × 4–5 rows (very packed) | 3 columns × 3 rows max, or 2 columns × 3 rows for resources |
-| Hover state | `bg-accent/10` subtle tint | Implied subtle hover, nothing aggressive |
-| Overall feel | Dashboard-like, dense | Clean SaaS / product navigation |
+| `/deadlines` | 0.7 | Statute of limitations hub — high search value |
+| `/consumer-news` | 0.6 | Fresh content page, signals crawl frequency |
+| `/analyze-letter` | 0.7 | Free tool — search intent for "analyze dispute letter" |
+| `/cookie-policy` | 0.3 | Legal page — low value but complete for crawlers |
 
-## Changes by Menu Panel
+**Fix**: Add these 4 entries to `staticPages` array in `generateStaticSitemap()`.
 
-### 1 — Letter Templates panel
-- Replace `ListItem` with a new `CardItem` component
-- Icon: render at `h-8 w-8` inside a `p-2 rounded-xl` tile with the category color tinted background (like `bg-[color]/10`)
-- Title: `text-sm font-semibold` (bold, not just medium)
-- Description: full `description.split('.')[0]` (first sentence, not just first comma-clause) — shown on 2 lines with `line-clamp-2 text-xs text-muted-foreground mt-0.5`
-- Grid: keep 3 columns but increase row gap to `gap-x-2 gap-y-1`
-- Each cell padding: `p-3` instead of `p-2.5`
-- Remove the inline banner (the "Not sure which letter?" prompt box) and replace with a cleaner footer row that includes both "Browse all templates →" and a "Get AI Help" button inline
+## Gap 2 — Blog Article Category Pages (9 missing slugs)
 
-### 2 — Guides panel
-- Same `CardItem` treatment: large icon with category-colored background, bold title, 2-line description
-- Category name used as-is (no string replacement)
-- Short description: `category.description.split('.')[0]` (first full sentence, naturally short)
-- Grid: 3 columns, generous padding
+The build script hardcodes `blogCategories` as 5 old slugs that no longer match the live data:
 
-### 3 — Resources panel
-- Restructure as a **2-column card grid** (General + Free Tools side by side), no column headers with uppercase tracking — just plain `text-sm text-muted-foreground font-medium` section labels
-- Each item in the `ResourceCardItem` component: larger icon (`h-5 w-5`), bold title, description shown (currently stripped — bring descriptions back since there's space at this card size)
-- Popular State Laws: move to a thin `border-t` footer strip at bottom of the panel, displaying CA / TX / NY / FL as inline chips → "Browse all 50 →"
-- Overall panel width stays `w-[520px]`
+**Script has (5 stale entries):**
+`consumer-rights`, `landlord-tenant`, `travel-disputes`, `financial-tips`, `legal-guides`
 
-## Component Changes
+**Actual categories in `src/data/blogPosts.ts` (14 entries):**
+`consumer-rights`, `insurance`, `healthcare`, `utilities`, `vehicle`, `employment`, `housing`, `travel`, `financial`, `ecommerce`, `hoa`, `contractors`, `complaint-guides`, `legal-tips`
 
-### New `CardItem` component (replaces `ListItem` for Templates + Guides)
-```text
-- Large icon in colored rounded tile
-- Bold title
-- 2-line description
-- Generous padding
-- Hover: subtle bg tint + slight shadow or border change
+9 category index pages (e.g. `/articles/insurance`, `/articles/healthcare`) are generating broken 404 URLs in the blog sitemap and missing real ones. Google may be crawling the old 5 stale URLs and hitting 404s.
+
+**Fix**: Replace the hardcoded `blogCategories` array in the build script with the correct 14 slugs.
+
+## Gap 3 — `sitemap-categories.xml` Missing Article Category Pages
+
+The `generateCategoriesSitemap()` function covers `/templates/:id` + `/guides/:id` but the blog category hub pages (`/articles/:category`) are only included inside `sitemap-blog-1.xml`. This is structurally fine (they live in the blog sitemap), but the issue is Gap 2 means the wrong slugs are being written there right now.
+
+## What Does NOT Need Changing
+
+- `sitemap-state-rights.xml` — 715 URLs, correct structure ✅
+- `sitemap-templates.xml` — all template routes correctly inferred ✅
+- `sitemap-categories.xml` — all 13 template categories + subcategories + guide pages ✅
+- Blog post URLs — fetched live from the database, paginated correctly ✅
+- Sitemap index structure — all sub-sitemaps referenced ✅
+
+## Implementation
+
+**Single file changed: `scripts/build-static.mjs`**
+
+### Change 1 — `generateStaticSitemap()` (lines 346–359)
+Add 4 missing static routes to the `staticPages` array:
+```
+{ loc: '/deadlines',      priority: '0.7', changefreq: 'weekly'  },
+{ loc: '/consumer-news',  priority: '0.6', changefreq: 'daily'   },
+{ loc: '/analyze-letter', priority: '0.7', changefreq: 'monthly' },
+{ loc: '/cookie-policy',  priority: '0.3', changefreq: 'monthly' },
 ```
 
-### Updated `ResourceCardItem` component (replaces `ResourceListItem`)
-```text
-- Icon: h-5 w-5 in a soft gray/primary-tinted tile
-- Title: font-semibold
-- Description: shown (text-xs text-muted-foreground), 1-line clamp
-- Layout: flex row, icon left, text right
-- Padding: py-2.5 px-3
+### Change 2 — `blogCategories` constant (lines 66–72)
+Replace the 5 stale slugs with all 14 correct slugs matching `src/data/blogPosts.ts`:
+```
+consumer-rights, insurance, healthcare, utilities, vehicle,
+employment, housing, travel, financial, ecommerce,
+hoa, contractors, complaint-guides, legal-tips
 ```
 
-## File Changed
+After these two changes, the sitemap will cover all publicly indexable URLs in the application. The sitemap index structure (`sitemap.xml`) does not need any changes — the same sub-sitemap files are referenced, they will simply contain the correct URLs.
 
-Only `src/components/layout/MegaMenu.tsx` — no data files, no routing, no new files.
-
-## Detailed Steps
-
-1. Add `CardItem` component at top of file — `icon`, `title`, `description`, `href` props, with large icon tile using category color
-2. Add `ResourceCardItem` component — `icon`, `title`, `description`, `href`, icon in neutral soft-tinted square
-3. **Letter Templates panel**: Replace `<ListItem>` with `<CardItem>`, pass `description={category.description.split('.')[0]}`, replace the `bg-primary/5 rounded-lg border` banner with a clean 2-button footer row (Browse all | AI Help)
-4. **Guides panel**: Replace inline `<Link>` blocks with `<CardItem>`, pass `description={category.description.split('.')[0]}`, remove the top pick banner or convert to a slim 1-line footer note
-5. **Resources panel**: Replace `<ResourceListItem>` with `<ResourceCardItem>` bringing back descriptions, move Popular State Laws to a bottom `border-t` strip of inline chips
-6. Ensure all panels retain `max-h-[calc(100vh-5rem)] overflow-y-auto` safety guard
+**Total new URLs added: ~17** (4 static + 9 blog category index pages + correcting 5 stale ones that would 404).
