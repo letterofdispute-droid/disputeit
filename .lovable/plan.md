@@ -1,115 +1,67 @@
 
-# Fix Persistent Orphan Articles — Root Cause & Permanent Solution
+# Megamenu Refactor — Fix All 3 Visual Issues
 
-## The Actual Problem (Diagnosed)
+## Problems Identified from Screenshots
 
-After running Rescue Orphans twice, the 290 suggestions were correctly created with `status = 'approved'`. However, when `apply-links-bulk` ran, it rejected **1,956 of them** with `hierarchy_violation: 'Outbound cap reached'`.
+### Issue 1 — Letter Templates menu (image-218)
+Items display full descriptions which are verbose (e.g. "Dispute poor workmanship, project abandonment, cost overruns, or service issues."). On a 13-column grid, descriptions truncate awkwardly mid-sentence. The `line-clamp-2` allows 2 lines of description but some names already wrap, making rows uneven.
 
-The bug is in how `apply-links-bulk` calculates whether a source article has room for more links:
+**Fix**: Shorten the description shown in the menu to a tight 1-line version (first 4–5 words with "..."), or switch to icon + name only (no description) for a cleaner, more scannable list. Given the 3-column grid and 13 categories, the cleanest approach is a compact icon + name layout with a short one-line subtext.
 
-```ts
-// Current broken logic (line 455-461 of apply-links-bulk/index.ts)
-const { count: alreadyApplied } = await supabaseAdmin
-  .from('link_suggestions')
-  .select('id', { count: 'exact', head: true })
-  .eq('source_post_id', postId)
-  .eq('status', 'applied');   // ← counts DB rows, NOT actual HTML links
+### Issue 2 — Guides menu (image-216)
+The `category.name.replace(' & ', ' ')` transform creates awkward names ("Utilities Telecommunications", "Contractors Home Improvement"). The `line-clamp-1` on the description (which uses `.split('.')[0]`) truncates mid-word. Items with 2-line names (Utilities Telecommunications, E-commerce Online Services) misalign the grid.
 
-const remainingSlots = maxOutbound - (alreadyApplied || 0);  // ← wrong counter
+**Fix**: Keep the `&` in category names. Switch descriptions to a pre-defined short tagline (3–5 words) that never wraps, e.g. "Billing & service disputes". Use `line-clamp-1` only on the short tagline, not the full description.
+
+### Issue 3 — Resources menu (image-217)
+The right column stacks: 4 Free Tools (with descriptions) + "Popular State Laws" header + 6 state links + "Browse all" = exceeds viewport height on a 14" laptop (~768px). The last 1–2 items and the "Browse all 50 states →" link are clipped.
+
+**Fix**: Reduce the Resources menu height by:
+- Making Free Tools items use compact single-line layout (title + short description on same line, no block stacking)
+- Reducing the state links from 6 to 4 (CA, TX, NY, FL — the 4 most popular)
+- Moving "Browse all 50 states →" to be inline rather than a separate list item
+
+## Implementation Plan
+
+### File: `src/components/layout/MegaMenu.tsx`
+
+**Change 1 — Letter Templates grid**: Replace the full `description` prop with a short menu tagline. Add a `menuLabel` field to the ListItem or derive a 40-char truncation. The cleaner approach: define a `SHORT_DESCRIPTIONS` map keyed by category ID, or truncate to first clause before the comma.
+
+Since `templateCategories` doesn't have a short label, the cleanest solution is to truncate descriptions inline: use only the text up to the first comma, or first 40 characters. This avoids touching data files.
+
+**Change 2 — Guides grid**: Remove the `.replace(' & ', ' ')` so names render correctly ("Utilities & Telecommunications"). Use the truncated description approach (first clause) for consistency with the Templates menu.
+
+**Change 3 — Resources menu**: Make the right column more compact:
+- Switch `ResourceListItem` for Free Tools to a slim 1-row layout with title and icon (no description paragraph, or inline description)  
+- Reduce `notableStateLinks` to 4 entries: CA, TX, NY, FL
+- Keep "Browse all 50 states →" as the 5th item inline
+
+**Change 4 — Resources menu max-height**: Add `max-h-[calc(100vh-80px)] overflow-y-auto` on the content `div` as a safety net so it can never overflow the viewport.
+
+## Exact Changes
+
+```text
+File: src/components/layout/MegaMenu.tsx
 ```
 
-This counts `link_suggestions` rows with `status='applied'` — but **3,615 articles** have 8+ applied suggestion rows in the DB while their actual embedded HTML link count (`outbound_count`) is far lower. Over time, partial runs, content saves, and reconciliation have created a large divergence between suggestion counts and real link counts. Every rescue candidate gets blocked by this ghost cap.
+1. **`notableStateLinks`** — trim from 6 to 4 entries (remove MA, IL)
 
-**Confirmed by data:**
-- 1,956 rescue suggestions rejected with "Outbound cap reached"
-- 3,615 articles flagged as ghost-capped (applied suggestion count ≥ 8, actual outbound_count < 8)
-- 0 approved rescue suggestions currently exist — they were all rejected during apply
+2. **`ResourceListItem` component** — remove the description `<p>` block to make each item a single compact row (icon + title), keeping it clean and short
 
-## The Fix — 3-Part Plan
+3. **Letter Templates `NavigationMenuContent`** — in the `<ul>` grid, pass only `title` and `icon` (no description) so each cell is compact and uniform height. Add `description` back as a tooltip or keep a truncated version (first sentence only, max 50 chars via slice)
 
-### Fix 1 — `apply-links-bulk`: Use `outbound_count` from `article_embeddings` (not suggestion count)
+4. **Guides `NavigationMenuContent`** — fix the `.replace(' & ', ' ')` → keep category name as-is. Use truncated description (before first comma)
 
-**File: `supabase/functions/apply-links-bulk/index.ts`** (lines 455–461)
+5. **Resources outer div** — add `max-h-[calc(100vh-5rem)] overflow-y-auto` so it can never clip
 
-Replace the expensive and inaccurate suggestion-count query with a single lookup of the source article's `outbound_count` from `article_embeddings`. This is the reconciled, accurate count of links actually embedded in the HTML:
+6. **Resources Free Tools section** — switch to compact single-line items (icon + title, no description) since descriptions are already shown on the actual pages
 
-```ts
-// AFTER FIX: use actual embedded link count
-const { data: sourceEmbed } = await supabaseAdmin
-  .from('article_embeddings')
-  .select('outbound_count')
-  .eq('content_id', postId)
-  .single();
+## Summary Table
 
-const currentOutbound = sourceEmbed?.outbound_count ?? 0;
-const remainingSlots = maxOutbound - currentOutbound;
-```
+| Menu | Issue | Fix |
+|---|---|---|
+| Letter Templates | Long descriptions make rows uneven, last item overflows | Remove/truncate descriptions in grid cells |
+| Guides | `replace()` strips `&`, `line-clamp-1` on long text clips mid-word | Keep `&`, use short first-clause text |
+| Resources | Right column too tall, clips Popular State Laws section | Compact Free Tools items, reduce state list to 4, add max-height safety net |
 
-This is the same `outbound_count` that `reconcile_link_counts` keeps accurate and that the semantic scan uses for its own cap check. Using it in the apply phase makes all three stages consistent.
-
-### Fix 2 — `rescue-orphans`: Re-insert suggestions with correct `source_post_id` type
-
-**File: `supabase/functions/rescue-orphans/index.ts`** (lines 165–195)
-
-There is a secondary bug: the rescue function inserts `source_post_id: sourceEmbed.content_id` — but `content_id` in `article_embeddings` is the blog post's UUID, while `source_post_id` in `link_suggestions` must match `blog_posts.id`. Currently the rescue function does an extra N+1 lookup to fetch `content_id`, but then also needs to ensure `target_embedding_id` is set correctly so `apply-links-bulk` can join to get the target's keywords.
-
-The rescue function also uses `candidate.id` (which is `article_embeddings.id`, not the blog post ID) as the source — this needs one additional join. Looking at the code, `sourceEmbed.content_id` is correctly fetched (line 170-176). The issue is purely the cap counter.
-
-### Fix 3 — Re-queue the 58 orphans for a new rescue pass after deploying Fix 1
-
-After deploying the corrected `apply-links-bulk`, the existing rejected rescue suggestions cannot be un-rejected automatically. We need to:
-
-1. Reset the 1,956 rejected `semantic-reverse` suggestions for the 58 orphan targets back to `approved` status via a database migration
-2. Then trigger Apply Links from the admin UI — this time the correct `outbound_count` cap will be used and links will be inserted successfully
-
-The SQL migration:
-```sql
-UPDATE link_suggestions
-SET status = 'approved', hierarchy_violation = null
-WHERE anchor_source = 'semantic-reverse'
-  AND status = 'rejected'
-  AND hierarchy_violation = 'Outbound cap reached'
-  AND target_slug IN (
-    SELECT slug FROM article_embeddings
-    WHERE content_type = 'article'
-      AND inbound_count <= 0
-      AND embedding_status = 'completed'
-  );
-```
-
-### Fix 4 — Prevent Future Ghost-Capping: add `outbound_count` sync after successful apply
-
-**File: `supabase/functions/apply-links-bulk/index.ts`**
-
-After each successful link insertion, the function calls `increment_link_counters` RPC to increment `outbound_count` in `article_embeddings`. This means after Fix 1 is deployed, future runs will stay in sync because the cap check reads the same `outbound_count` column that the increment writes to. No additional change needed — the fix creates a self-consistent loop.
-
-### Fix 5 — "Rescue Orphans" button should also auto-trigger Apply Links
-
-**File: `src/hooks/useSemanticLinkScan.ts`**
-
-Currently, after Rescue Orphans completes, the user must manually navigate to Link Review and click "Apply Approved". To prevent future confusion, we add a small delay + auto-trigger of `apply-links-bulk` immediately after the rescue job completes. This closes the full loop: Rescue → Approve → Apply → Reconcile, automatically.
-
-## Summary of Files Changed
-
-| File | Change |
-|---|---|
-| `supabase/functions/apply-links-bulk/index.ts` | Fix cap check: use `outbound_count` from `article_embeddings` instead of counting applied suggestion rows |
-| Database migration | Re-queue 1,956 wrongly-rejected rescue suggestions back to `approved` |
-
-## After Deployment — What to Do
-
-1. The migration will immediately reset ~1,956 rejected suggestions to `approved` for the 58 orphan targets
-2. Click **Apply Links** from the SEO Dashboard → Links tab
-3. This time the correct outbound_count cap will be used — links will be inserted
-4. Click **Reconcile Counts** to sync `inbound_count` for the orphans
-5. Orphan count should drop to 0 (or near 0 for any truly unreachable articles)
-
-## Preventing Future Orphans
-
-The fix creates a permanently consistent system:
-- **Scan** uses `outbound_count` from `article_embeddings` ✓ (already correct)
-- **Rescue** uses `outbound_count` from the RPC result ✓ (already correct)
-- **Apply** will now also use `outbound_count` ✓ (the fix)
-- **Reconcile** keeps `outbound_count` accurate ✓ (already correct)
-
-All four stages will use the same ground truth column, eliminating ghost-capping permanently.
+No data files, no new components, no routing changes — only `MegaMenu.tsx` is touched.
