@@ -1,127 +1,98 @@
 
-# 5-Task Cleanup Sprint
+# Fix: 4 Real UX Bugs Found in Testing
 
-## Overview
+## What's Broken (from user testing)
 
-This plan covers 5 targeted tasks: removing em dashes from user-facing text, a browser end-to-end smoke test, an SEO audit, legal page em-dash cleanup, and a HowItWorks content refresh.
+### Bug 1 - Recommendation links to category page, not the specific template
+In `LetterRecommendation.tsx`, "View Letter Template" links to `/templates/${recommendation.category}` - the category browse page. The user then has to scroll through and find the right template themselves. This is the core of the "double flow" complaint.
 
----
+**Root cause:** The AI's `[RECOMMENDATION]` block provides `letter: specific-letter-name` (e.g. `unauthorized-charge-dispute`) which is actually a template slug, but `LetterRecommendation.tsx` ignores this slug and just links to the category. The slug needs to be resolved to a full URL: `/templates/{categoryId}/{subcategorySlug}/{templateSlug}`.
 
-## Task 1 - Remove Em Dashes from Homepage (`Hero.tsx`)
+**Fix:** In `LetterRecommendation.tsx`:
+- Use `getTemplateBySlug(recommendation.letter)` to find the actual template
+- If found, resolve its full URL using `inferSubcategory` for the subcategory slug
+- "View Letter Template" button links directly to `/templates/{categoryId}/{subcat}/{slug}`
+- "Browse Category" remains as the fallback secondary button
 
-Two user-visible em dashes found in `src/components/home/Hero.tsx`:
+### Bug 2 - User has to re-type their issue description in the letter form
+After the intake flow (where user describes their situation), clicking through to a template page requires re-entering the same information. The `dispute_intake_context` already in `sessionStorage` contains the dispute description but is never used to pre-fill form fields.
 
-- Line 92: `{' '}— Without a Lawyer` - Replace `—` with a comma + rewrite: `Resolve Your Dispute Step-by-Step, Without a Lawyer`
-- Line 97: `— all in one place` - Replace with `- all in one place` (hyphen) or rewrite to remove it: `...and every agency complaint link, all in one place.`
+**Fix:** In `LetterGenerator.tsx`, on mount:
+- Read `sessionStorage.getItem('dispute_intake_context')` and `sessionStorage.getItem('dispute_intake_answers')` (a new key we store)
+- Extract the user's issue description from the intake answers
+- Pre-fill the first `textarea` field (typically `issueDescription`, `description`, or `details`) with the intake description if the field is currently empty
 
-Em dashes in code comments (lines 158, 194) are harmless - not rendered in the browser, will leave those alone.
+We also need to store the raw intake description in `DisputeIntakeFlow.tsx` - currently the intake has no "describe your issue" text field. Looking at the flow again:
 
----
+The intake flow is: Category → Credit card → Date + Company response. There is **no free-text description field** in the current intake. The user is confused because after the 3 steps they see the AI recommendation, and only in the AI chat does a description get typed. But the user said they "described an issue" during intake - this suggests they typed in the AI chat after intake completed (which auto-triggered the AI), and then expected that text to carry over.
 
-## Task 2 - End-to-End Browser Test
+**Revised fix:** Store the intake answers (disputeType, dates, etc.) in sessionStorage in a structured format, and use them to pre-fill the letter form:
+- Pre-fill date fields (`incidentDate`, `date`, `purchaseDate`) from `answers.incidentDate`
+- Add a brief pre-fill banner: "We've pre-filled some details from your intake" so the user knows it happened
 
-Will navigate the full core user flow using the browser tool:
+### Bug 3 - Mobile: Two buttons side by side don't fit
+In `LetterRecommendation.tsx`, the button row `<div className="flex gap-2">` puts both buttons side by side. On mobile (360px screens), "View Letter Template →" and "Browse Financial" overflow or truncate.
 
-1. Homepage loads correctly (Hero, trust bar, categories visible)
-2. Click "Start Your Dispute" - dispute intake modal opens (Step 1 category picker)
-3. Select a category (e.g. Payment/Financial) - Step 2 conditional follow-ups appear
-4. Answer follow-ups - Step 3 AI chat loads with pre-loaded context message
-5. Navigate to a template letter page - verify chargeback alert shows for payment category with recent date
-6. Verify the Resolution Plan panel renders after letter generation
+**Fix:** Change `flex gap-2` to `flex flex-col gap-2 sm:flex-row` so they stack on mobile and go side-by-side on sm+ screens.
 
-This is a smoke test pass/fail check - no code changes unless bugs are found.
+### Bug 4 - Download PDF button grayed out immediately after purchase
+On `PurchaseSuccessPage.tsx`, the "Download PDF" button is `disabled={!purchase.pdfUrl}`. 
 
----
+Looking at the code: for credit purchases (amount = 0), `pdfUrl` is set from `purchaseData.pdf_url` after calling `supabase.storage.createSignedUrl`. If `pdf_url` is null/empty in the DB at that point (PDF not yet generated), the button stays grayed out.
 
-## Task 3 - SEO Audit
+For paid Stripe purchases, `pdfUrl` comes from `verify-letter-purchase` edge function response.
 
-No code changes expected - verification only:
+**Fix:** 
+- Add a "Generating your PDF..." loading state when `purchase` exists but `purchase.pdfUrl` is falsy
+- Poll the `letter_purchases` table every 3 seconds (up to 30s) until `pdf_url` is populated, then generate a signed URL and enable the button
+- Show a spinner on the button with "Preparing PDF..." text while polling
+- After 30s timeout, show "PDF generation is taking longer than expected. Check your email or visit your dashboard."
 
-Checking the following:
-- Homepage title/description within character limits (60/155) - currently `"Dispute Letter Templates - Professional Complaint Letters That Get Results | Letter of Dispute"` = 91 chars, which is over the recommended 60. However this is the existing agreed strategy (memory note confirms the deliberate "problem-led" title).
-- Canonical tags are correct on all key pages
-- SEOHead emits correct schema types (WebApplication for template pages, FAQPage for guides)
-- No em dashes appear in meta titles or descriptions that could hurt readability in SERPs
+## Files to Modify
 
-**Finding:** The `GuidesPage.tsx` SEO title contains an em dash: `"Consumer Rights Guides — Know Your Rights"`. This will be fixed.
-
-**Other pages:** `StateRightsPage.tsx` title `"State Consumer Rights Lookup — Find Your State's Laws"` also contains an em dash in the SEO title - visible in Google SERPs. Both will be replaced with a pipe character `|` following the established title convention.
-
----
-
-## Task 4 - Update Legal Pages (Em Dash Cleanup)
-
-### `src/pages/TermsPage.tsx`
-
-User-visible em dashes to replace:
-- Line 139: `Dispute Outcome Tracker — provided free of charge` → `Dispute Outcome Tracker, provided free of charge`
-- Line 197: `7. Important Legal Disclaimer — "As Is" Use` → `7. Important Legal Disclaimer: "As Is" Use`
-
-### `src/pages/CookiePolicyPage.tsx`
-
-- Line 108: `at any time — it takes effect immediately` → `at any time. It takes effect immediately.`
-- Lines 135-137: Three bullet points using `—` as separators → replace each `—` with a colon `:`
-  - `Essential — Required for...` → `Essential: Required for...`
-  - `Analytics — Help us understand...` → `Analytics: Help us understand...`
-  - `Functional — Enhance the visual...` → `Functional: Enhance the visual...`
-
-### `src/pages/PrivacyPage.tsx`
-
-The one match in PrivacyPage is in a comment (`{/* Sticky ToC — desktop only */}`) - not user-visible, will leave it.
-
----
-
-## Task 5 - Update "How It Works" Section
-
-The current 4-step flow is outdated - it describes the old template-only experience. The platform now has an intake flow, AI assistant, resolution plan, and agency links. Update the copy to reflect the full "Dispute OS" experience:
-
-### Updated Steps
-
-**Step 01 - Describe Your Dispute** (was "Choose Your Letter Type")
-- Icon: `MessageSquare` (chat/intake)
-- Title: `Describe Your Dispute`
-- Description: `Answer a few guided questions about your situation. No legal jargon. Our AI identifies the right approach instantly.`
-
-**Step 02 - Get Your Resolution Plan** (was "Fill in the Details")
-- Icon: `ClipboardList` (plan/checklist)
-- Title: `Get Your Resolution Plan`
-- Description: `Receive a step-by-step strategy: the right letter, relevant agency links (CFPB, FTC, State AG), and chargeback guidance if applicable.`
-
-**Step 03 - Generate Your Letter** (unchanged concept, updated copy)
-- Icon: `FileCheck` (was `Download`)
-- Title: `Generate Your Letter`
-- Description: `Your letter is built with legal-safe language, correct tone, and the exact citations needed for your dispute type and state.`
-
-**Step 04 - Track Until Resolved** (was "Send & Get Results")
-- Icon: `CheckCircle` (was `Send`)
-- Title: `Track Until Resolved`
-- Description: `Use the Dispute Tracker to log progress, check off resolution steps, and mark your dispute resolved when you win.`
-
-Section subtitle also updated from `"Create a professional dispute letter in four simple steps."` to `"From first description to final resolution - your complete dispute toolkit in four steps."`
-
----
+| File | Change |
+|------|--------|
+| `src/components/dispute-assistant/LetterRecommendation.tsx` | Link directly to template slug URL + stack buttons on mobile |
+| `src/components/dispute-assistant/DisputeIntakeFlow.tsx` | Store structured answers to sessionStorage on complete |
+| `src/components/dispute-assistant/DisputeAssistantModal.tsx` | Store intake answers to sessionStorage when calling `handleIntakeComplete` |
+| `src/components/letter/LetterGenerator.tsx` | Pre-fill date field from intake sessionStorage on mount |
+| `src/pages/PurchaseSuccessPage.tsx` | Poll for PDF URL when initially missing, show loading state on button |
 
 ## Technical Details
 
-### Files to Modify
+### Resolving template slug to URL
+```
+recommendation.letter → getTemplateBySlug(slug) → template
+categoryId = getCategoryIdFromName(template.category)
+subcategorySlug = inferSubcategory(template.id, template.category)?.slug || 'general'
+url = /templates/${categoryId}/${subcategorySlug}/${template.slug}
+```
 
-| File | Changes |
-|---|---|
-| `src/components/home/Hero.tsx` | Remove 2 user-visible em dashes (lines 92, 97) |
-| `src/pages/GuidesPage.tsx` | Fix em dash in SEO title |
-| `src/pages/StateRightsPage.tsx` | Fix em dash in SEO title |
-| `src/pages/TermsPage.tsx` | Fix 2 user-visible em dashes (lines 139, 197) |
-| `src/pages/CookiePolicyPage.tsx` | Fix 5 user-visible em dashes (lines 108, 135-137) |
-| `src/components/home/HowItWorks.tsx` | Full content refresh - new icons, titles, descriptions, subtitle |
+### PDF polling logic
+```typescript
+// After purchase is set and pdfUrl is missing, poll every 3s up to 10 attempts
+useEffect(() => {
+  if (!purchase || purchase.pdfUrl) return;
+  let attempts = 0;
+  const interval = setInterval(async () => {
+    attempts++;
+    const { data } = await supabase.from('letter_purchases').select('pdf_url').eq('id', purchase.id).single();
+    if (data?.pdf_url) {
+      // generate signed URL and update purchase state
+      clearInterval(interval);
+    }
+    if (attempts >= 10) clearInterval(interval);
+  }, 3000);
+  return () => clearInterval(interval);
+}, [purchase]);
+```
 
-### No Backend Changes
+### Intake pre-fill in LetterGenerator
+When the component mounts, read from sessionStorage:
+```
+dispute_intake_answers: JSON of { disputeType, incidentDate, paidByCreditCard, companyResponded }
+```
+If `incidentDate` is set and the template has a date field, pre-fill it automatically and show a subtle "Pre-filled from your intake" banner.
 
-All changes are purely frontend copy and content. No database migrations, edge functions, or schema changes required.
-
-### Em Dash Replacement Rules
-
-Following the project's established convention (memory: content-quality-validation-system), em dashes are replaced with:
-- Hyphens `-` in flowing prose
-- Colons `:` in definition-style lists
-- Commas `,` where the em dash acts as a parenthetical
-
+## No Backend Changes Required
+All fixes are purely frontend. No migrations, no edge function changes.
