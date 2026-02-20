@@ -104,7 +104,7 @@ const ArticleCategoryPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title={`${categoryData.name} | DisputeLetters Blog`}
+        title={`${categoryData.name} | Letter of Dispute Blog`}
         description={categoryData.description}
         canonicalPath={`/articles/${category}`}
       />

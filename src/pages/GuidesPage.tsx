@@ -15,7 +15,7 @@ const GuidesPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Consumer Rights Guides | Know Your Rights"
+        title="Consumer Rights Guides — Know Your Rights | Letter of Dispute"
         description="Comprehensive guides to consumer protection laws organized by dispute category. Learn your rights for refunds, housing, travel, insurance, and more."
         canonicalPath="/guides"
       />
