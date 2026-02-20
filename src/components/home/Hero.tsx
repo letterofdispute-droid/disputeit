@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { Target, ShieldCheck, Clock, Sparkles, Search, Mic, TrendingUp } from 'lucide-react';
+import { ArrowRight, Target, ShieldCheck, Clock, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
-import GlobalSearch from '@/components/search/GlobalSearch';
+
 import { trackAIAssistantOpen, trackBrowseTemplatesClick } from '@/hooks/useGTM';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [autoStartVoice, setAutoStartVoice] = useState(false);
 
   // Live platform-wide success rate from tracked disputes
@@ -25,7 +24,7 @@ const Hero = () => {
       const rate = total >= 10 ? Math.round((resolved / total) * 100) : null;
       return { total, resolved, rate };
     },
-    staleTime: 1000 * 60 * 10, // cache 10 min
+    staleTime: 1000 * 60 * 10,
   });
 
   const handleAssistantOpen = () => {
@@ -43,32 +42,23 @@ const Hero = () => {
     }
   };
 
-  // handleStartDisputeClick removed - AI search bar is the single entry point
-
   return (
     <section className="relative overflow-hidden bg-background py-24 md:py-32 lg:py-36">
       {/* Geometric Background Elements */}
-      
-      {/* Large accent circle - top right */}
       <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-accent/[0.07] animate-float will-change-transform" />
-      
-      {/* Primary circle - bottom left */}
       <div className="absolute -bottom-20 -left-20 w-[300px] h-[300px] rounded-full border-2 border-primary/[0.08] animate-float-delayed will-change-transform" />
 
-      {/* Diagonal line */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
         <line x1="60%" y1="0" x2="40%" y2="100%" stroke="hsl(var(--primary))" strokeOpacity="0.06" strokeWidth="1" />
         <line x1="65%" y1="0" x2="45%" y2="100%" stroke="hsl(var(--accent))" strokeOpacity="0.04" strokeWidth="1" />
       </svg>
 
-      {/* Dotted grid - right side */}
       <svg className="absolute right-12 bottom-24 w-40 h-40 opacity-[0.06] hidden lg:block" viewBox="0 0 160 160">
         {Array.from({ length: 64 }).map((_, i) => (
           <circle key={i} cx={(i % 8) * 22 + 6} cy={Math.floor(i / 8) * 22 + 6} r="2" fill="hsl(var(--primary))" />
         ))}
       </svg>
 
-      {/* Small floating accent dot */}
       <div className="absolute top-1/3 right-1/4 w-3 h-3 rounded-full bg-accent/20 animate-float hidden md:block" />
       <div className="absolute bottom-1/3 left-[15%] w-2 h-2 rounded-full bg-primary/15 animate-float-delayed hidden md:block" />
 
@@ -90,48 +80,22 @@ const Hero = () => {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
               Describe your situation. Get the right letter, the fastest resolution path, and every agency complaint link - all in one place.
             </p>
 
-
-            {/* AI Search Prompt */}
-            <div className="animate-fade-up pb-4" style={{ animationDelay: '0.15s' }}>
-              <button
-                onClick={handleAssistantOpen}
-                className="w-full max-w-xl mx-auto lg:mx-0 flex items-center gap-3 px-5 py-4 bg-card hover:bg-muted/50 border border-border shadow-soft rounded-xl text-left transition-all duration-300 group mb-4">
-                <Search className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
-                <span className="flex-1 text-muted-foreground group-hover:text-foreground/80 transition-colors">
-                  Type or speak your dispute...
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAutoStartVoice(true);
-                    handleAssistantOpen();
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
-                  title="Speak your dispute"
-                >
-                  <Mic className="h-4 w-4" />
-                </button>
-                <div className="flex items-center gap-1 px-3 py-1.5 bg-accent rounded-lg text-accent-foreground text-sm font-medium">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  AI Help
-                </div>
-              </button>
-              <button
-                onClick={() => setIsSearchOpen(true)}
-                className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors underline underline-offset-2 lg:ml-1">
-                or search templates & articles manually
-              </button>
-            </div>
-
-            {/* Single secondary CTA - browse templates (AI search bar above is the primary entry point) */}
-            <div className="flex justify-center lg:justify-start mb-10 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-              <Button variant="outline" size="xl" onClick={handleBrowseClick}>
-                Browse Letter Templates
+            {/* Single CTA */}
+            <div className="flex flex-col sm:flex-row items-center lg:items-start gap-4 mb-10 animate-fade-up" style={{ animationDelay: '0.2s' }}>
+              <Button variant="accent" size="xl" onClick={handleAssistantOpen} className="w-full sm:w-auto">
+                Start Your Dispute
+                <ArrowRight className="h-5 w-5" />
               </Button>
+              <button
+                onClick={handleBrowseClick}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 mt-1 sm:mt-3"
+              >
+                or browse 550+ letter templates
+              </button>
             </div>
 
             {/* Trust Indicators */}
@@ -200,8 +164,8 @@ const Hero = () => {
         onClose={() => { setIsAssistantOpen(false); setAutoStartVoice(false); }}
         autoStartListening={autoStartVoice} />
 
-      {/* Global Search */}
-      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} triggerSource="hero" />
+
+
     </section>
   );
 };
