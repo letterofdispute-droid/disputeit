@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { ArrowRight, Target, ShieldCheck, Clock, Sparkles, Search, Mic, TrendingUp } from 'lucide-react';
+import { Target, ShieldCheck, Clock, Sparkles, Search, Mic, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 import GlobalSearch from '@/components/search/GlobalSearch';
-import { trackAIAssistantOpen, trackBrowseTemplatesClick, trackCTAClick } from '@/hooks/useGTM';
+import { trackAIAssistantOpen, trackBrowseTemplatesClick } from '@/hooks/useGTM';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -43,10 +43,7 @@ const Hero = () => {
     }
   };
 
-  const handleStartDisputeClick = () => {
-    trackCTAClick('start_your_dispute', 'hero');
-    handleAssistantOpen();
-  };
+  // handleStartDisputeClick removed - AI search bar is the single entry point
 
   return (
     <section className="relative overflow-hidden bg-background py-24 md:py-32 lg:py-36">
@@ -130,12 +127,8 @@ const Hero = () => {
               </button>
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-              <Button variant="accent" size="xl" onClick={handleStartDisputeClick}>
-                Start Your Dispute
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+            {/* Single secondary CTA - browse templates (AI search bar above is the primary entry point) */}
+            <div className="flex justify-center lg:justify-start mb-10 animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button variant="outline" size="xl" onClick={handleBrowseClick}>
                 Browse Letter Templates
               </Button>
@@ -155,13 +148,13 @@ const Hero = () => {
                 <Clock className="h-5 w-5 flex-shrink-0 text-accent" />
                 <span className="text-sm whitespace-nowrap">Legal-safe language</span>
               </div>
-              {/* Live success rate — shown when enough data, falls back to a strong default */}
+              {/* Verifiable platform stat */}
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 flex-shrink-0 text-success" />
                 <span className="text-sm font-semibold text-success whitespace-nowrap">
                   {successStats?.rate != null
                     ? `${successStats.rate}% of tracked disputes resolved`
-                    : '9 in 10 disputes get a response'}
+                    : '550+ professional letter templates'}
                 </span>
               </div>
             </div>
