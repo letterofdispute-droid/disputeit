@@ -296,19 +296,53 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
 
                   <LetterStrengthMeter strength={letterStrength} showDetails={true} />
 
-                  {/* Chargeback alert */}
-                  {showChargebackAlert && (
-                    <Alert className="border-yellow-500/30 bg-yellow-500/5">
-                      <CreditCard className="h-4 w-4 text-yellow-600" />
-                      <AlertTitle className="text-yellow-700 dark:text-yellow-400 text-sm">
-                        {withinChargebackWindow
-                          ? 'You may still be within your chargeback window!'
-                          : 'Consider a credit card chargeback'}
-                      </AlertTitle>
-                      <AlertDescription className="text-yellow-600 dark:text-yellow-500 text-xs mt-1">
-                        {withinChargebackWindow
-                          ? `You're within the 60-day FCBA window (${daysSinceIncident} days ago). Contact your bank to dispute the charge directly — this is often faster than a letter.`
-                          : 'If you paid by credit card, your bank may still be able to help, even beyond the standard window. A demand letter strengthens this claim.'}
+                  {/* Chargeback alert — prominent when within window */}
+                  {showChargebackAlert && withinChargebackWindow && (
+                    <div className="rounded-xl border-2 border-warning/50 bg-warning/10 p-4 shadow-soft">
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
+                            <CreditCard className="h-4 w-4 text-warning" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-warning-foreground text-sm">
+                              ⚡ You may still be within your chargeback window!
+                            </p>
+                            <span className="text-xs font-medium bg-warning/25 text-warning-foreground px-2 py-0.5 rounded-full">
+                              {daysSinceIncident} days ago
+                            </span>
+                          </div>
+                          <p className="text-warning-foreground/80 text-xs mt-1.5 leading-relaxed">
+                            Under the <strong>Fair Credit Billing Act (FCBA)</strong>, you have up to 60 days to dispute a credit card charge directly with your bank — often faster than sending a letter. A demand letter can still help strengthen your case.
+                          </p>
+                          <div className="flex items-center gap-3 mt-3 flex-wrap">
+                            <a
+                              href="https://consumer.ftc.gov/articles/disputing-credit-card-charges"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning underline underline-offset-2 hover:opacity-80 transition-opacity"
+                            >
+                              <ArrowRight className="h-3 w-3" />
+                              How to file a chargeback (FTC guide)
+                            </a>
+                            <span className="text-warning/40 text-xs hidden sm:inline">·</span>
+                            <span className="text-xs text-warning-foreground/60">Sends directly to your bank — no lawyer needed</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {showChargebackAlert && !withinChargebackWindow && incidentDate && (
+                    <Alert className="border-warning/30 bg-warning/5">
+                      <CreditCard className="h-4 w-4 text-warning" />
+                      <AlertTitle className="text-warning text-sm">Consider a credit card chargeback</AlertTitle>
+                      <AlertDescription className="text-muted-foreground text-xs mt-1">
+                        If you paid by credit card, your bank may still be able to help even beyond the standard 60-day window. A demand letter strengthens your position.{' '}
+                        <a href="https://consumer.ftc.gov/articles/disputing-credit-card-charges" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:opacity-80">
+                          Learn how chargebacks work →
+                        </a>
                       </AlertDescription>
                     </Alert>
                   )}
