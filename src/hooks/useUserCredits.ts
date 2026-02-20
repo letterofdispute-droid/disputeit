@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 export interface UserCredit {
   id: string;
   user_id: string;
-  granted_by: string;
+  // granted_by intentionally omitted from user-facing queries to prevent admin UUID exposure
   granted_at: string;
   expires_at: string;
   used_at: string | null;
@@ -38,7 +38,7 @@ export const useUserCredits = (options: UseUserCreditsOptions = {}) => {
     try {
       const { data, error: fetchError } = await supabase
         .from('user_credits')
-        .select('*')
+        .select('id, user_id, granted_at, expires_at, used_at, purchase_id, reason, status')
         .eq('user_id', targetUserId)
         .order('granted_at', { ascending: false });
 

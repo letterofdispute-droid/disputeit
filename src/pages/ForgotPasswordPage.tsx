@@ -118,9 +118,10 @@ const ForgotPasswordPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Forgot Password | DisputeLetters"
-        description="Reset your DisputeLetters account password"
+        title="Forgot Password | Letter of Dispute"
+        description="Reset your Letter of Dispute account password"
         canonicalPath="/forgot-password"
+        noIndex={true}
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">

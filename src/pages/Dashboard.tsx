@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,10 +40,7 @@ interface Purchase {
   status: string;
 }
 
-interface Profile {
-  first_name: string | null;
-  last_name: string | null;
-}
+
 
 // Recommended templates based on category
 const categoryRecommendations: Record<string, { id: string; name: string; icon: string }[]> = {
@@ -66,13 +64,8 @@ const categoryRecommendations: Record<string, { id: string; name: string; icon: 
 };
 
 const Dashboard = () => {
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading, profile } = useAuth();
   const navigate = useNavigate();
-  const [letters, setLetters] = useState<UserLetter[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPurchasesLoading, setIsPurchasesLoading] = useState(true);
   const dashboardViewedRef = useRef(false);
 
   useEffect(() => {
@@ -88,52 +81,38 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user) {
-      fetchLetters();
-      fetchPurchases();
-      fetchProfile();
-    }
-  }, [user]);
+  // React Query for letters — cached for 5 minutes
+  const { data: letters = [], isLoading } = useQuery({
+    queryKey: ['user-letters', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_letters')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data as UserLetter[];
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const fetchProfile = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (data) {
-      setProfile(data);
-    }
-  };
-
-  const fetchLetters = async () => {
-    const { data, error } = await supabase
-      .from('user_letters')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (!error && data) {
-      setLetters(data);
-    }
-    setIsLoading(false);
-  };
-
-  const fetchPurchases = async () => {
-    const { data, error } = await supabase
-      .from('letter_purchases')
-      .select('id, template_name, template_slug, purchase_type, amount_cents, created_at, status')
-      .eq('status', 'completed')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setPurchases(data);
-    }
-    setIsPurchasesLoading(false);
-  };
+  // React Query for purchases — cached for 5 minutes
+  const { data: purchases = [], isLoading: isPurchasesLoading } = useQuery({
+    queryKey: ['user-purchases', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('letter_purchases')
+        .select('id, template_name, template_slug, purchase_type, amount_cents, created_at, status')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as Purchase[];
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Get time-based greeting
   const getGreeting = () => {
@@ -143,7 +122,7 @@ const Dashboard = () => {
     return 'Good evening';
   };
 
-  // Get display name
+  // Get display name from AuthContext profile (no extra fetch needed)
   const displayName = profile?.first_name || user?.email?.split('@')[0] || 'there';
 
   // Calculate stats
@@ -154,7 +133,6 @@ const Dashboard = () => {
   const recommendations = useMemo(() => {
     if (purchases.length === 0) return categoryRecommendations['default'];
     
-    // Get unique categories from purchases
     const purchasedCategories = purchases.map(p => {
       const slug = p.template_slug || '';
       if (slug.includes('refund')) return 'refunds';
@@ -183,9 +161,10 @@ const Dashboard = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Dashboard | DisputeLetters"
+        title="My Dashboard | Letter of Dispute"
         description="View and manage your dispute letters"
         canonicalPath="/dashboard"
+        noIndex={true}
       />
 
       <div className="bg-background min-h-screen">
@@ -225,7 +204,7 @@ const Dashboard = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
+                transition={{ duration: 0.3, delay: 0.05 }}
                 className="flex items-center gap-3"
               >
                 <div className="p-2 bg-success/10 rounded-lg">
@@ -240,7 +219,7 @@ const Dashboard = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
                 className="flex items-center gap-3"
               >
                 <div className="p-2 bg-accent/10 rounded-lg">
@@ -255,7 +234,7 @@ const Dashboard = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.3 }}
+                transition={{ duration: 0.3, delay: 0.15 }}
                 className="flex items-center gap-3"
               >
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -435,7 +414,7 @@ const Dashboard = () => {
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
                 >
                   <Card>
                     <CardHeader>
@@ -469,7 +448,7 @@ const Dashboard = () => {
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.5 }}
+                  transition={{ duration: 0.4, delay: 0.15 }}
                 >
                   <Card>
                     <CardHeader>

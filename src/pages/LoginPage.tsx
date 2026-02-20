@@ -123,9 +123,10 @@ const LoginPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Login | DisputeLetters"
-        description="Sign in to your DisputeLetters account"
+        title="Sign In | Letter of Dispute"
+        description="Sign in to your Letter of Dispute account to access your dispute letters"
         canonicalPath="/login"
+        noIndex={true}
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">
