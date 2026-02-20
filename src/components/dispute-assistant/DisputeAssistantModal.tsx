@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, MessageCircle, Sparkles } from 'lucide-react';
@@ -46,6 +46,99 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
   const [customLetterOffer, setCustomLetterOffer] = useState<CustomLetterOfferData | null>(null);
   const [showLegalExpert, setShowLegalExpert] = useState(startInLegalExpertMode);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
+  const [pendingAutoTrigger, setPendingAutoTrigger] = useState(false);
+
+  // Auto-trigger AI after intake completes (no typing required)
+  useEffect(() => {
+    if (!pendingAutoTrigger) return;
+    setPendingAutoTrigger(false);
+
+    const intakeContext = sessionStorage.getItem('dispute_intake_context');
+    if (!intakeContext) return;
+
+    setIsLoading(true);
+    let assistantContent = '';
+
+    const updateAssistant = (chunk: string) => {
+      assistantContent += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant') {
+          return prev.map((m, i) =>
+            i === prev.length - 1
+              ? { ...m, content: cleanContentForDisplay(assistantContent) }
+              : m
+          );
+        }
+        return [...prev, { role: 'assistant', content: cleanContentForDisplay(assistantContent) }];
+      });
+
+      const rec = parseRecommendation(assistantContent);
+      if (rec) setRecommendation(rec);
+
+      const offer = parseCustomLetterOffer(assistantContent);
+      if (offer) setCustomLetterOffer(offer);
+    };
+
+    const hiddenTrigger = { role: 'user' as const, content: intakeContext };
+
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dispute-assistant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: [hiddenTrigger] }),
+    })
+      .then(async (response) => {
+        if (!response.ok || !response.body) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to get response');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let textBuffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          textBuffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.startsWith(':') || line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
+
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') break;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) updateAssistant(content);
+            } catch {
+              textBuffer = line + '\n' + textBuffer;
+              break;
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Auto-trigger chat error:', error);
+        setMessages(prev => [
+          ...prev,
+          { role: 'assistant', content: "I'm sorry, I encountered an error. Please type your situation below and I'll help." },
+        ]);
+      })
+      .finally(() => setIsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoTrigger]);
 
   const parseRecommendation = (content: string): Recommendation | null => {
     const match = content.match(/\[RECOMMENDATION\]([\s\S]*?)\[\/RECOMMENDATION\]/);
@@ -253,8 +346,9 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       },
     ]);
 
-    // Store context so it gets injected into the first API call
+    // Store context and auto-trigger AI immediately
     sessionStorage.setItem('dispute_intake_context', contextMessage);
+    setPendingAutoTrigger(true);
   };
 
   const handleReset = () => {
@@ -265,6 +359,7 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
     setCustomLetterOffer(null);
     setShowLegalExpert(startInLegalExpertMode);
     setGeneratedLetter(null);
+    setPendingAutoTrigger(false);
     sessionStorage.removeItem('dispute_intake_context');
   };
 
