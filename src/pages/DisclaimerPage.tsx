@@ -22,7 +22,7 @@ const DisclaimerPage = () => {
               Legal Disclaimer
             </h1>
             <p className="text-muted-foreground">
-              Last updated: February 8, 2026
+              Last updated: February 19, 2026
             </p>
           </div>
 
@@ -69,7 +69,8 @@ const DisclaimerPage = () => {
                   </p>
                   <ul className="list-disc pl-6 text-amber-800 dark:text-amber-200 space-y-2">
                     <li><strong>AI Generation:</strong> Letter content is created by AI systems based on template structures and user inputs.</li>
-                    <li><strong>Editorial Oversight:</strong> Our editorial team reviews template frameworks for quality and consistency, but does NOT provide legal review.</li>
+                    <li><strong>AI Dispute Assistant:</strong> When you use our AI Dispute Assistant intake flow, the text descriptions and structured answers you provide are processed by AI to generate dispute recommendations and a Resolution Plan. This content is AI-generated and is not reviewed or validated by licensed attorneys.</li>
+                    <li><strong>Editorial Oversight:</strong> Our editorial team reviews template frameworks for quality and consistency, but does NOT provide legal review of individual letters.</li>
                     <li><strong>No Attorney Review:</strong> Individual letters are NOT reviewed by licensed attorneys or legal professionals.</li>
                     <li><strong>User Responsibility:</strong> You must review, verify, and customize all AI-generated content before use.</li>
                     <li><strong>Potential Inaccuracies:</strong> AI-generated content may contain errors, outdated information, or content inappropriate for your specific situation.</li>
@@ -188,6 +189,7 @@ const DisclaimerPage = () => {
               <ul className="list-disc pl-6 text-muted-foreground space-y-2 mt-4">
                 <li>Determining whether our templates are appropriate for your situation</li>
                 <li>The accuracy and truthfulness of information you include in letters</li>
+                <li><strong className="text-foreground">The accuracy of descriptions you provide during the AI intake flow.</strong> The AI generates recommendations based solely on what you tell it — we cannot verify or validate the information you submit.</li>
                 <li>Reviewing and customizing templates to fit your specific circumstances</li>
                 <li>Verifying all AI-generated content before sending</li>
                 <li>Understanding and complying with applicable laws in your jurisdiction</li>
@@ -196,7 +198,8 @@ const DisclaimerPage = () => {
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-4">
                 By using our services, you acknowledge that you are acting on your own behalf and taking 
-                full responsibility for your actions and their consequences.
+                full responsibility for your actions and their consequences. Letter of Dispute is not a 
+                party to any dispute you pursue and bears no liability for outcomes.
               </p>
             </section>
 
