@@ -41,8 +41,8 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Landlords often respond quickly when they see a formal, dated letter that references their legal obligations.',
-    letterSlug: '/templates/housing/tenancy-dispute/housing-kw-security-deposit-dispute',
-    letterTitle: 'Security Deposit Return Request',
+    letterSlug: '/templates/housing/deposits/deposit-return-request',
+    letterTitle: 'Deposit Return Request Letter',
     category: 'housing',
   },
   {
@@ -59,8 +59,8 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Billing departments are required to investigate formal disputes, and errors are often corrected once documented.',
-    letterSlug: '/templates/healthcare/billing-coding/healthcare-kw-medical-bill-dispute',
-    letterTitle: 'Medical Bill Error Dispute',
+    letterSlug: '/templates/healthcare/billing/medical-billing-services-not-received-dispute',
+    letterTitle: 'Medical Billing - Services Not Received Dispute',
     category: 'healthcare',
   },
   {
@@ -77,8 +77,8 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Many denied claims are overturned on appeal when properly documented - the denial rate drops significantly after first appeal.',
-    letterSlug: '/templates/insurance/health-insurance/insurance-kw-health-insurance-appeal',
-    letterTitle: 'Insurance Claim Appeal',
+    letterSlug: '/templates/insurance/insurance-claims/prior-auth-denial-appeal',
+    letterTitle: 'Prior Authorization Denial Appeal Letter',
     category: 'insurance',
   },
   {
@@ -95,8 +95,8 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Companies often resolve issues faster when they see a formal complaint that could become a credit card dispute or regulatory complaint.',
-    letterSlug: '/templates/damaged-goods/defective-product/damaged-goods-kw-defective-product',
-    letterTitle: 'Defective Product Refund Request',
+    letterSlug: '/templates/damaged-goods/defective/defective-product-complaint',
+    letterTitle: 'Defective Product Complaint Letter',
     category: 'damaged-goods',
   },
   {
@@ -113,7 +113,7 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Airlines have legal obligations for delays/cancellations - a formal letter citing regulations often triggers a proper review.',
-    letterSlug: '/templates/travel/flight-compensation/travel-kw-flight-delay-compensation',
+    letterSlug: '/templates/travel/flights/airline-flight-delay-compensation',
     letterTitle: 'Flight Delay/Cancellation Compensation',
     category: 'travel',
   },
