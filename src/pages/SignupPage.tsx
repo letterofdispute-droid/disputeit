@@ -148,9 +148,10 @@ const SignupPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Sign Up | DisputeLetters"
-        description="Create your DisputeLetters account and start resolving disputes"
+        title="Create Account | Letter of Dispute"
+        description="Create your Letter of Dispute account and start resolving disputes professionally"
         canonicalPath="/signup"
+        noIndex={true}
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">

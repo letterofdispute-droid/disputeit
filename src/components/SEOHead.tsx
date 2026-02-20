@@ -27,6 +27,8 @@ interface SEOHeadProps {
   breadcrumbs?: BreadcrumbItem[];
   // Social sharing image
   ogImage?: string;
+  // Prevent indexing of private/auth pages
+  noIndex?: boolean;
 }
 
 const SEOHead = ({ 
@@ -43,10 +45,12 @@ const SEOHead = ({
   faqItems,
   breadcrumbs,
   ogImage,
+  noIndex = false,
 }: SEOHeadProps) => {
   const siteUrl = 'https://letterofdispute.com';
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
-  const defaultOgImage = `${siteUrl}/og-image.png`;
+  // Fall back to logo SVG (always exists) until a proper OG image is created
+  const defaultOgImage = `${siteUrl}/ld-logo.svg`;
   const resolvedOgImage = ogImage || defaultOgImage;
   
   // FAQPage schema when faqItems are provided
@@ -109,14 +113,15 @@ const SEOHead = ({
     description: 'Professional dispute letter templates for consumers',
   } : null;
 
+  // Only emit datePublished when we have a real publish date (prevents false freshness signals)
   const articleSchema = type === 'article' ? {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: title,
     description: description,
     url: canonicalUrl,
-    datePublished: publishedTime || new Date().toISOString(),
-    dateModified: modifiedTime || new Date().toISOString(),
+    ...(publishedTime && { datePublished: publishedTime }),
+    dateModified: modifiedTime || publishedTime || undefined,
     publisher: {
       '@type': 'Organization',
       name: 'Letter of Dispute'
@@ -129,6 +134,9 @@ const SEOHead = ({
       <title>{title}</title>
       <meta name="title" content={title} />
       <meta name="description" content={description} />
+      
+      {/* Robots: prevent indexing of private/auth pages */}
+      {noIndex && <meta name="robots" content="noindex, nofollow" />}
       
       {/* Canonical URL */}
       <link rel="canonical" href={canonicalUrl} />

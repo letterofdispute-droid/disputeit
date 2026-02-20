@@ -111,9 +111,10 @@ const ResetPasswordPage = () => {
     return (
       <Layout>
         <SEOHead 
-          title="Reset Password | DisputeLetters"
-          description="Set a new password for your DisputeLetters account"
+          title="Reset Password | Letter of Dispute"
+          description="Set a new password for your Letter of Dispute account"
           canonicalPath="/reset-password"
+          noIndex={true}
         />
         <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,9 +127,10 @@ const ResetPasswordPage = () => {
     return (
       <Layout>
         <SEOHead 
-          title="Reset Password | DisputeLetters"
-          description="Set a new password for your DisputeLetters account"
+          title="Reset Password | Letter of Dispute"
+          description="Set a new password for your Letter of Dispute account"
           canonicalPath="/reset-password"
+          noIndex={true}
         />
         <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">
           <Card className="w-full max-w-md">
@@ -167,9 +169,10 @@ const ResetPasswordPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="Reset Password | DisputeLetters"
-        description="Set a new password for your DisputeLetters account"
+        title="Reset Password | Letter of Dispute"
+        description="Set a new password for your Letter of Dispute account"
         canonicalPath="/reset-password"
+        noIndex={true}
       />
 
       <div className="min-h-[80vh] flex items-center justify-center bg-background py-12 px-4">

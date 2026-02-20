@@ -163,8 +163,8 @@ const Hero = () => {
                 <ShieldCheck className="h-8 w-8 text-accent/40" />
               </div>
 
-              {/* Small accent diamond */}
-              <div className="absolute top-[12%] left-[8%] w-8 h-8 bg-accent/10 rotate-45 rounded-sm animate-spin-slow will-change-transform" />
+              {/* Small accent diamond — static on mobile, subtle rotate on desktop */}
+              <div className="absolute top-[12%] left-[8%] w-8 h-8 bg-accent/10 rotate-45 rounded-sm hidden sm:block" />
 
               {/* Circle accent */}
               <div className="absolute bottom-[8%] left-[15%] w-20 h-20 rounded-full border-2 border-primary/[0.06]" />

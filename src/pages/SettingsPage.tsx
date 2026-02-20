@@ -174,9 +174,10 @@ const SettingsPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Account Settings | DisputeLetters"
-        description="Manage your DisputeLetters account settings, profile, and preferences"
+        title="Account Settings | Letter of Dispute"
+        description="Manage your Letter of Dispute account settings, profile, and preferences"
         canonicalPath="/settings"
+        noIndex={true}
       />
 
       <div className="bg-background min-h-screen">
