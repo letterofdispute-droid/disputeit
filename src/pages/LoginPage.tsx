@@ -47,11 +47,12 @@ const LoginPage = () => {
     if (error) {
       const isConflict = error.message?.toLowerCase().includes('already') ||
                          error.message?.toLowerCase().includes('identity') ||
-                         error.message?.toLowerCase().includes('linked');
+                         error.message?.toLowerCase().includes('linked') ||
+                         error.message?.toLowerCase().includes('provider');
       toast({
         title: isConflict ? 'Account already exists' : 'Error signing in',
         description: isConflict
-          ? 'An account with this email already exists. Please sign in with your original method (email or Google), then link additional sign-in methods from Settings.'
+          ? 'An account with this email already exists. Sign in with Google instead, or use your email & password. Once signed in, you can link both methods from Settings → Security.'
           : error.message,
         variant: 'destructive',
       });

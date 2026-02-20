@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,26 @@ const LinkedAccountsCard = () => {
   const hasEmail = identities.some(i => i.provider === 'email');
   const hasGoogle = identities.some(i => i.provider === 'google');
   const canUnlink = identities.length > 1;
+
+  // Detect return from Google linking flow and show success/failure toast
+  useEffect(() => {
+    const wasLinking = sessionStorage.getItem('linking_google');
+    if (!wasLinking) return;
+
+    sessionStorage.removeItem('linking_google');
+
+    const googleLinked = user?.identities?.some(i => i.provider === 'google');
+    if (googleLinked) {
+      toast({ title: 'Google account linked!', description: 'You can now sign in with Google.' });
+    } else if (user) {
+      // User is back but Google isn't linked — something went wrong
+      toast({
+        title: 'Google linking incomplete',
+        description: 'Google was not connected. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLinkGoogle = async () => {
     setIsLinking(true);

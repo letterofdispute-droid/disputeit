@@ -180,14 +180,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const linkGoogle = async () => {
+    // Store flag so we know a link attempt is in progress when we return
+    sessionStorage.setItem('linking_google', 'true');
+
     const { data, error } = await supabase.auth.linkIdentity({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/settings`,
+        skipBrowserRedirect: true,
       },
     });
-    if (error) return { error };
-    // If successful, user will be redirected for OAuth
+    if (error) {
+      sessionStorage.removeItem('linking_google');
+      return { error };
+    }
+    // Redirect manually so we control the return URL
     if (data?.url) {
       window.location.href = data.url;
     }

@@ -4,6 +4,22 @@ export async function processOAuthToken(): Promise<{
   processed: boolean;
   error?: Error;
 }> {
+  // Check for Supabase native OAuth hash fragment (identity linking / recovery)
+  // This fires when linkIdentity() redirects back with #access_token=...&type=user
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = hashParams.get('access_token');
+  const tokenType = hashParams.get('type'); // 'user' for identity linking, 'recovery' for password reset
+
+  if (accessToken && (tokenType === 'user' || tokenType === 'recovery')) {
+    console.log('[OAuth] Supabase hash fragment detected, type:', tokenType);
+    // Clean the URL hash so it doesn't persist
+    window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    sessionStorage.setItem('oauth_just_processed', 'true');
+    // Give Supabase's onAuthStateChange time to fire
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { processed: true };
+  }
+
   // Check for the __lovable_token parameter
   const urlParams = new URLSearchParams(window.location.search);
   const lovableToken = urlParams.get('__lovable_token');
