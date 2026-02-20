@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowRight, CreditCard, Calendar, MessageCircle, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowRight, CreditCard, Calendar, MessageCircle, AlertTriangle, ChevronLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +8,7 @@ export interface IntakeAnswers {
   paidByCreditCard: boolean | null;
   incidentDate: string;
   companyResponded: 'yes' | 'no' | 'not_yet';
+  description: string;
 }
 
 interface DisputeIntakeFlowProps {
@@ -31,6 +32,7 @@ const CREDIT_CARD_TYPES = new Set(['payment', 'product', 'travel', 'service']);
 export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps) {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Partial<IntakeAnswers>>({});
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const showChargebackQuestion = CREDIT_CARD_TYPES.has(answers.disputeType || '');
 
@@ -48,6 +50,13 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
     }
   }, [step, showChargebackQuestion]);
 
+  // Focus textarea when step 4 becomes active
+  useEffect(() => {
+    if (step === 4) {
+      setTimeout(() => descriptionRef.current?.focus(), 50);
+    }
+  }, [step]);
+
   const handleTypeSelect = (type: string) => {
     setAnswers(prev => ({ ...prev, disputeType: type }));
     setStep(2);
@@ -58,27 +67,33 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
     setStep(3);
   };
 
-  const handleFinish = (responded: 'yes' | 'no' | 'not_yet') => {
+  const handleCompanyResponse = (responded: 'yes' | 'no' | 'not_yet') => {
+    setAnswers(prev => ({ ...prev, companyResponded: responded }));
+    setStep(4);
+  };
+
+  const handleFinish = () => {
     onComplete({
       disputeType: answers.disputeType || 'other',
       paidByCreditCard: answers.paidByCreditCard ?? null,
       incidentDate: answers.incidentDate || '',
-      companyResponded: responded,
+      companyResponded: answers.companyResponded!,
+      description: answers.description || '',
     });
   };
 
   const goBack = () => {
-    if (step === 3) {
-      // Go back to step 2 only if chargeback question was shown; else go to step 1
+    if (step === 4) {
+      setStep(3);
+    } else if (step === 3) {
       setStep(showChargebackQuestion ? 2 : 1);
     } else if (step === 2) {
       setStep(1);
     }
   };
 
-  // Render step indicator dots
-  const totalSteps = 3;
-  const effectiveStep = step === 4 ? 3 : step; // step 4 is just the final question inside step 3 UI
+  const totalSteps = 4;
+  const effectiveStep = step;
 
   return (
     <div className="flex flex-col h-full">
@@ -291,7 +306,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                 ].map((option) => (
                   <button
                     key={option.id}
-                    onClick={() => handleFinish(option.id)}
+                    onClick={() => handleCompanyResponse(option.id)}
                     className={cn(
                       'w-full flex items-center gap-3 p-3.5 rounded-xl border border-border',
                       'hover:border-accent hover:bg-accent/5 text-left transition-all group',
@@ -314,6 +329,58 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                   You can select a response option above without entering a date.
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 4: Brief description ── */}
+        {step === 4 && (
+          <div className="space-y-4 animate-fade-in">
+            <button
+              onClick={goBack}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back
+            </button>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="h-4 w-4 text-accent" />
+                <h3 className="font-semibold text-foreground text-base">
+                  Briefly describe what happened
+                </h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A few sentences is enough — this will be pre-filled into your letter so you don't have to type it again.
+              </p>
+            </div>
+
+            <textarea
+              ref={descriptionRef}
+              value={answers.description || ''}
+              onChange={(e) => setAnswers(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="e.g. I ordered a laptop on 15 Jan. It arrived damaged and the seller refused to refund me despite multiple attempts..."
+              rows={5}
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors resize-none"
+            />
+
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="accent"
+                className="w-full gap-2"
+                onClick={handleFinish}
+                disabled={!answers.description?.trim()}
+              >
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <button
+                onClick={handleFinish}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors text-center"
+              >
+                Skip — I'll describe it in the chat
+              </button>
             </div>
           </div>
         )}
