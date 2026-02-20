@@ -9,7 +9,10 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone, ArrowUpRight, ArrowDownRight, Minus, GitCompareArrows, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Users, FileText, Eye, DollarSign, Loader2, TrendingUp, ShoppingCart, Percent, Filter, Route, MapPin, Globe, Megaphone, ArrowUpRight, ArrowDownRight, Minus, GitCompareArrows, Search, LayoutDashboard, Stethoscope } from 'lucide-react';
+import { PageDiagnosisPanel } from '@/components/admin/analytics/PageDiagnosisPanel';
 import SiteSearchReport from '@/components/admin/analytics/SiteSearchReport';
 import ExportButton from '@/components/admin/export/ExportButton';
 import UTMLinkBuilder from '@/components/admin/analytics/UTMLinkBuilder';
@@ -473,7 +476,7 @@ const AdminAnalytics = () => {
       </div>
 
       <Tabs defaultValue="revenue" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="funnel">Funnel</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -481,6 +484,10 @@ const AdminAnalytics = () => {
           <TabsTrigger value="search" className="flex items-center gap-1">
             <Search className="h-3 w-3" />
             <span className="hidden sm:inline">Search</span>
+          </TabsTrigger>
+          <TabsTrigger value="pages" className="flex items-center gap-1">
+            <LayoutDashboard className="h-3 w-3" />
+            <span className="hidden sm:inline">Pages</span>
           </TabsTrigger>
         </TabsList>
 
@@ -806,12 +813,247 @@ const AdminAnalytics = () => {
         <TabsContent value="search" className="space-y-6">
           <SiteSearchReport events={events} period={period} />
         </TabsContent>
+
+        {/* Page Performance Tab */}
+        <TabsContent value="pages" className="space-y-6">
+          <PagePerformanceTab events={events} period={period} />
+        </TabsContent>
       </Tabs>
     </div>
   );
 };
 
+// ─── Page Performance Tab ────────────────────────────────────────────────────
+interface PageRow {
+  path: string;
+  views: number;
+  sessions: number;
+  trend: number;
+  lastSeen: string;
+  signal: 'Hot' | 'Normal' | 'Cold' | 'Invisible';
+}
+
+type SortKey = 'views' | 'sessions' | 'trend' | 'lastSeen';
+type PageTypeFilter = 'all' | 'articles' | 'templates' | 'categories' | 'guides' | 'static';
+
+const detectPageTypeFilter = (path: string): PageTypeFilter => {
+  if (path.startsWith('/articles/') || path.startsWith('/blog/')) return 'articles';
+  if (path.startsWith('/letters/') || path.startsWith('/templates/')) return 'templates';
+  if (path.startsWith('/category/') || path.startsWith('/categories/')) return 'categories';
+  if (path.startsWith('/guides/') || path.startsWith('/state-rights')) return 'guides';
+  return 'static';
+};
+
+const signalConfig = {
+  Hot: { label: 'Hot', className: 'bg-green-500/10 text-green-600 border-green-500/20' },
+  Normal: { label: 'Normal', className: 'bg-primary/10 text-primary border-primary/20' },
+  Cold: { label: 'Cold', className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' },
+  Invisible: { label: 'Invisible', className: 'bg-destructive/10 text-destructive border-destructive/20' },
+};
+
+const PagePerformanceTab = ({ events, period }: { events: AnalyticsEvent[]; period: string }) => {
+  const [sortKey, setSortKey] = useState<SortKey>('views');
+  const [sortAsc, setSortAsc] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<PageTypeFilter>('all');
+  const [signalFilter, setSignalFilter] = useState<string>('all');
+  const [diagnosePage, setDiagnosePage] = useState<PageRow | null>(null);
+
+  const pageRows = useMemo((): PageRow[] => {
+    const daysInPeriod = parseInt(period);
+    const halfPoint = new Date(Date.now() - (daysInPeriod / 2) * 86400000);
+
+    const pageMap: Record<string, { views: number; sessions: Set<string>; latestAt: string; recentViews: number; prevViews: number }> = {};
+
+    events
+      .filter(e => e.event_type === 'page_view' && e.page_path)
+      .forEach(e => {
+        const path = e.page_path!;
+        if (!pageMap[path]) pageMap[path] = { views: 0, sessions: new Set(), latestAt: e.created_at, recentViews: 0, prevViews: 0 };
+        pageMap[path].views++;
+        if (e.session_id) pageMap[path].sessions.add(e.session_id);
+        if (new Date(e.created_at) > new Date(pageMap[path].latestAt)) pageMap[path].latestAt = e.created_at;
+        if (new Date(e.created_at) > halfPoint) {
+          pageMap[path].recentViews++;
+        } else {
+          pageMap[path].prevViews++;
+        }
+      });
+
+    const allViews = Object.values(pageMap).map(p => p.views).sort((a, b) => b - a);
+    const top10Pct = allViews[Math.floor(allViews.length * 0.1)] || 1;
+    const top70Pct = allViews[Math.floor(allViews.length * 0.7)] || 1;
+
+    return Object.entries(pageMap).map(([path, stats]) => {
+      const trend = stats.prevViews > 0
+        ? Math.round(((stats.recentViews - stats.prevViews) / stats.prevViews) * 100)
+        : stats.recentViews > 0 ? 100 : 0;
+
+      let signal: PageRow['signal'];
+      if (stats.views <= 1) signal = 'Invisible';
+      else if (stats.views < 5) signal = 'Cold';
+      else if (stats.views >= top10Pct) signal = 'Hot';
+      else if (stats.views >= top70Pct) signal = 'Normal';
+      else signal = 'Cold';
+
+      return { path, views: stats.views, sessions: stats.sessions.size, trend, lastSeen: stats.latestAt, signal };
+    });
+  }, [events, period]);
+
+  const filtered = useMemo(() => {
+    return pageRows
+      .filter(r => typeFilter === 'all' || detectPageTypeFilter(r.path) === typeFilter)
+      .filter(r => signalFilter === 'all' || r.signal === signalFilter);
+  }, [pageRows, typeFilter, signalFilter]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let diff = 0;
+      if (sortKey === 'views') diff = a.views - b.views;
+      else if (sortKey === 'sessions') diff = a.sessions - b.sessions;
+      else if (sortKey === 'trend') diff = a.trend - b.trend;
+      else if (sortKey === 'lastSeen') diff = new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime();
+      return sortAsc ? diff : -diff;
+    });
+  }, [filtered, sortKey, sortAsc]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(v => !v);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => (
+    sortKey === col ? (sortAsc ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />) : <Minus className="h-3 w-3 opacity-30" />
+  );
+
+  const signalCounts = useMemo(() => {
+    const counts = { Hot: 0, Normal: 0, Cold: 0, Invisible: 0 };
+    pageRows.forEach(r => { counts[r.signal]++; });
+    return counts;
+  }, [pageRows]);
+
+  if (pageRows.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <LayoutDashboard className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-sm text-muted-foreground">No page view data for this period</p>
+          <p className="text-xs text-muted-foreground mt-1">Page views are tracked automatically as users visit the site</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {(Object.entries(signalCounts) as [keyof typeof signalCounts, number][]).map(([signal, count]) => (
+          <Card key={signal} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setSignalFilter(signalFilter === signal ? 'all' : signal)}>
+            <CardContent className="pt-4 pb-3">
+              <div className="text-2xl font-bold text-foreground">{count}</div>
+              <Badge variant="outline" className={`text-xs mt-1 ${signalConfig[signal].className}`}>
+                {signal}
+              </Badge>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as PageTypeFilter)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Page type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All page types</SelectItem>
+            <SelectItem value="articles">Articles</SelectItem>
+            <SelectItem value="templates">Templates</SelectItem>
+            <SelectItem value="categories">Categories</SelectItem>
+            <SelectItem value="guides">Guides / State Rights</SelectItem>
+            <SelectItem value="static">Static pages</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={signalFilter} onValueChange={setSignalFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Signal" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All signals</SelectItem>
+            <SelectItem value="Hot">Hot only</SelectItem>
+            <SelectItem value="Normal">Normal only</SelectItem>
+            <SelectItem value="Cold">Cold only</SelectItem>
+            <SelectItem value="Invisible">Invisible only</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground self-center ml-auto">{sorted.length} pages</p>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Page</TableHead>
+                  <TableHead className="cursor-pointer select-none w-24" onClick={() => toggleSort('views')}>
+                    <div className="flex items-center gap-1">Views <SortIcon col="views" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none w-24 hidden sm:table-cell" onClick={() => toggleSort('sessions')}>
+                    <div className="flex items-center gap-1">Sessions <SortIcon col="sessions" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none w-24 hidden md:table-cell" onClick={() => toggleSort('trend')}>
+                    <div className="flex items-center gap-1">Trend <SortIcon col="trend" /></div>
+                  </TableHead>
+                  <TableHead className="w-24">Signal</TableHead>
+                  <TableHead className="w-20 text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sorted.slice(0, 100).map((row) => (
+                  <TableRow key={row.path} className="group">
+                    <TableCell className="font-mono text-xs max-w-[200px] truncate text-foreground">{row.path}</TableCell>
+                    <TableCell className="text-sm font-medium">{row.views}</TableCell>
+                    <TableCell className="text-sm hidden sm:table-cell">{row.sessions}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className={`text-xs font-medium ${row.trend > 0 ? 'text-green-600' : row.trend < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {row.trend > 0 ? '+' : ''}{row.trend}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs ${signalConfig[row.signal].className}`}>
+                        {row.signal}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setDiagnosePage(row)}
+                      >
+                        <Stethoscope className="h-3 w-3 mr-1" />
+                        Diagnose
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {sorted.length > 100 && (
+            <p className="text-xs text-muted-foreground text-center py-3">
+              Showing top 100 of {sorted.length} pages. Use filters to narrow down.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <PageDiagnosisPanel page={diagnosePage} period={period} onClose={() => setDiagnosePage(null)} />
+    </>
+  );
+};
+
 // ─── Helper: compute funnel steps from events + purchases ──────────────────
+
 const computeFunnelSteps = (events: AnalyticsEvent[], purchases: Purchase[]) => {
   const pageViews = events.filter(e => e.event_type === 'page_view').length;
   const templateViews = events.filter(e => e.event_type === 'template_view').length;
