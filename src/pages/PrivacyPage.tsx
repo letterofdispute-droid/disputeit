@@ -139,6 +139,7 @@ const PrivacyPage = () => {
                 <ul>
                   <li><strong>Account Information:</strong> Name and email address when you create an account</li>
                   <li><strong>Dispute Details:</strong> Information you enter into letter templates</li>
+                  <li><strong>AI Dispute Assistant Inputs:</strong> Text descriptions and structured answers you provide during the AI intake flow (including dispute type, incident date, and free-text issue description). This data is processed by AI to generate recommendations and pre-fill letter forms. It is stored temporarily in your browser session only and is not retained on our servers beyond that session.</li>
                   <li><strong>Payment Information:</strong> Processed securely by Stripe; we do not store credit card numbers</li>
                   <li><strong>Communications:</strong> Information you provide when contacting our support team</li>
                   <li><strong>Dispute Outcome Data:</strong> Dispute titles, categories, amounts, and status you voluntarily log in the Dispute Tracker</li>
@@ -210,10 +211,11 @@ const PrivacyPage = () => {
                   </p>
                   <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
                     <li><strong>AI Letter Generation:</strong> Information you provide in letter forms is processed by AI to generate customized content.</li>
+                    <li><strong>AI Dispute Assistant:</strong> Text descriptions and answers you type during the intake flow are processed in real-time by AI to generate your Resolution Plan and letter recommendations. This intake data is stored only in your browser session (sessionStorage) and is not persisted to our servers after your session ends.</li>
                     <li><strong>Free Letter Analyzer:</strong> When you use the Letter Analyzer, your submitted text is processed by AI for scoring but is not stored after analysis. No personal data is retained from analyzer sessions.</li>
                     <li><strong>Third-Party AI Providers:</strong> Your data may be transmitted to AI service providers under data processing agreements.</li>
                     <li><strong>No Training Use:</strong> Your personal information is NOT used to train AI models.</li>
-                    <li><strong>Temporary Processing:</strong> AI systems process your data only for letter generation; data is not retained by AI providers beyond the processing session.</li>
+                    <li><strong>Temporary Processing:</strong> AI systems process your data only for the requested task; data is not retained by AI providers beyond the processing session.</li>
                   </ul>
                 </div>
               </section>

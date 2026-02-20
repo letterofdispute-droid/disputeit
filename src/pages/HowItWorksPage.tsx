@@ -10,11 +10,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  Search, 
-  FileEdit, 
+  MessageSquare, 
+  ClipboardList, 
   FileText, 
-  Send, 
+  BarChart2, 
   CheckCircle2, 
   Clock, 
   ArrowRight,
@@ -24,76 +25,78 @@ import {
   AlertCircle,
   Gavel,
   CreditCard,
-  Phone
+  Phone,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 
 const steps = [
   {
     number: '01',
-    title: 'Choose Your Letter Type',
-    icon: Search,
-    description: 'Browse our library of 400+ professionally crafted dispute letter templates. Each template is designed for a specific situation - from refund requests to landlord disputes.',
+    title: 'Describe Your Dispute',
+    icon: MessageSquare,
+    description: 'Tell our AI what happened. Answer a few guided questions — no legal jargon required. The AI identifies the right dispute type and recommended approach in seconds.',
     tips: [
-      'Use our category filters to narrow down options',
-      'Each template includes a description of when to use it',
-      'Not sure? Try our AI assistant to find the right match',
+      'Have key dates and amounts ready before starting',
+      'Be factual — describe what happened, not what you want',
+      'You can type freely; the AI will extract what matters',
     ],
   },
   {
     number: '02',
-    title: 'Fill in Your Details',
-    icon: FileEdit,
-    description: 'Answer simple questions about your situation. Our smart forms guide you through exactly what information you need - no legal knowledge required.',
+    title: 'Get Your Resolution Plan',
+    icon: ClipboardList,
+    description: 'Receive a structured plan: the right letter type, relevant agency links (CFPB, FTC, State AG), chargeback guidance if you paid by card, and statutory deadlines for your dispute category.',
     tips: [
-      'Have your receipts, contracts, or order numbers ready',
-      'Include specific dates and amounts when asked',
-      'Be factual—we\'ll handle the professional tone',
+      'The plan is informational — not legal advice',
+      'Agency links are suggestions; we are not affiliated with any government body',
+      'Escalation paths shown are options, not guarantees',
     ],
   },
   {
     number: '03',
     title: 'Generate Your Letter',
     icon: FileText,
-    description: 'Your personalized dispute letter is created instantly. Preview it, make any final adjustments, then download as PDF or edit online with 30-day access.',
+    description: 'Your letter is assembled with appropriate formal language, relevant consumer law references for your state, and a professional tone designed to be taken seriously. Review it carefully before sending.',
     tips: [
-      'Review the letter preview before purchasing',
-      'PDF is ready to send immediately',
-      'Edit Access gives you 30 days to customize online',
+      'Review all details carefully before downloading',
+      'Customize any field that doesn\'t match your situation',
+      'We are not a law firm — for complex matters, consult a licensed attorney',
     ],
   },
   {
     number: '04',
-    title: 'Send and Get Results',
-    icon: Send,
-    description: 'Send your letter via email or certified mail. Most businesses respond within 7-14 days. Your professional letter creates an official paper trail.',
+    title: 'Track Until Resolved',
+    icon: BarChart2,
+    description: 'Log your dispute in the tracker. Check off steps as you go. If the letter doesn\'t resolve the issue, your documented record supports escalation to agencies or small claims court.',
     tips: [
-      'Certified mail provides proof of delivery',
-      'Email is faster but keep a copy for records',
-      'Follow up if you don\'t hear back within 14 days',
+      'Outcomes are not guaranteed',
+      'Track your correspondence dates carefully',
+      'Update the tracker if you need to escalate',
     ],
   },
 ];
 
-const effectiveness = [
+const whatWeProvide = [
   {
     icon: Shield,
-    title: 'Pre-Validated Templates',
-    description: 'Unlike generic AI output, our templates are researched and validated for each specific dispute type. We include the right legal references and consumer protection citations.',
+    title: 'Structured Templates',
+    description: 'Our templates are designed for specific dispute types and include relevant consumer law references. They provide a starting framework — you are responsible for reviewing and customising for your situation.',
   },
   {
     icon: Scale,
-    title: 'Correct Legal Tone',
-    description: 'Our letters strike the perfect balance—assertive but not threatening, professional but not weak. This tone is proven to get better response rates.',
+    title: 'Professional Tone',
+    description: 'Our letters use formal language designed to communicate professionally. Tone alone does not guarantee any response or outcome from the recipient.',
   },
   {
     icon: Clock,
-    title: 'Strategic Deadlines',
-    description: 'Each letter includes appropriate response deadlines based on the type of dispute and relevant regulations. This creates urgency without being unreasonable.',
+    title: 'Statutory References',
+    description: 'Each letter may include reference to applicable response deadlines based on common dispute frameworks. These are informational — not legal determinations.',
   },
   {
     icon: FileCheck,
-    title: 'Documentation Trail',
-    description: 'Your letter creates an official record of your complaint. This becomes crucial evidence if you need to escalate to chargebacks, regulatory complaints, or small claims court.',
+    title: 'Documentation Record',
+    description: 'Your letter creates a written record of your complaint. This may support escalation to chargebacks, regulatory complaints, or small claims court — but outcomes depend on many factors beyond our control.',
   },
 ];
 
@@ -101,17 +104,17 @@ const afterSending = [
   {
     icon: Clock,
     title: 'Typical Response Times',
-    description: 'Most businesses respond within 7-14 business days. Larger companies may take up to 30 days. If your letter includes a specific deadline, expect a response before that date.',
+    description: 'Many businesses respond within 7–14 business days. Larger companies may take up to 30 days. We cannot predict or guarantee any response.',
   },
   {
     icon: CheckCircle2,
     title: 'If They Respond Positively',
-    description: 'Great! Most disputes are resolved at this stage. Make sure to get any agreement in writing, keep copies of all correspondence, and verify refunds or credits actually appear.',
+    description: 'Get any agreement in writing, keep copies of all correspondence, and verify that refunds or credits actually appear. We are not a party to any resolution.',
   },
   {
     icon: AlertCircle,
     title: 'If They Don\'t Respond',
-    description: 'Send a follow-up letter referencing your original. If still no response, you have strong documentation to escalate further.',
+    description: 'Send a follow-up letter referencing your original. If still no response, you have written documentation to support escalation. We are not responsible for recipient actions or inaction.',
   },
 ];
 
@@ -119,53 +122,61 @@ const escalationOptions = [
   {
     icon: CreditCard,
     title: 'Credit Card Chargeback',
-    description: 'If you paid by card, your dispute letter serves as documentation for a chargeback claim with your bank.',
+    description: 'If you paid by card, your dispute letter may serve as supporting documentation for a chargeback claim with your bank. Contact your card issuer directly.',
   },
   {
     icon: Phone,
     title: 'Regulatory Complaints',
-    description: 'File complaints with the FTC, CFPB, or your state attorney general. Your letter proves you attempted to resolve directly.',
+    description: 'You may file complaints with the FTC, CFPB, or your state attorney general. We are not affiliated with these bodies. Your letter shows you attempted direct resolution.',
   },
   {
     icon: Gavel,
     title: 'Small Claims Court',
-    description: 'For amounts under $10,000 (varies by state), small claims is affordable and doesn\'t require a lawyer. Your letter trail is key evidence.',
+    description: 'For eligible amounts (varies by state), small claims is an option that does not require a lawyer. Your written record may serve as evidence — consult your local court for requirements.',
   },
 ];
 
 const faqs = [
   {
     question: 'How long does it take to create a letter?',
-    answer: 'Most letters take 5-10 minutes to complete. Simply choose your template, fill in the details about your situation, and your letter is generated instantly. You can preview it before purchasing.',
+    answer: 'Most letters take 5–10 minutes to complete. Describe your dispute in the AI intake, receive your Resolution Plan, fill in the letter form, and your letter is generated instantly. You can preview it before purchasing.',
   },
   {
     question: 'Do I need to mail the letter, or can I email it?',
-    answer: 'Both work! Email is faster and creates a digital paper trail. Certified mail provides proof of delivery, which can be important for legal escalation. For serious disputes over significant amounts, we recommend certified mail.',
+    answer: 'Both options are available. Email is faster and creates a digital record. Certified mail provides proof of delivery, which may be useful if you need to escalate. For significant disputes, we suggest certified mail — but this is your decision.',
   },
   {
     question: 'What if my situation isn\'t covered by a template?',
-    answer: 'With 500+ templates across 13 categories, we cover most consumer disputes. Try our AI assistant to describe your situation—it will recommend the closest match. If nothing fits, our PDF + Edit Access option gives you 30 days to customize any template in our online editor.',
+    answer: 'With 500+ templates across 13 categories, we cover most common consumer disputes. Use the AI assistant to describe your situation — it will recommend the closest match. If nothing fits well, the PDF + Edit Access option lets you customise any template in our online editor for 30 days.',
   },
   {
-    question: 'Can I customize the letter after generating it?',
-    answer: 'Yes! The PDF + Edit Access option includes 30 days of in-app editing. Make changes anytime, then export to PDF when you\'re ready to send.',
+    question: 'Can I customise the letter after generating it?',
+    answer: 'Yes. The PDF + Edit Access option includes 30 days of in-app editing. Make changes at any time, then export to PDF when you\'re ready. You are responsible for reviewing the final content before sending.',
+  },
+  {
+    question: 'Do you guarantee my dispute will be resolved?',
+    answer: 'No. We make no guarantees about the outcome of any dispute. Whether a recipient responds, offers a refund, or takes any action depends on factors entirely outside our control — including their policies, applicable law, and the specific facts of your situation. Our service provides a communication tool, not a legal remedy.',
   },
   {
     question: 'Are these letters legally binding?',
-    answer: 'Our letters are formal demand letters, not legal contracts. They document your complaint professionally and establish a paper trail. While they carry weight, they don\'t compel a response—but they significantly increase your chances of resolution.',
+    answer: 'Our letters are formal written communications — not legal contracts and not attorney-drafted documents. They are not reviewed by licensed attorneys. While a professional written letter may carry more weight than an informal complaint, we cannot guarantee any legal effect or recipient response. For matters with significant legal implications, consult a licensed attorney in your jurisdiction.',
   },
   {
     question: 'What makes these better than writing my own letter?',
-    answer: 'Our templates include correct legal references, proper formatting, strategic deadlines, and professional language that gets results. They\'re designed to be taken seriously without sounding aggressive or making legal missteps that could hurt your case.',
+    answer: 'Our templates provide a structured starting point with consumer law references, professional formatting, and appropriate tone for common dispute types. They may help you communicate more effectively — but we cannot guarantee they will produce better outcomes than a letter you write yourself. Results vary by situation.',
+  },
+  {
+    question: 'What if the company ignores my letter?',
+    answer: 'We are not responsible for how recipients respond to your letter. If there is no response, your written record may support escalation to a credit card chargeback, a regulatory complaint (FTC, CFPB, State AG), or small claims court — but outcomes depend on the specifics of your case. We recommend consulting a licensed attorney if significant amounts are at stake.',
   },
 ];
 
-// JSON-LD Schema for HowTo
+// JSON-LD Schema for HowTo — matches Dispute OS flow
 const howToSchema = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": "How to Create a Professional Dispute Letter",
-  "description": "Create legally-sound dispute letters in minutes with Letter of Dispute. Our step-by-step process guides you from selecting the right template to sending your letter.",
+  "name": "How to Create a Professional Dispute Letter with Letter of Dispute",
+  "description": "Use Letter of Dispute's AI-guided Dispute OS flow to describe your issue, receive a resolution plan, generate a professional letter, and track your dispute to resolution.",
   "totalTime": "PT10M",
   "estimatedCost": {
     "@type": "MonetaryAmount",
@@ -176,26 +187,26 @@ const howToSchema = {
     {
       "@type": "HowToStep",
       "position": 1,
-      "name": "Choose Your Letter Type",
-      "text": "Browse 400+ professionally crafted dispute letter templates organized by category. Use filters or the AI assistant to find the perfect match for your situation."
+      "name": "Describe Your Dispute",
+      "text": "Answer a few guided questions about your situation using our AI intake flow. No legal jargon required. The AI identifies the right dispute type and recommended approach."
     },
     {
       "@type": "HowToStep",
       "position": 2,
-      "name": "Fill in Your Details",
-      "text": "Answer simple questions about your situation. Our smart forms guide you through exactly what information you need - no legal knowledge required."
+      "name": "Get Your Resolution Plan",
+      "text": "Receive a structured resolution plan including the right letter type, relevant agency links (CFPB, FTC, State AG), chargeback guidance, and statutory deadlines for your dispute category. The plan is informational only."
     },
     {
       "@type": "HowToStep",
       "position": 3,
       "name": "Generate Your Letter",
-      "text": "Your personalized dispute letter is created instantly. Preview it, then download as PDF or use our in-app editor with Edit Access."
+      "text": "Your letter is assembled with formal language and consumer law references for your state. Review all details carefully before downloading. Not attorney-reviewed."
     },
     {
       "@type": "HowToStep",
       "position": 4,
-      "name": "Send and Get Results",
-      "text": "Send your letter via email or certified mail. Most businesses respond within 7-14 days."
+      "name": "Track Until Resolved",
+      "text": "Log your dispute in the tracker and check off resolution steps. Your documented record supports escalation if needed. Outcomes are not guaranteed."
     }
   ]
 };
@@ -218,8 +229,8 @@ const HowItWorksPage = () => {
   return (
     <Layout>
       <SEOHead 
-        title="How It Works - Create Dispute Letters in Minutes | Letter of Dispute"
-        description="Learn how Letter of Dispute helps you create professional dispute letters in minutes. Our 4-step process guides you from choosing a template to sending your letter and getting results."
+        title="How It Works - AI Dispute Assistant | Letter of Dispute"
+        description="Learn how Letter of Dispute's AI-guided Dispute OS flow helps you describe your issue, get a resolution plan, generate a professional letter, and track your dispute. Not legal advice."
         canonicalPath="/how-it-works"
       />
       <Helmet>
@@ -239,8 +250,8 @@ const HowItWorksPage = () => {
               How Letter of Dispute Works
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-8">
-              Create professional dispute letters in minutes - not hours. No legal expertise needed. 
-              Our guided process helps you write letters that businesses take seriously.
+              Our AI-guided Dispute OS takes you from describing your issue to a professional dispute letter — in minutes. 
+              No legal expertise needed.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button variant="accent" size="lg" asChild>
@@ -262,10 +273,10 @@ const HowItWorksPage = () => {
         <div className="container-wide">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Four Simple Steps to Your Letter
+              Four Steps to Your Dispute Letter
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Our streamlined process gets you from dispute to resolution as quickly as possible.
+              Our streamlined Dispute OS guides you from describing your issue to a written record — as efficiently as possible.
             </p>
           </div>
 
@@ -276,7 +287,6 @@ const HowItWorksPage = () => {
               return (
                 <Card key={index} className="overflow-hidden">
                   <CardContent className={`p-0 flex flex-col ${isEven ? 'md:flex-row-reverse' : 'md:flex-row'}`}>
-                    {/* Content Side */}
                     <div className="flex-1 p-6 md:p-8">
                       <div className="flex items-center gap-4 mb-4">
                         <span className="text-4xl font-bold text-primary/20">{step.number}</span>
@@ -291,7 +301,7 @@ const HowItWorksPage = () => {
                         {step.description}
                       </p>
                       <div className="bg-muted/50 rounded-lg p-4">
-                        <p className="text-sm font-medium text-foreground mb-2">Pro Tips:</p>
+                        <p className="text-sm font-medium text-foreground mb-2">Tips:</p>
                         <ul className="space-y-1">
                           {step.tips.map((tip, tipIndex) => (
                             <li key={tipIndex} className="text-sm text-muted-foreground flex items-start gap-2">
@@ -310,20 +320,20 @@ const HowItWorksPage = () => {
         </div>
       </section>
 
-      {/* What Makes Letters Effective */}
+      {/* What Our Service Provides */}
       <section className="py-16 md:py-24 bg-muted/30">
         <div className="container-wide">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
-              What Makes Our Letters Effective
+              What Our Service Provides
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Unlike generic templates or AI-generated letters, ours are specifically designed to get results.
+              Our letters are designed to help you communicate professionally. They are not attorney-reviewed and do not constitute legal advice.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {effectiveness.map((item, index) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {whatWeProvide.map((item, index) => {
               const Icon = item.icon;
               return (
                 <Card key={index}>
@@ -342,6 +352,34 @@ const HowItWorksPage = () => {
               );
             })}
           </div>
+
+          {/* Important Limitations Card */}
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-6 md:p-8">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+                <h3 className="font-semibold text-xl text-foreground">Important Limitations</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <span className="text-destructive font-bold mt-0.5">✕</span>
+                  <span><strong className="text-foreground">Not a law firm.</strong> We do not provide legal advice or representation.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-destructive font-bold mt-0.5">✕</span>
+                  <span><strong className="text-foreground">No attorney review.</strong> Letters are AI-generated and not reviewed by licensed attorneys.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-destructive font-bold mt-0.5">✕</span>
+                  <span><strong className="text-foreground">No guaranteed outcomes.</strong> We cannot predict or control how any recipient will respond.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-destructive font-bold mt-0.5">✕</span>
+                  <span><strong className="text-foreground">Used at your own risk.</strong> You are solely responsible for the content you send.</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -353,7 +391,7 @@ const HowItWorksPage = () => {
               After You Send Your Letter
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              What to expect and how to handle different outcomes.
+              What to expect and how to handle different outcomes. We are not a party to your dispute.
             </p>
           </div>
 
@@ -376,9 +414,10 @@ const HowItWorksPage = () => {
 
           {/* Escalation Options */}
           <div className="bg-muted/50 rounded-xl p-6 md:p-8">
-            <h3 className="font-serif text-xl font-bold text-foreground mb-6 text-center">
+            <h3 className="font-serif text-xl font-bold text-foreground mb-2 text-center">
               Need to Escalate? Your Options
             </h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">These are independent options — Letter of Dispute is not affiliated with any of these bodies or processes.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {escalationOptions.map((option, index) => {
                 const Icon = option.icon;
@@ -427,6 +466,20 @@ const HowItWorksPage = () => {
         </div>
       </section>
 
+      {/* Legal Disclaimer Strip */}
+      <section className="py-8 bg-muted border-y border-border">
+        <div className="container-wide">
+          <Alert className="border-border bg-background">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <AlertDescription className="text-sm text-muted-foreground ml-2">
+              <strong className="text-foreground">Legal Notice:</strong> Letter of Dispute is not a law firm and does not provide legal advice. 
+              All letters are AI-generated and are not reviewed by licensed attorneys. Use of this service does not create an attorney-client relationship. 
+              We make no guarantees about dispute outcomes. Use at your own risk. For legal matters, consult a licensed attorney in your jurisdiction.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-16 md:py-24 bg-primary">
         <div className="container-wide">
@@ -435,7 +488,7 @@ const HowItWorksPage = () => {
               Ready to Create Your Letter?
             </h2>
             <p className="text-lg text-primary-foreground/80 mb-8">
-              Join thousands of consumers who've successfully resolved disputes with our professional letters.
+              Used by thousands of consumers to communicate their disputes professionally. Start your intake — it only takes a few minutes.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button variant="accent" size="lg" asChild>

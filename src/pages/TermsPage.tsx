@@ -134,6 +134,8 @@ const TermsPage = () => {
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                   <li>Access to letter templates for various dispute categories</li>
                   <li>An AI-powered letter generation tool that creates personalized letters based on your input</li>
+                  <li><strong className="text-foreground">AI Dispute Assistant:</strong> An AI-guided intake flow that collects a description of your situation and generates a personalised Resolution Plan including suggested letter type, relevant agency links, and escalation options. The Resolution Plan is informational only and does not constitute legal advice.</li>
+                  <li><strong className="text-foreground">Dispute Tracker:</strong> A dashboard tool for monitoring the progress of your dispute, logging correspondence, and tracking resolution steps. Outcomes are not guaranteed.</li>
                   <li>Downloadable letter documents in PDF and DOCX formats</li>
                   <li>Educational content about consumer rights and dispute resolution</li>
                   <li><strong className="text-foreground">Free Tools:</strong> State Consumer Rights Lookup, Statute of Limitations Calculator, Consumer News Hub, Free Letter Strength Analyzer, and Dispute Outcome Tracker, provided free of charge for informational purposes</li>

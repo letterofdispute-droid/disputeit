@@ -23,7 +23,7 @@ const steps: Step[] = [
   {
     icon: FileCheck,
     title: 'Generate Your Letter',
-    description: 'Your letter is built with legal-safe language, correct tone, and the exact citations needed for your dispute type and state.',
+    description: 'Your letter is assembled with formal language and consumer law references for your state. Review all details carefully before sending — not attorney-reviewed.',
     step: '03',
   },
   {
