@@ -1,198 +1,127 @@
 
-# Turning Letter of Dispute into a Dispute OS — Strategic Assessment & Build Plan
+# 5-Task Cleanup Sprint
 
-## Honest Assessment: How Much Is Already Built
+## Overview
 
-ChatGPT's advice is excellent — but here is the important truth: **you have already built most of the hard infrastructure**. The gap is primarily in connecting what exists into a coherent guided flow, not in rebuilding from scratch.
+This plan covers 5 targeted tasks: removing em dashes from user-facing text, a browser end-to-end smoke test, an SEO audit, legal page em-dash cleanup, and a HowItWorks content refresh.
 
-| ChatGPT's Recommendation | Current Status |
+---
+
+## Task 1 - Remove Em Dashes from Homepage (`Hero.tsx`)
+
+Two user-visible em dashes found in `src/components/home/Hero.tsx`:
+
+- Line 92: `{' '}— Without a Lawyer` - Replace `—` with a comma + rewrite: `Resolve Your Dispute Step-by-Step, Without a Lawyer`
+- Line 97: `— all in one place` - Replace with `- all in one place` (hyphen) or rewrite to remove it: `...and every agency complaint link, all in one place.`
+
+Em dashes in code comments (lines 158, 194) are harmless - not rendered in the browser, will leave those alone.
+
+---
+
+## Task 2 - End-to-End Browser Test
+
+Will navigate the full core user flow using the browser tool:
+
+1. Homepage loads correctly (Hero, trust bar, categories visible)
+2. Click "Start Your Dispute" - dispute intake modal opens (Step 1 category picker)
+3. Select a category (e.g. Payment/Financial) - Step 2 conditional follow-ups appear
+4. Answer follow-ups - Step 3 AI chat loads with pre-loaded context message
+5. Navigate to a template letter page - verify chargeback alert shows for payment category with recent date
+6. Verify the Resolution Plan panel renders after letter generation
+
+This is a smoke test pass/fail check - no code changes unless bugs are found.
+
+---
+
+## Task 3 - SEO Audit
+
+No code changes expected - verification only:
+
+Checking the following:
+- Homepage title/description within character limits (60/155) - currently `"Dispute Letter Templates - Professional Complaint Letters That Get Results | Letter of Dispute"` = 91 chars, which is over the recommended 60. However this is the existing agreed strategy (memory note confirms the deliberate "problem-led" title).
+- Canonical tags are correct on all key pages
+- SEOHead emits correct schema types (WebApplication for template pages, FAQPage for guides)
+- No em dashes appear in meta titles or descriptions that could hurt readability in SERPs
+
+**Finding:** The `GuidesPage.tsx` SEO title contains an em dash: `"Consumer Rights Guides — Know Your Rights"`. This will be fixed.
+
+**Other pages:** `StateRightsPage.tsx` title `"State Consumer Rights Lookup — Find Your State's Laws"` also contains an em dash in the SEO title - visible in Google SERPs. Both will be replaced with a pipe character `|` following the established title convention.
+
+---
+
+## Task 4 - Update Legal Pages (Em Dash Cleanup)
+
+### `src/pages/TermsPage.tsx`
+
+User-visible em dashes to replace:
+- Line 139: `Dispute Outcome Tracker — provided free of charge` → `Dispute Outcome Tracker, provided free of charge`
+- Line 197: `7. Important Legal Disclaimer — "As Is" Use` → `7. Important Legal Disclaimer: "As Is" Use`
+
+### `src/pages/CookiePolicyPage.tsx`
+
+- Line 108: `at any time — it takes effect immediately` → `at any time. It takes effect immediately.`
+- Lines 135-137: Three bullet points using `—` as separators → replace each `—` with a colon `:`
+  - `Essential — Required for...` → `Essential: Required for...`
+  - `Analytics — Help us understand...` → `Analytics: Help us understand...`
+  - `Functional — Enhance the visual...` → `Functional: Enhance the visual...`
+
+### `src/pages/PrivacyPage.tsx`
+
+The one match in PrivacyPage is in a comment (`{/* Sticky ToC — desktop only */}`) - not user-visible, will leave it.
+
+---
+
+## Task 5 - Update "How It Works" Section
+
+The current 4-step flow is outdated - it describes the old template-only experience. The platform now has an intake flow, AI assistant, resolution plan, and agency links. Update the copy to reflect the full "Dispute OS" experience:
+
+### Updated Steps
+
+**Step 01 - Describe Your Dispute** (was "Choose Your Letter Type")
+- Icon: `MessageSquare` (chat/intake)
+- Title: `Describe Your Dispute`
+- Description: `Answer a few guided questions about your situation. No legal jargon. Our AI identifies the right approach instantly.`
+
+**Step 02 - Get Your Resolution Plan** (was "Fill in the Details")
+- Icon: `ClipboardList` (plan/checklist)
+- Title: `Get Your Resolution Plan`
+- Description: `Receive a step-by-step strategy: the right letter, relevant agency links (CFPB, FTC, State AG), and chargeback guidance if applicable.`
+
+**Step 03 - Generate Your Letter** (unchanged concept, updated copy)
+- Icon: `FileCheck` (was `Download`)
+- Title: `Generate Your Letter`
+- Description: `Your letter is built with legal-safe language, correct tone, and the exact citations needed for your dispute type and state.`
+
+**Step 04 - Track Until Resolved** (was "Send & Get Results")
+- Icon: `CheckCircle` (was `Send`)
+- Title: `Track Until Resolved`
+- Description: `Use the Dispute Tracker to log progress, check off resolution steps, and mark your dispute resolved when you win.`
+
+Section subtitle also updated from `"Create a professional dispute letter in four simple steps."` to `"From first description to final resolution - your complete dispute toolkit in four steps."`
+
+---
+
+## Technical Details
+
+### Files to Modify
+
+| File | Changes |
 |---|---|
-| "Do I even have a case?" qualifier | Partially built — Dispute Assistant already does intake via conversation |
-| Guided questions / dynamic branching | Partial — the assistant is conversational but freeform |
-| Resolution path engine | Missing — the assistant recommends a letter but not a multi-step strategy |
-| State-specific logic | Strong foundation — `stateSpecificLaws.ts`, `legalKnowledge.ts`, deadlines tool, state rights pages |
-| Evidence builder | Built — `EvidenceUploader`, photo upload, `EvidenceChecklist` in letter generator |
-| "Probability of success" indicator | Built — `LetterStrengthMeter` and `assessLetterStrength()` in `fieldValidators.ts` |
-| Dispute tracking / outcome logging | Built — `DisputeTracker` in Dashboard with status, amounts, notes |
-| Multi-channel outputs (letter + email + script) | Partially built — letter generation exists, no phone scripts or email versions |
-| Chargeback routing | Missing |
-| Agency routing (FTC, CFPB, State AG) | Data exists in `legalKnowledge.ts` (regulatoryAgencies field), not surfaced to users |
+| `src/components/home/Hero.tsx` | Remove 2 user-visible em dashes (lines 92, 97) |
+| `src/pages/GuidesPage.tsx` | Fix em dash in SEO title |
+| `src/pages/StateRightsPage.tsx` | Fix em dash in SEO title |
+| `src/pages/TermsPage.tsx` | Fix 2 user-visible em dashes (lines 139, 197) |
+| `src/pages/CookiePolicyPage.tsx` | Fix 5 user-visible em dashes (lines 108, 135-137) |
+| `src/components/home/HowItWorks.tsx` | Full content refresh - new icons, titles, descriptions, subtitle |
 
-**The core problem is not missing features. It is that the flow is broken into disconnected islands.**
+### No Backend Changes
 
-The user starts in the Hero → opens the Dispute Assistant → gets a letter recommendation → lands on a template page → fills out a form → gets a letter → is shown pricing. That is already a decent flow. But after purchase, they disappear. There is no "now what?" — no next steps, no escalation path, no routing to the right agency, no multi-step strategy. The output is a letter, not a plan.
+All changes are purely frontend copy and content. No database migrations, edge functions, or schema changes required.
 
----
+### Em Dash Replacement Rules
 
-## What "Dispute OS" Actually Means Architecturally
+Following the project's established convention (memory: content-quality-validation-system), em dashes are replaced with:
+- Hyphens `-` in flowing prose
+- Colons `:` in definition-style lists
+- Commas `,` where the em dash acts as a parenthetical
 
-The difference between what you have and what ChatGPT is describing is one concept: **a Resolution Plan**.
-
-Currently the output of using the product is: `1 letter`.
-
-The output of a Dispute OS is: `a multi-step resolution strategy with 1 letter as step 1`.
-
-```text
-CURRENT FLOW:
-Describe situation → Get letter → Purchase → Done (?)
-
-DISPUTE OS FLOW:
-Describe situation → Get qualified:
-  ├── Is this a strong case? (strength score)
-  ├── What is the fastest path? (chargeback / demand letter / agency complaint)
-  └── What are the ordered steps?
-        Step 1: Send demand letter → [GENERATE]
-        Step 2: If no response in 14 days → File CFPB complaint → [LINK + GUIDE]
-        Step 3: If still unresolved → Small claims ($X limit in your state) → [GUIDE]
-        Step 4: Consider BBB complaint → [LINK]
-```
-
-This is a relatively focused code change. The intelligence engine (Gemini) already exists. The legal database already exists. The letter generation already exists. The dispatch engine already exists. What is missing is the **resolution plan output layer**.
-
----
-
-## What To Build — Phased Implementation
-
-### Phase 1 — "Resolution Plan" Output After Letter Generation (Highest Priority, 1-2 Sessions)
-
-**The change:** After the letter is generated (and pricing modal shown), instead of ending the interaction, display a **"Your Resolution Plan"** panel. This is the single highest-leverage change.
-
-**What it contains:**
-- Step 1: Your demand letter (already generated)
-- Step 2: Filing the relevant agency complaint (CFPB / FTC / State AG — derived from `legalKnowledge.ts` which already has `regulatoryAgencies` per category)
-- Step 3: Escalation path based on category (chargeback window / small claims limit / BBB)
-- Deadline alerts (days remaining for chargeback window, FCBA limit, etc. — all in `legalKnowledge.ts` timeframes)
-
-**New component:** `src/components/letter/ResolutionPlanPanel.tsx`
-
-This panel appears below the `GeneratingOverlay` resolves. It reads:
-- `template.category` → look up `legalKnowledgeDatabase` → get `escalationPaths` + `regulatoryAgencies` + `timeframes`
-- `selectedState` → look up `stateSpecificLaws` → get small claims limit + state AG URL
-- Renders 3–5 ordered action cards, each with a label, icon, link (where applicable), and urgency badge
-
-**No backend changes required for Phase 1.** All the legal data is already in local TypeScript files.
-
-**Files changed:**
-- `src/components/letter/ResolutionPlanPanel.tsx` — new component
-- `src/components/letter/LetterGenerator.tsx` — show `ResolutionPlanPanel` after overlay completes, above the `PricingModal`
-- `src/pages/PurchaseSuccessPage.tsx` — show the plan again post-purchase so it is not lost
-
----
-
-### Phase 2 — Guided Structured Intake (Replaces Freeform Chat) (1 Session)
-
-**The change:** Add a structured pre-intake step before the freeform chat. Instead of a blank "tell me what happened" box, present 3-4 branching questions first:
-
-```
-Step 1: What type of issue?
-  → Payment/charge | Product | Service | Housing | Employment | Travel | Other
-
-Step 2 (conditional on step 1):
-  → "Did you pay by credit card?" [Yes/No] — triggers chargeback guidance
-  → "When did this happen?" [date picker] — triggers deadline calculation
-  → "Has the company responded to you before?" [Yes/No/Not yet]
-
-Step 3: Then open freeform chat with this context pre-loaded
-```
-
-**This is the "Smart Dispute Intake"** ChatGPT described. The structured answers pre-populate the AI context, making the letter recommendation more accurate and enabling the "fastest path" recommendation.
-
-**Files changed:**
-- `src/components/dispute-assistant/DisputeIntakeFlow.tsx` — new multi-step intake component
-- `src/components/dispute-assistant/DisputeAssistantModal.tsx` — add intake as step 0 before the chat
-
----
-
-### Phase 3 — Resolution Path Engine in Dashboard (1 Session)
-
-**The change:** Upgrade the `DisputeTracker` to become a genuine Dispute OS. Currently it tracks title + status + amounts + notes. Upgrade it to store and display:
-
-- The resolution plan steps (which steps have been completed)
-- Agency complaint links per category
-- Deadline tracking (chargeback window expires date)
-- "What to do next" AI suggestion per active dispute
-
-The `dispute_outcomes` table already exists. Add a `resolution_steps` JSONB column to persist the plan.
-
-**New capability:** When a user adds a dispute to the tracker from a purchase, the resolution plan from Phase 1 is pre-loaded into the tracker automatically — closing the loop between letter generation and outcome tracking.
-
-**Files changed / DB change:**
-- New migration: add `resolution_steps jsonb` column to `dispute_outcomes`
-- `src/components/dashboard/DisputeTracker.tsx` — upgrade card UI to show step checklist
-
----
-
-### Phase 4 — Multi-Channel Outputs (1 Session)
-
-**The change:** After letter generation, offer two additional output formats generated from the same form data:
-- **Email version** — shorter, less formal, same facts
-- **Phone script** — bullet-point talking points for calling the company
-
-Both are generated via the existing `generate-legal-letter` edge function with a new `outputFormat` parameter: `'letter' | 'email' | 'phone-script'`.
-
-**Files changed:**
-- `supabase/functions/generate-legal-letter/index.ts` — add `outputFormat` handling
-- `src/components/letter/PricingModal.tsx` — add toggle for output type before purchase
-
----
-
-### Phase 5 — Chargeback Window Alert (Quick Win, 30 mins)
-
-**The change:** In `LetterGenerator.tsx`, when the user selects a payment/financial category and the date of incident is entered:
-- Calculate if they are within the credit card chargeback window (60 days for FCBA)
-- Show a prominent alert: **"You may still be within your chargeback window. This is often faster than a letter — your bank can reverse the charge directly."**
-- Link to a guide explaining how to file a chargeback
-
-This is the single highest-conversion UX improvement for payment disputes. Most users do not know about chargebacks.
-
----
-
-## What NOT To Build Right Now
-
-- **Full block editor for homepage** — too much effort for current stage
-- **State-by-state complete coverage from scratch** — `stateSpecificLaws.ts` already covers all 51 states for the key categories; extend it for edge cases as needed
-- **Court filing automation** — legal liability surface, not worth it yet
-- **Direct API integrations with FTC/CFPB** — guide the user to the form, do not submit on their behalf (liability + complexity)
-
----
-
-## Positioning Upgrade (No Code Required)
-
-ChatGPT's note about positioning is important. The current Hero says:
-
-> "Professional Dispute Letters, Without the Guesswork"
-
-This is accurate but undersells the product after Phase 1 is built. Once the Resolution Plan exists, the positioning should shift to:
-
-> "Resolve Your Dispute Step-by-Step — Without a Lawyer"
-
-The templates become step 1 of a larger resolution strategy. This is a much bigger value proposition.
-
----
-
-## Build Order Summary
-
-| Phase | What | Effort | Value |
-|---|---|---|---|
-| 1 | Resolution Plan panel after letter generation | 1 session | Very High — turns a letter into a strategy |
-| 5 | Chargeback window alert | 30 min | High — saves payment dispute users immediately |
-| 2 | Structured intake flow (pre-chat questions) | 1 session | High — better matching + faster resolution |
-| 3 | Dispute tracker upgrade with step persistence | 1 session | Medium-High — closes the feedback loop |
-| 4 | Email + phone script output formats | 1 session | Medium — expands utility |
-
-**Phase 1 + Quick Win (chargeback alert) together are a single session of work and deliver the largest shift in product perception.** That is the recommended starting point.
-
----
-
-## Technical Note on Data Already Available
-
-The `legalKnowledgeDatabase` in `legalKnowledge.ts` already contains, for every category:
-- `regulatoryAgencies` — name, website, complaint URL (CFPB, FTC, State AG pattern)
-- `timeframes` — specific day limits with source citations
-- `escalationPaths` — ordered escalation strings
-
-And `stateSpecificLaws.ts` already contains:
-- `agWebsite` — state AG link per state
-- Small claims limits are not yet stored but can be added as a simple lookup object
-
-Phase 1 can be built almost entirely from data that already exists in the codebase. It is a presentation and UX problem, not a data problem.
