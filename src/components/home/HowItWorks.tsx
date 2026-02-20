@@ -29,7 +29,7 @@ const steps: Step[] = [
   {
     icon: CheckCircle,
     title: 'Track Until Resolved',
-    description: 'Use the Dispute Tracker to log progress, check off resolution steps, and mark your dispute resolved when you win.',
+    description: 'Use the Dispute Tracker to log progress, check off resolution steps, and update your status if the dispute is resolved. Outcomes are not guaranteed.',
     step: '04',
   },
 ];
