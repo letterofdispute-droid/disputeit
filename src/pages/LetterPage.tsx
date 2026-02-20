@@ -13,7 +13,7 @@ import TemplateFAQ from '@/components/letter/TemplateFAQ';
 import SEOHead from '@/components/SEOHead';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { ChevronRight, ArrowDown, AlertCircle } from 'lucide-react';
+import { ChevronRight, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MethodologyBadge } from '@/components/letter/MethodologyBadge';
 import TemplateSocialProof from '@/components/letter/TemplateSocialProof';
@@ -375,21 +375,6 @@ const LetterPage = () => {
         subcategorySlug={subcategorySlug!}
         maxItems={6}
       />
-
-      {/* Persistent Legal Disclaimer Banner */}
-      <div className="sticky bottom-0 z-40 w-full bg-muted/95 backdrop-blur-sm border-t border-border">
-        <div className="container-wide py-2">
-          <div className="flex items-center justify-center gap-2">
-            <AlertCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <p className="text-xs text-muted-foreground text-center">
-              <strong className="text-foreground">Not legal advice.</strong> Machine-generated content. Review carefully before sending.{' '}
-              <Link to="/disclaimer" className="underline hover:text-foreground transition-colors">
-                Full disclaimer
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
     </Layout>
   );
 };
