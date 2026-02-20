@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Target, Settings, KeyRound } from 'lucide-react';
+import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Target, Settings, KeyRound, Lightbulb } from 'lucide-react';
 import TemplateCoverageMap from '@/components/admin/seo/TemplateCoverageMap';
 import ContentQueue from '@/components/admin/seo/ContentQueue';
 import LinkSuggestions from '@/components/admin/seo/LinkSuggestions';
@@ -9,6 +9,7 @@ import ContentPerformance from '@/components/admin/seo/analytics/ContentPerforma
 import GapAnalysis from '@/components/admin/seo/analytics/GapAnalysis';
 import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
 import KeywordManager from '@/components/admin/seo/KeywordManager';
+import TopicDiscovery from '@/components/admin/seo/TopicDiscovery';
 
 export default function SEODashboard() {
   return (
@@ -27,8 +28,12 @@ export default function SEODashboard() {
       <CoverageStats />
 
       {/* Main Tabs */}
-      <Tabs defaultValue="coverage" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-flex">
+      <Tabs defaultValue="discover" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-9 lg:w-auto lg:inline-flex">
+          <TabsTrigger value="discover" className="gap-2">
+            <Lightbulb className="h-4 w-4" />
+            <span className="hidden sm:inline">Discover</span>
+          </TabsTrigger>
           <TabsTrigger value="coverage" className="gap-2">
             <LayoutGrid className="h-4 w-4" />
             <span className="hidden sm:inline">Coverage</span>
@@ -62,6 +67,10 @@ export default function SEODashboard() {
             <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="discover" className="mt-4">
+          <TopicDiscovery />
+        </TabsContent>
 
         <TabsContent value="coverage" className="mt-4">
           <TemplateCoverageMap />
