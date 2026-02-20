@@ -73,6 +73,47 @@ Deno.serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Input validation
+    if (!action || typeof action !== 'string' || !['suggest', 'analyze'].includes(action)) {
+      return new Response(JSON.stringify({ error: 'Invalid action. Must be "suggest" or "analyze"' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (fieldLabel !== undefined && (typeof fieldLabel !== 'string' || fieldLabel.length > 200)) {
+      return new Response(JSON.stringify({ error: 'fieldLabel must be a string under 200 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (fieldValue !== undefined && (typeof fieldValue !== 'string' || fieldValue.length > 10000)) {
+      return new Response(JSON.stringify({ error: 'fieldValue must be a string under 10,000 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (templateTitle !== undefined && (typeof templateTitle !== 'string' || templateTitle.length > 300)) {
+      return new Response(JSON.stringify({ error: 'templateTitle must be a string under 300 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (category !== undefined && (typeof category !== 'string' || category.length > 100)) {
+      return new Response(JSON.stringify({ error: 'category must be a string under 100 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (context !== undefined) {
+      const contextStr = JSON.stringify(context);
+      if (contextStr.length > 50000) {
+        return new Response(JSON.stringify({ error: 'context payload too large (max 50KB)' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const expertise = categoryExpertise[category] || 'You are an expert in consumer dispute resolution.';
 
     let systemPrompt = `${expertise}

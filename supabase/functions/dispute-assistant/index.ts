@@ -12,9 +12,44 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
+    const { messages } = body;
+
+    // Input validation
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "Messages array is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (messages.length === 0 || messages.length > 50) {
+      return new Response(JSON.stringify({ error: "Messages must contain between 1 and 50 items" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    for (const msg of messages) {
+      if (!msg || typeof msg.content !== "string" || !msg.role) {
+        return new Response(JSON.stringify({ error: "Invalid message format" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (msg.content.length > 10000) {
+        return new Response(JSON.stringify({ error: "Message content exceeds maximum length of 10,000 characters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!["user", "assistant", "system"].includes(msg.role)) {
+        return new Response(JSON.stringify({ error: "Invalid message role" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
