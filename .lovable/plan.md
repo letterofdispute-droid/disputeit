@@ -1,68 +1,83 @@
 
-# Sitemap Gaps — 3 Categories of Missing URLs
+# Sitemap Completeness Audit — Current Status & One Remaining Fix
 
-The current sitemap is missing URLs in three areas. Here is the full audit.
+## Full Cross-Reference: Every Route vs. Sitemap Coverage
 
-## Gap 1 — Static Pages (4 missing routes)
+After a complete audit of `App.tsx`, `scripts/build-static.mjs`, `consumerRightsContent.ts`, and `stateSpecificLaws.ts`, here is the definitive coverage map:
 
-The `generateStaticSitemap()` function in `scripts/build-static.mjs` lists 12 pages. Comparing against `App.tsx`, four public indexable routes are absent:
+### sitemap-static.xml — 16 pages (COMPLETE after last fix)
 
-| Route | Priority | Why it matters |
+| Route | Present | Sitemap File |
 |---|---|---|
-| `/deadlines` | 0.7 | Statute of limitations hub — high search value |
-| `/consumer-news` | 0.6 | Fresh content page, signals crawl frequency |
-| `/analyze-letter` | 0.7 | Free tool — search intent for "analyze dispute letter" |
-| `/cookie-policy` | 0.3 | Legal page — low value but complete for crawlers |
+| `/` | Yes | sitemap-static.xml |
+| `/templates` | Yes | sitemap-static.xml |
+| `/how-it-works` | Yes | sitemap-static.xml |
+| `/pricing` | Yes | sitemap-static.xml |
+| `/faq` | Yes | sitemap-static.xml |
+| `/about` | Yes | sitemap-static.xml |
+| `/contact` | Yes | sitemap-static.xml |
+| `/guides` | Yes | sitemap-static.xml |
+| `/articles` | Yes | sitemap-static.xml |
+| `/privacy` | Yes | sitemap-static.xml |
+| `/terms` | Yes | sitemap-static.xml |
+| `/disclaimer` | Yes | sitemap-static.xml |
+| `/deadlines` | Yes (added last session) | sitemap-static.xml |
+| `/consumer-news` | Yes (added last session) | sitemap-static.xml |
+| `/analyze-letter` | Yes (added last session) | sitemap-static.xml |
+| `/cookie-policy` | Yes (added last session) | sitemap-static.xml |
 
-**Fix**: Add these 4 entries to `staticPages` array in `generateStaticSitemap()`.
+### sitemap-categories.xml — COMPLETE
 
-## Gap 2 — Blog Article Category Pages (9 missing slugs)
+Contains all 13 template category pages, all subcategory pages, and all 13 Consumer Rights Guide pages (`/guides/:categoryId`). The `generateCategoriesSitemap()` function loops over the same 13 categories defined in `consumerRightsContent.ts` — exact match, no gaps.
 
-The build script hardcodes `blogCategories` as 5 old slugs that no longer match the live data:
+### sitemap-templates.xml — COMPLETE
 
-**Script has (5 stale entries):**
-`consumer-rights`, `landlord-tenant`, `travel-disputes`, `financial-tips`, `legal-guides`
+All 400+ template leaf pages are inferred at build time from the template TypeScript source files.
 
-**Actual categories in `src/data/blogPosts.ts` (14 entries):**
-`consumer-rights`, `insurance`, `healthcare`, `utilities`, `vehicle`, `employment`, `housing`, `travel`, `financial`, `ecommerce`, `hoa`, `contractors`, `complaint-guides`, `legal-tips`
+### sitemap-state-rights.xml — COMPLETE
 
-9 category index pages (e.g. `/articles/insurance`, `/articles/healthcare`) are generating broken 404 URLs in the blog sitemap and missing real ones. Google may be crawling the old 5 stale URLs and hitting 404s.
+715 URLs: `/state-rights` hub + 51 state hubs + 663 state+category leaf pages. The hub page `/state-rights` is correctly placed in this file (not the static file) — this is valid per sitemap spec.
 
-**Fix**: Replace the hardcoded `blogCategories` array in the build script with the correct 14 slugs.
+### sitemap-blog-*.xml — COMPLETE after last fix
 
-## Gap 3 — `sitemap-categories.xml` Missing Article Category Pages
+All 14 active blog category pages + all published blog posts fetched from the database. The stale 5 slugs have been replaced.
 
-The `generateCategoriesSitemap()` function covers `/templates/:id` + `/guides/:id` but the blog category hub pages (`/articles/:category`) are only included inside `sitemap-blog-1.xml`. This is structurally fine (they live in the blog sitemap), but the issue is Gap 2 means the wrong slugs are being written there right now.
+---
 
-## What Does NOT Need Changing
+## The One Real Bug: Stale Console Count
 
-- `sitemap-state-rights.xml` — 715 URLs, correct structure ✅
-- `sitemap-templates.xml` — all template routes correctly inferred ✅
-- `sitemap-categories.xml` — all 13 template categories + subcategories + guide pages ✅
-- Blog post URLs — fetched live from the database, paginated correctly ✅
-- Sitemap index structure — all sub-sitemaps referenced ✅
+Line 638 of `build-static.mjs` has a hardcoded `12` for the static page count that was never updated when 4 pages were added:
+
+```text
+// CURRENT (wrong):
+const totalUrls = 12 + categories.length + subcatCount + ...
+
+// SHOULD BE:
+const totalUrls = staticPages.length + categories.length + subcatCount + ...
+```
+
+This only affects the console log output — not any actual sitemap content — but it reports ~4 fewer URLs than are actually generated, which is misleading.
+
+**The correct fix** is to move the calculation inside `generateStaticSitemap()` or pass the count out dynamically, so it self-updates whenever pages are added.
+
+---
 
 ## Implementation
 
-**Single file changed: `scripts/build-static.mjs`**
+**Single file changed: `scripts/build-static.mjs`** — line 638 only.
 
-### Change 1 — `generateStaticSitemap()` (lines 346–359)
-Add 4 missing static routes to the `staticPages` array:
-```
-{ loc: '/deadlines',      priority: '0.7', changefreq: 'weekly'  },
-{ loc: '/consumer-news',  priority: '0.6', changefreq: 'daily'   },
-{ loc: '/analyze-letter', priority: '0.7', changefreq: 'monthly' },
-{ loc: '/cookie-policy',  priority: '0.3', changefreq: 'monthly' },
-```
+Change the hardcoded `12` to a dynamic reference. The cleanest approach is to make `generateStaticSitemap()` also return the count, or simply count the `staticPages` array at the point of use.
 
-### Change 2 — `blogCategories` constant (lines 66–72)
-Replace the 5 stale slugs with all 14 correct slugs matching `src/data/blogPosts.ts`:
-```
-consumer-rights, insurance, healthcare, utilities, vehicle,
-employment, housing, travel, financial, ecommerce,
-hoa, contractors, complaint-guides, legal-tips
+Concretely, refactor `generateStaticSitemap()` to return both the XML and the page count:
+
+```text
+// Before: returns string
+function generateStaticSitemap() { ... return xml; }
+
+// After: returns { xml, count }
+function generateStaticSitemap() { ... return { xml: xmlString, count: staticPages.length }; }
 ```
 
-After these two changes, the sitemap will cover all publicly indexable URLs in the application. The sitemap index structure (`sitemap.xml`) does not need any changes — the same sub-sitemap files are referenced, they will simply contain the correct URLs.
+Then update the call site and total count line accordingly. This ensures the console summary is always accurate regardless of future additions.
 
-**Total new URLs added: ~17** (4 static + 9 blog category index pages + correcting 5 stale ones that would 404).
+**No other changes are needed.** The sitemap is structurally complete — all public indexable routes from the application are covered across the five sitemap files.
