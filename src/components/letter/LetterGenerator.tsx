@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, Loader2, AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ import EvidenceChecklist from './EvidenceChecklist';
 import EvidenceUploader from './EvidenceUploader';
 import HumanCraftedBadge from './HumanCraftedBadge';
 import GeneratingOverlay from './GeneratingOverlay';
+import ResolutionPlanPanel from './ResolutionPlanPanel';
 import { useFormAssistant } from '@/hooks/useFormAssistant';
 import { useGenerateLegalLetter } from '@/hooks/useGenerateLegalLetter';
 import { useEvidenceUpload } from '@/hooks/useEvidenceUpload';
@@ -33,6 +35,9 @@ import {
   trackGenerateLetterClick 
 } from '@/hooks/useGTM';
 
+
+const CHARGEBACK_CATEGORIES = new Set(['Financial & Banking', 'Refunds & Retail', 'E-commerce & Online Shopping', 'Travel & Hospitality', 'Damaged Goods & Products']);
+
 interface LetterGeneratorProps {
   template: LetterTemplate;
 }
@@ -46,6 +51,7 @@ const LetterGenerator = ({
   const [selectedState, setSelectedState] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showResolutionPlan, setShowResolutionPlan] = useState(false);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
   const [showEvidenceChecklist, setShowEvidenceChecklist] = useState(false);
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
@@ -62,6 +68,17 @@ const LetterGenerator = ({
   const { user } = useAuth();
   const { trackFormStarted, trackFormCompleted } = useAnalytics();
   const totalSteps = 3;
+
+  // Chargeback alert: show in step 2 when category + jurisdiction is US
+  const showChargebackAlert = selectedJurisdiction === 'US' && CHARGEBACK_CATEGORIES.has(template.category);
+
+  // Check if within chargeback window based on date fields
+  const incidentDate = formData.incidentDate || formData.date || formData.purchaseDate || formData.serviceDate || '';
+  const daysSinceIncident = incidentDate
+    ? Math.floor((Date.now() - new Date(incidentDate).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const withinChargebackWindow = daysSinceIncident !== null && daysSinceIncident <= 60;
+
 
   // Generate fallback letter content (for preview only)
   const fallbackLetterContent = useMemo(() => {
@@ -465,12 +482,20 @@ const LetterGenerator = ({
         onClose={() => setShowPricing(false)} 
       />}
 
+      {/* Resolution Plan — shown after letter generation, above pricing */}
+      {showResolutionPlan && (
+        <div className="max-w-5xl mx-auto mt-6">
+          <ResolutionPlanPanel templateCategory={template.category} selectedState={selectedState} />
+        </div>
+      )}
+
       {/* Generating Overlay with Progress */}
       <GeneratingOverlay 
         isOpen={showGeneratingOverlay}
         isGenerating={isGenerating} 
         onComplete={useCallback(() => {
           setShowGeneratingOverlay(false);
+          setShowResolutionPlan(true);
           setShowPricing(true);
         }, [])} 
       />

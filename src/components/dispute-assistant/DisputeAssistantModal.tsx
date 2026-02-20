@@ -7,6 +7,7 @@ import ChatInput from './ChatInput';
 import LetterRecommendation from './LetterRecommendation';
 import CustomLetterOffer from './CustomLetterOffer';
 import LegalExpertChat from './LegalExpertChat';
+import DisputeIntakeFlow, { IntakeAnswers } from './DisputeIntakeFlow';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -37,6 +38,8 @@ const INITIAL_MESSAGE: Message = {
 };
 
 const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false, autoStartListening = false }: DisputeAssistantModalProps) => {
+  const [showIntake, setShowIntake] = useState(true);
+  const [intakeAnswers, setIntakeAnswers] = useState<IntakeAnswers | null>(null);
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -182,12 +185,51 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
     }
   }, [messages]);
 
+  const handleIntakeComplete = (answers: IntakeAnswers) => {
+    setIntakeAnswers(answers);
+    setShowIntake(false);
+
+    // Build a pre-loaded context message for the AI
+    const creditCardNote = answers.paidByCreditCard === true
+      ? 'They paid by credit card (chargeback may be possible).'
+      : answers.paidByCreditCard === false
+      ? 'They did not pay by credit card.'
+      : '';
+    const dateNote = answers.incidentDate
+      ? `The incident happened on ${answers.incidentDate}.`
+      : '';
+    const responseNote = answers.companyResponded === 'yes'
+      ? 'The company has already responded but was unsatisfactory.'
+      : answers.companyResponded === 'no'
+      ? 'The company has not responded to previous contact.'
+      : 'This is a first contact — the company has not been approached yet.';
+
+    const contextMessage = `[User context from intake: Dispute type: ${answers.disputeType}. ${creditCardNote} ${dateNote} ${responseNote}]`;
+
+    setMessages([
+      INITIAL_MESSAGE,
+      {
+        role: 'assistant',
+        content: `Got it! You're dealing with a ${answers.disputeType} dispute. ${
+          answers.paidByCreditCard
+            ? "Since you paid by credit card, I'll also mention your chargeback options. "
+            : ''
+        }Tell me what happened and I'll find the best letter and resolution path for you.`,
+      },
+    ]);
+    // Store context for AI (will be prepended to first user message)
+    sessionStorage.setItem('dispute_intake_context', contextMessage);
+  };
+
   const handleReset = () => {
+    setShowIntake(true);
+    setIntakeAnswers(null);
     setMessages([INITIAL_MESSAGE]);
     setRecommendation(null);
     setCustomLetterOffer(null);
     setShowLegalExpert(startInLegalExpertMode);
     setGeneratedLetter(null);
+    sessionStorage.removeItem('dispute_intake_context');
   };
 
   const handleClose = () => {
@@ -222,7 +264,9 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
                   </div>
                   <div>
                     <DialogTitle className="text-left font-serif">Dispute Assistant</DialogTitle>
-                    <p className="text-sm text-muted-foreground">I'll help you find the right letter</p>
+                    <p className="text-sm text-muted-foreground">
+                      {showIntake ? 'Step-by-step dispute guidance' : "I'll help you find the right letter"}
+                    </p>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
@@ -231,50 +275,55 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
               </div>
             </DialogHeader>
 
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <ChatInterface messages={messages} isLoading={isLoading} />
-              
-              {/* Show recommendation if available */}
-              {recommendation && (
-                <div className="px-4 py-3 border-t border-border bg-muted/30">
-                  <LetterRecommendation 
-                    recommendation={recommendation} 
-                    onClose={handleClose}
-                  />
-                </div>
-              )}
-
-              {/* Show custom letter offer if available (and no recommendation) */}
-              {customLetterOffer && !recommendation && (
-                <div className="px-4 py-3 border-t border-border bg-muted/30">
-                  <CustomLetterOffer 
-                    reason={customLetterOffer.reason}
-                    suggestedApproach={customLetterOffer.suggestedApproach}
-                    onStartCustomLetter={handleStartCustomLetter}
-                  />
-                </div>
-              )}
-
-              <div className="border-t border-border p-4 flex-shrink-0">
-                <ChatInput 
-                  onSend={streamChat} 
-                  isLoading={isLoading}
-                  placeholder="Type or speak your dispute..."
-                  autoStartListening={autoStartListening}
-                />
-                {messages.length > 1 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleReset}
-                    className="mt-2 text-xs text-muted-foreground"
-                  >
-                    <MessageCircle className="h-3 w-3 mr-1" />
-                    Start over
-                  </Button>
+            {/* Intake flow shown first */}
+            {showIntake ? (
+              <DisputeIntakeFlow onComplete={handleIntakeComplete} />
+            ) : (
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <ChatInterface messages={messages} isLoading={isLoading} />
+                
+                {/* Show recommendation if available */}
+                {recommendation && (
+                  <div className="px-4 py-3 border-t border-border bg-muted/30">
+                    <LetterRecommendation 
+                      recommendation={recommendation} 
+                      onClose={handleClose}
+                    />
+                  </div>
                 )}
+
+                {/* Show custom letter offer if available (and no recommendation) */}
+                {customLetterOffer && !recommendation && (
+                  <div className="px-4 py-3 border-t border-border bg-muted/30">
+                    <CustomLetterOffer 
+                      reason={customLetterOffer.reason}
+                      suggestedApproach={customLetterOffer.suggestedApproach}
+                      onStartCustomLetter={handleStartCustomLetter}
+                    />
+                  </div>
+                )}
+
+                <div className="border-t border-border p-4 flex-shrink-0">
+                  <ChatInput 
+                    onSend={streamChat} 
+                    isLoading={isLoading}
+                    placeholder="Tell me what happened..."
+                    autoStartListening={autoStartListening}
+                  />
+                  {messages.length > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleReset}
+                      className="mt-2 text-xs text-muted-foreground"
+                    >
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      Start over
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           <LegalExpertChat 
@@ -290,3 +339,4 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
 };
 
 export default DisputeAssistantModal;
+
