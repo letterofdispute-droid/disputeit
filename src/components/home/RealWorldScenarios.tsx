@@ -41,7 +41,7 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Landlords often respond quickly when they see a formal, dated letter that references their legal obligations.',
-    letterSlug: '/letters/housing/security-deposit-return',
+    letterSlug: '/templates/housing/tenancy-dispute/housing-kw-security-deposit-dispute',
     letterTitle: 'Security Deposit Return Request',
     category: 'housing',
   },
@@ -59,7 +59,7 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Billing departments are required to investigate formal disputes, and errors are often corrected once documented.',
-    letterSlug: '/letters/healthcare/medical-bill-dispute',
+    letterSlug: '/templates/healthcare/billing-coding/healthcare-kw-medical-bill-dispute',
     letterTitle: 'Medical Bill Error Dispute',
     category: 'healthcare',
   },
@@ -77,7 +77,7 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Many denied claims are overturned on appeal when properly documented - the denial rate drops significantly after first appeal.',
-    letterSlug: '/letters/insurance/claim-denial-appeal',
+    letterSlug: '/templates/insurance/health-insurance/insurance-kw-health-insurance-appeal',
     letterTitle: 'Insurance Claim Appeal',
     category: 'insurance',
   },
@@ -95,9 +95,9 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Companies often resolve issues faster when they see a formal complaint that could become a credit card dispute or regulatory complaint.',
-    letterSlug: '/letters/refunds/defective-product-refund',
+    letterSlug: '/templates/damaged-goods/defective-product/damaged-goods-kw-defective-product',
     letterTitle: 'Defective Product Refund Request',
-    category: 'refunds',
+    category: 'damaged-goods',
   },
   {
     id: 'flight-compensation',
@@ -113,7 +113,7 @@ const scenarios: Scenario[] = [
     ],
     typicalOutcome:
       'Airlines have legal obligations for delays/cancellations - a formal letter citing regulations often triggers a proper review.',
-    letterSlug: '/letters/travel/flight-delay-compensation',
+    letterSlug: '/templates/travel/flight-compensation/travel-kw-flight-delay-compensation',
     letterTitle: 'Flight Delay/Cancellation Compensation',
     category: 'travel',
   },
