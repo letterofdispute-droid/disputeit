@@ -1,233 +1,129 @@
 
-# Full Website Audit — Performance & Security
+# Analytics Intelligence Layer — Page Performance Monitoring & Content Strategy Integration
 
-This is a comprehensive audit of every part of the website: homepage, template pages, articles, guides, state rights, deadlines calculator, consumer news, letter analyzer, user dashboard, settings, and all public/admin routes.
+## The Good News: You're Already Collecting the Data
 
----
+This is the key insight. Since day one, the site has been recording `page_view` events with full context: `page_path`, `session_id`, `referrer`, `first_touch` / `last_touch` attribution, and screen width. As of today there are **4,974 page view events** already stored across real page paths — `/`, `/dashboard`, `/articles`, `/state-rights`, dozens of individual article URLs, and more.
 
-## Overall Assessment
-
-The site is well-architected. Most critical security concerns are properly addressed. There are targeted improvements to make across three areas: **RLS policy gaps**, **performance quick wins**, and **SEO/metadata gaps on a handful of pages**.
+The data is there. What's missing is a **"Page Performance" lens** that presents it as actionable intelligence — specifically the "which pages are underperforming, and what should we do about it" view you're describing.
 
 ---
 
-## Security Findings
+## What You're Asking For (Translated to Concrete Features)
 
-### CRITICAL — `letter_purchases` SELECT policy uses email fallback (exploitable)
+The idea maps directly to three things:
 
-The current SELECT policy on `letter_purchases` is:
-```sql
-USING (auth.uid() = user_id OR email = auth.email())
-```
+1. **A Page Performance report** — A ranked table of every page by views, unique visitors, and engagement signals. Highlights underperformers with clear visual indicators ("this page got 2 views in 30 days — it's invisible").
 
-The `email = auth.email()` branch is dangerous. If a user changes their email or if a session token is intercepted, this creates a path to view purchases made before auth linkage. Additionally, `user_id` is nullable on this table — meaning guest purchases (no user_id) fall through to the email branch which is unvalidated for non-authenticated callers.
+2. **An AI-powered "Why is this underperforming?" button** — For any low-traffic page, an AI analysis that reads the page's content plan coverage, keyword targets, internal link count, article type distribution, and views — then produces a specific content strategy recommendation: "This template page has no related articles. Creating a How-To guide and a Sample Letter would likely triple its visibility."
 
-**Fix:** Add a hard authenticated-only guard. Guest purchases (user_id IS NULL) should only be accessible via the server-side edge function that verifies the Stripe session, not via direct DB select.
-
-```sql
--- New SELECT policy (drop the old one first)
-CREATE POLICY "Users can view own purchases"
-ON letter_purchases FOR SELECT
-USING (
-  auth.uid() IS NOT NULL
-  AND (auth.uid() = user_id OR email = auth.email())
-);
-```
-
-This ensures unauthenticated callers — even with a valid email in the session — cannot query the table.
+3. **A bridge to the SEO Command Center** — So the insight flows directly into action: the recommendation creates a content plan or adds keywords, without leaving the screen.
 
 ---
 
-### MEDIUM — `profiles` UPDATE policy has no `WITH CHECK` clause
+## What Currently Exists (So We Don't Duplicate)
 
-The policy `Users can update their own profile` has:
-- `USING (auth.uid() = user_id)` ✅
-- `WITH CHECK: <nil>` ❌
+| Already Built | Where |
+|---|---|
+| `page_view` events with `page_path` stored | `analytics_events` table |
+| Funnel tab with top landing pages (top 10) | `AdminAnalytics.tsx` FunnelTab |
+| Site Search report (zero-result queries) | `SiteSearchReport.tsx` |
+| Content performance by article views | `ContentPerformance.tsx` (SEO Dashboard) |
+| Gap analysis by template coverage | `GapAnalysis.tsx` (SEO Dashboard) |
+| Attribution by channel (first/last touch) | `AdminAnalytics.tsx` FunnelTab |
 
-Without a `WITH CHECK`, a user could update their row to set `is_admin = true` or change their `user_id` to another user's ID, because there is no constraint enforcing the shape of the updated row.
-
-**Fix:**
-```sql
--- Replace existing update policy
-ALTER POLICY "Users can update their own profile" ON profiles
-  USING (auth.uid() = user_id)
-  WITH CHECK (
-    auth.uid() = user_id
-    AND (is_admin = (SELECT is_admin FROM profiles WHERE user_id = auth.uid()))
-  );
-```
-
-This prevents privilege escalation via profile update.
-
----
-
-### LOW — `analytics_events` INSERT policy uses `WITH CHECK (true)` — anonymous flood risk
-
-The policy `Anyone can insert analytics events` has no length limit, no rate limit, and no content validation at the RLS layer. While analytics silently fail, a bad actor could flood this table with millions of rows trivially.
-
-The `useAnalytics` hook already checks cookie consent before inserting, which is good. But the DB has no safeguard if the hook is bypassed.
-
-**Fix:** Restrict anonymous inserts to require a minimum payload shape, or limit to `authenticated` role only. Since the site tracks anonymous page views, the best mitigation is adding a DB-level row limit trigger. As a lighter alternative, we scope insert access to only allow `event_type` values from an allowlist.
-
----
-
-### INFO — `user_credits` exposes `granted_by` (admin UUID)
-
-The `granted_by` column is an admin's UUID. While users can only SELECT their own credits, they can read the UUID of the admin who granted the credit. This leaks internal admin identity, which could help social engineering attacks.
-
-**Fix:** Exclude `granted_by` from the user-facing SELECT policy by creating a view or updating the query in `useUserCredits` to never select `granted_by`.
-
----
-
-### INFO — `Permissive RLS Policy Always True` linter warning (Supabase)
-
-Tables with `WITH CHECK (true)` flagged by Supabase linter:
-- `analytics_events` INSERT — discussed above
-- `blog_categories`, `blog_tags`, `category_images`, `consumer_news_cache`, `letter_analyses`, `site_settings`, `template_seo_overrides`, `template_stats` — all are intentional public read tables (SELECT true is fine per spec)
-
-The only actionable one is `analytics_events` INSERT.
-
----
-
-### INFO — Extension in Public schema (Supabase linter)
-
-The `vector` extension (pgvector) is installed in the `public` schema rather than a dedicated schema. This is a Supabase-managed configuration — it cannot be changed without dropping and recreating the extension. This is **not actionable** from the app layer and is noted as informational.
-
----
-
-## Performance Findings
-
-### HIGH — Dashboard makes 3 sequential uncoordinated fetches on mount
-
-`Dashboard.tsx` calls `fetchLetters()`, `fetchPurchases()`, and `fetchProfile()` inside a single `useEffect` that fires when `user` is truthy. These three fetches run in parallel (good) but are not using React Query — they use raw `useState` and `setIsLoading`. This means:
-1. No caching — every Dashboard navigation triggers 3 new Supabase round-trips
-2. No stale-while-revalidate — users see a spinner on every visit
-3. The `profile` state in Dashboard is a **duplicate** of the `profile` already available from `useAuth()` — a wasted fetch
-
-**Fix:**
-- Remove `fetchProfile()` from Dashboard entirely — use `profile` from `useAuth()` which is already loaded
-- Migrate `fetchLetters` and `fetchPurchases` to `useQuery` with `staleTime: 5 * 60 * 1000` — this eliminates the loading spinner on return visits
-
----
-
-### MEDIUM — `SettingsPage` re-fetches profile data already in AuthContext
-
-`SettingsPage.tsx` calls `supabase.from('profiles').select(...)` on mount. `useAuth()` already contains `profile` (first_name, last_name, avatar_url). The settings page fetches the same data again unnecessarily, plus `email` and `created_at` which are available from `user` object in Auth.
-
-**Fix:** Remove the `fetchProfile` call from `SettingsPage`. Read `profile` from `useAuth()` and `user.email` / `user.created_at` from the auth `user` object directly.
-
----
-
-### MEDIUM — `letter_purchases` fetch in Dashboard has no limit
-
-```typescript
-const { data, error } = await supabase
-  .from('letter_purchases')
-  .select('...')
-  .eq('status', 'completed')
-  .order('created_at', { ascending: false });
-  // NO .limit() call
-```
-
-For a power user with 50+ purchases, this returns every row. Supabase's default cap is 1000 rows.
-
-**Fix:** Add `.limit(50)` and implement pagination if needed.
-
----
-
-### LOW — Framer Motion animations on Dashboard load with delay cascade
-
-The Dashboard uses `motion.div` with `delay: 0.1s / 0.2s / 0.3s / 0.4s / 0.5s` staggered animations. On a slow connection, the user sees sequential content pop-ins. This increases perceived load time.
-
-**Fix:** Reduce delays to max 0.15s and use `layout` animations instead of staggered opacity/y transitions for stat blocks.
-
----
-
-### LOW — Hero section uses `animate-float` on multiple elements simultaneously
-
-`Hero.tsx` has 6+ elements with `animate-float` / `animate-float-delayed` / `animate-spin-slow`. These all use `will-change-transform` which is good, but running 6 simultaneous CSS animations on the LCP-critical first fold adds GPU compositing pressure on low-end mobile devices.
-
-**Fix:** Remove `animate-spin-slow` from the accent diamond and limit concurrent float animations to max 2 on mobile (use `hidden sm:block` on decorative animated elements).
-
----
-
-### LOW — `og-image.png` referenced but does not exist in `public/`
-
-`index.html` and `SEOHead.tsx` both reference `/og-image.png`:
-```html
-<meta property="og:image" content="https://letterofdispute.com/og-image.png" />
-```
-This file does not appear in the project's `public/` directory. When shared on social media (Twitter/X, LinkedIn, Facebook), the preview card will show a broken image. This also affects every page using `SEOHead` with the default `ogImage`.
-
-**Fix:** Create and add `public/og-image.png` (1200×630px recommended) to the repository. Until then, fall back to the logo SVG or hero background image.
-
----
-
-## SEO / Metadata Gaps
-
-### MEDIUM — Dashboard and Settings pages have wrong brand name in SEO title
-
-```
-title="Dashboard | DisputeLetters"      ← should be "Letter of Dispute"
-title="Account Settings | DisputeLetters"
-```
-
-The site brand is consistently "Letter of Dispute" everywhere else. These two pages use an undifferentiated "DisputeLetters" variant. Since dashboard/settings are noindexed by default (not in sitemap), this is low SEO impact but matters for browser tab display.
-
-**Fix:** Update both titles to use the correct brand name format: `"My Dashboard | Letter of Dispute"` and `"Account Settings | Letter of Dispute"`.
-
----
-
-### LOW — Login/Signup pages lack `noindex` directive
-
-`LoginPage` and `SignupPage` have SEO titles and descriptions but are not marked `noindex`. These pages should never rank in search — they have thin, duplicate-pattern content.
-
-**Fix:** Add `<meta name="robots" content="noindex, nofollow" />` to the `SEOHead` on `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/dashboard`, and `/settings`.
-
----
-
-### LOW — `ArticlePage` Article schema uses `new Date().toISOString()` as fallback for `datePublished`
-
-```typescript
-datePublished: publishedTime || new Date().toISOString(),
-```
-
-If `publishedTime` is missing, Google sees today's date — making the article appear freshly published every time the page renders. This inflates apparent freshness and can cause trust penalties.
-
-**Fix:** Only emit the `datePublished` field when `publishedTime` is actually present.
+**The gap**: None of these surfaces combine page-level traffic data with content strategy recommendations in one place. You have to cross-reference the Funnel tab, the SEO Dashboard, and the Gap Analysis manually.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1 — Security (Database Migration)
+### Phase 1 — Page Performance Tab in Admin Analytics
 
-**File:** new migration SQL
+**New tab: "Pages"** added to `AdminAnalytics.tsx` alongside Revenue, Funnel, Activity, Campaigns, Search.
 
-1. Fix `letter_purchases` SELECT policy — add `auth.uid() IS NOT NULL` guard
-2. Fix `profiles` UPDATE policy — add `WITH CHECK` preventing `is_admin` field modification
-3. Scope `analytics_events` INSERT to require `auth.role() = 'authenticated'` OR limit via `event_type` allowlist
+This tab shows a **sortable, filterable table** of all tracked pages, built entirely from the existing `analytics_events` data that's already in the database:
 
-### Phase 2 — Performance (Code Changes)
+| Column | Source |
+|---|---|
+| Page URL | `page_path` from `analytics_events` |
+| Total Views | Count of `page_view` events for that path |
+| Unique Sessions | Count of distinct `session_id` values |
+| Trend | View count this period vs. prior period (30d vs. prev 30d) |
+| Last Seen | Most recent `page_view` event timestamp |
+| Performance Signal | Color-coded badge: Hot / Normal / Cold / Invisible |
 
-**Files:** `src/pages/Dashboard.tsx`, `src/pages/SettingsPage.tsx`
+**Performance signal thresholds** (adjustable, based on relative position):
+- **Hot** (top 10% of pages by views)
+- **Normal** (middle 60%)
+- **Cold** (bottom 20%, fewer than 5 views in period)
+- **Invisible** (0 or 1 views — pages that have essentially no traffic)
 
-1. Remove duplicate `fetchProfile` from Dashboard — use `profile` from `useAuth()`
-2. Migrate `fetchLetters` + `fetchPurchases` to `useQuery` with stale caching
-3. Add `.limit(50)` to purchases query
-4. Reduce animation delay cascade from 0.5s max to 0.2s max
+The table will be filterable by page type (articles, templates, guides, category pages, static pages) by detecting patterns in the URL path.
 
-### Phase 3 — SEO Metadata (Code Changes)
+**No new database tables or edge functions needed** — this is purely a query over existing `analytics_events` data, processed client-side using the already-loaded events array that `AdminAnalytics.tsx` fetches.
 
-**Files:** `src/pages/Dashboard.tsx`, `src/pages/SettingsPage.tsx`, `src/pages/LoginPage.tsx`, `src/pages/SignupPage.tsx`, `src/pages/ForgotPasswordPage.tsx`, `src/pages/ResetPasswordPage.tsx`, `src/components/SEOHead.tsx`
+### Phase 2 — "Diagnose" Button per Page (AI-Powered)
 
-1. Fix brand name in Dashboard and Settings page titles
-2. Add `noindex` support to `SEOHead` component (new optional prop)
-3. Apply `noindex` to auth pages and dashboard/settings
-4. Fix `datePublished` fallback in Article JSON-LD schema
+Each row in the Pages table gets a **"Diagnose" button**. Clicking it opens a slide-out panel with an AI-generated content strategy for that specific page.
 
-### Phase 4 — Missing OG Image
+The panel calls a new **`diagnose-page-performance`** edge function that:
 
-**File:** `public/og-image.png`
+1. Reads the page's view count and trend from the events already passed to it
+2. Looks up any related `blog_posts` (for article pages) or `content_plans` (for template pages) from the database
+3. Looks up `link_suggestions` — how many internal links point to this page
+4. Looks up `keyword_targets` — whether this page's category has unused keyword budget
+5. Sends this context to `google/gemini-2.5-flash` with a focused prompt: "Act as an SEO content strategist. This page has had X views in the last 30 days. Here is its content coverage data. Diagnose why it's underperforming and give 3 specific, actionable recommendations."
 
-Create and add a proper 1200×630px Open Graph image. This will require the user to supply an image file since it is a design asset. As an interim fix, update the `og:image` fallback in `SEOHead` to use `/ld-logo.svg` (which exists) until the proper image is created.
+**Output structure:**
+```
+Diagnosis Card:
+  ├── Traffic signal (Red/Amber/Green)
+  ├── Root cause statement (1-2 sentences from AI)
+  └── 3 Recommendations:
+       ├── Rec 1: "Create a 'How-To' cluster article targeting [keyword]"
+       ├── Rec 2: "Add 2 internal links from [related article slugs]"  
+       └── Rec 3: "This page has no meta description — add one"
+           └── [Quick action buttons where applicable]
+```
+
+### Phase 3 — Bridge to Content Action
+
+Two quick-action buttons in the Diagnose panel:
+- **"Add to Keyword Pipeline"** — inserts the AI-suggested keyword into `keyword_targets` for the page's vertical, marking it `is_seed = true`. This feeds the existing keyword → plan → generate workflow.
+- **"View in SEO Dashboard"** — deep-links to the SEO Command Center's Coverage or Queue tab pre-filtered to the relevant category.
+
+This closes the loop: see the problem → understand why → take action → content is generated.
+
+---
+
+## Files Changed
+
+| File | Change |
+|---|---|
+| `src/pages/admin/AdminAnalytics.tsx` | Add "Pages" tab to the `TabsList` and `TabsContent`; create `PagePerformanceTab` component inline (same pattern as `FunnelTab`) |
+| `supabase/functions/diagnose-page-performance/index.ts` | New edge function — reads page context from DB, calls Gemini, returns structured diagnosis |
+| `src/components/admin/analytics/PageDiagnosisPanel.tsx` | New slide-out panel component for displaying the AI diagnosis and action buttons |
+
+No database migrations required. The `analytics_events` table already stores all necessary data.
+
+---
+
+## The "When You Have Users" Part
+
+Right now the data is mostly your own testing sessions (4,974 events, ~430 unique sessions on the homepage). The system is fully ready for real users — every visitor will be tracked automatically via the `usePageView()` hook in `Layout.tsx`. As traffic grows, the Page Performance tab will self-populate with increasingly meaningful signals.
+
+The only additional tracking enhancement worth adding: **scroll depth** (how far users scroll on article pages before leaving). This is currently not tracked and would give a much stronger "engagement" signal than view count alone. It could be added to `useAnalytics.ts` as a `scroll_depth` event type without any schema changes.
+
+---
+
+## Summary: What Gets Built
+
+| Feature | Effort | Value |
+|---|---|---|
+| Page Performance table tab | 1 session | High — immediate visibility into traffic distribution |
+| Performance signal badges (Hot/Cold/Invisible) | Included above | High — at-a-glance page health |
+| AI Diagnose button + panel | 1 session | Very High — converts insight to strategy |
+| Keyword pipeline bridge button | 30 mins | High — closes the insight-to-action loop |
+| SEO Dashboard deep-link | 15 mins | Medium — convenience |
+| Scroll depth tracking (optional) | 30 mins | Medium — richer engagement signal |
