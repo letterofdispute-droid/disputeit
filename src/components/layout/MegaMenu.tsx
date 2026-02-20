@@ -10,68 +10,23 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, Scale, ArrowRight, MapPin, Clock, Newspaper, Search } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
 const resources = [
-  {
-    title: 'How It Works',
-    description: 'Learn our 3-step process',
-    href: '/how-it-works',
-    icon: HelpCircle,
-  },
-  {
-    title: 'FAQ',
-    description: 'Common questions answered',
-    href: '/faq',
-    icon: MessageCircle,
-  },
-  {
-    title: 'Knowledge Center',
-    description: 'Tips, guides, and articles',
-    href: '/articles',
-    icon: BookOpen,
-  },
-  {
-    title: 'About Us',
-    description: 'Our mission to empower consumers',
-    href: '/about',
-    icon: Users,
-  },
-  {
-    title: 'Contact',
-    description: 'Get in touch with our team',
-    href: '/contact',
-    icon: Mail,
-  },
+  { title: 'How It Works', description: 'Learn our 3-step process', href: '/how-it-works', icon: HelpCircle },
+  { title: 'FAQ', description: 'Common questions answered', href: '/faq', icon: MessageCircle },
+  { title: 'Knowledge Center', description: 'Tips, guides, and articles', href: '/articles', icon: BookOpen },
+  { title: 'About Us', description: 'Our mission to empower consumers', href: '/about', icon: Users },
+  { title: 'Contact', description: 'Get in touch with our team', href: '/contact', icon: Mail },
 ];
 
 const freeTools = [
-  {
-    title: 'State Rights Lookup',
-    description: 'Find laws for your state and dispute type',
-    href: '/state-rights',
-    icon: MapPin,
-  },
-  {
-    title: 'Deadlines Calculator',
-    description: 'See how long you have to act',
-    href: '/deadlines',
-    icon: Clock,
-  },
-  {
-    title: 'Consumer News',
-    description: 'Latest FTC, CFPB & recall alerts',
-    href: '/consumer-news',
-    icon: Newspaper,
-  },
-  {
-    title: 'Analyze My Letter',
-    description: 'Free AI score on your draft letter',
-    href: '/analyze-letter',
-    icon: Search,
-  },
+  { title: 'State Rights Lookup', description: 'Find laws for your state', href: '/state-rights', icon: MapPin },
+  { title: 'Deadlines Calculator', description: 'See how long you have to act', href: '/deadlines', icon: Clock },
+  { title: 'Consumer News', description: 'Latest FTC, CFPB & recall alerts', href: '/consumer-news', icon: Newspaper },
+  { title: 'Analyze My Letter', description: 'Free AI score on your draft', href: '/analyze-letter', icon: Search },
 ];
 
 const notableStateLinks = [
@@ -81,88 +36,75 @@ const notableStateLinks = [
   { code: 'FL', name: 'Florida', slug: 'florida' },
 ];
 
-interface ListItemProps extends React.ComponentPropsWithoutRef<'a'> {
+// Card-style item for Templates & Guides grids
+interface CardItemProps {
+  title: string;
+  description?: string;
+  icon?: React.ElementType;
+  href: string;
+  iconColor?: string;
+  iconBg?: string;
+}
+
+const CardItem = ({ title, description, icon: Icon, href, iconColor, iconBg }: CardItemProps) => (
+  <li>
+    <NavigationMenuLink asChild>
+      <Link
+        to={href}
+        className="flex items-start gap-3 select-none rounded-xl p-3 no-underline outline-none transition-all hover:bg-accent/8 hover:shadow-sm focus:bg-accent/8 group"
+      >
+        {Icon && (
+          <div
+            className="p-2 rounded-xl flex-shrink-0 mt-0.5"
+            style={{ backgroundColor: iconBg || 'hsl(var(--primary) / 0.08)' }}
+          >
+            <Icon
+              className="h-5 w-5"
+              style={{ color: iconColor || 'hsl(var(--primary))' }}
+            />
+          </div>
+        )}
+        <div className="flex flex-col gap-1 min-w-0">
+          <span className="text-sm font-semibold leading-tight text-foreground">{title}</span>
+          {description && (
+            <span className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{description}</span>
+          )}
+        </div>
+      </Link>
+    </NavigationMenuLink>
+  </li>
+);
+
+// Compact card item for Resources panel
+interface ResourceCardItemProps {
   title: string;
   description?: string;
   icon?: React.ElementType;
   href: string;
 }
 
-const ListItem = ({ className, title, description, icon: Icon, href, ...props }: ListItemProps) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <Link
-          to={href}
-          className={cn(
-            'flex items-start gap-2 select-none rounded-lg p-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
-            className
-          )}
-          {...props}
-        >
-          {Icon && (
-            <div className="p-1.5 rounded-md bg-primary/5 flex-shrink-0">
-              <Icon className="h-3.5 w-3.5 text-primary" />
-            </div>
-          )}
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-sm font-medium leading-tight">{title}</span>
-            {description && (
-              <span className="text-xs text-muted-foreground line-clamp-2 leading-snug">{description}</span>
-            )}
+const ResourceCardItem = ({ title, description, icon: Icon, href }: ResourceCardItemProps) => (
+  <li>
+    <NavigationMenuLink asChild>
+      <Link
+        to={href}
+        className="flex items-start gap-3 select-none rounded-xl px-3 py-2.5 no-underline outline-none transition-all hover:bg-accent/8 hover:shadow-sm focus:bg-accent/8"
+      >
+        {Icon && (
+          <div className="p-1.5 rounded-lg bg-primary/8 flex-shrink-0 mt-0.5">
+            <Icon className="h-4 w-4 text-primary" />
           </div>
-        </Link>
-      </NavigationMenuLink>
-    </li>
-  );
-};
-
-interface ResourceListItemProps extends React.ComponentPropsWithoutRef<'a'> {
-  title: string;
-  icon?: React.ElementType;
-  href: string;
-  children?: React.ReactNode;
-}
-
-const ResourceListItem = ({ className, title, icon: Icon, href, ...props }: ResourceListItemProps) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <Link
-          to={href}
-          className={cn(
-            'flex items-center gap-2 select-none rounded-lg px-3 py-2 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground',
-            className
+        )}
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-sm font-semibold leading-tight text-foreground">{title}</span>
+          {description && (
+            <span className="text-xs text-muted-foreground line-clamp-1 leading-snug">{description}</span>
           )}
-          {...props}
-        >
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-          <div className="text-sm font-medium leading-none">{title}</div>
-        </Link>
-      </NavigationMenuLink>
-    </li>
-  );
-};
-
-const GuideListItem = ({ className, title, icon: Icon, href, ...props }: ListItemProps) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <Link
-          to={href}
-          className={cn(
-            'flex items-center gap-2 select-none rounded-lg p-2 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group',
-            className
-          )}
-          {...props}
-        >
-          {Icon && <Icon className="h-4 w-4 text-primary flex-shrink-0" />}
-          <span className="text-sm">{title}</span>
-        </Link>
-      </NavigationMenuLink>
-    </li>
-  );
-};
+        </div>
+      </Link>
+    </NavigationMenuLink>
+  </li>
+);
 
 const MegaMenu = () => {
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -171,108 +113,82 @@ const MegaMenu = () => {
     <>
       <NavigationMenu>
         <NavigationMenuList>
-          {/* Letter Templates - 3 Column Layout */}
+          {/* Letter Templates */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">
               Letter Templates
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[800px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                {/* AI Helper Prompt */}
-                <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
-                  <p className="text-sm text-muted-foreground mb-1.5">Not sure which letter you need?</p>
-                  <button 
-                    onClick={() => setAssistantOpen(true)}
-                    className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Get AI Help →
-                  </button>
-                </div>
-
-                {/* Category grid - compact icon + name + short tagline */}
+              <div className="w-[860px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
-                    const shortDesc = category.description.split(',')[0].slice(0, 45);
+                    const desc = category.description.split('.')[0];
                     return (
-                      <ListItem
+                      <CardItem
                         key={category.id}
                         title={category.name}
-                        description={shortDesc}
+                        description={desc}
                         href={`/templates/${category.id}`}
                         icon={Icon}
+                        iconColor={category.color}
+                        iconBg={`${category.color}18`}
                       />
                     );
                   })}
                 </ul>
 
-                {/* Footer link */}
-                <div className="border-t border-border mt-3 pt-2">
-                  <Link 
-                    to="/#letters" 
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-2"
+                {/* Footer */}
+                <div className="border-t border-border mt-4 pt-3 flex items-center justify-between px-1">
+                  <Link
+                    to="/#letters"
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                   >
                     <FileText className="h-4 w-4" />
                     Browse all templates →
                   </Link>
+                  <button
+                    onClick={() => setAssistantOpen(true)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Not sure? Get AI help
+                  </button>
                 </div>
               </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
 
-          {/* Consumer Rights Guides - Upgraded menu */}
+          {/* Guides */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">
               Guides
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[750px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                {/* Top pick banner */}
-                <div className="mb-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
-                  <p className="text-xs text-muted-foreground mb-1">Popular guide</p>
-                  <Link 
-                    to="/guides/refunds"
-                    className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <Scale className="h-4 w-4" />
-                    Know your refund rights before writing your dispute letter →
-                  </Link>
-                </div>
-
-                {/* Category grid - compact, 3 columns */}
+              <div className="w-[860px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ul className="grid grid-cols-3 gap-1">
                   {templateCategories.map((category) => {
                     const Icon = category.icon;
-                    const shortDesc = category.description.split(',')[0].slice(0, 45);
+                    const desc = category.description.split('.')[0];
                     return (
-                      <li key={category.id}>
-                        <NavigationMenuLink asChild>
-                          <Link
-                            to={`/guides/${category.id}`}
-                            className="flex items-start gap-2 select-none rounded-lg p-2.5 leading-none no-underline outline-none transition-colors hover:bg-accent/10 hover:text-accent-foreground focus:bg-accent/10 focus:text-accent-foreground group"
-                          >
-                            <div className="p-1.5 rounded-md flex-shrink-0" style={{ backgroundColor: `${category.color}15` }}>
-                              <Icon className="h-3.5 w-3.5" style={{ color: category.color }} />
-                            </div>
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <span className="text-sm font-medium leading-tight">{category.name}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1 leading-snug">
-                                {shortDesc}
-                              </span>
-                            </div>
-                          </Link>
-                        </NavigationMenuLink>
-                      </li>
+                      <CardItem
+                        key={category.id}
+                        title={category.name}
+                        description={desc}
+                        href={`/guides/${category.id}`}
+                        icon={Icon}
+                        iconColor={category.color}
+                        iconBg={`${category.color}18`}
+                      />
                     );
                   })}
                 </ul>
 
-                {/* Footer link */}
-                <div className="border-t border-border mt-3 pt-2">
-                  <Link 
-                    to="/guides" 
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-2"
+                {/* Footer */}
+                <div className="border-t border-border mt-4 pt-3 px-1">
+                  <Link
+                    to="/guides"
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                   >
                     <ArrowRight className="h-4 w-4" />
                     View all consumer rights guides →
@@ -288,15 +204,16 @@ const MegaMenu = () => {
               Resources
             </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[520px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-1">
+              <div className="w-[540px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">General</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 px-3">General</p>
                     <ul className="space-y-0.5">
                       {resources.map((resource) => (
-                        <ResourceListItem
+                        <ResourceCardItem
                           key={resource.title}
                           title={resource.title}
+                          description={resource.description}
                           href={resource.href}
                           icon={resource.icon}
                         />
@@ -304,42 +221,42 @@ const MegaMenu = () => {
                     </ul>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Free Tools</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 px-3">Free Tools</p>
                     <ul className="space-y-0.5">
                       {freeTools.map((tool) => (
-                        <ResourceListItem
+                        <ResourceCardItem
                           key={tool.title}
                           title={tool.title}
+                          description={tool.description}
                           href={tool.href}
                           icon={tool.icon}
                         />
                       ))}
                     </ul>
-                    {/* Notable state hub links */}
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-2">Popular State Laws</p>
-                      <ul className="space-y-0.5">
-                        {notableStateLinks.map((s) => (
-                          <li key={s.code}>
-                            <Link
-                              to={`/state-rights/${s.slug}`}
-                              className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
-                            >
-                              <span className="font-mono text-[10px] w-5">{s.code}</span>
-                              {s.name}
-                            </Link>
-                          </li>
-                        ))}
-                        <li>
-                          <Link
-                            to="/state-rights"
-                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-primary hover:underline transition-colors"
-                          >
-                            Browse all 50 states →
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
+                  </div>
+                </div>
+
+                {/* State laws footer strip */}
+                <div className="border-t border-border mt-4 pt-3 px-1">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Popular State Laws</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {notableStateLinks.map((s) => (
+                      <Link
+                        key={s.code}
+                        to={`/state-rights/${s.slug}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/20 transition-colors"
+                      >
+                        <span className="font-mono">{s.code}</span>
+                        <span className="hidden sm:inline text-muted-foreground/70">·</span>
+                        <span className="hidden sm:inline">{s.name}</span>
+                      </Link>
+                    ))}
+                    <Link
+                      to="/state-rights"
+                      className="text-xs text-primary font-medium hover:underline transition-colors ml-1"
+                    >
+                      Browse all 50 →
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -357,9 +274,9 @@ const MegaMenu = () => {
         </NavigationMenuList>
       </NavigationMenu>
 
-      <DisputeAssistantModal 
-        isOpen={assistantOpen} 
-        onClose={() => setAssistantOpen(false)} 
+      <DisputeAssistantModal
+        isOpen={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
       />
     </>
   );
