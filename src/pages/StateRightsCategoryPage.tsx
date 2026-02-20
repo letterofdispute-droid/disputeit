@@ -17,6 +17,8 @@ import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { getTemplatesByCategory } from '@/data/allTemplates';
+import { inferSubcategory } from '@/data/subcategoryMappings';
 
 // Map category to matching template route
 const CATEGORY_TEMPLATE_MAP: Record<string, string> = {
@@ -131,6 +133,13 @@ export default function StateRightsCategoryPage() {
   };
 
   const templateRoute = CATEGORY_TEMPLATE_MAP[categorySlug!] || 'templates';
+
+  // Get top 3 templates for this category as direct CTAs
+  const categoryTemplates = getTemplatesByCategory(categorySlug!);
+  const topTemplates = categoryTemplates.slice(0, 3).map(t => {
+    const sub = inferSubcategory(t.id, t.category);
+    return { ...t, subSlug: sub?.slug || 'general' };
+  });
 
   return (
     <Layout>
@@ -332,6 +341,38 @@ export default function StateRightsCategoryPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Top Templates for this category */}
+            {topTemplates.length > 0 && (
+              <Card>
+                <CardContent className="pt-5">
+                  <h3 className="font-semibold text-foreground mb-3 text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    {categoryLabel} Letter Templates
+                  </h3>
+                  <ul className="space-y-2">
+                    {topTemplates.map((t) => (
+                      <li key={t.slug}>
+                        <Link
+                          to={`/templates/${categorySlug}/${t.subSlug}/${t.slug}`}
+                          className="flex items-start gap-2 px-2 py-2 rounded text-sm hover:bg-muted transition-colors group"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-xs text-foreground group-hover:text-primary transition-colors line-clamp-2">{t.title}</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors ml-auto flex-shrink-0 mt-0.5" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to={`/templates/${categorySlug}`}
+                    className="mt-3 flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    All {categoryLabel} templates → <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Other categories for this state */}
             <Card>

@@ -3,7 +3,8 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import { getCategoryById, templateCategories } from '@/data/templateCategories';
 import { getGuideByCategory } from '@/data/consumerRightsContent';
-import { getTemplatesByCategory } from '@/data/allTemplates';
+import { getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
+import { inferSubcategory } from '@/data/subcategoryMappings';
 import { ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Clock, FileText, Scale, HelpCircle, ShieldAlert, Lightbulb, BookOpen, ExternalLink, Phone, BarChart3, MapPin, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -507,15 +508,20 @@ const CategoryGuidePage = () => {
                 {popularTemplates.length > 0 && (
                   <div className="mt-5 flex flex-wrap justify-center gap-2">
                     <span className="text-xs text-muted-foreground">Popular:</span>
-                    {popularTemplates.map((t) => (
-                      <Link
-                        key={t.slug}
-                        to={`/letters/${t.slug}`}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        {t.title}
-                      </Link>
-                    ))}
+                  {popularTemplates.map((t) => {
+                      const sub = inferSubcategory(t.id, t.category);
+                      const subSlug = sub?.slug || 'general';
+                      const catId = getCategoryIdFromName(t.category);
+                      return (
+                        <Link
+                          key={t.slug}
+                          to={`/templates/${catId}/${subSlug}/${t.slug}`}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {t.title}
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -531,7 +537,7 @@ const CategoryGuidePage = () => {
                     {relatedArticles.map((article) => (
                       <Link
                         key={article.slug}
-                        to={`/articles/${article.slug}`}
+                        to={`/articles/${article.category_slug}/${article.slug}`}
                         className="group border border-border rounded-lg p-4 hover:border-primary/30 hover:bg-primary/5 transition-colors"
                       >
                         <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
