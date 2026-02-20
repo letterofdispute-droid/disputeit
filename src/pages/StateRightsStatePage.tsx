@@ -45,6 +45,23 @@ export default function StateRightsStatePage() {
     { name: stateName, url: `https://letterofdispute.com/state-rights/${stateSlug}` },
   ];
 
+  const faqItems = [
+    {
+      question: `What is ${stateName}'s main consumer protection law?`,
+      answer: `${stateName}'s primary consumer protection statute is ${primaryStatute.name} (${primaryStatute.citation}). ${primaryStatute.summary}`,
+    },
+    {
+      question: `How do I file a consumer complaint in ${stateName}?`,
+      answer: `You can file a formal consumer complaint with the ${stateData.agOffice} through their official website at ${stateData.agWebsite}. Filing a complaint often triggers faster business responses and is free for consumers.`,
+    },
+    {
+      question: `Does ${stateName} have a lemon law for vehicles?`,
+      answer: stateData.lemonLaw
+        ? `Yes. ${stateName} has a lemon law: ${stateData.lemonLaw.name} (${stateData.lemonLaw.citation}). ${stateData.lemonLaw.summary}`
+        : `${stateName} consumers are protected by the federal Magnuson-Moss Warranty Act for defective vehicles. Check with the ${stateData.agOffice} for state-specific remedies.`,
+    },
+  ];
+
   // Collect all available specific statutes for this state
   const specificStatutes = [
     stateData.lemonLaw ? { key: 'vehicle', statute: stateData.lemonLaw } : null,
@@ -61,6 +78,7 @@ export default function StateRightsStatePage() {
         description={description}
         canonicalPath={`/state-rights/${stateSlug}`}
         breadcrumbs={breadcrumbs}
+        faqItems={faqItems}
       />
 
       {/* Breadcrumb */}

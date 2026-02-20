@@ -265,8 +265,23 @@ const LetterGenerator = ({
                     {selectedState && (() => {
                       const stateInfo = US_STATES.find(s => s.code === selectedState);
                       if (!stateInfo) return null;
-                      const stateSlug = stateInfo.name.toLowerCase().replace(/\s+/g, '-');
-                      const categorySlug = template.category;
+                      const stateSlug = stateInfo.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                      const CATEGORY_TO_SLUG: Record<string, string> = {
+                        'Vehicle': 'vehicle',
+                        'Housing & Tenant Rights': 'housing',
+                        'Insurance': 'insurance',
+                        'Financial & Banking': 'financial',
+                        'Contractors & Home Services': 'contractors',
+                        'Damaged Goods & Products': 'damaged-goods',
+                        'Refunds & Retail': 'refunds',
+                        'Travel & Hospitality': 'travel',
+                        'Utilities & Telecoms': 'utilities',
+                        'Employment': 'employment',
+                        'E-commerce & Online Shopping': 'ecommerce',
+                        'HOA & Neighbors': 'hoa',
+                        'Healthcare': 'healthcare',
+                      };
+                      const categorySlug = CATEGORY_TO_SLUG[template.category] || template.category.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
                       return (
                         <a
                           href={`/state-rights/${stateSlug}/${categorySlug}`}

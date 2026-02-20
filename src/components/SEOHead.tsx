@@ -33,7 +33,7 @@ const SEOHead = ({
   title, 
   description, 
   canonicalPath,
-  type = 'article',
+  type = 'website',
   publishedTime,
   modifiedTime,
   templateName,
@@ -49,6 +49,29 @@ const SEOHead = ({
   const defaultOgImage = `${siteUrl}/og-image.png`;
   const resolvedOgImage = ogImage || defaultOgImage;
   
+  // FAQPage schema when faqItems are provided
+  const faqSchema = faqItems && faqItems.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  } : null;
+
+  // BreadcrumbList schema when breadcrumbs are provided
+  const breadcrumbSchema = breadcrumbs && breadcrumbs.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  } : null;
+
   // WebApplication schema for template pages
   const webAppSchema = templateName ? {
     '@context': 'https://schema.org',
@@ -126,6 +149,18 @@ const SEOHead = ({
       <meta name="twitter:image" content={resolvedOgImage} />
       
       {/* Schema.org structured data */}
+      {faqSchema && (
+        <script type="application/ld+json">
+          {JSON.stringify(faqSchema)}
+        </script>
+      )}
+
+      {breadcrumbSchema && (
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbSchema)}
+        </script>
+      )}
+
       {webAppSchema && (
         <script type="application/ld+json">
           {JSON.stringify(webAppSchema)}

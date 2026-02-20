@@ -203,7 +203,7 @@ const ArticlesPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Blog | DisputeLetters - Consumer Rights & Dispute Resolution"
+        title="Blog | Letter of Dispute - Consumer Rights & Dispute Resolution"
         description="Expert guides on consumer rights, landlord-tenant disputes, travel compensation, and more. Learn how to protect your rights and resolve disputes effectively."
         canonicalPath="/articles"
       />
