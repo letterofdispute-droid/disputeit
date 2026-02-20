@@ -137,6 +137,51 @@ const PurchaseSuccessPage = () => {
       });
   }, [purchase, user]);
 
+  // Poll for PDF URL when it's not ready immediately (generated async)
+  const [isPdfPolling, setIsPdfPolling] = useState(false);
+  const [pdfTimedOut, setPdfTimedOut] = useState(false);
+  const pdfPollRef = useRef(false);
+
+  useEffect(() => {
+    if (!purchase || purchase.pdfUrl || pdfPollRef.current) return;
+    pdfPollRef.current = true;
+    setIsPdfPolling(true);
+    let attempts = 0;
+
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const { data } = await supabase
+          .from('letter_purchases')
+          .select('pdf_url')
+          .eq('id', purchase.id)
+          .single();
+
+        if (data?.pdf_url) {
+          clearInterval(interval);
+          setIsPdfPolling(false);
+          let signedUrl = data.pdf_url;
+          if (!signedUrl.startsWith('http')) {
+            const { data: signedData } = await supabase.storage.from('letters').createSignedUrl(signedUrl, 3600);
+            signedUrl = signedData?.signedUrl || signedUrl;
+          }
+          setPurchase(prev => prev ? { ...prev, pdfUrl: signedUrl } : prev);
+          return;
+        }
+      } catch (e) {
+        console.error('PDF poll error:', e);
+      }
+
+      if (attempts >= 10) {
+        clearInterval(interval);
+        setIsPdfPolling(false);
+        setPdfTimedOut(true);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [purchase?.id]);
+
   const downloadPdf = () => {
     if (!purchase?.pdfUrl) return;
     trackDownloadPdf(purchase.templateName.replace(/\s+/g, '-').toLowerCase());
@@ -193,9 +238,25 @@ const PurchaseSuccessPage = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <Button className="w-full" variant="outline" onClick={downloadPdf} disabled={!purchase.pdfUrl}>
-                    <FileText className="h-4 w-4 mr-2" />Download PDF
-                  </Button>
+                  {pdfTimedOut ? (
+                    <div className="w-full text-center p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                      PDF generation is taking longer than expected. Check your email or{' '}
+                      <Link to="/dashboard" className="underline font-medium hover:text-foreground">visit your dashboard</Link>.
+                    </div>
+                  ) : (
+                    <Button className="w-full" variant="outline" onClick={downloadPdf} disabled={!purchase.pdfUrl || isPdfPolling}>
+                      {isPdfPolling ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Preparing PDF...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />Download PDF
+                        </>
+                      )}
+                    </Button>
+                  )}
                   {purchase.purchaseType === 'pdf-editable' && (
                     <Button className="w-full" variant="accent" asChild>
                       <Link to={`/letters/${purchase.id}/edit`}>

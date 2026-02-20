@@ -346,8 +346,14 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       },
     ]);
 
-    // Store context and auto-trigger AI immediately
+    // Store context and structured answers in sessionStorage for letter form pre-fill
     sessionStorage.setItem('dispute_intake_context', contextMessage);
+    sessionStorage.setItem('dispute_intake_answers', JSON.stringify({
+      disputeType: answers.disputeType,
+      incidentDate: answers.incidentDate,
+      paidByCreditCard: answers.paidByCreditCard,
+      companyResponded: answers.companyResponded,
+    }));
     setPendingAutoTrigger(true);
   };
 
