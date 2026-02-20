@@ -1,120 +1,127 @@
 
-# Audit & Update: How It Works + Legal Pages
+# 5-Task Cleanup Sprint
 
-## What Was Audited
+## Overview
 
-Five files were reviewed against two requirements:
-1. Accurate reflection of the new 4-step Dispute OS flow (Describe → Resolution Plan → Generate → Track)
-2. Full legal coverage: zero liability for user actions, clear AI disclosure, no legal advice, no government affiliation
+This plan covers 5 targeted tasks: removing em dashes from user-facing text, a browser end-to-end smoke test, an SEO audit, legal page em-dash cleanup, and a HowItWorks content refresh.
 
 ---
 
-## Gaps Found
+## Task 1 - Remove Em Dashes from Homepage (`Hero.tsx`)
 
-### HowItWorksPage.tsx — Stale & Legally Risky
+Two user-visible em dashes found in `src/components/home/Hero.tsx`:
 
-The `/how-it-works` page is the **most out of date** file. It still describes the old template-browse flow, not the new Dispute OS flow:
+- Line 92: `{' '}— Without a Lawyer` - Replace `—` with a comma + rewrite: `Resolve Your Dispute Step-by-Step, Without a Lawyer`
+- Line 97: `— all in one place` - Replace with `- all in one place` (hyphen) or rewrite to remove it: `...and every agency complaint link, all in one place.`
 
-| Problem | Current | Should Be |
-|---|---|---|
-| Step 1 | "Choose Your Letter Type" (browse templates) | "Describe Your Dispute" (AI intake) |
-| Step 2 | "Fill in Your Details" (form fields) | "Get Your Resolution Plan" (multi-step strategy) |
-| Step 3 | "Generate Your Letter" (preview + download) | "Generate Your Letter" (legal-safe with citations) |
-| Step 4 | "Send and Get Results" | "Track Until Resolved" (dashboard tracker) |
-| Effectiveness section | "Pre-Validated Templates" as hero feature | Should include AI Disclosure and "used at your own risk" note |
-| FAQ: "legally binding?" | Says letters "carry weight" — overpromising | Must add explicit "not legal advice, no guaranteed outcome" caveat |
-| FAQ: "better than writing own?" | "proven to get results" | Must qualify as "may improve outcomes, no guarantee" |
-| CTA section | "Join thousands who've successfully resolved" | Misleading success claim — must be qualified |
-| JSON-LD HowTo schema | References old 4 steps | Must match new 4 steps |
-| No disclaimer footer | Missing | Must add brief "not legal advice" notice at bottom of page |
-
-### HowItWorks.tsx (homepage component) — Step 3 wording
-Step 3 description says "legal-safe language" — this is good but needs a soft qualifier so it doesn't imply attorney-reviewed.
-
-### DisclaimerPage.tsx — Good but needs one addition
-The Disclaimer page is comprehensive and solid. One gap:
-- **Date is stale**: Shows "February 8, 2026" — should match the compliance benchmark of "February 19, 2026"
-- **No mention of the Dispute OS intake flow or Resolution Plan**: Users may submit description text through the AI assistant; should note that intake descriptions are processed by AI
-
-### PrivacyPage.tsx — One gap to patch
-- Section 2 (Information We Collect) lists "Dispute Details: Information you enter into letter templates" but the new intake flow also captures a free-text description and structured answers (disputeType, incidentDate, etc.) via `sessionStorage` before the letter form. This should be disclosed.
-- **No mention of intake/assistant chat data**: The AI assistant modal processes user-typed descriptions. This needs a privacy disclosure.
-
-### TermsPage.tsx — Minor gaps
-- Section 3 (Description of Service) does not mention the AI Dispute Assistant or Resolution Plan — two new core service components that now exist
-- The "As Is" disclaimer in Section 7 is solid and covers liability well — no changes needed there
+Em dashes in code comments (lines 158, 194) are harmless - not rendered in the browser, will leave those alone.
 
 ---
 
-## Changes to Make
+## Task 2 - End-to-End Browser Test
 
-### 1. HowItWorksPage.tsx — Major update
+Will navigate the full core user flow using the browser tool:
 
-**Rewrite the 4 steps** to match the Dispute OS flow:
-```
-Step 01 — Describe Your Dispute
-  "Tell our AI what happened. Answer a few guided questions — no legal jargon required. The AI identifies the right dispute type and recommended approach in seconds."
-  Tips: Have key dates and amounts ready / Be factual — describe what happened, not what you want / You can type freely; the AI will extract what matters
+1. Homepage loads correctly (Hero, trust bar, categories visible)
+2. Click "Start Your Dispute" - dispute intake modal opens (Step 1 category picker)
+3. Select a category (e.g. Payment/Financial) - Step 2 conditional follow-ups appear
+4. Answer follow-ups - Step 3 AI chat loads with pre-loaded context message
+5. Navigate to a template letter page - verify chargeback alert shows for payment category with recent date
+6. Verify the Resolution Plan panel renders after letter generation
 
-Step 02 — Get Your Resolution Plan  
-  "Receive a structured plan: the right letter type, relevant agency links (CFPB, FTC, State AG), chargeback guidance if you paid by card, and statutory deadlines for your dispute category."
-  Tips: The plan is informational — not legal advice / Agency links are suggestions; we are not affiliated with any government body / Escalation paths shown are options, not guarantees
-
-Step 03 — Generate Your Letter
-  "Your letter is assembled with appropriate formal language, relevant consumer law references for your state, and a professional tone designed to be taken seriously. Review it carefully before sending."
-  Tips: Review all details before downloading / Customize any field that doesn't match your situation / We are not a law firm — for complex matters, consult a licensed attorney  
-
-Step 04 — Track Until Resolved
-  "Log your dispute in the tracker. Check off steps as you go. If the letter doesn't resolve the issue, your documented record supports escalation to agencies or small claims."
-  Tips: Outcomes are not guaranteed / Track your correspondence dates / Update the tracker if you escalate
-```
-
-**Update the "What Makes Our Letters Effective" section** — rename to "What Our Service Provides" and add a legal disclaimer card:
-- Remove "proven to get better response rates" (unverifiable claim)
-- Replace with accurate, qualified language: "designed to communicate professionally"
-- Add a prominent "Important Limitations" card below this section with: Not a law firm / No attorney review / No guaranteed outcomes / Used at your own risk
-
-**Update FAQs** — four answers need legal-safe rewrites:
-- "Are these letters legally binding?" → remove "they carry weight" / add "consult an attorney for legal matters"
-- "What makes these better than writing my own?" → qualify "may improve outcomes" not "proven to get results"
-- Add new FAQ: "Do you guarantee my dispute will be resolved?" → explicit no-guarantee answer
-- "What if the company ignores my letter?" → add "we are not responsible for recipient actions"
-
-**Update CTAs** — remove "successfully resolved disputes" unqualified success claims. Replace with: "Used by thousands of consumers to communicate their disputes professionally."
-
-**Update JSON-LD schema** — rewrite to match the new 4 steps exactly.
-
-**Add disclaimer footer strip** — a thin banner above the CTA with: "Letter of Dispute is not a law firm. Letters are generated using AI and are not reviewed by attorneys. Use at your own risk."
-
-### 2. DisclaimerPage.tsx — Minor updates
-
-- Update date from "February 8, 2026" to "February 19, 2026"
-- Add to Section 2 (AI-Generated Content): A note that the AI Dispute Assistant processes user-typed issue descriptions to generate recommendations — content is AI-generated and not attorney-reviewed
-- Add to Section 7 (User Responsibility): Mention that users are responsible for accuracy of the description they provide during the AI intake flow
-
-### 3. PrivacyPage.tsx — Add intake data disclosure
-
-- In Section 2 (Information We Collect → Personal Information You Provide): Add bullet: "AI Dispute Assistant Inputs: Text descriptions and answers you provide during the AI intake flow (dispute type, dates, issue description). This data is processed by AI to generate recommendations and pre-fill letter forms. It is stored temporarily in your browser session and not retained on our servers beyond the session."
-- In Section 5 (AI Data Processing): Note that the Dispute Assistant processes user descriptions in real-time and that intake data is session-only (not persisted server-side)
-
-### 4. TermsPage.tsx — Section 3 update
-
-- Add to the bulleted list in Section 3 (Description of Service): "An AI Dispute Assistant that guides users through a structured intake flow and generates a personalised Resolution Plan" and "A Dispute Tracker for monitoring progress toward resolution"
-
-### 5. HowItWorks.tsx (homepage) — Step 3 qualifier
-
-- Step 3 description: Change "legal-safe language" to "formal language with consumer law references" to avoid implying attorney-reviewed content
+This is a smoke test pass/fail check - no code changes unless bugs are found.
 
 ---
 
-## Files to Modify
+## Task 3 - SEO Audit
 
-| File | Scope |
+No code changes expected - verification only:
+
+Checking the following:
+- Homepage title/description within character limits (60/155) - currently `"Dispute Letter Templates - Professional Complaint Letters That Get Results | Letter of Dispute"` = 91 chars, which is over the recommended 60. However this is the existing agreed strategy (memory note confirms the deliberate "problem-led" title).
+- Canonical tags are correct on all key pages
+- SEOHead emits correct schema types (WebApplication for template pages, FAQPage for guides)
+- No em dashes appear in meta titles or descriptions that could hurt readability in SERPs
+
+**Finding:** The `GuidesPage.tsx` SEO title contains an em dash: `"Consumer Rights Guides — Know Your Rights"`. This will be fixed.
+
+**Other pages:** `StateRightsPage.tsx` title `"State Consumer Rights Lookup — Find Your State's Laws"` also contains an em dash in the SEO title - visible in Google SERPs. Both will be replaced with a pipe character `|` following the established title convention.
+
+---
+
+## Task 4 - Update Legal Pages (Em Dash Cleanup)
+
+### `src/pages/TermsPage.tsx`
+
+User-visible em dashes to replace:
+- Line 139: `Dispute Outcome Tracker — provided free of charge` → `Dispute Outcome Tracker, provided free of charge`
+- Line 197: `7. Important Legal Disclaimer — "As Is" Use` → `7. Important Legal Disclaimer: "As Is" Use`
+
+### `src/pages/CookiePolicyPage.tsx`
+
+- Line 108: `at any time — it takes effect immediately` → `at any time. It takes effect immediately.`
+- Lines 135-137: Three bullet points using `—` as separators → replace each `—` with a colon `:`
+  - `Essential — Required for...` → `Essential: Required for...`
+  - `Analytics — Help us understand...` → `Analytics: Help us understand...`
+  - `Functional — Enhance the visual...` → `Functional: Enhance the visual...`
+
+### `src/pages/PrivacyPage.tsx`
+
+The one match in PrivacyPage is in a comment (`{/* Sticky ToC — desktop only */}`) - not user-visible, will leave it.
+
+---
+
+## Task 5 - Update "How It Works" Section
+
+The current 4-step flow is outdated - it describes the old template-only experience. The platform now has an intake flow, AI assistant, resolution plan, and agency links. Update the copy to reflect the full "Dispute OS" experience:
+
+### Updated Steps
+
+**Step 01 - Describe Your Dispute** (was "Choose Your Letter Type")
+- Icon: `MessageSquare` (chat/intake)
+- Title: `Describe Your Dispute`
+- Description: `Answer a few guided questions about your situation. No legal jargon. Our AI identifies the right approach instantly.`
+
+**Step 02 - Get Your Resolution Plan** (was "Fill in the Details")
+- Icon: `ClipboardList` (plan/checklist)
+- Title: `Get Your Resolution Plan`
+- Description: `Receive a step-by-step strategy: the right letter, relevant agency links (CFPB, FTC, State AG), and chargeback guidance if applicable.`
+
+**Step 03 - Generate Your Letter** (unchanged concept, updated copy)
+- Icon: `FileCheck` (was `Download`)
+- Title: `Generate Your Letter`
+- Description: `Your letter is built with legal-safe language, correct tone, and the exact citations needed for your dispute type and state.`
+
+**Step 04 - Track Until Resolved** (was "Send & Get Results")
+- Icon: `CheckCircle` (was `Send`)
+- Title: `Track Until Resolved`
+- Description: `Use the Dispute Tracker to log progress, check off resolution steps, and mark your dispute resolved when you win.`
+
+Section subtitle also updated from `"Create a professional dispute letter in four simple steps."` to `"From first description to final resolution - your complete dispute toolkit in four steps."`
+
+---
+
+## Technical Details
+
+### Files to Modify
+
+| File | Changes |
 |---|---|
-| `src/pages/HowItWorksPage.tsx` | Major — rewrite steps, update effectiveness section, update FAQs, update CTAs, add disclaimer strip, fix JSON-LD |
-| `src/pages/DisclaimerPage.tsx` | Minor — fix date, add AI intake note to sections 2 and 7 |
-| `src/pages/PrivacyPage.tsx` | Minor — add intake data disclosure to sections 2 and 5 |
-| `src/pages/TermsPage.tsx` | Minor — add AI assistant and tracker to section 3 service description |
-| `src/components/home/HowItWorks.tsx` | Tiny — qualify Step 3 wording |
+| `src/components/home/Hero.tsx` | Remove 2 user-visible em dashes (lines 92, 97) |
+| `src/pages/GuidesPage.tsx` | Fix em dash in SEO title |
+| `src/pages/StateRightsPage.tsx` | Fix em dash in SEO title |
+| `src/pages/TermsPage.tsx` | Fix 2 user-visible em dashes (lines 139, 197) |
+| `src/pages/CookiePolicyPage.tsx` | Fix 5 user-visible em dashes (lines 108, 135-137) |
+| `src/components/home/HowItWorks.tsx` | Full content refresh - new icons, titles, descriptions, subtitle |
 
-## No backend changes required.
+### No Backend Changes
+
+All changes are purely frontend copy and content. No database migrations, edge functions, or schema changes required.
+
+### Em Dash Replacement Rules
+
+Following the project's established convention (memory: content-quality-validation-system), em dashes are replaced with:
+- Hyphens `-` in flowing prose
+- Colons `:` in definition-style lists
+- Commas `,` where the em dash acts as a parenthetical
+
