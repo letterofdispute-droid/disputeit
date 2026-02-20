@@ -452,13 +452,16 @@ async function processBatch(
 
   for (const [postId, postSuggestions] of suggestionsByPost) {
     try {
-      const { count: alreadyApplied } = await supabaseAdmin
-        .from('link_suggestions')
-        .select('id', { count: 'exact', head: true })
-        .eq('source_post_id', postId)
-        .eq('status', 'applied');
+      // Use outbound_count from article_embeddings (actual HTML links, kept accurate by reconcile_link_counts)
+      // This avoids ghost-capping from stale 'applied' suggestion rows that diverge from real link counts
+      const { data: sourceEmbed } = await supabaseAdmin
+        .from('article_embeddings')
+        .select('outbound_count')
+        .eq('content_id', postId)
+        .single();
 
-      const remainingSlots = maxOutbound - (alreadyApplied || 0);
+      const currentOutbound = sourceEmbed?.outbound_count ?? 0;
+      const remainingSlots = maxOutbound - currentOutbound;
 
       if (remainingSlots <= 0) {
         for (const s of postSuggestions) {

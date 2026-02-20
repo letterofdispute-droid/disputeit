@@ -529,6 +529,16 @@ export function useSemanticLinkScan() {
     },
   });
 
+  // Helper: trigger apply-links-bulk after rescue completes
+  const triggerApplyLinksAfterRescue = useCallback(async () => {
+    try {
+      await supabase.functions.invoke('apply-links-bulk', { body: {} });
+      queryClient.invalidateQueries({ queryKey: ['apply-job-active'] });
+    } catch {
+      // Fire-and-forget — not critical if this fails
+    }
+  }, [queryClient]);
+
   // Rescue orphans mutation
   const rescueOrphansMutation = useMutation({
     mutationFn: async (params?: { maxLinksPerArticle?: number }) => {
@@ -555,16 +565,21 @@ export function useSemanticLinkScan() {
       
       toast({
         title: 'Orphan rescue started',
-        description: 'Scanning orphan articles for inbound link opportunities...',
+        description: 'Scanning orphan articles for inbound link opportunities. Links will auto-apply when complete.',
       });
+
+      // Auto-trigger apply-links-bulk after a brief delay so rescue suggestions get applied immediately
+      setTimeout(() => triggerApplyLinksAfterRescue(), 5000);
     },
     onError: (error) => {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       if (msg.includes('Failed to send') || msg.includes('Failed to fetch')) {
         queryClient.invalidateQueries({ queryKey: ['rescue-job-active'] });
+        // Still attempt to trigger apply in case the rescue function ran
+        setTimeout(() => triggerApplyLinksAfterRescue(), 5000);
         toast({
           title: 'Rescue scan continues in background',
-          description: 'The scan is running. Suggestions will appear as they are found.',
+          description: 'The scan is running. Suggestions will be auto-applied when ready.',
         });
       } else {
         toast({
