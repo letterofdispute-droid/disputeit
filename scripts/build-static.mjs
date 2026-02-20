@@ -633,9 +633,10 @@ async function buildSitemaps() {
     console.log(`   ✅ Sitemaps written to ${label}/`);
   }
   
+  const staticPageCount = 16; // matches staticPages array in generateStaticSitemap()
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   const blogUrlCount = blogCategories.length + blogPosts.length;
-  const totalUrls = 12 + categories.length + subcatCount + categories.length + templates.length + blogUrlCount + stateRightsUrlCount;
+  const totalUrls = staticPageCount + categories.length + subcatCount + categories.length + templates.length + blogUrlCount + stateRightsUrlCount;
   console.log(`\n✨ Generated ${totalUrls} URLs across ${4 + blogSitemapPages.length} sitemap files (in both dist/ and public/)`);
   console.log(`   📍 State rights: ${stateRightsUrlCount} URLs in sitemap-state-rights.xml\n`);
 }
