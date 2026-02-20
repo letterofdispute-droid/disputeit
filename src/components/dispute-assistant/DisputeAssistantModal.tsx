@@ -324,7 +324,11 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       ? 'The company has not responded to a previous contact — the user is being ignored.'
       : 'The user has NOT yet contacted the company — this is a first contact scenario.';
 
-    const contextMessage = `[INTAKE CONTEXT - use this to personalise your response without asking these questions again]\nDispute category: ${typeLabel[answers.disputeType] || answers.disputeType}.\n${creditCardNote}\n${dateNote}\n${responseNote}\nBased on this context, provide a tailored recommendation. If a chargeback window is active, mention it as the fastest first step before the letter.`;
+    const descriptionNote = answers.description
+      ? `The user described their issue as: "${answers.description}"`
+      : '';
+
+    const contextMessage = `[INTAKE CONTEXT - use this to personalise your response without asking these questions again]\nDispute category: ${typeLabel[answers.disputeType] || answers.disputeType}.\n${creditCardNote}\n${dateNote}\n${responseNote}${descriptionNote ? '\n' + descriptionNote : ''}\nBased on this context, provide a tailored recommendation. If a chargeback window is active, mention it as the fastest first step before the letter.`;
 
     // Build the AI welcome message shown to the user
     const chargebackHint = answers.paidByCreditCard === true
@@ -337,12 +341,15 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       : '';
 
     const disputeLabel = typeLabel[answers.disputeType] || `a ${answers.disputeType} dispute`;
+    const descriptionPreview = answers.description
+      ? `\n\nYou mentioned: *"${answers.description.slice(0, 120)}${answers.description.length > 120 ? '...' : ''}"*`
+      : "\n\nTell me the specifics of what happened and I'll find the right letter and resolution strategy for your situation.";
 
     setMessages([
       INITIAL_MESSAGE,
       {
         role: 'assistant',
-        content: `Got it - you're dealing with ${disputeLabel}.${chargebackHint}${escalationHint}\n\nTell me the specifics of what happened and I'll find the right letter and resolution strategy for your situation.`,
+        content: `Got it - you're dealing with ${disputeLabel}.${chargebackHint}${escalationHint}${descriptionPreview}`,
       },
     ]);
 
@@ -353,6 +360,7 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
       incidentDate: answers.incidentDate,
       paidByCreditCard: answers.paidByCreditCard,
       companyResponded: answers.companyResponded,
+      description: answers.description || '',
     }));
     setPendingAutoTrigger(true);
   };

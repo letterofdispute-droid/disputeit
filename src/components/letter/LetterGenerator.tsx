@@ -75,17 +75,37 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
     const raw = sessionStorage.getItem('dispute_intake_answers');
     if (!raw) return;
     try {
-      const intake = JSON.parse(raw) as { incidentDate?: string; disputeType?: string };
-      if (!intake.incidentDate) return;
+      const intake = JSON.parse(raw) as { incidentDate?: string; disputeType?: string; description?: string };
+      let didPrefill = false;
 
-      const dateFields = ['incidentDate', 'date', 'purchaseDate', 'serviceDate', 'eventDate'];
-      const matchingField = template.fields.find(f => dateFields.includes(f.id));
-      if (matchingField) {
+      setFormData(prev => {
+        const next = { ...prev };
+
+        // Pre-fill date fields
+        if (intake.incidentDate) {
+          const dateFields = ['incidentDate', 'date', 'purchaseDate', 'serviceDate', 'eventDate'];
+          const matchingDateField = template.fields.find(f => dateFields.includes(f.id));
+          if (matchingDateField && !next[matchingDateField.id]) {
+            next[matchingDateField.id] = intake.incidentDate!;
+            didPrefill = true;
+          }
+        }
+
+        // Pre-fill description/issue fields
+        if (intake.description) {
+          const descFields = ['issueDescription', 'description', 'details', 'whatHappened', 'complaintDetails', 'disputeDetails', 'problemDescription'];
+          const matchingDescField = template.fields.find(f => descFields.includes(f.id));
+          if (matchingDescField && !next[matchingDescField.id]) {
+            next[matchingDescField.id] = intake.description;
+            didPrefill = true;
+          }
+        }
+
+        return next;
+      });
+
+      if (didPrefill) {
         intakePrefilledRef.current = true;
-        setFormData(prev => {
-          if (prev[matchingField.id]) return prev; // don't overwrite if already filled
-          return { ...prev, [matchingField.id]: intake.incidentDate! };
-        });
         setShowIntakePrefillBanner(true);
       }
     } catch {
