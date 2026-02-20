@@ -89,12 +89,12 @@ const Hero = () => {
             <h1 className="font-serif text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold text-foreground leading-[1.1] mb-6 animate-fade-up">
               Resolve Your Dispute{' '}
               <span className="text-accent">Step-by-Step</span>
-              {' '}— Without a Lawyer
+              , Without a Lawyer
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              Describe your situation. Get the right letter, the fastest resolution path, and every agency complaint link — all in one place.
+              Describe your situation. Get the right letter, the fastest resolution path, and every agency complaint link - all in one place.
             </p>
 
 

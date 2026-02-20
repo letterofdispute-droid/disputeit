@@ -105,7 +105,7 @@ const CookiePolicyPage = () => {
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex-1">
                 <p className="text-sm text-foreground font-medium">Want to change your cookie preferences?</p>
-                <p className="text-xs text-muted-foreground mt-1">You can update your choices at any time — it takes effect immediately.</p>
+                <p className="text-xs text-muted-foreground mt-1">You can update your choices at any time. It takes effect immediately.</p>
               </div>
               <Button size="sm" onClick={openSettings} variant="accent">Manage Cookie Settings</Button>
             </div>
@@ -132,9 +132,9 @@ const CookiePolicyPage = () => {
                 <p>Letter of Dispute uses cookies grouped into three categories. We only activate non-essential cookies <strong>after you give explicit consent</strong>, in compliance with GDPR (EU) and UK ePrivacy regulations.</p>
                 <p>The three categories are:</p>
                 <ul>
-                  <li><strong>Essential</strong> — Required for the site to function correctly</li>
-                  <li><strong>Analytics</strong> — Help us understand how visitors use the site</li>
-                  <li><strong>Functional</strong> — Enhance the visual experience and typography</li>
+                  <li><strong>Essential:</strong> Required for the site to function correctly</li>
+                  <li><strong>Analytics:</strong> Help us understand how visitors use the site</li>
+                  <li><strong>Functional:</strong> Enhance the visual experience and typography</li>
                 </ul>
               </section>
 

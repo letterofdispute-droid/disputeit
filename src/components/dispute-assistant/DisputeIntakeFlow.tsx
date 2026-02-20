@@ -150,7 +150,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                This affects your fastest resolution path — chargebacks can be quicker than letters.
+                This affects your fastest resolution path - chargebacks can be quicker than letters.
               </p>
             </div>
             <div className="space-y-2">
@@ -162,7 +162,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                   <CreditCard className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Yes — credit or debit card</p>
+                  <p className="font-medium text-foreground text-sm">Yes: credit or debit card</p>
                   <p className="text-xs text-muted-foreground mt-0.5">I may be able to file a chargeback</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto" />
@@ -175,7 +175,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">No — cash, bank transfer, or other</p>
+                  <p className="font-medium text-foreground text-sm">No: cash, bank transfer, or other</p>
                   <p className="text-xs text-muted-foreground mt-0.5">A formal letter is likely my best route</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto" />
@@ -185,7 +185,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
               onClick={() => { setAnswers(prev => ({ ...prev, paidByCreditCard: null })); setStep(3); }}
               className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Not sure — skip this
+              Not sure? Skip this
             </button>
           </div>
         )}
@@ -244,7 +244,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                     </span>
                   ) : (
                     <span>
-                      This occurred {daysSince} day{daysSince !== 1 ? 's' : ''} ago — I'll factor any relevant deadlines into my recommendation.
+                      This occurred {daysSince} day{daysSince !== 1 ? 's' : ''} ago. I'll factor any relevant deadlines into my recommendation.
                     </span>
                   )}
                 </div>
@@ -272,7 +272,7 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                 {[
                   {
                     id: 'not_yet' as const,
-                    label: "Not yet — haven't contacted them",
+                    label: "Not yet - haven't contacted them",
                     sub: "I'll help you draft a strong first contact",
                     emoji: '📝',
                   },

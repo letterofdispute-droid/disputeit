@@ -136,7 +136,7 @@ const TermsPage = () => {
                   <li>An AI-powered letter generation tool that creates personalized letters based on your input</li>
                   <li>Downloadable letter documents in PDF and DOCX formats</li>
                   <li>Educational content about consumer rights and dispute resolution</li>
-                  <li><strong className="text-foreground">Free Tools:</strong> State Consumer Rights Lookup, Statute of Limitations Calculator, Consumer News Hub, Free Letter Strength Analyzer, and Dispute Outcome Tracker — provided free of charge for informational purposes</li>
+                  <li><strong className="text-foreground">Free Tools:</strong> State Consumer Rights Lookup, Statute of Limitations Calculator, Consumer News Hub, Free Letter Strength Analyzer, and Dispute Outcome Tracker, provided free of charge for informational purposes</li>
                 </ul>
               </section>
 
@@ -194,7 +194,7 @@ const TermsPage = () => {
               </section>
 
               <section id="disclaimer" className="bg-muted/50 rounded-xl p-6 border border-border">
-                <h2 className="text-2xl font-semibold text-foreground mb-4">7. Important Legal Disclaimer — "As Is" Use</h2>
+                <h2 className="text-2xl font-semibold text-foreground mb-4">7. Important Legal Disclaimer: "As Is" Use</h2>
                 <div className="text-muted-foreground space-y-4">
                   <p className="font-semibold text-foreground">LETTER OF DISPUTE IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL ADVICE.</p>
                   <p>The letters, templates, and information provided through our Service are for informational and educational purposes only. No attorney-client relationship is created by your use of the Service.</p>

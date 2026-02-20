@@ -228,7 +228,7 @@ const StateRightsPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="State Consumer Rights Lookup — Find Your State's Laws | Letter of Dispute"
+        title="State Consumer Rights Lookup | Find Your State's Laws | Letter of Dispute"
         description="Find consumer protection laws, statutes, and Attorney General contacts for all 50 US states. Free interactive tool for refund rights, lemon laws, tenant rights, and more."
         canonicalPath="/state-rights"
         faqItems={faqItems}
@@ -255,13 +255,13 @@ const StateRightsPage = () => {
             <div>
               <div className="inline-flex items-center gap-2 bg-primary-foreground/10 rounded-full px-4 py-1.5 mb-5">
                 <Shield className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-sm text-primary-foreground/80">Free Tool — No Login Required</span>
+                <span className="text-sm text-primary-foreground/80">Free Tool - No Login Required</span>
               </div>
               <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-5 leading-tight">
                 Know Your State's Consumer Protection Laws
               </h1>
               <p className="text-lg text-primary-foreground/80 mb-6 leading-relaxed">
-                State laws can be dramatically stronger than federal law — offering treble damages, mandatory attorney fees, and broader definitions of unfair practices. Find the exact statute for your state and dispute type.
+                State laws can be dramatically stronger than federal law, offering treble damages, mandatory attorney fees, and broader definitions of unfair practices. Find the exact statute for your state and dispute type.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
@@ -509,7 +509,7 @@ const StateRightsPage = () => {
                 {
                   icon: CheckCircle2,
                   title: 'Cite the Right Citation',
-                  desc: 'Businesses take disputes more seriously when you cite the exact statute — Cal. Civ. Code § 1750 carries more weight than a vague reference to "consumer protection law."',
+                  desc: 'Businesses take disputes more seriously when you cite the exact statute - Cal. Civ. Code § 1750 carries more weight than a vague reference to "consumer protection law."',
                 },
                 {
                   icon: BookOpen,

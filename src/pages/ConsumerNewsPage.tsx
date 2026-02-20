@@ -70,7 +70,7 @@ const SOURCE_CONFIG: Record<string, {
     accentColor: 'border-l-blue-700',
     borderColor: 'border-blue-200 dark:border-blue-900',
     description: 'Federal Trade Commission',
-    fullName: 'Federal Trade Commission — Enforces laws against deceptive business practices, fraud, and anticompetitive behavior.',
+    fullName: 'Federal Trade Commission: Enforces laws against deceptive business practices, fraud, and anticompetitive behavior.',
   },
   cfpb:  {
     label: 'CFPB',
@@ -78,7 +78,7 @@ const SOURCE_CONFIG: Record<string, {
     accentColor: 'border-l-green-700',
     borderColor: 'border-green-200 dark:border-green-900',
     description: 'Consumer Financial Protection Bureau',
-    fullName: 'Consumer Financial Protection Bureau — Oversees banks, lenders, and financial services companies for consumer harm.',
+    fullName: 'Consumer Financial Protection Bureau: Oversees banks, lenders, and financial services companies for consumer harm.',
   },
   nhtsa: {
     label: 'NHTSA',
@@ -86,7 +86,7 @@ const SOURCE_CONFIG: Record<string, {
     accentColor: 'border-l-orange-600',
     borderColor: 'border-orange-200 dark:border-orange-900',
     description: 'Vehicle Safety Recalls',
-    fullName: 'National Highway Traffic Safety Administration — Issues vehicle safety recalls and investigates defects.',
+    fullName: 'National Highway Traffic Safety Administration: Issues vehicle safety recalls and investigates defects.',
   },
 };
 
@@ -156,7 +156,7 @@ export default function ConsumerNewsPage() {
   return (
     <Layout>
       <SEOHead
-        title="Consumer News Hub — FTC & CFPB Alerts | Letter of Dispute"
+        title="Consumer News Hub | FTC &amp; CFPB Alerts | Letter of Dispute"
         description="Stay current with the latest FTC enforcement actions, CFPB consumer alerts, and NHTSA vehicle recalls. Official government news that affects your consumer rights."
         canonicalPath="/consumer-news"
         breadcrumbs={breadcrumbs}
@@ -188,7 +188,7 @@ export default function ConsumerNewsPage() {
                 Consumer Rights News Hub
               </h1>
               <p className="text-lg text-primary-foreground/80 max-w-xl leading-relaxed">
-                Latest enforcement actions, consumer alerts, and safety recalls from the FTC, CFPB, and NHTSA — the agencies that protect your rights.
+                Latest enforcement actions, consumer alerts, and safety recalls from the FTC, CFPB, and NHTSA - the agencies that protect your rights.
               </p>
             </div>
             {/* Agency seal SVG illustration */}
@@ -230,7 +230,7 @@ export default function ConsumerNewsPage() {
                 {source === 'all' ? 'All Sources' : (
                   <span className="flex items-center gap-1.5">
                     {source.toUpperCase()}
-                    <span className="opacity-70 text-xs hidden sm:inline">— {SOURCE_CONFIG[source].description}</span>
+                    <span className="opacity-70 text-xs hidden sm:inline">- {SOURCE_CONFIG[source].description}</span>
                   </span>
                 )}
               </button>
