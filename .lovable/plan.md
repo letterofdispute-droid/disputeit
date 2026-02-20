@@ -1,67 +1,72 @@
 
-# Megamenu Refactor — Fix All 3 Visual Issues
+# Megamenu Visual Redesign — Reference-Matched Card Layout
 
-## Problems Identified from Screenshots
+## What the Reference Images Show (vs. Current)
 
-### Issue 1 — Letter Templates menu (image-218)
-Items display full descriptions which are verbose (e.g. "Dispute poor workmanship, project abandonment, cost overruns, or service issues."). On a 13-column grid, descriptions truncate awkwardly mid-sentence. The `line-clamp-2` allows 2 lines of description but some names already wrap, making rows uneven.
+The reference designs (image-219, image-220, image-221) share a clear visual pattern that's very different from the current implementation:
 
-**Fix**: Shorten the description shown in the menu to a tight 1-line version (first 4–5 words with "..."), or switch to icon + name only (no description) for a cleaner, more scannable list. Given the 3-column grid and 13 categories, the cleanest approach is a compact icon + name layout with a short one-line subtext.
+| Attribute | Current | Reference Target |
+|---|---|---|
+| Icon size | Tiny (3.5 × 3.5 in a small box) | Large icon tile (~32–40px) with a soft colored/neutral square background |
+| Description | 1-line clamp, very short | Full 2-line description — readable, informative |
+| Row spacing | Tight `gap-1` / `p-2.5` | Generous — items breathe, ~`py-3` between rows |
+| Column headers | Styled "uppercase tracking-wider" labels | Plain gray text, left-aligned, larger than current |
+| Item density | 3 columns × 4–5 rows (very packed) | 3 columns × 3 rows max, or 2 columns × 3 rows for resources |
+| Hover state | `bg-accent/10` subtle tint | Implied subtle hover, nothing aggressive |
+| Overall feel | Dashboard-like, dense | Clean SaaS / product navigation |
 
-### Issue 2 — Guides menu (image-216)
-The `category.name.replace(' & ', ' ')` transform creates awkward names ("Utilities Telecommunications", "Contractors Home Improvement"). The `line-clamp-1` on the description (which uses `.split('.')[0]`) truncates mid-word. Items with 2-line names (Utilities Telecommunications, E-commerce Online Services) misalign the grid.
+## Changes by Menu Panel
 
-**Fix**: Keep the `&` in category names. Switch descriptions to a pre-defined short tagline (3–5 words) that never wraps, e.g. "Billing & service disputes". Use `line-clamp-1` only on the short tagline, not the full description.
+### 1 — Letter Templates panel
+- Replace `ListItem` with a new `CardItem` component
+- Icon: render at `h-8 w-8` inside a `p-2 rounded-xl` tile with the category color tinted background (like `bg-[color]/10`)
+- Title: `text-sm font-semibold` (bold, not just medium)
+- Description: full `description.split('.')[0]` (first sentence, not just first comma-clause) — shown on 2 lines with `line-clamp-2 text-xs text-muted-foreground mt-0.5`
+- Grid: keep 3 columns but increase row gap to `gap-x-2 gap-y-1`
+- Each cell padding: `p-3` instead of `p-2.5`
+- Remove the inline banner (the "Not sure which letter?" prompt box) and replace with a cleaner footer row that includes both "Browse all templates →" and a "Get AI Help" button inline
 
-### Issue 3 — Resources menu (image-217)
-The right column stacks: 4 Free Tools (with descriptions) + "Popular State Laws" header + 6 state links + "Browse all" = exceeds viewport height on a 14" laptop (~768px). The last 1–2 items and the "Browse all 50 states →" link are clipped.
+### 2 — Guides panel
+- Same `CardItem` treatment: large icon with category-colored background, bold title, 2-line description
+- Category name used as-is (no string replacement)
+- Short description: `category.description.split('.')[0]` (first full sentence, naturally short)
+- Grid: 3 columns, generous padding
 
-**Fix**: Reduce the Resources menu height by:
-- Making Free Tools items use compact single-line layout (title + short description on same line, no block stacking)
-- Reducing the state links from 6 to 4 (CA, TX, NY, FL — the 4 most popular)
-- Moving "Browse all 50 states →" to be inline rather than a separate list item
+### 3 — Resources panel
+- Restructure as a **2-column card grid** (General + Free Tools side by side), no column headers with uppercase tracking — just plain `text-sm text-muted-foreground font-medium` section labels
+- Each item in the `ResourceCardItem` component: larger icon (`h-5 w-5`), bold title, description shown (currently stripped — bring descriptions back since there's space at this card size)
+- Popular State Laws: move to a thin `border-t` footer strip at bottom of the panel, displaying CA / TX / NY / FL as inline chips → "Browse all 50 →"
+- Overall panel width stays `w-[520px]`
 
-## Implementation Plan
+## Component Changes
 
-### File: `src/components/layout/MegaMenu.tsx`
-
-**Change 1 — Letter Templates grid**: Replace the full `description` prop with a short menu tagline. Add a `menuLabel` field to the ListItem or derive a 40-char truncation. The cleaner approach: define a `SHORT_DESCRIPTIONS` map keyed by category ID, or truncate to first clause before the comma.
-
-Since `templateCategories` doesn't have a short label, the cleanest solution is to truncate descriptions inline: use only the text up to the first comma, or first 40 characters. This avoids touching data files.
-
-**Change 2 — Guides grid**: Remove the `.replace(' & ', ' ')` so names render correctly ("Utilities & Telecommunications"). Use the truncated description approach (first clause) for consistency with the Templates menu.
-
-**Change 3 — Resources menu**: Make the right column more compact:
-- Switch `ResourceListItem` for Free Tools to a slim 1-row layout with title and icon (no description paragraph, or inline description)  
-- Reduce `notableStateLinks` to 4 entries: CA, TX, NY, FL
-- Keep "Browse all 50 states →" as the 5th item inline
-
-**Change 4 — Resources menu max-height**: Add `max-h-[calc(100vh-80px)] overflow-y-auto` on the content `div` as a safety net so it can never overflow the viewport.
-
-## Exact Changes
-
+### New `CardItem` component (replaces `ListItem` for Templates + Guides)
 ```text
-File: src/components/layout/MegaMenu.tsx
+- Large icon in colored rounded tile
+- Bold title
+- 2-line description
+- Generous padding
+- Hover: subtle bg tint + slight shadow or border change
 ```
 
-1. **`notableStateLinks`** — trim from 6 to 4 entries (remove MA, IL)
+### Updated `ResourceCardItem` component (replaces `ResourceListItem`)
+```text
+- Icon: h-5 w-5 in a soft gray/primary-tinted tile
+- Title: font-semibold
+- Description: shown (text-xs text-muted-foreground), 1-line clamp
+- Layout: flex row, icon left, text right
+- Padding: py-2.5 px-3
+```
 
-2. **`ResourceListItem` component** — remove the description `<p>` block to make each item a single compact row (icon + title), keeping it clean and short
+## File Changed
 
-3. **Letter Templates `NavigationMenuContent`** — in the `<ul>` grid, pass only `title` and `icon` (no description) so each cell is compact and uniform height. Add `description` back as a tooltip or keep a truncated version (first sentence only, max 50 chars via slice)
+Only `src/components/layout/MegaMenu.tsx` — no data files, no routing, no new files.
 
-4. **Guides `NavigationMenuContent`** — fix the `.replace(' & ', ' ')` → keep category name as-is. Use truncated description (before first comma)
+## Detailed Steps
 
-5. **Resources outer div** — add `max-h-[calc(100vh-5rem)] overflow-y-auto` so it can never clip
-
-6. **Resources Free Tools section** — switch to compact single-line items (icon + title, no description) since descriptions are already shown on the actual pages
-
-## Summary Table
-
-| Menu | Issue | Fix |
-|---|---|---|
-| Letter Templates | Long descriptions make rows uneven, last item overflows | Remove/truncate descriptions in grid cells |
-| Guides | `replace()` strips `&`, `line-clamp-1` on long text clips mid-word | Keep `&`, use short first-clause text |
-| Resources | Right column too tall, clips Popular State Laws section | Compact Free Tools items, reduce state list to 4, add max-height safety net |
-
-No data files, no new components, no routing changes — only `MegaMenu.tsx` is touched.
+1. Add `CardItem` component at top of file — `icon`, `title`, `description`, `href` props, with large icon tile using category color
+2. Add `ResourceCardItem` component — `icon`, `title`, `description`, `href`, icon in neutral soft-tinted square
+3. **Letter Templates panel**: Replace `<ListItem>` with `<CardItem>`, pass `description={category.description.split('.')[0]}`, replace the `bg-primary/5 rounded-lg border` banner with a clean 2-button footer row (Browse all | AI Help)
+4. **Guides panel**: Replace inline `<Link>` blocks with `<CardItem>`, pass `description={category.description.split('.')[0]}`, remove the top pick banner or convert to a slim 1-line footer note
+5. **Resources panel**: Replace `<ResourceListItem>` with `<ResourceCardItem>` bringing back descriptions, move Popular State Laws to a bottom `border-t` strip of inline chips
+6. Ensure all panels retain `max-h-[calc(100vh-5rem)] overflow-y-auto` safety guard
