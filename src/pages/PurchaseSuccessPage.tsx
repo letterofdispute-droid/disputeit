@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { trackPurchaseComplete, trackDownloadPdf } from '@/hooks/useGTM';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import ResolutionPlanPanel from '@/components/letter/ResolutionPlanPanel';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PurchaseData {
   id: string;
@@ -27,7 +28,9 @@ const PurchaseSuccessPage = () => {
   const [voteSubmitted, setVoteSubmitted] = useState<'positive' | 'negative' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const purchaseTrackedRef = useRef(false);
+  const trackerCreatedRef = useRef(false);
   const { trackCheckoutCompleted } = useAnalytics();
+  const { user } = useAuth();
 
   // Read resolution context stored by LetterGenerator after generation
   const resolutionCategory = sessionStorage.getItem('resolution_category') || '';
@@ -111,6 +114,28 @@ const PurchaseSuccessPage = () => {
 
     verifyPurchase();
   }, [sessionId, purchaseId]);
+
+  // Auto-create a Dispute Tracker entry once the purchase is confirmed and the user is logged in
+  useEffect(() => {
+    if (!purchase || !user || trackerCreatedRef.current) return;
+    trackerCreatedRef.current = true;
+
+    const category = resolutionCategory || sessionStorage.getItem('resolution_category') || '';
+    const title = `${purchase.templateName} Dispute`;
+
+    supabase
+      .from('dispute_outcomes')
+      .insert({
+        user_id: user.id,
+        title,
+        category: category || undefined,
+        status: 'in_progress',
+        resolution_steps: [],
+      })
+      .then(({ error }) => {
+        if (error) console.error('Failed to auto-create dispute tracker entry:', error);
+      });
+  }, [purchase, user]);
 
   const downloadPdf = () => {
     if (!purchase?.pdfUrl) return;
