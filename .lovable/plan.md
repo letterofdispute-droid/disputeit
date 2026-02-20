@@ -1,307 +1,261 @@
 
-# Full-Site SEO Audit — Letter of Dispute
+# Link Audit & Hierarchy Verification — Letter of Dispute
 
 ## Audit Scope
 
-All public-facing routes were inspected including: Homepage, Templates (500+ pages), Category/Subcategory pages, State Rights hub + 51 state hubs + 663 state×category pages, Blog (ArticlesPage, ArticleCategoryPage, ArticlePage), Guides (GuidesPage, CategoryGuidePage), and all 5 free tools (Deadlines, State Rights Lookup, Consumer News, Letter Analyzer, SettingsPage).
+Inspected: all bidirectional linking between templates ↔ articles, article internal link graph (44K+ suggestions), site navigation hierarchy, state-rights linking, and URL integrity across all page types.
 
 ---
 
-## Critical Bugs Found
+## What's Working Well
 
-### Bug 1 — `SEOHead` silently drops all `faqItems` and `breadcrumbs` schema
+### Internal Link Volume — Excellent
+- **5,780 published articles** are 100% embedded (vector coverage is perfect)
+- **44,256 applied links** across the article graph
+- **Average inbound: 6.6 links per article**, average outbound: 6.6 — well-balanced
+- **4,796 articles (83%)** have 3+ inbound links — that's strong coverage
+
+### Template → Article Bidirectional Linking — Strong
+- **All 5,780 published articles** have `related_templates` populated (100%)
+- Top templates are receiving meaningful article coverage:
+  - `housing-kw-housing-complaint`: referenced in 43 articles
+  - `healthcare-kw-healthcare-complaint`: referenced in 42 articles
+  - `travel-kw-flight-compensation-form`: referenced in 34 articles
+  - `financial-kw-bank-complaint-letter`: referenced in 20 articles
+
+### Article → Template CTA — Correct
+- `ArticlePage` correctly renders `<RelatedTemplatesCTA>` when `related_templates` array is set
+- `LetterPage` correctly renders `<RelatedArticles>` querying `related_templates` field and falling back to category-wide results
+- Both ends of the bidirectional link are implemented
+
+### State Rights Navigation — Present
+- Footer has 6 state hub links + 2 state×category deep links
+- MegaMenu has 6 notable state hub links
+- `CategoryGuidePage` has a 6-state grid linking to `state-rights/{state}/{categoryId}` deep pages
+- `LetterPage` has a 5-state panel with correct `state-rights/${slug}/${categoryId}` links
+- `LetterGenerator` (Step 2) shows a dynamic link to the user's selected state (slug mapping confirmed correct after last fix)
+
+---
+
+## Bugs Found
+
+### Bug 1 — CRITICAL: `CategoryGuidePage.tsx` uses `/letters/` URL for template quick-links (404s)
 
 **Severity: High**
 
-`SEOHead` accepts `faqItems?: FAQItem[]` and `breadcrumbs?: BreadcrumbItem[]` as props but **never emits JSON-LD for them**. It builds only 3 schemas internally (WebApplication, Organization, Article) and ignores the prop data entirely.
-
-The following pages pass data that is silently lost:
-
-| Page | Props passed to SEOHead | Schema actually emitted |
-|---|---|---|
-| `/state-rights` | `faqItems`, `breadcrumbs` | Nothing |
-| `/state-rights/:stateSlug` | `breadcrumbs` | Nothing |
-| `/deadlines` | `faqItems`, `breadcrumbs` | Nothing |
-| `/consumer-news` | `breadcrumbs` | Nothing |
-| `/analyze-letter` | `breadcrumbs` | Nothing |
-| `/guides/:categoryId` | `faqItems`, `breadcrumbs` | Nothing |
-
-Note: `/state-rights/:stateSlug/:categorySlug` correctly injects FAQ schema via a separate `<script>` tag outside of `SEOHead`, so it is fine. `/faq` and `/pricing` also bypass `SEOHead` by using `<Helmet>` directly — those are fine.
-
-**Fix:** Add `faqSchema` and `breadcrumbSchema` generation inside `SEOHead.tsx` whenever the corresponding props are present.
-
----
-
-### Bug 2 — `StateRightsStatePage` has no BreadcrumbList JSON-LD emitted
-
-**Severity: Medium**
-
-The state hub pages (`/state-rights/california` etc.) pass `breadcrumbs` to `SEOHead` but due to Bug 1 those breadcrumbs are never emitted. No BreadcrumbList schema exists for any of the 51 state hub pages. These are high-value hub pages ranking for "[State] consumer rights" and should display rich breadcrumbs in Google results.
-
----
-
-### Bug 3 — `/articles` blog index and `/articles/:category` use wrong site branding in titles
-
-**Severity: Low**
-
-- `/articles` title: `"Blog | DisputeLetters - Consumer Rights & Dispute Resolution"` — **"DisputeLetters" is incorrect branding**, should be "Letter of Dispute".
-- `/articles/:category` title: `"${categoryData.name} | DisputeLetters Blog"` — same issue.
-
-These are rendered client-side via `SEOHead` and will be visible to social crawlers and Google.
-
----
-
-### Bug 4 — `/guides` and `/guides/:categoryId` missing brand suffix in titles
-
-**Severity: Low**
-
-- `/guides` title: `"Consumer Rights Guides | Know Your Rights"` — missing "| Letter of Dispute" suffix.
-- `/guides/:categoryId` title: `"${guide.title} | Consumer Rights Guide"` — missing brand suffix. Every other page on the site uses the `| Letter of Dispute` suffix pattern.
-
----
-
-### Bug 5 — `SEOHead` has a ghost `type="article"` default causing incorrect Article schema on non-article pages
-
-**Severity: Medium**
-
-`SEOHead` defaults `type = 'article'` and emits an Article schema for **any page that doesn't explicitly set `type="website"`**. The following pages receive an incorrect Article schema:
-
-- `/state-rights` (no `type` prop set → gets Article schema)
-- `/deadlines` (no `type` prop set → gets Article schema)
-- `/consumer-news` (no `type` prop set → gets Article schema)
-- `/analyze-letter` (no `type` prop set → gets Article schema)
-- `/guides` (no `type` prop set → gets Article schema)
-
-These are interactive tool pages — Article schema with `datePublished: new Date().toISOString()` (always "today") is semantically incorrect and will confuse Google.
-
----
-
-### Bug 6 — `/state-rights/:stateSlug` missing FAQPage schema
-
-**Severity: Medium**
-
-The state hub pages contain well-structured prose that would support FAQ schema, but no FAQ items are defined or passed. The state-category pages (`/state-rights/:stateSlug/:categorySlug`) correctly have FAQPage schema with 3 questions each. The intermediate hub pages (/state-rights/california) have none, which is a missed rich snippet opportunity for 51 high-value pages.
-
----
-
-### Bug 7 — `LetterGenerator.tsx` state-rights link uses raw `template.category` as category slug
-
-**Severity: Low**
-
-The helper link added in the last edit constructs the URL as:
+At line 513, the "Popular Templates" quick-link section in the Guide CTA box links to:
 ```tsx
-href={`/state-rights/${stateSlug}/${template.category}`}
+to={`/letters/${t.slug}`}
 ```
-`template.category` is the category display name (e.g. `"Vehicle"`, `"Housing & Tenant Rights"`) not the URL slug (e.g. `vehicle`, `housing`). This will produce broken URLs like `/state-rights/california/Vehicle` which return 404s.
+
+The route `/letters/:slug` does **not exist**. The correct URL pattern is:
+```
+/templates/:categoryId/:subcategorySlug/:templateSlug
+```
+
+This means every Category Guide page (13 pages) has broken template CTA links in the "Ready to Assert Your Rights?" section. Affected example: clicking "Security Deposit Return Letter" from `/guides/housing` routes to `/letters/housing-kw-security-deposit-return` → 404.
+
+**Fix:** Look up each template's full hierarchical path using `inferSubcategory` and `getCategoryIdFromName`, same pattern used in `RelatedTemplatesCTA.tsx`.
 
 ---
 
-## Issues by Page Type
+### Bug 2 — MEDIUM: `RealWorldScenarios.tsx` (Homepage) uses stale `/letters/` slugs
 
-### Homepage `/`
-- Status: Good
-- Has: Title, description, canonical, OG, Twitter, WebApplication schema, Organization schema
-- Missing: `type="website"` is set correctly; Article schema is suppressed
-- Recommendation: None critical
+**Severity: Medium**
 
-### Template Pages `/templates/:categoryId/:subcategorySlug/:templateSlug`
-- Status: Good
-- Has: WebApplication + HowTo + BreadcrumbList schema, SEO title/desc, canonical
-- Has: DB SEO override support
-- Recommendation: None critical
+`src/components/home/RealWorldScenarios.tsx` contains 5 hardcoded `letterSlug` values using the old `/letters/` format:
+```ts
+letterSlug: '/letters/housing/security-deposit-return',
+letterSlug: '/letters/healthcare/medical-bill-dispute',
+letterSlug: '/letters/insurance/claim-denial-appeal',
+letterSlug: '/letters/refunds/defective-product-refund',
+letterSlug: '/letters/travel/flight-delay-compensation',
+```
 
-### Category Pages `/templates/:categoryId`
-- Status: Good
-- Has: ItemList + BreadcrumbList schema, breadcrumb UI
-- Missing: `type="website"` set correctly
-- Recommendation: None critical
+These slugs appear to be legacy paths from a previous routing scheme. Whether these are used as `<Link to="">` or just shown as text needs confirming, but they represent the wrong URL format regardless.
 
-### Subcategory Pages `/templates/:categoryId/:subcategorySlug`
-- Status: Good
-- Has: BreadcrumbList schema, breadcrumb UI
-- Missing: No `type="website"` — gets erroneous Article schema (Bug 5)
-- Recommendation: Add `type="website"` to `SubcategoryPage`
+**Fix:** Map to correct hierarchical URLs or remove if they're display-only.
 
-### All Templates `/templates`
-- Status: Good
-- Has: CollectionPage + BreadcrumbList schema
-- Recommendation: None critical
+---
 
-### State Rights Hub `/state-rights`
-- Status: Partially broken
-- Has: Title, description, canonical, FAQ props (silently dropped - Bug 1)
-- Missing: FAQPage schema, BreadcrumbList schema (Bug 1)
-- Gets: Incorrect Article schema (Bug 5)
+### Bug 3 — MEDIUM: 130 orphan articles with 0 inbound links
 
-### State Rights State Hub `/state-rights/:stateSlug` (×51)
-- Status: Partially broken
-- Has: Dynamic title with citation, description, canonical, breadcrumb UI, sidebar with all-13-category grid
-- Missing: BreadcrumbList schema (Bug 2), FAQPage schema (Bug 6)
-- Gets: Incorrect Article schema (Bug 5)
+**Severity: Medium**
 
-### State Rights Category Pages `/state-rights/:stateSlug/:categorySlug` (×663)
-- Status: Good
-- Has: Dynamic title, description, canonical, FAQPage schema (3 questions), BreadcrumbList schema, breadcrumb UI, Federal vs State table, peer linking, sibling category links
-- Recommendation: None critical
+130 articles (2.2%) have zero inbound links. Of these, 15 have high outbound link counts (they link OUT to 8–16 articles but receive nothing back). Notable orphans:
+- `what-to-do-about-pcp` (vehicle) — 16 outbound, 0 inbound
+- `everything-you-need-to-know-about-bill-shock-complaint` (utilities) — 10 outbound, 0 inbound
+- `how-to-write-a-credit-report-dispute-letter-step-by-step-guide` (financial) — 8 outbound, 0 inbound
 
-### Blog Index `/articles`
-- Status: Minor issue
-- Has: Title, description, canonical
-- Has: Incorrect brand name "DisputeLetters" (Bug 3)
+These are unreachable via internal navigation — Google will deprioritize them as "orphaned" pages.
 
-### Blog Category `/articles/:category`
-- Status: Minor issue
-- Has: Title, description, canonical; breadcrumb uses plain `<nav>` not `<Breadcrumb>` component
-- Has: Incorrect brand name "DisputeLetters" (Bug 3)
-- Missing: BreadcrumbList JSON-LD
+**Fix:** Run the existing "Rescue Orphans" edge function from the admin SEO dashboard. It uses a lower similarity threshold (0.55 vs 0.70) to find inbound sources for exactly these articles.
 
-### Blog Post `/articles/:category/:slug`
-- Status: Good
-- Has: Article JSON-LD (Person author, Organization publisher, datePublished, dateModified, image), OG image, dynamic canonical
-- Has: Correct `meta_title`/`meta_description` from DB
-- Recommendation: None critical
+---
 
-### Guides Hub `/guides`
-- Status: Minor issue
-- Missing: Brand suffix in title (Bug 4), no `type="website"` (Bug 5)
+### Bug 4 — MEDIUM: `semantic-reverse` suggestions have NULL `relevance_score` (1,118 affected)
 
-### Guide Category `/guides/:categoryId`
-- Status: Partially broken
-- Has: Dynamic title, description, canonical; FAQ props passed (silently dropped - Bug 1)
-- Missing: FAQPage schema (Bug 1), brand suffix (Bug 4)
+**Severity: Medium**
 
-### Deadlines Calculator `/deadlines`
-- Status: Partially broken
-- Has: Title, description, canonical, FAQ props (silently dropped - Bug 1)
-- Missing: FAQPage schema (Bug 1), BreadcrumbList schema (Bug 1)
-- Gets: Incorrect Article schema (Bug 5)
+The `link_suggestions` audit shows that **1,118 `semantic-reverse` suggestions have `NULL` relevance scores**. The `relevance_score` is used by the link review UI to show the quality indicator badge. These 1,118 suggestions display no score in the admin panel, making them harder to evaluate. Of 2,106 total `semantic-reverse` suggestions, 646 are approved but not yet applied.
 
-### Consumer News `/consumer-news`
-- Status: Minor issue
-- Has: Title, description, canonical, breadcrumb UI
-- Gets: Incorrect Article schema (Bug 5)
-- Missing: BreadcrumbList schema from `breadcrumbs` prop (Bug 1)
+**Fix:** Backfill `relevance_score` for `semantic-reverse` suggestions using `round(semantic_score * 100)`.
 
-### Letter Analyzer `/analyze-letter`
-- Status: Minor issue
-- Has: Title, description, canonical, breadcrumb UI
-- Gets: Incorrect Article schema (Bug 5)
-- Missing: BreadcrumbList schema from `breadcrumbs` prop (Bug 1)
+---
 
-### FAQ Page `/faq`
-- Status: Good — uses separate `<Helmet>` directly, bypasses Bug 5
+### Bug 5 — LOW: `CategoryGuidePage` "Related Articles" links use short slug (missing category prefix)
 
-### Pricing Page `/pricing`
-- Status: Good — uses separate `<Helmet>` directly, bypasses Bug 5
+**Severity: Low**
+
+At line 534, the Related Articles section in `CategoryGuidePage` links to:
+```tsx
+to={`/articles/${article.slug}`}
+```
+
+But the correct URL format (enforced everywhere else) is:
+```
+/articles/:categorySlug/:slug
+```
+
+The query already fetches `category_slug` in the select, so `article.category_slug` is available — it's just not being used.
+
+**Fix:** Change to `` to={`/articles/${article.category_slug}/${article.slug}`} ``
+
+---
+
+### Bug 6 — LOW: Over-linked articles exceeding the 8-link cap
+
+**Severity: Low**
+
+15 articles have `outbound_count > 8`, with the highest at 17 links (`your-rights-what-to-do-when-health-insurance-denies-a-claim`). These exceed the platform's own SEO best-practice cap of 8 outbound links per article (defined in the internal linking policy). These links were applied before the cap was lowered or enforced.
+
+**Fix:** No immediate action needed unless a reconciliation is run — these won't hurt rankings significantly. But the reconcile script should be run to audit if any are ghost links.
+
+---
+
+### Bug 7 — LOW: No state-rights pages appear as link targets in `link_suggestions`
+
+**Severity: Low**
+
+The scan-for-semantic-links and scan-for-smart-links edge functions were recently updated to inject state-rights pages as candidates. However, checking the `link_suggestions` table confirms **0 rows** have `target_slug` that is a `/state-rights/` path. This is expected because:
+
+1. The scan functions inject them as `CandidateTarget` objects at runtime but insert them with a `target_slug` referencing the article slug pattern, not `/state-rights/` paths.
+2. The state-rights pages don't have entries in `article_embeddings`, so the vector matching doesn't discover them.
+
+The state-rights links **are** embedded directly in `LetterPage`, `CategoryGuidePage`, and generator prompts — but they are not flowing through the link suggestions system. This is acceptable for now but means the admin Link Management UI won't show them for review.
+
+---
+
+## Site Hierarchy Verification
+
+### Current Structure (Correct)
+
+```text
+/ (Homepage)
+├── /templates                          (All templates collection)
+│   └── /templates/:categoryId          (Category page — 13 pages)
+│       └── /templates/:categoryId/:sub (Subcategory — ~150 pages)
+│           └── /templates/:cat/:sub/:slug (Template — 500+ pages)
+├── /guides                             (Guides hub)
+│   └── /guides/:categoryId             (Category guide — 13 pages)
+├── /articles                           (Blog hub)
+│   └── /articles/:categorySlug         (Blog category — ~15 pages)
+│       └── /articles/:cat/:slug        (Blog post — 5,780 pages)
+├── /state-rights                       (State rights hub)
+│   └── /state-rights/:stateSlug        (State hub — 51 pages)
+│       └── /state-rights/:state/:cat   (State+category — 663 pages)
+└── /deadlines, /consumer-news, /analyze-letter (Free tools)
+```
+
+### Hierarchy Issues
+
+- **Guides → Templates cross-links are sparse**: `CategoryGuidePage` links to `/templates/${categoryId}` (the category index) but the "Popular Templates" quick-links are broken (Bug 1). Once fixed, guides will be strong template funnels.
+- **Blog → Template linking is working** correctly via `related_templates` field and `RelatedTemplatesCTA`.
+- **Template → Blog linking works** via `RelatedArticles` which queries `related_templates` and falls back to category.
+- **State Rights → Template linking is missing**: State category pages (`/state-rights/california/vehicle`) don't link to individual templates. This is a missed conversion funnel — someone reading about California vehicle rights has no direct path to the Lemon Law template.
+
+---
+
+## Priority Fix List
+
+| Bug | Severity | File(s) | Fix Type |
+|---|---|---|---|
+| CategoryGuidePage `/letters/` broken links | High | `CategoryGuidePage.tsx` | Code fix |
+| CategoryGuidePage article URL missing category prefix | Low | `CategoryGuidePage.tsx` | Code fix |
+| RealWorldScenarios legacy `/letters/` slugs | Medium | `RealWorldScenarios.tsx` | Code fix |
+| 130 orphan articles | Medium | Admin SEO Dashboard | Run Rescue Orphans |
+| semantic-reverse NULL relevance scores | Medium | Database | SQL backfill |
+| State category pages missing template CTAs | Medium | `StateRightsCategoryPage.tsx` | New feature |
 
 ---
 
 ## Implementation Plan
 
-### Phase 1 — Fix `SEOHead.tsx` (fixes Bugs 1 and 5 at once)
-
-**File: `src/components/SEOHead.tsx`**
-
-1. Change the default `type` from `'article'` to `'website'` so tool/hub pages don't get incorrect Article schema by default.
-
-2. Add FAQPage schema generation when `faqItems` prop is present:
-```ts
-const faqSchema = faqItems && faqItems.length > 0 ? {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqItems.map(item => ({
-    '@type': 'Question',
-    name: item.question,
-    acceptedAnswer: { '@type': 'Answer', text: item.answer },
-  })),
-} : null;
-```
-
-3. Add BreadcrumbList schema generation when `breadcrumbs` prop is present:
-```ts
-const breadcrumbSchema = breadcrumbs && breadcrumbs.length > 0 ? {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: breadcrumbs.map((item, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    name: item.name,
-    item: item.url,
-  })),
-} : null;
-```
-
-4. Emit both schemas inside the `<Helmet>` return alongside the existing ones.
-
-5. Update the Article schema condition: only emit if `type === 'article'` (not the default).
-
-This single fix resolves Bug 1 on 6 pages and Bug 5 across 5+ pages simultaneously.
-
----
-
-### Phase 2 — Fix branding in blog titles (Bug 3)
-
-**File: `src/pages/ArticlesPage.tsx`**
-
-Change: `"Blog | DisputeLetters - Consumer Rights & Dispute Resolution"`
-To: `"Blog | Letter of Dispute - Consumer Rights & Dispute Resolution"`
-
-**File: `src/pages/ArticleCategoryPage.tsx`**
-
-Change: `` `${categoryData.name} | DisputeLetters Blog` ``
-To: `` `${categoryData.name} | Letter of Dispute Blog` ``
-
----
-
-### Phase 3 — Fix guide title brand suffixes (Bug 4)
-
-**File: `src/pages/GuidesPage.tsx`**
-
-Change: `"Consumer Rights Guides | Know Your Rights"`
-To: `"Consumer Rights Guides — Know Your Rights | Letter of Dispute"`
+### Phase 1 — Fix `CategoryGuidePage.tsx` (Bugs 1 and 5)
 
 **File: `src/pages/CategoryGuidePage.tsx`**
 
-Change: `` `${guide.title} | Consumer Rights Guide` ``
-To: `` `${guide.title} | Consumer Rights Guide — Letter of Dispute` ``
+**Fix Bug 1** (line 513): Replace `/letters/${t.slug}` with the correct hierarchical template URL. Import `inferSubcategory` and `getCategoryIdFromName`, then compute:
+```tsx
+const sub = inferSubcategory(t.id, t.category);
+const subSlug = sub?.slug || 'general';
+const catId = getCategoryIdFromName(t.category);
+to={`/templates/${catId}/${subSlug}/${t.slug}`}
+```
+
+**Fix Bug 5** (line 534): Replace `to={`/articles/${article.slug}`}` with `to={`/articles/${article.category_slug}/${article.slug}`}`.
 
 ---
 
-### Phase 4 — Add `type="website"` to tool/hub pages (Bug 5 supplementary)
+### Phase 2 — Fix `RealWorldScenarios.tsx` (Bug 2)
 
-After Phase 1, the default becomes `'website'`, so this phase is largely resolved automatically. However, the following pages that explicitly render Article schema via `type="article"` need to be checked:
+**File: `src/components/home/RealWorldScenarios.tsx`**
 
-- `SubcategoryPage.tsx` — no `type` prop currently; will correctly inherit `'website'` default after Phase 1 fix.
-- `StateRightsPage.tsx` — no `type` prop; will correctly inherit `'website'` after fix.
+Map each hardcoded `letterSlug` to the correct hierarchical URL:
+- `/letters/housing/security-deposit-return` → `/templates/housing/tenancy-dispute/housing-kw-security-deposit-dispute`
+- `/letters/healthcare/medical-bill-dispute` → `/templates/healthcare/billing-coding/healthcare-kw-medical-bill-dispute`
+- `/letters/insurance/claim-denial-appeal` → `/templates/insurance/health-insurance/insurance-kw-insurance-appeal`
+- etc.
 
-No additional file changes needed in Phase 4 if Phase 1 changes the default.
-
----
-
-### Phase 5 — Add FAQ schema to state hub pages (Bug 6)
-
-**File: `src/pages/StateRightsStatePage.tsx`**
-
-Define 2-3 FAQ items about the state (e.g., "What is [State]'s consumer protection law?", "How do I file a complaint with the [State] AG?") and pass them as `faqItems` to `SEOHead`. This activates the FAQPage schema added in Phase 1 for all 51 state hub pages.
+If the `letterSlug` field is only for display and not used in `<Link>`, confirm and clean up or properly route it.
 
 ---
 
-### Phase 6 — Fix broken state-rights link in LetterGenerator (Bug 7)
+### Phase 3 — Backfill `relevance_score` on semantic-reverse suggestions (Bug 4)
 
-**File: `src/components/letter/LetterGenerator.tsx`**
+This is a database fix that sets `relevance_score = round(semantic_score * 100)` for all `semantic-reverse` suggestions where `relevance_score IS NULL`. This improves the admin link review UI immediately for the 646 approved-but-unreviewed suggestions.
 
-Build a `CATEGORY_TO_SLUG` mapping that converts `template.category` display name to URL slug, identical to the mapping used in the edge functions (`CATEGORY_TO_RIGHTS_SLUG`). Apply this mapping when constructing the `/state-rights/` link href.
+---
+
+### Phase 4 — Add Template CTAs to State Category Pages (Bug 7 enhancement)
+
+**File: `src/pages/StateRightsCategoryPage.tsx`**
+
+Add a sidebar section or bottom CTA that links to the 3 most relevant templates for that state's category. For example, `/state-rights/california/vehicle` would show links to the Lemon Law, Car Dealer Complaint, and Vehicle Warranty templates. This closes the conversion funnel for the 663 highest-value SEO pages.
+
+---
+
+### Phase 5 — Run Rescue Orphans (Bug 3)
+
+From the Admin SEO Dashboard → Link Management → "Rescue Orphans" button. This immediately fixes the 130 orphans by auto-approving inbound link suggestions for them.
 
 ---
 
 ## Summary Table
 
-| Bug | Severity | Pages Affected | Fix In Phase |
-|---|---|---|---|
-| `SEOHead` drops `faqItems` → no FAQPage schema | High | 5+ pages | Phase 1 |
-| `SEOHead` drops `breadcrumbs` → no BreadcrumbList | High | 6+ pages | Phase 1 |
-| Wrong brand name "DisputeLetters" in blog titles | Low | 2 pages | Phase 2 |
-| Missing "Letter of Dispute" brand suffix in guides | Low | 2 pages | Phase 3 |
-| Wrong Article schema default on tool pages | Medium | 5+ pages | Phase 1 |
-| No FAQPage schema on state hub pages | Medium | 51 pages | Phase 5 |
-| Broken state-rights URL in LetterGenerator | Low | All letter pages | Phase 6 |
+| Check | Status | Details |
+|---|---|---|
+| 100% article embedding coverage | PASS | 5,780/5,780 articles embedded |
+| All articles have related_templates | PASS | 5,780/5,780 (100%) |
+| Average inbound links per article | PASS | 6.6 avg, 83% with 3+ |
+| Applied link total | PASS | 44,256 links injected |
+| Template bidirectional linking | PASS | Articles → Templates → Articles all wired |
+| State rights linking from templates | PASS | 5-state panel on every LetterPage |
+| State rights linking from guides | PASS | 6-state grid on every CategoryGuidePage |
+| Guide → Template CTA URLs | FAIL | Bug 1: broken `/letters/` URLs |
+| Guide → Article URLs | FAIL | Bug 5: missing category prefix |
+| Homepage scenario links | FAIL | Bug 2: legacy `/letters/` URLs |
+| Orphan articles | WARN | 130 orphans (2.2%) — run Rescue Orphans |
+| Over-linked articles (>8) | WARN | 15 articles exceed cap |
+| semantic-reverse relevance scores | WARN | 1,118 NULL scores |
+| State rights → Template CTAs | MISSING | 663 pages lack template conversion path |
