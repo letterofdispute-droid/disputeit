@@ -1,98 +1,120 @@
 
-# Fix: 4 Real UX Bugs Found in Testing
+# Audit & Update: How It Works + Legal Pages
 
-## What's Broken (from user testing)
+## What Was Audited
 
-### Bug 1 - Recommendation links to category page, not the specific template
-In `LetterRecommendation.tsx`, "View Letter Template" links to `/templates/${recommendation.category}` - the category browse page. The user then has to scroll through and find the right template themselves. This is the core of the "double flow" complaint.
+Five files were reviewed against two requirements:
+1. Accurate reflection of the new 4-step Dispute OS flow (Describe → Resolution Plan → Generate → Track)
+2. Full legal coverage: zero liability for user actions, clear AI disclosure, no legal advice, no government affiliation
 
-**Root cause:** The AI's `[RECOMMENDATION]` block provides `letter: specific-letter-name` (e.g. `unauthorized-charge-dispute`) which is actually a template slug, but `LetterRecommendation.tsx` ignores this slug and just links to the category. The slug needs to be resolved to a full URL: `/templates/{categoryId}/{subcategorySlug}/{templateSlug}`.
+---
 
-**Fix:** In `LetterRecommendation.tsx`:
-- Use `getTemplateBySlug(recommendation.letter)` to find the actual template
-- If found, resolve its full URL using `inferSubcategory` for the subcategory slug
-- "View Letter Template" button links directly to `/templates/{categoryId}/{subcat}/{slug}`
-- "Browse Category" remains as the fallback secondary button
+## Gaps Found
 
-### Bug 2 - User has to re-type their issue description in the letter form
-After the intake flow (where user describes their situation), clicking through to a template page requires re-entering the same information. The `dispute_intake_context` already in `sessionStorage` contains the dispute description but is never used to pre-fill form fields.
+### HowItWorksPage.tsx — Stale & Legally Risky
 
-**Fix:** In `LetterGenerator.tsx`, on mount:
-- Read `sessionStorage.getItem('dispute_intake_context')` and `sessionStorage.getItem('dispute_intake_answers')` (a new key we store)
-- Extract the user's issue description from the intake answers
-- Pre-fill the first `textarea` field (typically `issueDescription`, `description`, or `details`) with the intake description if the field is currently empty
+The `/how-it-works` page is the **most out of date** file. It still describes the old template-browse flow, not the new Dispute OS flow:
 
-We also need to store the raw intake description in `DisputeIntakeFlow.tsx` - currently the intake has no "describe your issue" text field. Looking at the flow again:
+| Problem | Current | Should Be |
+|---|---|---|
+| Step 1 | "Choose Your Letter Type" (browse templates) | "Describe Your Dispute" (AI intake) |
+| Step 2 | "Fill in Your Details" (form fields) | "Get Your Resolution Plan" (multi-step strategy) |
+| Step 3 | "Generate Your Letter" (preview + download) | "Generate Your Letter" (legal-safe with citations) |
+| Step 4 | "Send and Get Results" | "Track Until Resolved" (dashboard tracker) |
+| Effectiveness section | "Pre-Validated Templates" as hero feature | Should include AI Disclosure and "used at your own risk" note |
+| FAQ: "legally binding?" | Says letters "carry weight" — overpromising | Must add explicit "not legal advice, no guaranteed outcome" caveat |
+| FAQ: "better than writing own?" | "proven to get results" | Must qualify as "may improve outcomes, no guarantee" |
+| CTA section | "Join thousands who've successfully resolved" | Misleading success claim — must be qualified |
+| JSON-LD HowTo schema | References old 4 steps | Must match new 4 steps |
+| No disclaimer footer | Missing | Must add brief "not legal advice" notice at bottom of page |
 
-The intake flow is: Category → Credit card → Date + Company response. There is **no free-text description field** in the current intake. The user is confused because after the 3 steps they see the AI recommendation, and only in the AI chat does a description get typed. But the user said they "described an issue" during intake - this suggests they typed in the AI chat after intake completed (which auto-triggered the AI), and then expected that text to carry over.
+### HowItWorks.tsx (homepage component) — Step 3 wording
+Step 3 description says "legal-safe language" — this is good but needs a soft qualifier so it doesn't imply attorney-reviewed.
 
-**Revised fix:** Store the intake answers (disputeType, dates, etc.) in sessionStorage in a structured format, and use them to pre-fill the letter form:
-- Pre-fill date fields (`incidentDate`, `date`, `purchaseDate`) from `answers.incidentDate`
-- Add a brief pre-fill banner: "We've pre-filled some details from your intake" so the user knows it happened
+### DisclaimerPage.tsx — Good but needs one addition
+The Disclaimer page is comprehensive and solid. One gap:
+- **Date is stale**: Shows "February 8, 2026" — should match the compliance benchmark of "February 19, 2026"
+- **No mention of the Dispute OS intake flow or Resolution Plan**: Users may submit description text through the AI assistant; should note that intake descriptions are processed by AI
 
-### Bug 3 - Mobile: Two buttons side by side don't fit
-In `LetterRecommendation.tsx`, the button row `<div className="flex gap-2">` puts both buttons side by side. On mobile (360px screens), "View Letter Template →" and "Browse Financial" overflow or truncate.
+### PrivacyPage.tsx — One gap to patch
+- Section 2 (Information We Collect) lists "Dispute Details: Information you enter into letter templates" but the new intake flow also captures a free-text description and structured answers (disputeType, incidentDate, etc.) via `sessionStorage` before the letter form. This should be disclosed.
+- **No mention of intake/assistant chat data**: The AI assistant modal processes user-typed descriptions. This needs a privacy disclosure.
 
-**Fix:** Change `flex gap-2` to `flex flex-col gap-2 sm:flex-row` so they stack on mobile and go side-by-side on sm+ screens.
+### TermsPage.tsx — Minor gaps
+- Section 3 (Description of Service) does not mention the AI Dispute Assistant or Resolution Plan — two new core service components that now exist
+- The "As Is" disclaimer in Section 7 is solid and covers liability well — no changes needed there
 
-### Bug 4 - Download PDF button grayed out immediately after purchase
-On `PurchaseSuccessPage.tsx`, the "Download PDF" button is `disabled={!purchase.pdfUrl}`. 
+---
 
-Looking at the code: for credit purchases (amount = 0), `pdfUrl` is set from `purchaseData.pdf_url` after calling `supabase.storage.createSignedUrl`. If `pdf_url` is null/empty in the DB at that point (PDF not yet generated), the button stays grayed out.
+## Changes to Make
 
-For paid Stripe purchases, `pdfUrl` comes from `verify-letter-purchase` edge function response.
+### 1. HowItWorksPage.tsx — Major update
 
-**Fix:** 
-- Add a "Generating your PDF..." loading state when `purchase` exists but `purchase.pdfUrl` is falsy
-- Poll the `letter_purchases` table every 3 seconds (up to 30s) until `pdf_url` is populated, then generate a signed URL and enable the button
-- Show a spinner on the button with "Preparing PDF..." text while polling
-- After 30s timeout, show "PDF generation is taking longer than expected. Check your email or visit your dashboard."
+**Rewrite the 4 steps** to match the Dispute OS flow:
+```
+Step 01 — Describe Your Dispute
+  "Tell our AI what happened. Answer a few guided questions — no legal jargon required. The AI identifies the right dispute type and recommended approach in seconds."
+  Tips: Have key dates and amounts ready / Be factual — describe what happened, not what you want / You can type freely; the AI will extract what matters
+
+Step 02 — Get Your Resolution Plan  
+  "Receive a structured plan: the right letter type, relevant agency links (CFPB, FTC, State AG), chargeback guidance if you paid by card, and statutory deadlines for your dispute category."
+  Tips: The plan is informational — not legal advice / Agency links are suggestions; we are not affiliated with any government body / Escalation paths shown are options, not guarantees
+
+Step 03 — Generate Your Letter
+  "Your letter is assembled with appropriate formal language, relevant consumer law references for your state, and a professional tone designed to be taken seriously. Review it carefully before sending."
+  Tips: Review all details before downloading / Customize any field that doesn't match your situation / We are not a law firm — for complex matters, consult a licensed attorney  
+
+Step 04 — Track Until Resolved
+  "Log your dispute in the tracker. Check off steps as you go. If the letter doesn't resolve the issue, your documented record supports escalation to agencies or small claims."
+  Tips: Outcomes are not guaranteed / Track your correspondence dates / Update the tracker if you escalate
+```
+
+**Update the "What Makes Our Letters Effective" section** — rename to "What Our Service Provides" and add a legal disclaimer card:
+- Remove "proven to get better response rates" (unverifiable claim)
+- Replace with accurate, qualified language: "designed to communicate professionally"
+- Add a prominent "Important Limitations" card below this section with: Not a law firm / No attorney review / No guaranteed outcomes / Used at your own risk
+
+**Update FAQs** — four answers need legal-safe rewrites:
+- "Are these letters legally binding?" → remove "they carry weight" / add "consult an attorney for legal matters"
+- "What makes these better than writing my own?" → qualify "may improve outcomes" not "proven to get results"
+- Add new FAQ: "Do you guarantee my dispute will be resolved?" → explicit no-guarantee answer
+- "What if the company ignores my letter?" → add "we are not responsible for recipient actions"
+
+**Update CTAs** — remove "successfully resolved disputes" unqualified success claims. Replace with: "Used by thousands of consumers to communicate their disputes professionally."
+
+**Update JSON-LD schema** — rewrite to match the new 4 steps exactly.
+
+**Add disclaimer footer strip** — a thin banner above the CTA with: "Letter of Dispute is not a law firm. Letters are generated using AI and are not reviewed by attorneys. Use at your own risk."
+
+### 2. DisclaimerPage.tsx — Minor updates
+
+- Update date from "February 8, 2026" to "February 19, 2026"
+- Add to Section 2 (AI-Generated Content): A note that the AI Dispute Assistant processes user-typed issue descriptions to generate recommendations — content is AI-generated and not attorney-reviewed
+- Add to Section 7 (User Responsibility): Mention that users are responsible for accuracy of the description they provide during the AI intake flow
+
+### 3. PrivacyPage.tsx — Add intake data disclosure
+
+- In Section 2 (Information We Collect → Personal Information You Provide): Add bullet: "AI Dispute Assistant Inputs: Text descriptions and answers you provide during the AI intake flow (dispute type, dates, issue description). This data is processed by AI to generate recommendations and pre-fill letter forms. It is stored temporarily in your browser session and not retained on our servers beyond the session."
+- In Section 5 (AI Data Processing): Note that the Dispute Assistant processes user descriptions in real-time and that intake data is session-only (not persisted server-side)
+
+### 4. TermsPage.tsx — Section 3 update
+
+- Add to the bulleted list in Section 3 (Description of Service): "An AI Dispute Assistant that guides users through a structured intake flow and generates a personalised Resolution Plan" and "A Dispute Tracker for monitoring progress toward resolution"
+
+### 5. HowItWorks.tsx (homepage) — Step 3 qualifier
+
+- Step 3 description: Change "legal-safe language" to "formal language with consumer law references" to avoid implying attorney-reviewed content
+
+---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/dispute-assistant/LetterRecommendation.tsx` | Link directly to template slug URL + stack buttons on mobile |
-| `src/components/dispute-assistant/DisputeIntakeFlow.tsx` | Store structured answers to sessionStorage on complete |
-| `src/components/dispute-assistant/DisputeAssistantModal.tsx` | Store intake answers to sessionStorage when calling `handleIntakeComplete` |
-| `src/components/letter/LetterGenerator.tsx` | Pre-fill date field from intake sessionStorage on mount |
-| `src/pages/PurchaseSuccessPage.tsx` | Poll for PDF URL when initially missing, show loading state on button |
+| File | Scope |
+|---|---|
+| `src/pages/HowItWorksPage.tsx` | Major — rewrite steps, update effectiveness section, update FAQs, update CTAs, add disclaimer strip, fix JSON-LD |
+| `src/pages/DisclaimerPage.tsx` | Minor — fix date, add AI intake note to sections 2 and 7 |
+| `src/pages/PrivacyPage.tsx` | Minor — add intake data disclosure to sections 2 and 5 |
+| `src/pages/TermsPage.tsx` | Minor — add AI assistant and tracker to section 3 service description |
+| `src/components/home/HowItWorks.tsx` | Tiny — qualify Step 3 wording |
 
-## Technical Details
-
-### Resolving template slug to URL
-```
-recommendation.letter → getTemplateBySlug(slug) → template
-categoryId = getCategoryIdFromName(template.category)
-subcategorySlug = inferSubcategory(template.id, template.category)?.slug || 'general'
-url = /templates/${categoryId}/${subcategorySlug}/${template.slug}
-```
-
-### PDF polling logic
-```typescript
-// After purchase is set and pdfUrl is missing, poll every 3s up to 10 attempts
-useEffect(() => {
-  if (!purchase || purchase.pdfUrl) return;
-  let attempts = 0;
-  const interval = setInterval(async () => {
-    attempts++;
-    const { data } = await supabase.from('letter_purchases').select('pdf_url').eq('id', purchase.id).single();
-    if (data?.pdf_url) {
-      // generate signed URL and update purchase state
-      clearInterval(interval);
-    }
-    if (attempts >= 10) clearInterval(interval);
-  }, 3000);
-  return () => clearInterval(interval);
-}, [purchase]);
-```
-
-### Intake pre-fill in LetterGenerator
-When the component mounts, read from sessionStorage:
-```
-dispute_intake_answers: JSON of { disputeType, incidentDate, paidByCreditCard, companyResponded }
-```
-If `incidentDate` is set and the template has a date field, pre-fill it automatically and show a subtle "Pre-filled from your intake" banner.
-
-## No Backend Changes Required
-All fixes are purely frontend. No migrations, no edge function changes.
+## No backend changes required.
