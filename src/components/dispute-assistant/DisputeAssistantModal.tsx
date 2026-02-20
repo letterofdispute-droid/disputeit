@@ -123,6 +123,16 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
     };
 
     try {
+      // Build message history, injecting intake context as a hidden system message before the first user turn
+      const visibleMessages = messages.filter(m => m !== INITIAL_MESSAGE);
+      const intakeContext = sessionStorage.getItem('dispute_intake_context');
+      
+      // Only prepend context on the very first user message (no prior user turns)
+      const hasUserTurn = visibleMessages.some(m => m.role === 'user');
+      const contextPrefix: Message[] = (!hasUserTurn && intakeContext)
+        ? [{ role: 'user', content: intakeContext }, { role: 'assistant', content: 'Understood. I have your context.' }]
+        : [];
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dispute-assistant`, {
         method: 'POST',
         headers: {
@@ -130,7 +140,7 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ 
-          messages: [...messages.filter(m => m !== INITIAL_MESSAGE), userMsg] 
+          messages: [...contextPrefix, ...visibleMessages, userMsg],
         }),
       });
 
@@ -189,35 +199,61 @@ const DisputeAssistantModal = ({ isOpen, onClose, startInLegalExpertMode = false
     setIntakeAnswers(answers);
     setShowIntake(false);
 
-    // Build a pre-loaded context message for the AI
-    const creditCardNote = answers.paidByCreditCard === true
-      ? 'They paid by credit card (chargeback may be possible).'
-      : answers.paidByCreditCard === false
-      ? 'They did not pay by credit card.'
-      : '';
-    const dateNote = answers.incidentDate
-      ? `The incident happened on ${answers.incidentDate}.`
-      : '';
-    const responseNote = answers.companyResponded === 'yes'
-      ? 'The company has already responded but was unsatisfactory.'
-      : answers.companyResponded === 'no'
-      ? 'The company has not responded to previous contact.'
-      : 'This is a first contact — the company has not been approached yet.';
+    // Build a rich hidden context message to inject before the first user turn
+    const typeLabel: Record<string, string> = {
+      payment: 'a payment or charge dispute',
+      product: 'a defective or missing product dispute',
+      service: 'a poor service dispute',
+      housing: 'a housing or rental dispute',
+      employment: 'an employment dispute',
+      travel: 'a travel dispute',
+      financial: 'a financial or credit dispute',
+      other: 'a general consumer dispute',
+    };
 
-    const contextMessage = `[User context from intake: Dispute type: ${answers.disputeType}. ${creditCardNote} ${dateNote} ${responseNote}]`;
+    const creditCardNote = answers.paidByCreditCard === true
+      ? 'The user paid by credit or debit card — a chargeback may be possible.'
+      : answers.paidByCreditCard === false
+      ? 'The user did NOT pay by credit card, so a chargeback is not available.'
+      : 'Payment method is unknown.';
+
+    const dateNote = answers.incidentDate
+      ? (() => {
+          const days = Math.floor((Date.now() - new Date(answers.incidentDate).getTime()) / (1000 * 60 * 60 * 24));
+          const within60 = days <= 60;
+          return `The incident happened on ${answers.incidentDate} (${days} days ago).${answers.paidByCreditCard && within60 ? ' They are WITHIN the 60-day chargeback window.' : answers.paidByCreditCard && !within60 ? ' The chargeback window has likely PASSED.' : ''}`;
+        })()
+      : 'Incident date is unknown.';
+
+    const responseNote = answers.companyResponded === 'yes'
+      ? 'The company has already responded but the user is unsatisfied — this is an escalation scenario.'
+      : answers.companyResponded === 'no'
+      ? 'The company has not responded to a previous contact — the user is being ignored.'
+      : 'The user has NOT yet contacted the company — this is a first contact scenario.';
+
+    const contextMessage = `[INTAKE CONTEXT - use this to personalise your response without asking these questions again]\nDispute category: ${typeLabel[answers.disputeType] || answers.disputeType}.\n${creditCardNote}\n${dateNote}\n${responseNote}\nBased on this context, provide a tailored recommendation. If a chargeback window is active, mention it as the fastest first step before the letter.`;
+
+    // Build the AI welcome message shown to the user
+    const chargebackHint = answers.paidByCreditCard === true
+      ? " Since you paid by card, I'll also flag whether a chargeback is your fastest option."
+      : '';
+    const escalationHint = answers.companyResponded === 'no'
+      ? " Since you've been ignored, I'll recommend a stronger escalation approach."
+      : answers.companyResponded === 'yes'
+      ? " Since they've already refused, I'll focus on formal escalation options."
+      : '';
+
+    const disputeLabel = typeLabel[answers.disputeType] || `a ${answers.disputeType} dispute`;
 
     setMessages([
       INITIAL_MESSAGE,
       {
         role: 'assistant',
-        content: `Got it! You're dealing with a ${answers.disputeType} dispute. ${
-          answers.paidByCreditCard
-            ? "Since you paid by credit card, I'll also mention your chargeback options. "
-            : ''
-        }Tell me what happened and I'll find the best letter and resolution path for you.`,
+        content: `Got it — you're dealing with ${disputeLabel}.${chargebackHint}${escalationHint}\n\nTell me the specifics of what happened and I'll find the right letter and resolution strategy for your situation.`,
       },
     ]);
-    // Store context for AI (will be prepended to first user message)
+
+    // Store context so it gets injected into the first API call
     sessionStorage.setItem('dispute_intake_context', contextMessage);
   };
 

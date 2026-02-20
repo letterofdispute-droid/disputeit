@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, CreditCard, Calendar, MessageCircle, AlertTriangle } from 'lucide-react';
+import { ArrowRight, CreditCard, Calendar, MessageCircle, AlertTriangle, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,7 @@ const DISPUTE_TYPES = [
   { id: 'other', label: 'Something Else', emoji: '❓' },
 ];
 
+// Dispute types where a chargeback is relevant
 const CREDIT_CARD_TYPES = new Set(['payment', 'product', 'travel', 'service']);
 
 export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps) {
@@ -32,6 +33,20 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
   const [answers, setAnswers] = useState<Partial<IntakeAnswers>>({});
 
   const showChargebackQuestion = CREDIT_CARD_TYPES.has(answers.disputeType || '');
+
+  // Calculate days since incident
+  const daysSince = answers.incidentDate
+    ? Math.floor((Date.now() - new Date(answers.incidentDate).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const withinChargebackWindow = daysSince !== null && daysSince <= 60;
+
+  // Auto-advance step 2 if not a chargeback-relevant category
+  useEffect(() => {
+    if (step === 2 && !showChargebackQuestion) {
+      setAnswers(prev => ({ ...prev, paidByCreditCard: null }));
+      setStep(3);
+    }
+  }, [step, showChargebackQuestion]);
 
   const handleTypeSelect = (type: string) => {
     setAnswers(prev => ({ ...prev, disputeType: type }));
@@ -43,61 +58,53 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
     setStep(3);
   };
 
-  const handleSkipCreditCard = () => {
-    setAnswers(prev => ({ ...prev, paidByCreditCard: null }));
-    setStep(3);
-  };
-
-  const handleStep3Continue = () => {
-    setStep(4);
-  };
-
   const handleFinish = (responded: 'yes' | 'no' | 'not_yet') => {
-    const finalAnswers: IntakeAnswers = {
+    onComplete({
       disputeType: answers.disputeType || 'other',
       paidByCreditCard: answers.paidByCreditCard ?? null,
       incidentDate: answers.incidentDate || '',
       companyResponded: responded,
-    };
-    setAnswers(prev => ({ ...prev, companyResponded: responded }));
-    onComplete(finalAnswers);
+    });
   };
 
-  // Auto-advance step 2 if not a chargeback category
-  useEffect(() => {
-    if (step === 2 && !showChargebackQuestion) {
-      setAnswers(prev => ({ ...prev, paidByCreditCard: null }));
-      setStep(3);
+  const goBack = () => {
+    if (step === 3) {
+      // Go back to step 2 only if chargeback question was shown; else go to step 1
+      setStep(showChargebackQuestion ? 2 : 1);
+    } else if (step === 2) {
+      setStep(1);
     }
-  }, [step, showChargebackQuestion]);
+  };
 
-  // Calculate days since incident for urgency
-  const daysSince = answers.incidentDate
-    ? Math.floor((Date.now() - new Date(answers.incidentDate).getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-  const withinChargebackWindow = daysSince !== null && daysSince <= 60;
+  // Render step indicator dots
+  const totalSteps = 3;
+  const effectiveStep = step === 4 ? 3 : step; // step 4 is just the final question inside step 3 UI
 
   return (
     <div className="flex flex-col h-full">
-      {/* Step indicator */}
-      <div className="flex items-center gap-1 px-6 py-3 border-b border-border">
-        {[1, 2, 3, 4].map((s) => (
+      {/* Progress bar */}
+      <div className="flex items-center gap-1.5 px-6 py-3 border-b border-border bg-muted/20">
+        {Array.from({ length: totalSteps }).map((_, i) => (
           <div
-            key={s}
+            key={i}
             className={cn(
-              'h-1.5 flex-1 rounded-full transition-colors',
-              s <= step ? 'bg-accent' : 'bg-muted'
+              'h-1.5 flex-1 rounded-full transition-all duration-300',
+              i + 1 <= effectiveStep ? 'bg-accent' : 'bg-muted'
             )}
           />
         ))}
+        <span className="ml-2 text-xs text-muted-foreground font-medium tabular-nums">
+          {effectiveStep}/{totalSteps}
+        </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Step 1: Dispute type */}
+      <div className="flex-1 overflow-y-auto p-5">
+
+        {/* ── Step 1: Dispute type ── */}
         {step === 1 && (
-          <div className="animate-fade-in space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <div>
-              <h3 className="font-semibold text-foreground text-base">
+              <h3 className="font-semibold text-foreground text-base leading-snug">
                 What type of dispute is this?
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -109,10 +116,14 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
                 <button
                   key={type.id}
                   onClick={() => handleTypeSelect(type.id)}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-accent hover:bg-accent/5 text-left transition-all group"
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-xl border border-border',
+                    'hover:border-accent hover:bg-accent/5 text-left transition-all group',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+                  )}
                 >
-                  <span className="text-xl">{type.emoji}</span>
-                  <span className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
+                  <span className="text-xl leading-none">{type.emoji}</span>
+                  <span className="text-sm font-medium text-foreground group-hover:text-accent transition-colors leading-tight">
                     {type.label}
                   </span>
                 </button>
@@ -121,167 +132,188 @@ export default function DisputeIntakeFlow({ onComplete }: DisputeIntakeFlowProps
           </div>
         )}
 
-        {/* Step 2: Credit card (conditional) or skip to date */}
+        {/* ── Step 2: Credit card question (conditional) ── */}
         {step === 2 && showChargebackQuestion && (
-          <div className="animate-fade-in space-y-4">
+          <div className="space-y-4 animate-fade-in">
+            <button
+              onClick={goBack}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-1"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back
+            </button>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <CreditCard className="h-4 w-4 text-accent" />
                 <h3 className="font-semibold text-foreground text-base">
-                  Did you pay by credit card?
+                  Did you pay by credit or debit card?
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                This affects your fastest resolution path — credit card chargebacks can be quicker than letters.
+                This affects your fastest resolution path — chargebacks can be quicker than letters.
               </p>
             </div>
             <div className="space-y-2">
               <button
                 onClick={() => handleCreditCardAnswer(true)}
-                className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 text-left transition-all"
+                className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <div className="p-2 rounded-lg bg-success/10">
+                <div className="p-2 rounded-lg bg-success/10 flex-shrink-0">
                   <CreditCard className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Yes, credit or debit card</p>
-                  <p className="text-xs text-muted-foreground">I may be able to file a chargeback</p>
+                  <p className="font-medium text-foreground text-sm">Yes — credit or debit card</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">I may be able to file a chargeback</p>
                 </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto" />
               </button>
               <button
                 onClick={() => handleCreditCardAnswer(false)}
-                className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-muted-foreground hover:bg-muted/50 text-left transition-all"
+                className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-muted-foreground/50 hover:bg-muted/50 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="p-2 rounded-lg bg-muted">
+                <div className="p-2 rounded-lg bg-muted flex-shrink-0">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">No, cash, check, or other</p>
-                  <p className="text-xs text-muted-foreground">A formal letter is likely my best route</p>
+                  <p className="font-medium text-foreground text-sm">No — cash, bank transfer, or other</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">A formal letter is likely my best route</p>
                 </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto" />
               </button>
             </div>
             <button
-              onClick={handleSkipCreditCard}
+              onClick={() => { setAnswers(prev => ({ ...prev, paidByCreditCard: null })); setStep(3); }}
               className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Not sure — skip this question
+              Not sure — skip this
             </button>
           </div>
         )}
 
-        {/* Auto-advance step 2 for non-chargeback categories */}
-        {step === 2 && !showChargebackQuestion && (() => {
-          // Use effect-like logic: trigger via setTimeout to avoid render-time setState
-          return null;
-        })()}
-
-        {/* Step 3: When did this happen? */}
+        {/* ── Step 3: Date + Company response ── */}
         {step === 3 && (
-          <div className="animate-fade-in space-y-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="h-4 w-4 text-accent" />
-                <h3 className="font-semibold text-foreground text-base">
-                  When did this happen?
-                </h3>
+          <div className="space-y-5 animate-fade-in">
+            <button
+              onClick={goBack}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back
+            </button>
+
+            {/* Date section */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-accent" />
+                  <h3 className="font-semibold text-foreground text-base">
+                    When did this happen?
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Helps identify relevant deadlines for your case.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Knowing the date helps identify relevant deadlines for your case.
-              </p>
+
+              <input
+                type="date"
+                value={answers.incidentDate || ''}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setAnswers(prev => ({ ...prev, incidentDate: e.target.value }))}
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
+              />
+
+              {/* Urgency banner based on date + payment method */}
+              {answers.incidentDate && daysSince !== null && (
+                <div className={cn(
+                  'flex items-start gap-2 p-3 rounded-lg text-xs border',
+                  answers.paidByCreditCard && withinChargebackWindow
+                    ? 'bg-warning/10 text-warning border-warning/30'
+                    : answers.paidByCreditCard && !withinChargebackWindow
+                    ? 'bg-destructive/10 text-destructive border-destructive/20'
+                    : 'bg-muted text-muted-foreground border-border'
+                )}>
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                  {answers.paidByCreditCard && withinChargebackWindow ? (
+                    <span>
+                      <strong>You're within the 60-day chargeback window.</strong> Your bank may be able to reverse this charge directly — I'll mention this in my recommendation.
+                    </span>
+                  ) : answers.paidByCreditCard && !withinChargebackWindow ? (
+                    <span>
+                      The standard 60-day chargeback window has passed ({daysSince} days ago). A formal demand letter is still your strongest option.
+                    </span>
+                  ) : (
+                    <span>
+                      This occurred {daysSince} day{daysSince !== 1 ? 's' : ''} ago — I'll factor any relevant deadlines into my recommendation.
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            <input
-              type="date"
-              value={answers.incidentDate || ''}
-              max={new Date().toISOString().split('T')[0]}
-              onChange={(e) => setAnswers(prev => ({ ...prev, incidentDate: e.target.value }))}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            />
+            {/* Divider */}
+            <div className="border-t border-border" />
 
-            {/* Urgency signals based on date */}
-            {answers.incidentDate && daysSince !== null && (
-              <div className={cn(
-                'flex items-start gap-2 p-3 rounded-lg text-xs border',
-                answers.paidByCreditCard && withinChargebackWindow
-                  ? 'bg-warning/10 text-warning border-warning/20'
-                  : 'bg-muted text-muted-foreground border-border'
-              )}>
-                <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                {answers.paidByCreditCard && withinChargebackWindow ? (
-                  <span>
-                    <strong>Good news:</strong> You're within the 60-day chargeback window. Your bank may be able to reverse this charge.
-                  </span>
-                ) : answers.paidByCreditCard && !withinChargebackWindow ? (
-                  <span>
-                    The standard 60-day chargeback window has likely passed ({daysSince} days ago), but a demand letter is still effective.
-                  </span>
-                ) : (
-                  <span>
-                    This occurred {daysSince} day{daysSince !== 1 ? 's' : ''} ago. I'll factor this into my recommendations.
-                  </span>
-                )}
+            {/* Company response section */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <MessageCircle className="h-4 w-4 text-accent" />
+                  <h3 className="font-semibold text-foreground text-base">
+                    Has the company responded to you?
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This determines the right tone and escalation level.
+                </p>
               </div>
-            )}
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  setAnswers(prev => ({ ...prev, incidentDate: '' }));
-                  handleStep3Continue();
-                }}
-              >
-                Not sure / Skip
-              </Button>
-              <Button
-                variant="accent"
-                size="sm"
-                className="flex-1 gap-2"
-                onClick={handleStep3Continue}
-              >
-                Continue
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Has the company responded? */}
-        {step === 4 && (
-          <div className="animate-fade-in space-y-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <MessageCircle className="h-4 w-4 text-accent" />
-                <h3 className="font-semibold text-foreground text-base">
-                  Has the company responded to you?
-                </h3>
+              <div className="space-y-2">
+                {[
+                  {
+                    id: 'not_yet' as const,
+                    label: "Not yet — haven't contacted them",
+                    sub: "I'll help you draft a strong first contact",
+                    emoji: '📝',
+                  },
+                  {
+                    id: 'no' as const,
+                    label: 'No response / being ignored',
+                    sub: 'Stronger tone + escalation options recommended',
+                    emoji: '🔔',
+                  },
+                  {
+                    id: 'yes' as const,
+                    label: 'Yes, but refused or unsatisfied',
+                    sub: 'Time to escalate with formal documentation',
+                    emoji: '⚡',
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleFinish(option.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 p-3.5 rounded-xl border border-border',
+                      'hover:border-accent hover:bg-accent/5 text-left transition-all group',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+                    )}
+                  >
+                    <span className="text-lg leading-none">{option.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground text-sm leading-snug">{option.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{option.sub}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors flex-shrink-0" />
+                  </button>
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground">
-                This helps me recommend the right tone and escalation level.
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              {[
-                { id: 'not_yet' as const, label: "Not yet — haven't contacted them", sub: "I'll help you draft a formal first contact" },
-                { id: 'no' as const, label: 'No response / being ignored', sub: 'Stronger tone + escalation guidance recommended' },
-                { id: 'yes' as const, label: "Yes, but refused or unsatisfied", sub: "Time to escalate with formal documentation" },
-              ].map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => handleFinish(option.id)}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 text-left transition-all group"
-                >
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{option.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{option.sub}</p>
-                  </div>
-                </button>
-              ))}
+              {/* Skip date option (only show if date not entered yet) */}
+              {!answers.incidentDate && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  You can select a response option above without entering a date.
+                </p>
+              )}
             </div>
           </div>
         )}
