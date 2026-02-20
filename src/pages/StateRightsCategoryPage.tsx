@@ -17,7 +17,7 @@ import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { getTemplatesByCategory } from '@/data/allTemplates';
+import { getTemplatesByCategory, getTemplateBySlug } from '@/data/allTemplates';
 import { inferSubcategory } from '@/data/subcategoryMappings';
 
 // Map category to matching template route
@@ -134,9 +134,35 @@ export default function StateRightsCategoryPage() {
 
   const templateRoute = CATEGORY_TEMPLATE_MAP[categorySlug!] || 'templates';
 
+  // Priority template slugs per category — most relevant for state rights readers
+  const PRIORITY_TEMPLATE_SLUGS: Record<string, string[]> = {
+    vehicle: ['lemon-law-buyback-demand', 'car-dealer-complaint', 'warranty-repair-refusal'],
+    housing: ['landlord-repairs-general', 'deposit-return-request', 'rent-withholding-habitability'],
+    insurance: ['prior-auth-denial-appeal', 'claim-denial-appeal', 'home-insurance-claim-denial'],
+    financial: ['credit-report-dispute', 'debt-validation-request', 'bank-account-fee-dispute'],
+    contractors: ['general-contractor-demand', 'project-delay-complaint', 'contractor-abandoned-project'],
+    'damaged-goods': ['defective-product-complaint', 'warranty-replacement-demand', 'return-refund-denial'],
+    refunds: ['retail-refund-demand', 'service-fee-refund', 'subscription-cancellation-refund'],
+    travel: ['airline-flight-delay-compensation', 'hotel-refund-dispute', 'travel-package-cancellation'],
+    utilities: ['energy-billing-dispute', 'telecom-billing-dispute', 'broadband-service-cancellation'],
+    employment: ['unpaid-wages-demand', 'wrongful-termination-notice', 'workplace-discrimination-complaint'],
+    ecommerce: ['online-purchase-refund', 'marketplace-seller-dispute', 'subscription-cancellation-dispute'],
+    hoa: ['hoa-fee-dispute', 'hoa-maintenance-failure', 'hoa-violation-dispute'],
+    healthcare: ['medical-billing-services-not-received-dispute', 'prior-auth-denial-appeal', 'health-insurance-claim-denial-appeal'],
+  };
+
   // Get top 3 templates for this category as direct CTAs
   const categoryTemplates = getTemplatesByCategory(categorySlug!);
-  const topTemplates = categoryTemplates.slice(0, 3).map(t => {
+  const prioritySlugs = PRIORITY_TEMPLATE_SLUGS[categorySlug!] || [];
+
+  // Try priority slugs first (using getTemplateBySlug for exact match), then fall back
+  const priorityTemplates = prioritySlugs
+    .map(slug => getTemplateBySlug(slug) ?? categoryTemplates.find(t => t.slug === slug))
+    .filter(Boolean) as typeof categoryTemplates;
+  const topTemplates = [
+    ...priorityTemplates,
+    ...categoryTemplates.filter(t => !prioritySlugs.includes(t.slug)),
+  ].slice(0, 3).map(t => {
     const sub = inferSubcategory(t.id, t.category);
     return { ...t, subSlug: sub?.slug || 'general' };
   });
@@ -321,6 +347,52 @@ export default function StateRightsCategoryPage() {
                 ))}
               </Accordion>
             </div>
+
+            {/* Get Help With This — inline template CTAs */}
+            {topTemplates.length > 0 && (
+              <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 p-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <h2 className="font-serif text-lg font-bold text-foreground">
+                    Get Help With This
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Use one of these professionally drafted {stateName} {categoryLabel.toLowerCase()} dispute letters — our AI automatically cites <strong>{primaryStatute.citation}</strong> in every letter.
+                </p>
+                <div className="space-y-3">
+                  {topTemplates.map((t) => (
+                    <Link
+                      key={t.slug}
+                      to={`/templates/${categorySlug}/${t.subSlug}/${t.slug}`}
+                      className="group flex items-center gap-4 rounded-xl border border-border/60 bg-background p-4 hover:border-primary/40 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground group-hover:text-primary transition-colors text-sm leading-snug line-clamp-2">
+                          {t.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {t.shortDescription}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Cites {primaryStatute.citation} automatically</span>
+                  <Link
+                    to={`/templates/${categorySlug}`}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    All {categoryLabel} templates <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
