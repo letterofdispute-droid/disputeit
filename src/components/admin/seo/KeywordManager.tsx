@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useKeywordTargets } from '@/hooks/useKeywordTargets';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // Map sheet names to vertical IDs
 const SHEET_NAME_MAP: Record<string, string> = {
@@ -47,26 +47,33 @@ export default function KeywordManager() {
     if (!file) return;
 
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(data);
 
     const sheets: { vertical: string; keywords: { keyword: string; isSeed: boolean; columnGroup: string }[] }[] = [];
     const preview: { vertical: string; total: number; seeds: number }[] = [];
 
-    for (const sheetName of workbook.SheetNames) {
+    workbook.eachSheet((worksheet, _sheetId) => {
+      const sheetName = worksheet.name;
       const vertical = normalizeSheetName(sheetName);
-      if (!vertical) continue;
+      if (!vertical) return;
 
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
-      if (!jsonData || jsonData.length === 0) continue;
+      // Convert sheet rows to 2D array
+      const jsonData: any[][] = [];
+      worksheet.eachRow({ includeEmpty: false }, (row) => {
+        const rowValues = row.values as any[];
+        // ExcelJS rows are 1-indexed; slice(1) to remove the leading undefined
+        jsonData.push(rowValues.slice(1));
+      });
+
+      if (!jsonData || jsonData.length === 0) return;
 
       const keywords: { keyword: string; isSeed: boolean; columnGroup: string }[] = [];
-      
+
       // Row 0 = headers (seed keywords)
       const headerRow = jsonData[0] || [];
       const seedKeywords = headerRow
-        .filter((cell: any) => cell && String(cell).trim())
+        .filter((cell: any) => cell != null && String(cell).trim())
         .map((cell: any) => String(cell).trim());
 
       // Add seed keywords
@@ -79,7 +86,7 @@ export default function KeywordManager() {
         const row = jsonData[rowIdx] || [];
         for (let colIdx = 0; colIdx < seedKeywords.length; colIdx++) {
           const cell = row[colIdx];
-          if (cell && String(cell).trim()) {
+          if (cell != null && String(cell).trim()) {
             keywords.push({
               keyword: String(cell).trim(),
               isSeed: false,
@@ -93,7 +100,7 @@ export default function KeywordManager() {
         sheets.push({ vertical, keywords });
         preview.push({ vertical, total: keywords.length, seeds: seedKeywords.length });
       }
-    }
+    });
 
     if (sheets.length === 0) {
       return;
@@ -101,7 +108,7 @@ export default function KeywordManager() {
 
     setParseResult(preview);
     importKeywords(sheets);
-    
+
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
