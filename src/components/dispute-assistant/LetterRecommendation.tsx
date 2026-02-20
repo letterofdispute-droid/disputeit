@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, FileText, Sparkles } from 'lucide-react';
 import { getCategoryById } from '@/data/templateCategories';
+import { getTemplateBySlug, getCategoryIdFromName } from '@/data/allTemplates';
+import { inferSubcategory } from '@/data/subcategoryMappings';
 
 interface Recommendation {
   category: string;
@@ -18,6 +20,18 @@ interface LetterRecommendationProps {
 const LetterRecommendation = ({ recommendation, onClose }: LetterRecommendationProps) => {
   const category = getCategoryById(recommendation.category);
   const IconComponent = category?.icon || FileText;
+
+  // Resolve template slug → full direct URL
+  const resolvedTemplate = getTemplateBySlug(recommendation.letter);
+  const directTemplateUrl = (() => {
+    if (!resolvedTemplate) return null;
+    const categoryId = getCategoryIdFromName(resolvedTemplate.category);
+    const subcat = inferSubcategory(resolvedTemplate.slug, resolvedTemplate.category);
+    const subcatSlug = subcat?.slug || 'general';
+    return `/templates/${categoryId}/${subcatSlug}/${resolvedTemplate.slug}`;
+  })();
+
+  const categoryUrl = `/templates/${recommendation.category}`;
 
   return (
     <Card className="p-4 bg-accent/5 border-accent/20">
@@ -39,22 +53,23 @@ const LetterRecommendation = ({ recommendation, onClose }: LetterRecommendationP
           </div>
           
           <h4 className="font-semibold text-foreground text-sm mb-1">
-            {recommendation.letter}
+            {resolvedTemplate?.title || recommendation.letter}
           </h4>
           
           <p className="text-xs text-muted-foreground mb-3">
             {recommendation.reason}
           </p>
           
-          <div className="flex gap-2">
+          {/* Stack vertically on mobile, side-by-side on sm+ */}
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button size="sm" variant="accent" asChild onClick={onClose}>
-              <Link to={`/templates/${recommendation.category}`}>
-                View Letter Template
+              <Link to={directTemplateUrl || categoryUrl}>
+                Use This Template
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Link>
             </Button>
             <Button size="sm" variant="outline" asChild onClick={onClose}>
-              <Link to={`/templates/${recommendation.category}`}>
+              <Link to={categoryUrl}>
                 Browse {category?.name || 'Category'}
               </Link>
             </Button>

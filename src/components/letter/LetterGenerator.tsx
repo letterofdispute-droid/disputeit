@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Eye, Lock, Sparkles, AlertTriangle, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -58,6 +58,7 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
   const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
   const [uploadedEvidencePaths, setUploadedEvidencePaths] = useState<{ storagePath: string; description: string }[]>([]);
   const formStartedRef = useRef(false);
+  const intakePrefilledRef = useRef(false);
 
   const { suggestions, isLoading, requestSuggestionDebounced } = useFormAssistant();
   const { generateLetter, isGenerating, generatedContent } = useGenerateLegalLetter();
@@ -66,6 +67,31 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
   const { user } = useAuth();
   const { trackFormStarted, trackFormCompleted } = useAnalytics();
   const totalSteps = 3;
+  const [showIntakePrefillBanner, setShowIntakePrefillBanner] = useState(false);
+
+  // Pre-fill form fields from intake answers stored in sessionStorage
+  useEffect(() => {
+    if (intakePrefilledRef.current) return;
+    const raw = sessionStorage.getItem('dispute_intake_answers');
+    if (!raw) return;
+    try {
+      const intake = JSON.parse(raw) as { incidentDate?: string; disputeType?: string };
+      if (!intake.incidentDate) return;
+
+      const dateFields = ['incidentDate', 'date', 'purchaseDate', 'serviceDate', 'eventDate'];
+      const matchingField = template.fields.find(f => dateFields.includes(f.id));
+      if (matchingField) {
+        intakePrefilledRef.current = true;
+        setFormData(prev => {
+          if (prev[matchingField.id]) return prev; // don't overwrite if already filled
+          return { ...prev, [matchingField.id]: intake.incidentDate! };
+        });
+        setShowIntakePrefillBanner(true);
+      }
+    } catch {
+      // ignore malformed data
+    }
+  }, [template.fields]);
 
   // Chargeback alert: show in step 2 when category + jurisdiction is US
   const showChargebackAlert = selectedJurisdiction === 'US' && CHARGEBACK_CATEGORIES.has(template.category);
@@ -244,6 +270,14 @@ const LetterGenerator = ({ template }: LetterGeneratorProps) => {
                       Fill in the required information below. This will be used to generate your letter.
                     </p>
                   </div>
+
+                  {/* Intake pre-fill banner */}
+                  {showIntakePrefillBanner && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/10 border border-accent/20 text-xs text-accent">
+                      <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>We've pre-filled some details from your dispute intake.</span>
+                    </div>
+                  )}
 
                   <div className="space-y-5">
                     {requiredFields.map(field => (
