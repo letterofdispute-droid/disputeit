@@ -1,43 +1,59 @@
 
 
-# Replace Connect Button with Auto-Linking Guidance
+# Add Trailing-Slash Canonical Normalization
 
-## What Changes
+## Problem
+Google may index both `/templates` and `/templates/` as separate URLs, splitting link equity and causing duplicate content signals. The canonical URLs emitted by `SEOHead` don't enforce a consistent trailing-slash policy.
 
-Replace the "Connect" button on the Google row with a disabled state and a helpful tooltip/message explaining that users should sign out and sign back in with Google using the same email to automatically link their accounts.
+## Solution
+Standardize on **no trailing slash** (e.g., `/templates` not `/templates/`) across three layers:
 
-## File: `src/components/settings/LinkedAccountsCard.tsx`
+### 1. SEOHead canonical normalization (code change)
+**File: `src/components/SEOHead.tsx`**
 
-### Changes:
-1. **Remove the `handleLinkGoogle` function** and the `isLinking` state (no longer needed)
-2. **Remove the `useEffect` for detecting return from Google linking** (no longer needed)
-3. **Remove imports** for `linkGoogle` from `useAuth` and `Link2`/`Loader2` where only used for linking
-4. **Replace the Connect button** (lines 212-225) with a informational message:
+Add a normalization step that strips trailing slashes from `canonicalPath` before building the canonical URL (preserving `/` for the homepage):
 
 ```tsx
-<div className="flex flex-col items-end gap-1">
-  <Badge variant="outline" className="text-xs text-muted-foreground">Not connected</Badge>
-  <p className="text-xs text-muted-foreground max-w-[200px] text-right">
-    Sign in with Google using your account email to link automatically
-  </p>
-</div>
+// Normalize: strip trailing slash (except bare "/")
+const normalizedPath = canonicalPath === '/' 
+  ? '/' 
+  : canonicalPath.replace(/\/+$/, '');
+const canonicalUrl = `${siteUrl}${normalizedPath}`;
 ```
 
-5. **Update the bottom help text** (line 230-232) to reinforce:
-```
-"To link your Google account, sign out and sign back in using 'Continue with Google' with the same email address. Your accounts will merge automatically."
+This ensures every `<link rel="canonical">` and `og:url` across all 34+ pages using SEOHead consistently points to the non-trailing-slash variant.
+
+### 2. Client-side trailing-slash redirect (new component)
+**File: `src/components/TrailingSlashRedirect.tsx`**
+
+A small component placed inside `BrowserRouter` that detects if the current URL has a trailing slash and performs a `navigate(pathWithoutSlash, { replace: true })` redirect. This handles users or bots arriving at `/templates/` via internal links.
+
+### 3. Edge-level redirect via `_redirects` file
+**File: `public/_redirects`**
+
+Add a hosting-level redirect rule to catch trailing-slash requests before they even hit the SPA:
+
+```text
+# Strip trailing slashes (301 permanent redirect)
+/*/  /:splat  301
 ```
 
-## Why This Works
+This ensures that any external link or crawler hitting `/pricing/` gets a 301 to `/pricing`.
 
-- Automatic identity linking is enabled by default in Lovable Cloud
-- When a user clicks "Continue with Google" on the login page and the Google account email matches an existing email/password account, Lovable Cloud merges the identities server-side
-- After that merge, the user's `identities` array will contain both `email` and `google`, so `hasGoogle` flips to `true` and the card shows "Connected"
-- No manual `linkIdentity()` call is needed
+### 4. Update `_headers` for the redirects file
+**File: `public/_headers`** -- no changes needed, the `_redirects` file is automatically processed by the hosting layer.
 
 ## Files Changed
 
 | File | Change |
 |---|---|
-| `src/components/settings/LinkedAccountsCard.tsx` | Replace Connect button with auto-link guidance message, remove linking logic |
+| `src/components/SEOHead.tsx` | Normalize canonicalPath to strip trailing slashes |
+| `src/components/TrailingSlashRedirect.tsx` | New component: client-side redirect for trailing-slash URLs |
+| `src/App.tsx` | Import and add `TrailingSlashRedirect` inside `BrowserRouter` |
+| `public/_redirects` | New file: edge-level 301 redirect to strip trailing slashes |
+
+## Impact
+- All 75+ indexed pages will emit consistent canonical URLs
+- Google will consolidate `/path/` and `/path` into a single index entry
+- No user-visible change -- redirects are silent 301s
 
