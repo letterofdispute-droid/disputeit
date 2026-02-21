@@ -137,7 +137,7 @@ TASK: Return 3-5 topic suggestions as a JSON array with this exact structure:
 
 Produce exactly 3-5 items. Prioritise verticals with low article counts, low keyword saturation, or high commercial intent gaps. UK English throughout.`;
 
-    const aiResponse = await fetch('https://gateway.ai.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
