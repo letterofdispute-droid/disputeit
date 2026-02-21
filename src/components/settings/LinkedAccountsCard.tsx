@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Link2, Unlink, Mail, Shield } from 'lucide-react';
+import { Loader2, Unlink, Mail, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,49 +27,14 @@ const GoogleIcon = () => (
 );
 
 const LinkedAccountsCard = () => {
-  const { user, linkGoogle, unlinkIdentity } = useAuth();
+  const { user, unlinkIdentity } = useAuth();
   const { toast } = useToast();
-  const [isLinking, setIsLinking] = useState(false);
   const [isUnlinking, setIsUnlinking] = useState<string | null>(null);
 
   const identities = user?.identities || [];
   const hasEmail = identities.some(i => i.provider === 'email');
   const hasGoogle = identities.some(i => i.provider === 'google');
   const canUnlink = identities.length > 1;
-
-  // Detect return from Google linking flow and show success/failure toast
-  useEffect(() => {
-    const wasLinking = sessionStorage.getItem('linking_google');
-    if (!wasLinking) return;
-
-    sessionStorage.removeItem('linking_google');
-
-    const googleLinked = user?.identities?.some(i => i.provider === 'google');
-    if (googleLinked) {
-      toast({ title: 'Google account linked!', description: 'You can now sign in with Google.' });
-    } else if (user) {
-      // User is back but Google isn't linked — something went wrong
-      toast({
-        title: 'Google linking incomplete',
-        description: 'Google was not connected. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleLinkGoogle = async () => {
-    setIsLinking(true);
-    const { error } = await linkGoogle();
-    if (error) {
-      toast({
-        title: 'Failed to link Google',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsLinking(false);
-    }
-    // If successful, user will be redirected for OAuth
-  };
 
   const handleUnlink = async (identityId: string, provider: string) => {
     if (!canUnlink) {
@@ -209,26 +174,18 @@ const LinkedAccountsCard = () => {
                 )}
               </>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLinkGoogle}
-                disabled={isLinking}
-                className="gap-2"
-              >
-                {isLinking ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Link2 className="h-3.5 w-3.5" />
-                )}
-                Connect
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Badge variant="outline" className="text-xs text-muted-foreground">Not connected</Badge>
+                <p className="text-xs text-muted-foreground max-w-[200px] text-right">
+                  Sign in with Google using your account email to link automatically
+                </p>
+              </div>
             )}
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground pt-2">
-          Linking accounts allows you to sign in using either method. Your data stays the same regardless of how you sign in.
+          To link your Google account, sign out and sign back in using "Continue with Google" with the same email address. Your accounts will merge automatically.
         </p>
       </CardContent>
     </Card>
