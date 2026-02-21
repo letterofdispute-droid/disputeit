@@ -54,8 +54,18 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const GuidesPage = lazy(() => import("./pages/GuidesPage"));
 const CategoryGuidePage = lazy(() => import("./pages/CategoryGuidePage"));
 
+// Helper to retry dynamic imports on chunk load failure (stale cache)
+const lazyRetry = (importFn: () => Promise<any>) =>
+  lazy(() =>
+    importFn().catch(() => {
+      // Force reload on stale chunk errors
+      window.location.reload();
+      return new Promise(() => {}); // Never resolves — page reloads
+    })
+  );
+
 // Admin routes - lazy loaded
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const AdminLayout = lazyRetry(() => import("./components/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const SEODashboard = lazy(() => import("./pages/admin/SEODashboard"));
