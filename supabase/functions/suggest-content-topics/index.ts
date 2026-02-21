@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function extractJson(raw: string): unknown {
+  let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  const start = cleaned.search(/[\[{]/);
+  if (start === -1) throw new Error('No JSON found in AI response');
+  const bracket = cleaned[start];
+  const close = bracket === '[' ? ']' : '}';
+  let end = cleaned.lastIndexOf(close);
+
+  // If closing bracket missing (truncated), try to repair
+  if (end <= start) {
+    // Trim trailing incomplete string/object and force-close
+    cleaned = cleaned.substring(start).replace(/,\s*\{[^}]*$/, '').replace(/,\s*"[^"]*$/, '') + close;
+  } else {
+    cleaned = cleaned.substring(start, end + 1);
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fix trailing commas and control chars
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/[\x00-\x1F\x7F]/g, '');
+    return JSON.parse(cleaned);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -162,9 +190,8 @@ Produce exactly 3 items. Prioritize verticals with low article counts, low keywo
     const aiData = await aiResponse.json();
     const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
 
-    // Strip markdown code fences if present
-    const jsonStr = rawContent.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-    const suggestions = JSON.parse(jsonStr);
+    // Robust JSON extraction — handles truncation, markdown fences, trailing commas
+    const suggestions = extractJson(rawContent);
 
     return new Response(JSON.stringify({ success: true, suggestions, contextData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
