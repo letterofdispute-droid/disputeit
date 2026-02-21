@@ -1,35 +1,43 @@
 
-# Fix: Enable Manual Identity Linking
 
-## The Problem
+# Replace Connect Button with Auto-Linking Guidance
 
-The error message "Manual linking is disabled" is coming directly from Supabase's GoTrue authentication server. It is **not a code bug** — it is a missing configuration setting.
+## What Changes
 
-When `supabase.auth.linkIdentity()` is called, Supabase checks whether manual identity linking is permitted. By default, it is **disabled**. Since the `supabase/config.toml` file has no `[auth]` section at all, this setting has never been turned on, so every attempt to link Google fails immediately before even redirecting to Google.
+Replace the "Connect" button on the Google row with a disabled state and a helpful tooltip/message explaining that users should sign out and sign back in with Google using the same email to automatically link their accounts.
 
-## The Fix: One Line in config.toml
+## File: `src/components/settings/LinkedAccountsCard.tsx`
 
-Add an `[auth]` block to `supabase/config.toml` with two settings:
+### Changes:
+1. **Remove the `handleLinkGoogle` function** and the `isLinking` state (no longer needed)
+2. **Remove the `useEffect` for detecting return from Google linking** (no longer needed)
+3. **Remove imports** for `linkGoogle` from `useAuth` and `Link2`/`Loader2` where only used for linking
+4. **Replace the Connect button** (lines 212-225) with a informational message:
 
-```toml
-[auth]
-enable_manual_linking = true
+```tsx
+<div className="flex flex-col items-end gap-1">
+  <Badge variant="outline" className="text-xs text-muted-foreground">Not connected</Badge>
+  <p className="text-xs text-muted-foreground max-w-[200px] text-right">
+    Sign in with Google using your account email to link automatically
+  </p>
+</div>
 ```
 
-This single change unlocks the `linkIdentity()` API call for all users.
+5. **Update the bottom help text** (line 230-232) to reinforce:
+```
+"To link your Google account, sign out and sign back in using 'Continue with Google' with the same email address. Your accounts will merge automatically."
+```
 
-## What `enable_manual_linking` Does
+## Why This Works
 
-It allows authenticated users to call `supabase.auth.linkIdentity()` to connect additional OAuth providers (Google, Apple) to their existing account. Without it, the call is rejected server-side before it ever reaches Google.
+- Automatic identity linking is enabled by default in Lovable Cloud
+- When a user clicks "Continue with Google" on the login page and the Google account email matches an existing email/password account, Lovable Cloud merges the identities server-side
+- After that merge, the user's `identities` array will contain both `email` and `google`, so `hasGoogle` flips to `true` and the card shows "Connected"
+- No manual `linkIdentity()` call is needed
 
-## Why the Code Changes Were Correct but Didn't Help
-
-The previous fixes to `useAuth.tsx`, `oauthTokenHandler.ts`, and `LinkedAccountsCard.tsx` all correctly handle the **redirect flow** after Google approval. But the user never got that far — the error fires immediately when the button is clicked, before any redirect happens, because Supabase rejects the `linkIdentity()` call at the server level.
-
-## Files to Change
+## Files Changed
 
 | File | Change |
 |---|---|
-| `supabase/config.toml` | Add `[auth]` section with `enable_manual_linking = true` |
+| `src/components/settings/LinkedAccountsCard.tsx` | Replace Connect button with auto-link guidance message, remove linking logic |
 
-That's the only change needed. The code fixes from the previous plan remain correct and will work properly once this setting is enabled.
