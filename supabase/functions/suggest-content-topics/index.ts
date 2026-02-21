@@ -92,7 +92,7 @@ serve(async (req) => {
     };
 
     // ── 7. Call Gemini 2.5 Pro ───────────────────────────────────────────
-    const systemPrompt = `You are a senior SEO content strategist specialising in UK consumer rights, dispute letters, and legal self-help content.
+    const systemPrompt = `You are a senior SEO content strategist specializing in US consumer rights, dispute letters, and legal self-help content.
 
 Your job: analyse site data and identify the 3-5 highest-opportunity content topics that will drive the most organic traffic growth.
 
@@ -135,7 +135,7 @@ TASK: Return 3-5 topic suggestions as a JSON array with this exact structure:
   }
 ]
 
-Produce exactly 3-5 items. Prioritise verticals with low article counts, low keyword saturation, or high commercial intent gaps. UK English throughout.`;
+Produce exactly 3-5 items. Prioritize verticals with low article counts, low keyword saturation, or high commercial intent gaps. Target US audiences and use American English throughout. Reference US federal and state laws (e.g., FTC, CFPB, FDCPA, state consumer protection statutes) rather than UK bodies like Ombudsman services.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
