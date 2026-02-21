@@ -48,7 +48,11 @@ const SEOHead = ({
   noIndex = false,
 }: SEOHeadProps) => {
   const siteUrl = 'https://letterofdispute.com';
-  const canonicalUrl = `${siteUrl}${canonicalPath}`;
+  // Normalize: strip trailing slash (except bare "/")
+  const normalizedPath = canonicalPath === '/' 
+    ? '/' 
+    : canonicalPath.replace(/\/+$/, '');
+  const canonicalUrl = `${siteUrl}${normalizedPath}`;
   // Fall back to logo SVG (always exists) until a proper OG image is created
   const defaultOgImage = `${siteUrl}/ld-logo.svg`;
   const resolvedOgImage = ogImage || defaultOgImage;

@@ -1,0 +1,2 @@
+# Strip trailing slashes (301 permanent redirect)
+/*/  /:splat  301
