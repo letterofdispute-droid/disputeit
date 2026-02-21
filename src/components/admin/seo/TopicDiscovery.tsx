@@ -268,7 +268,7 @@ export default function TopicDiscovery() {
                 <h2 className="text-lg font-semibold">AI Topic Discovery</h2>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Analyses your live article counts, keyword saturation, and template coverage gaps to surface the highest-opportunity content topics. Results feed directly into your keyword pipeline — no XLSX roundtrip needed.
+                Analyzes your live article counts, keyword saturation, and template coverage gaps to surface the highest-opportunity content topics. Results feed directly into your keyword pipeline — no XLSX roundtrip needed.
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -283,7 +283,7 @@ export default function TopicDiscovery() {
                 ) : (
                   <Lightbulb className="h-4 w-4" />
                 )}
-                {isAnalyzing ? 'Analysing site…' : analyzed ? 'Re-Analyse' : 'Analyse & Suggest Topics'}
+                {isAnalyzing ? 'Analyzing site…' : analyzed ? 'Re-Analyze' : 'Analyze & Suggest Topics'}
               </Button>
               {suggestions.length > 1 && (
                 <Button variant="outline" size="lg" onClick={handleLoadAll} className="gap-2">
@@ -298,7 +298,7 @@ export default function TopicDiscovery() {
             <div className="mt-4 p-3 rounded-lg bg-background/60 border border-border/50 flex items-center gap-3">
               <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
               <div>
-                <p className="text-sm font-medium">Analysing site data…</p>
+                <p className="text-sm font-medium">Analyzing site data…</p>
                 <p className="text-xs text-muted-foreground">
                   Reading article counts, keyword saturation, content plan coverage. This takes ~20 seconds.
                 </p>
@@ -316,7 +316,7 @@ export default function TopicDiscovery() {
           </div>
           <h3 className="text-lg font-semibold mb-1">No suggestions yet</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Click <strong>"Analyse & Suggest Topics"</strong> and the AI will read your live site data to find the best content opportunities.
+            Click <strong>"Analyze & Suggest Topics"</strong> and the AI will read your live site data to find the best content opportunities.
           </p>
         </div>
       )}

@@ -94,7 +94,7 @@ serve(async (req) => {
     // ── 7. Call Gemini 2.5 Pro ───────────────────────────────────────────
     const systemPrompt = `You are a senior SEO content strategist specializing in US consumer rights, dispute letters, and legal self-help content.
 
-Your job: analyse site data and identify the 3-5 highest-opportunity content topics that will drive the most organic traffic growth.
+Your job: analyze site data and identify the 3 highest-opportunity content topics that will drive the most organic traffic growth.
 
 Focus on topics where:
 1. Commercial intent is high (people need help resolving disputes, claiming refunds, writing formal letters)
@@ -129,13 +129,13 @@ TASK: Return 3-5 topic suggestions as a JSON array with this exact structure:
       "dispute insurance claim denial",
       "insurance complaint letter template",
       "how to appeal insurance decision",
-      "insurance ombudsman complaint",
+      "how to appeal insurance decision",
       "insurance claim rejected letter"
     ]
   }
 ]
 
-Produce exactly 3-5 items. Prioritize verticals with low article counts, low keyword saturation, or high commercial intent gaps. Target US audiences and use American English throughout. Reference US federal and state laws (e.g., FTC, CFPB, FDCPA, state consumer protection statutes) rather than UK bodies like Ombudsman services.`;
+Produce exactly 3 items. Prioritize verticals with low article counts, low keyword saturation, or high commercial intent gaps. Target US audiences only and use American English throughout. Reference US federal and state laws (e.g., FTC, CFPB, FDCPA, state consumer protection statutes). Do NOT reference any UK bodies, UK laws, or UK terminology (no Ombudsman, no Trading Standards, no Citizens Advice, no FCA, no UK-specific agencies).`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
