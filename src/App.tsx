@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ScrollToTop from "@/components/ScrollToTop";
+import TrailingSlashRedirect from "@/components/TrailingSlashRedirect";
 import AuthRedirectHandler from './components/auth/AuthRedirectHandler';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './hooks/useAuth';
@@ -91,6 +92,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <TrailingSlashRedirect />
         <AuthRedirectHandler />
         <Suspense fallback={<PageLoader />}>
           <Routes>
