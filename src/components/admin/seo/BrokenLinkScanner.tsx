@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Wrench, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Wrench, AlertTriangle, CheckCircle2, Scissors } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ interface BrokenLinkResult {
   postSlug: string;
   broken: number;
   fixed: number;
-  unfixable: Array<{ url: string; reason: string }>;
+  stripped: number;
 }
 
 interface ScanSummary {
@@ -19,7 +19,7 @@ interface ScanSummary {
   postsWithIssues: number;
   totalBrokenLinks: number;
   totalFixed: number;
-  totalUnfixable: number;
+  totalStripped: number;
 }
 
 export default function BrokenLinkScanner() {
@@ -37,7 +37,7 @@ export default function BrokenLinkScanner() {
     let allResults: BrokenLinkResult[] = [];
     let totalSummary: ScanSummary = {
       postsScanned: 0, postsWithIssues: 0,
-      totalBrokenLinks: 0, totalFixed: 0, totalUnfixable: 0,
+      totalBrokenLinks: 0, totalFixed: 0, totalStripped: 0,
     };
     let totalPosts = 1;
     const batchSize = 200;
@@ -58,7 +58,7 @@ export default function BrokenLinkScanner() {
         totalSummary.postsWithIssues += data.summary.postsWithIssues;
         totalSummary.totalBrokenLinks += data.summary.totalBrokenLinks;
         totalSummary.totalFixed += data.summary.totalFixed;
-        totalSummary.totalUnfixable += data.summary.totalUnfixable;
+        totalSummary.totalStripped += data.summary.totalStripped;
 
         const issueResults = data.results.filter((r: BrokenLinkResult) => r.broken > 0);
         allResults = [...allResults, ...issueResults];
@@ -68,7 +68,7 @@ export default function BrokenLinkScanner() {
         offset += batchSize;
       }
 
-      toast.success(`Fixed ${totalSummary.totalFixed} broken links across ${totalSummary.postsWithIssues} articles`);
+      toast.success(`Fixed ${totalSummary.totalFixed} links, stripped ${totalSummary.totalStripped} dead links across ${totalSummary.postsWithIssues} articles`);
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
     } finally {
@@ -88,7 +88,7 @@ export default function BrokenLinkScanner() {
               Broken Link Scanner
             </CardTitle>
             <CardDescription className="text-xs mt-1">
-              Detect and auto-fix broken internal links (old /blog/, category-path, and bare-slug URLs)
+              Detect broken internal links, rewrite fixable ones, and strip dead links (keeping visible text)
             </CardDescription>
           </div>
           <Button
@@ -102,7 +102,6 @@ export default function BrokenLinkScanner() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
-        {/* Progress bar */}
         {isFixing && (
           <div className="space-y-1">
             <Progress value={progressPercent} className="h-2" />
@@ -112,9 +111,8 @@ export default function BrokenLinkScanner() {
           </div>
         )}
 
-        {/* Summary */}
         {summary && (
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <div className="bg-muted/50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold">{summary.postsScanned}</p>
               <p className="text-[10px] text-muted-foreground">Scanned</p>
@@ -124,21 +122,16 @@ export default function BrokenLinkScanner() {
               <p className="text-[10px] text-muted-foreground">With Issues</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold text-orange-500">{summary.totalBrokenLinks}</p>
-              <p className="text-[10px] text-muted-foreground">Broken</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold text-green-500">{summary.totalFixed}</p>
-              <p className="text-[10px] text-muted-foreground">Fixed</p>
+              <p className="text-[10px] text-muted-foreground">Rewritten</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold text-yellow-500">{summary.totalUnfixable}</p>
-              <p className="text-[10px] text-muted-foreground">Unfixable</p>
+              <p className="text-lg font-bold text-orange-500">{summary.totalStripped}</p>
+              <p className="text-[10px] text-muted-foreground">Stripped</p>
             </div>
           </div>
         )}
 
-        {/* Results */}
         {results.length > 0 && (
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             <h4 className="text-xs font-semibold text-muted-foreground">
@@ -154,25 +147,13 @@ export default function BrokenLinkScanner() {
                         <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed}
                       </Badge>
                     )}
-                    {r.unfixable.length > 0 && (
-                      <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] px-1.5 py-0">
-                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> {r.unfixable.length}
+                    {r.stripped > 0 && (
+                      <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] px-1.5 py-0">
+                        <Scissors className="h-2.5 w-2.5 mr-0.5" /> {r.stripped}
                       </Badge>
                     )}
                   </div>
                 </div>
-                {r.unfixable.length > 0 && (
-                  <div className="pl-2 border-l-2 border-destructive/20">
-                    {r.unfixable.slice(0, 2).map((u, j) => (
-                      <p key={j} className="text-[10px] text-muted-foreground">
-                        <code className="bg-muted px-1 rounded">{u.url}</code>
-                      </p>
-                    ))}
-                    {r.unfixable.length > 2 && (
-                      <p className="text-[10px] text-muted-foreground">+{r.unfixable.length - 2} more</p>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>
