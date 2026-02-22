@@ -1,80 +1,78 @@
 
 
-# Emergency: Restore 24,000+ Stripped Links and Fix Scanner
+# Fix Link Restoration: Full-Scale Scan and Recovery
 
-## Damage Assessment
+## Current Problems
 
-- 5,406 posts had their content modified by the scanner
-- ~24,440 internal links were stripped (removed the `<a>` tag, kept text)
-- Average posts should have ~6.8 outbound links; most now have 0-2
-- The `article_embeddings.outbound_count` is now out of sync (shows old counts)
+1. **Health check only scans 500 posts** -- the `batchSize: 500` in the UI sends a single request with no pagination. There are 5,780 published posts, so 91% are never checked.
+2. **Restore processes 50 posts at a time** calling `scan-for-semantic-links` per post individually -- extremely slow and impractical for 3,700+ affected posts.
+3. **Counter sync not run first** -- `outbound_count` in `article_embeddings` is stale, making the health check unreliable.
 
-## Restoration Strategy
+### Actual damage (from database):
+- 973 posts have 0 internal links
+- 2,759 posts have 1-2 internal links
+- 2,048 posts have 3+ links (healthy)
+- ~3,732 posts need link restoration
 
-Since the database content was modified in place and there's no content versioning, we need a two-phase approach:
+## Solution
 
-### Phase 1: Immediate -- Disable the Scanner's Fix Mode
+### Step 1: Fix Health Check to Paginate Through ALL Posts
 
-Modify the edge function to **refuse "fix" mode entirely** for now. Make it scan-only so no more damage can occur.
+Update `restore-stripped-links` scan mode to auto-paginate through all posts (like the URL scanner already does), accumulating totals across batches.
 
-### Phase 2: Re-Add Links Using Semantic Scan System
+Update the UI (`BrokenLinkScanner.tsx`) to loop through batches client-side with a progress bar, exactly like the URL scanner's `runScan` function already does.
 
-The project already has a robust semantic linking pipeline:
-1. `scan-for-semantic-links` -- finds link opportunities using vector embeddings
-2. `link_suggestions` table -- stores approved link candidates
-3. `apply-links-bulk` -- inserts links into article content
+### Step 2: Use Existing Bulk Semantic Scan for Restoration
 
-**Restoration plan:**
-1. Create a new edge function `restore-stripped-links` that:
-   - Targets all 5,406 modified posts (identified by `updated_at > 2 hours ago`)
-   - For each post, triggers a semantic scan to find link opportunities
-   - Auto-approves suggestions with relevance >= 70
-   - Applies them in batches
-2. This won't be an exact restoration but will re-add meaningful, validated internal links based on actual content relevance
+Instead of the slow per-post restore approach, leverage the **existing bulk semantic scan system** that already handles batching, self-chaining, and job tracking:
 
-### Phase 3: Reconcile Link Counters
+1. First reconcile counters (sync `outbound_count` with actual content)
+2. Then trigger a full semantic scan (the existing "Scan All" button in the Links panel)
+3. Auto-approve high-relevance suggestions
+4. Apply links in bulk
 
-Run the existing `reconcile_link_counts` RPC to sync `article_embeddings.outbound_count` with actual link counts in post content.
+The restore function will be simplified to:
+- **Step 1**: Reconcile counters
+- **Step 2**: Reset `next_scan_due_at` for all low-link posts so the existing scan picks them up
+- **Step 3**: Trigger the existing bulk semantic scan job
 
-### Phase 4: Fix the Scanner Permanently
+### Step 3: Update UI for Full Workflow
 
-Rewrite the scanner to be **read-only by default**:
-- Remove Pattern 10 entirely (orphan stripping was the destructive pattern)
-- Remove `stripAnchorTag` function -- the scanner should NEVER delete content
-- The scanner's only job: detect old URL patterns (`/blog/`, `/category/`, absolute URLs) and rewrite them to correct relative paths
-- Add a hard safeguard: if more than 50 links would be stripped in a single batch, abort
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `supabase/functions/fix-broken-links/index.ts` | Remove Pattern 10, remove stripAnchorTag, add safety limit, make scan-only default |
-| `supabase/functions/restore-stripped-links/index.ts` | NEW: batch re-scan affected posts via semantic scan, auto-approve + apply links |
-| `src/components/admin/seo/BrokenLinkScanner.tsx` | Add "Restore Links" button for affected posts, remove stripped stat, add safety warnings |
-
-## Execution Order
-
-1. Deploy fixed scanner (prevents more damage)
-2. Reconcile link counters (sync outbound_count with reality)  
-3. Run semantic re-scan on all 5,406 affected posts (restores links)
-4. Apply approved suggestions in bulk
+The BrokenLinkScanner's Link Restoration section will:
+- Show a paginated health check with real progress (e.g., "2,100 of 5,780 checked")
+- Show accurate totals across all posts
+- "Restore" button will: reconcile counters, reset scan timestamps for affected posts, then redirect user to use the existing semantic scan pipeline
 
 ## Technical Details
 
-### restore-stripped-links edge function
+### `supabase/functions/restore-stripped-links/index.ts`
 
-```text
-For each batch of 50 affected posts:
-  1. Query posts WHERE updated_at > cutoff_time
-  2. For each post, invoke scan-for-semantic-links with postId
-  3. Auto-approve suggestions with relevance >= 70
-  4. Self-chain to next batch
-```
+**Scan mode changes:**
+- Remove per-post content checking (too slow for 5,780 posts)
+- Instead, use `outbound_count` from `article_embeddings` directly (after reconcile)
+- Return paginated results with `{ count: 'exact' }` for accurate totals
 
-### Safety guardrails for fixed scanner
+**Restore mode changes:**
+- Step 1: Call `reconcile_link_counts` RPC
+- Step 2: Reset `next_scan_due_at = null` for all posts with `outbound_count <= 2`
+- Step 3: Return count of affected posts -- user then triggers existing semantic scan from the Links panel
 
-- Maximum 10 links can be modified per post per run
-- No stripping -- only URL pattern rewrites
-- Dry-run (scan) mode is the ONLY mode; "fix" requires explicit confirmation parameter
-- Log every change for audit trail
+### `src/components/admin/seo/BrokenLinkScanner.tsx`
+
+**Health check changes:**
+- Loop through batches of 1,000 with progress tracking (like the URL scanner)
+- Show running totals as each batch completes
+- Display final count of all posts needing links
+
+**Restore button changes:**
+- Calls restore endpoint which reconciles + resets scan timestamps
+- Shows toast directing user to run "Scan All" from the Links panel
+- Or auto-triggers the semantic scan via `scan-for-semantic-links`
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `supabase/functions/restore-stripped-links/index.ts` | Simplify: reconcile counters, reset scan timestamps, use outbound_count directly instead of per-post content checking |
+| `src/components/admin/seo/BrokenLinkScanner.tsx` | Paginated health check with progress bar, streamlined restore that uses existing semantic scan pipeline |
 
