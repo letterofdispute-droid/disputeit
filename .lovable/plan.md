@@ -1,79 +1,98 @@
 
 
-# Fix Broken Links: Root Cause Analysis and Comprehensive Repair
+# Emergency Fix: Stop Destroying Valid Links
 
-## What Actually Happened
+## Root Cause
 
-After investigating the database, here's the real picture:
+The `fix-broken-links` edge function has a critical bug on **line 106-109**:
 
-1. **The old pattern fixer works** -- it already converted most `/blog/`, `/category/`, and bare-slug URLs. Running it again on the first 200 posts now shows 0 issues.
+```javascript
+const { data: allArticles } = await supabase
+  .from('blog_posts')
+  .select('slug, category_slug')
+  .eq('status', 'published');
+```
 
-2. **The 831 "unfixable" from the screenshot were from the previous run.** When the scanner found a `/blog/slug` that didn't match any real article, it BOTH marked it "unfixable" AND rewrote it to a guessed path (`/articles/{category}/{slug}`). This created new broken links pointing to non-existent articles.
+This query hits the **1,000-row default limit**. The function only loads 1,000 of 5,780 published article slugs into its lookup map. Pattern 10 then validates every internal link against this incomplete map and **strips links to the missing 4,780 articles as "orphans."**
 
-3. **The real remaining problem is 135 orphan slugs across ~3,375 posts.** These are internal links (already in `/articles/category/slug` format) that point to articles that simply don't exist -- they were hallucinated by the AI content generator. The current scanner completely ignores these because they already have the "correct" URL format.
-
-4. **74 posts still have old `/blog/` or absolute URLs** that need the original pattern fix.
-
-### Current state summary:
-| Issue | Count |
-|-------|-------|
-| Posts with old `/blog/` or absolute URLs still remaining | 74 |
-| Unique orphan slugs (articles that don't exist) | 135 |
-| Posts containing at least one orphan link | ~3,375 |
+### Real numbers
+- Actual orphan links (pointing to non-existent articles): **228 across 50 posts**
+- Links the scanner is destroying (valid articles missing from lookup): **~16,000**
+- That means **98.6% of "stripped" links were perfectly valid**
 
 ## Plan
 
-### 1. Edge Function: Add Orphan Link Detection and Repair
+### 1. Fix the query limit bug (critical)
 
-Add a **new Pattern 10** to `fix-broken-links/index.ts` that:
-- Validates every `/articles/category/slug` link against the `slugToCategory` lookup map
-- If the target slug doesn't exist: attempt fuzzy matching (prefix match, contains match)
-- If no fuzzy match: **strip the `<a>` tag but keep the visible text** (so the content reads normally but the dead link is removed)
-- Count these as "fixed" not "unfixable"
+Paginate the slug lookup query to load ALL 5,780 articles:
 
-Also fix Pattern 1: stop rewriting unfixable `/blog/slug` to a guessed path. Instead, strip the `<a>` tag.
-
-### 2. Edge Function: Stop Creating False "Unfixable" Entries
-
-- Pattern 1 currently marks a link as unfixable but ALSO rewrites it. Change: if no match found, strip the `<a>` tag entirely and count as "fixed"
-- Remove the concept of "unfixable" from the scanner -- every broken link should either be fixed to a valid destination or have its `<a>` tag stripped
-
-### 3. UI: Simplify the Scanner Display
-
-Update `BrokenLinkScanner.tsx`:
-- Remove the "Unfixable" stat (since everything will now be fixed)
-- Replace with a "Stripped" count (links where the `<a>` was removed because no valid target exists)
-- Show 4 stats instead of 5: Scanned, Issues, Fixed (rewritten), Stripped (tag removed)
-
-## Technical Details
-
-### Edge Function Changes (`supabase/functions/fix-broken-links/index.ts`)
-
-**Pattern 1 fix** (line 136-137): Replace fallback rewrite with tag stripping:
 ```javascript
-// Before (creates new broken link):
-unfixable.push({ url: `/blog/${slug}`, reason: 'No matching article found' });
-return `href="/articles/${post.category_slug}/${slug}"`;
-
-// After (strips the dead link):
-fixCount++;
-return null; // signal to strip <a> tag
+// Load ALL published slugs in batches of 1000
+let allArticles: Array<{slug: string, category_slug: string}> = [];
+let from = 0;
+const PAGE = 1000;
+while (true) {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('slug, category_slug')
+    .eq('status', 'published')
+    .range(from, from + PAGE - 1);
+  if (error) throw error;
+  if (!data || data.length === 0) break;
+  allArticles = allArticles.concat(data);
+  if (data.length < PAGE) break;
+  from += PAGE;
+}
 ```
 
-**New Pattern 10**: Validate all existing `/articles/` links:
-```javascript
-// Check every href="/articles/cat/slug" link
-// If slug doesn't exist in slugToCategory map:
-//   1. Try fuzzy match -> rewrite to correct slug
-//   2. No match -> strip <a> tag, keep text
-```
+### 2. Replace stripping with smart replacement
 
-The tag stripping will use a regex that captures `<a href="...">TEXT</a>` and replaces with just `TEXT`.
+Instead of stripping orphan links, use the existing semantic embeddings (all 5,780 articles are embedded) to find a **replacement article** in the same category:
 
-### Files Modified
+- For each orphan slug, look up the source article's category
+- Query `article_embeddings` for the closest match in that category  
+- Replace the orphan link with the best real match (keeping the original anchor text)
+- Only strip if no semantic match exists (very rare edge case)
+
+### 3. Add a "scan-only" dry run mode  
+
+Before fixing, show users what WILL happen:
+- How many links will be **rewritten** (pattern fixes)
+- How many will be **replaced** (orphan to real article via semantic match)  
+- How many will be **stripped** (truly unfixable, should be near zero)
+
+### 4. Reverse the damage already done
+
+The scan was at 17% (1000 of 5780 posts). We need to check if any posts were already updated with stripped content. If so, we cannot undo that damage from code alone -- but since the scanner only processed 1000 posts in "fix" mode and the screenshot shows 0 rewritten + 4826 stripped, it appears the scan may still be running. We should:
+
+- Immediately stop the current scan (it's batched, so it will stop between batches)
+- Check how many posts were actually modified
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/fix-broken-links/index.ts` | Add orphan link validation (Pattern 10), fix Pattern 1 fallback, strip dead links instead of rewriting to guessed paths |
-| `src/components/admin/seo/BrokenLinkScanner.tsx` | Replace "Unfixable" with "Stripped" stat, simplify display |
+| `supabase/functions/fix-broken-links/index.ts` | Fix 1000-row limit bug with paginated loading; add semantic replacement for orphans instead of stripping; add dry-run scan mode |
+| `src/components/admin/seo/BrokenLinkScanner.tsx` | Add scan-only preview before fixing; show replaced vs stripped counts; add confirmation step |
+
+## Technical Details
+
+### Semantic replacement logic (new)
+
+For each orphan link (`/articles/cat/slug` where slug doesn't exist):
+
+1. Extract the category from the link
+2. Query `article_embeddings` for articles in that category
+3. Use word overlap between the orphan slug and real article slugs to find the best match (e.g., `loan-holiday-dispute-letter` should match an article about loan holidays)
+4. If a match scores above 60% word overlap, replace the href with the real article's path
+5. Keep the original anchor text (it's still topically relevant)
+6. If no match, strip the tag (expected to affect fewer than 50 links total)
+
+### UI changes
+
+The BrokenLinkScanner will get a two-step flow:
+1. **Step 1 -- Scan**: Shows preview of what will happen (rewrite/replace/strip counts)
+2. **Step 2 -- Fix**: User confirms, then the fix runs
+
+Stats will show 4 columns: Scanned | Rewritten | Replaced | Stripped
 
