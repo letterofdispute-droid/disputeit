@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.analyze-letter-strength]
 verify_jwt = false
+
+[functions.fix-broken-links]
+verify_jwt = false
