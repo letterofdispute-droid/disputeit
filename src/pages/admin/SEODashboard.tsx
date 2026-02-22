@@ -1,16 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Target, Settings, KeyRound, Lightbulb, LinkIcon } from 'lucide-react';
+import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Settings, KeyRound, Lightbulb } from 'lucide-react';
 import TemplateCoverageMap from '@/components/admin/seo/TemplateCoverageMap';
 import ContentQueue from '@/components/admin/seo/ContentQueue';
 import LinkSuggestions from '@/components/admin/seo/LinkSuggestions';
 import ContentCalendar from '@/components/admin/seo/ContentCalendar';
 import CoverageStats from '@/components/admin/seo/CoverageStats';
 import ContentPerformance from '@/components/admin/seo/analytics/ContentPerformance';
-import GapAnalysis from '@/components/admin/seo/analytics/GapAnalysis';
 import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
 import KeywordManager from '@/components/admin/seo/KeywordManager';
 import TopicDiscovery from '@/components/admin/seo/TopicDiscovery';
-import BrokenLinkScanner from '@/components/admin/seo/BrokenLinkScanner';
 
 export default function SEODashboard() {
   return (
@@ -30,7 +28,7 @@ export default function SEODashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="discover" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-10 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
           <TabsTrigger value="discover" className="gap-2">
             <Lightbulb className="h-4 w-4" />
             <span className="hidden sm:inline">Discover</span>
@@ -55,21 +53,9 @@ export default function SEODashboard() {
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Analytics</span>
           </TabsTrigger>
-          <TabsTrigger value="gaps" className="gap-2">
-            <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">Gaps</span>
-          </TabsTrigger>
           <TabsTrigger value="keywords" className="gap-2">
             <KeyRound className="h-4 w-4" />
             <span className="hidden sm:inline">Keywords</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </TabsTrigger>
-          <TabsTrigger value="broken-links" className="gap-2">
-            <LinkIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">404s</span>
           </TabsTrigger>
         </TabsList>
 
@@ -97,20 +83,8 @@ export default function SEODashboard() {
           <ContentPerformance />
         </TabsContent>
 
-        <TabsContent value="gaps" className="mt-4">
-          <GapAnalysis />
-        </TabsContent>
-
         <TabsContent value="keywords" className="mt-4">
           <KeywordManager />
-        </TabsContent>
-
-        <TabsContent value="settings" className="mt-4">
-          <CategoryTierSettings />
-        </TabsContent>
-
-        <TabsContent value="broken-links" className="mt-4">
-          <BrokenLinkScanner />
         </TabsContent>
       </Tabs>
     </div>

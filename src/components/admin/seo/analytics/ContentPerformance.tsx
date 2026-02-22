@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, Eye, FileText, Link2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, Eye, FileText, Link2 } from 'lucide-react';
+import GapAnalysis from './GapAnalysis';
 
 interface PostPerformance {
   id: string;
@@ -245,6 +246,8 @@ export default function ContentPerformance() {
           </div>
         </CardContent>
       </Card>
+      {/* Gap Analysis */}
+      <GapAnalysis />
     </div>
   );
 }

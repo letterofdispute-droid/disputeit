@@ -8,7 +8,10 @@ import LinkActions from './links/LinkActions';
 import LinkCard from './links/LinkCard';
 import ScanProgress from './links/ScanProgress';
 import SemanticScanPanel from './links/SemanticScanPanel';
+import BrokenLinkScanner from './BrokenLinkScanner';
 import QueuePagination from './queue/QueuePagination';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
@@ -151,6 +154,17 @@ export default function LinkSuggestions() {
 
   return (
     <div className="space-y-4">
+      {/* Broken Link Scanner (collapsible) */}
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full justify-between border rounded-lg px-4 py-2.5 bg-muted/30">
+          <span>🔗 Broken Link Scanner</span>
+          <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <BrokenLinkScanner />
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Semantic Scan Panel */}
       <SemanticScanPanel categoryFilter={categoryFilter} />
 

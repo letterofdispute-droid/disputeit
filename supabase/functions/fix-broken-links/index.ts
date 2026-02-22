@@ -6,8 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const SITE = 'https://letterofdispute.com';
-
 // Map human-readable category paths to blog category slugs
 const CATEGORY_PATH_TO_SLUG: Record<string, string> = {
   'financial-services': 'financial',
@@ -33,6 +31,24 @@ const CATEGORY_PATH_TO_SLUG: Record<string, string> = {
   'healthcare-medical-billing': 'healthcare',
   'travel': 'travel',
   'travel-transportation': 'travel',
+  'damaged-goods': 'damaged-goods',
+  'refunds': 'refunds',
+};
+
+// Map category paths to template category IDs
+const CAT_TO_TEMPLATE: Record<string, string> = {
+  'vehicle-auto': 'vehicle', 'vehicle': 'vehicle',
+  'consumer-rights': 'damaged-goods', 'employment-workplace': 'employment',
+  'financial-services': 'financial', 'landlord-housing': 'housing',
+  'e-commerce-online-services': 'ecommerce', 'ecommerce': 'ecommerce',
+  'insurance-claims': 'insurance', 'insurance': 'insurance',
+  'utilities-telecommunications': 'utilities', 'utilities': 'utilities',
+  'contractors-home-improvement': 'contractors', 'contractors': 'contractors',
+  'healthcare-medical-billing': 'healthcare', 'healthcare-medical': 'healthcare', 'healthcare': 'healthcare',
+  'travel-transportation': 'travel', 'travel': 'travel',
+  'neighbor-hoa-disputes': 'hoa', 'hoa': 'hoa',
+  'housing': 'housing', 'employment': 'employment',
+  'financial': 'financial',
 };
 
 // Reserved paths that are NOT article slugs
@@ -41,8 +57,15 @@ const RESERVED_PATHS = new Set([
   'login', 'signup', 'pricing', 'about', 'contact', 'faq', 'privacy',
   'terms', 'disclaimer', 'cookie-policy', 'how-it-works', 'settings',
   'state-rights', 'deadlines', 'consumer-news', 'analyze-letter',
-  'vehicle-auto', 'contractor', 'sitemap.xml', 'robots.txt',
+  'sitemap.xml', 'robots.txt',
 ]);
+
+// All known category path segments (used for category-only and category+slug patterns)
+const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
+const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
+
+// Optional absolute prefix pattern for matching both absolute and relative URLs
+const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -70,6 +93,7 @@ serve(async (req) => {
     }
 
     // Fetch posts - either specific post or batch
+    // We scan ALL published posts since broken links can be relative too
     let query = supabase
       .from('blog_posts')
       .select('id, slug, content, category_slug')
@@ -79,8 +103,7 @@ serve(async (req) => {
     if (postId) {
       query = query.eq('id', postId);
     } else {
-      // Only scan posts that actually contain absolute links
-      query = query.like('content', '%letterofdispute.com%').range(offset, offset + limit - 1);
+      query = query.range(offset, offset + limit - 1);
     }
 
     const { data: posts, error: postsErr } = await query;
@@ -103,112 +126,95 @@ serve(async (req) => {
       const unfixable: Array<{ url: string; reason: string }> = [];
       const originalContent = content;
 
-      // Pattern 1: Full URL with /blog/ prefix
-      // e.g. https://letterofdispute.com/blog/some-article-slug
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/blog\/([a-z0-9][a-z0-9-]+)\/?"/gi,
-        (_match: string, slug: string) => {
-          const cat = slugToCategory.get(slug);
-          if (cat) {
-            fixCount++;
-            return `href="/articles/${cat}/${slug}"`;
-          }
-          const fuzzy = findTruncatedMatch(slug, slugToCategory);
-          if (fuzzy) {
-            fixCount++;
-            return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
-          }
-          unfixable.push({ url: `/blog/${slug}`, reason: 'No matching article found' });
-          return `href="/articles/${post.category_slug}/${slug}"`;
-        }
-      );
+      // ── Pattern 1: /blog/slug (absolute or relative) ──
+      const blogRegex = new RegExp(`href="${ORIGIN}\\/blog\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
+      content = content.replace(blogRegex, (_match: string, slug: string) => {
+        const cat = slugToCategory.get(slug);
+        if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
+        const fuzzy = findTruncatedMatch(slug, slugToCategory);
+        if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
+        unfixable.push({ url: `/blog/${slug}`, reason: 'No matching article found' });
+        return `href="/articles/${post.category_slug}/${slug}"`;
+      });
 
-      // Pattern 2: Full URL with category-name path (not /articles/)
-      // e.g. https://letterofdispute.com/financial-services/loan-holiday-dispute-letter
-      const categoryRegex = /href="https?:\/\/letterofdispute\.com\/(financial-services|consumer-rights|insurance|housing|vehicle|vehicle-auto|employment|utilities|ecommerce|e-commerce-online-services|hoa|contractors|healthcare|healthcare-medical|healthcare-medical-billing|travel|travel-transportation|employment-workplace|landlord-housing|insurance-claims|utilities-telecommunications|contractors-home-improvement|neighbor-hoa-disputes)\/([a-z0-9][a-z0-9_-]+)\/?"/gi;
-      content = content.replace(
-        categoryRegex,
-        (_match: string, categoryPath: string, slug: string) => {
-          const normalizedSlug = slug.replace(/_/g, '-');
-          const articleCat = slugToCategory.get(normalizedSlug) || slugToCategory.get(slug);
-          if (articleCat) {
-            fixCount++;
-            return `href="/articles/${articleCat}/${normalizedSlug}"`;
-          }
-          const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath] || categoryPath;
-          const fuzzy = findTruncatedMatch(normalizedSlug, slugToCategory);
-          if (fuzzy) {
-            fixCount++;
-            return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
-          }
-          unfixable.push({ url: `/${categoryPath}/${slug}`, reason: 'No matching article or template' });
+      // ── Pattern 2: /category/ and /categories/ prefixed URLs (absolute or relative) ──
+      const categoryPrefixRegex = new RegExp(`href="${ORIGIN}\\/(?:category|categories)\\/([^"]+)"`, 'gi');
+      content = content.replace(categoryPrefixRegex, (_match: string, path: string) => {
+        const cleanPath = path.replace(/\/$/, '');
+        const slug = cleanPath.split('/')[0].toLowerCase();
+        const templateCat = CAT_TO_TEMPLATE[slug] || slug;
+        fixCount++;
+        return `href="/templates/${templateCat}"`;
+      });
+
+      // ── Pattern 3: Category-only links — /healthcare, /landlord-housing etc. (absolute or relative) ──
+      // Must run BEFORE bare slug matching so these don't get caught as article slugs
+      const catOnlyRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/?\"`, 'gi');
+      content = content.replace(catOnlyRegex, (_match: string, categoryPath: string) => {
+        const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
+        fixCount++;
+        return `href="/articles/${blogCat}"`;
+      });
+
+      // ── Pattern 4: Category-path + article slug (absolute or relative) ──
+      // e.g. /financial-services/loan-holiday-dispute-letter or /landlord-housing/roof-leak
+      const catSlugRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/([a-z0-9][a-z0-9_-]+)\\/?\"`, 'gi');
+      content = content.replace(catSlugRegex, (_match: string, categoryPath: string, slug: string) => {
+        const normalizedSlug = slug.replace(/_/g, '-');
+        const articleCat = slugToCategory.get(normalizedSlug) || slugToCategory.get(slug);
+        if (articleCat) {
           fixCount++;
-          return `href="/articles/${blogCat}"`;
+          return `href="/articles/${articleCat}/${normalizedSlug}"`;
         }
-      );
+        const fuzzy = findTruncatedMatch(normalizedSlug, slugToCategory);
+        if (fuzzy) {
+          fixCount++;
+          return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
+        }
+        // Fallback: resolve to the category page (this IS a fix, not unfixable)
+        const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
+        fixCount++;
+        return `href="/articles/${blogCat}"`;
+      });
 
-      // Pattern 3: Full URL bare slugs (not /blog/, not /articles/, not /templates/, not reserved)
+      // ── Pattern 5: /mistakes/ path pattern (absolute or relative) ──
+      const mistakesRegex = new RegExp(`href="${ORIGIN}\\/mistakes\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
+      content = content.replace(mistakesRegex, (_match: string, slug: string) => {
+        const cat = slugToCategory.get(slug);
+        if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
+        const fuzzy = findTruncatedMatch(slug, slugToCategory);
+        if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
+        // Try matching with "mistakes" prefix variations
+        for (const [fullSlug, c] of slugToCategory) {
+          if (fullSlug.includes(slug) || slug.includes(fullSlug.split('-').slice(0, 3).join('-'))) {
+            fixCount++;
+            return `href="/articles/${c}/${fullSlug}"`;
+          }
+        }
+        unfixable.push({ url: `/mistakes/${slug}`, reason: 'No matching article' });
+        return _match;
+      });
+
+      // ── Pattern 6: Bare slugs (absolute only — relative bare slugs are too risky to auto-fix) ──
       // e.g. https://letterofdispute.com/some-article-slug
       content = content.replace(
         /href="https?:\/\/letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
         (_match: string, slug: string) => {
           if (RESERVED_PATHS.has(slug)) return _match;
           if (slug.startsWith('articles/') || slug.startsWith('templates/') || slug.startsWith('guides/')) return _match;
-          
+          // Skip if it matches a known category (already handled by Pattern 3)
+          if (CATEGORY_PATH_TO_SLUG[slug]) return _match;
+
           const cat = slugToCategory.get(slug);
-          if (cat) {
-            fixCount++;
-            return `href="/articles/${cat}/${slug}"`;
-          }
+          if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
           const fuzzy = findTruncatedMatch(slug, slugToCategory);
-          if (fuzzy) {
-            fixCount++;
-            return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
-          }
+          if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
           unfixable.push({ url: `/${slug}`, reason: 'No matching article' });
           return _match;
         }
       );
 
-      // Pattern 4: /category/ and /categories/ prefixed URLs → /templates/categoryId
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/(?:category|categories)\/([^"]+)"/gi,
-        (_match: string, path: string) => {
-          const cleanPath = path.replace(/\/$/, '');
-          fixCount++;
-          // Map to templates category page
-          const slug = cleanPath.split('/')[0].toLowerCase();
-          const catMap: Record<string, string> = {
-            'vehicle-auto': 'vehicle', 'vehicle': 'vehicle',
-            'consumer-rights': 'damaged-goods', 'employment-workplace': 'employment',
-            'financial-services': 'financial', 'landlord-housing': 'housing',
-            'e-commerce-online-services': 'ecommerce', 'ecommerce': 'ecommerce',
-            'insurance-claims': 'insurance', 'insurance': 'insurance',
-            'utilities-telecommunications': 'utilities', 'utilities': 'utilities',
-            'contractors-home-improvement': 'contractors', 'contractors': 'contractors',
-            'healthcare-medical-billing': 'healthcare', 'healthcare': 'healthcare',
-            'travel-transportation': 'travel', 'travel': 'travel',
-            'neighbor-hoa-disputes': 'hoa', 'hoa': 'hoa',
-            'housing': 'housing',
-          };
-          const templateCat = catMap[slug] || slug;
-          return `href="/templates/${templateCat}"`;
-        }
-      );
-
-      // Pattern 5: Category-only links (no sub-slug) — /healthcare, /travel etc.
-      const catOnlyPattern = Object.keys(CATEGORY_PATH_TO_SLUG).join('|');
-      const catOnlyRegex = new RegExp(`href="https?:\\/\\/letterofdispute\\.com\\/(${catOnlyPattern})\\/?\"`, 'gi');
-      content = content.replace(
-        catOnlyRegex,
-        (_match: string, categoryPath: string) => {
-          const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
-          fixCount++;
-          return `href="/articles/${blogCat}"`;
-        }
-      );
-
-      // Pattern 6: Convert absolute letterofdispute.com/articles/ URLs to relative
+      // ── Pattern 7: Convert absolute /articles/ URLs to relative ──
       content = content.replace(
         /href="https?:\/\/letterofdispute\.com\/(articles\/[^"]+)"/gi,
         (_match: string, path: string) => {
@@ -217,7 +223,7 @@ serve(async (req) => {
         }
       );
 
-      // Pattern 7: Convert remaining absolute letterofdispute.com/templates/ URLs to relative
+      // ── Pattern 8: Convert absolute /templates/ URLs to relative ──
       content = content.replace(
         /href="https?:\/\/letterofdispute\.com\/(templates\/[^"]+)"/gi,
         (_match: string, path: string) => {
@@ -226,7 +232,7 @@ serve(async (req) => {
         }
       );
 
-      // Pattern 8: Catch-all for any remaining absolute URLs to make relative
+      // ── Pattern 9: Catch-all for remaining absolute URLs ──
       content = content.replace(
         /href="https?:\/\/letterofdispute\.com\/([^"]+)"/gi,
         (_match: string, path: string) => {
@@ -235,7 +241,6 @@ serve(async (req) => {
             fixCount++;
             return `href="/${cleanPath}"`;
           }
-          // Check if it matches a known article
           const cat = slugToCategory.get(cleanPath);
           if (cat) {
             fixCount++;
@@ -304,11 +309,9 @@ function findTruncatedMatch(
   partialSlug: string,
   slugMap: Map<string, string>
 ): { slug: string; cat: string } | null {
-  // If slug is short, skip fuzzy
   if (partialSlug.length < 10) return null;
   
   for (const [fullSlug, cat] of slugMap) {
-    // Check if the full slug starts with the partial (truncated case)
     if (fullSlug.startsWith(partialSlug) && fullSlug.length > partialSlug.length) {
       return { slug: fullSlug, cat };
     }
