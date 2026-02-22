@@ -60,12 +60,35 @@ const RESERVED_PATHS = new Set([
   'sitemap.xml', 'robots.txt',
 ]);
 
-// All known category path segments (used for category-only and category+slug patterns)
 const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
 const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
-
-// Optional absolute prefix pattern for matching both absolute and relative URLs
 const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
+
+// Valid blog category slugs (targets for /articles/CATEGORY)
+const VALID_CATEGORIES = new Set([
+  'financial', 'consumer-rights', 'insurance', 'housing', 'vehicle',
+  'employment', 'utilities', 'ecommerce', 'hoa', 'contractors',
+  'healthcare', 'travel', 'damaged-goods', 'refunds',
+]);
+
+/**
+ * Strip an <a> tag but keep its visible text content.
+ * Handles self-closing, nested tags, and multiline.
+ */
+function stripAnchorTag(content: string, href: string): { content: string; count: number } {
+  // Escape href for use in regex
+  const escapedHref = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tagRegex = new RegExp(
+    `<a\\s[^>]*href="${escapedHref}"[^>]*>(.*?)<\\/a>`,
+    'gis'
+  );
+  let count = 0;
+  const result = content.replace(tagRegex, (_match: string, innerText: string) => {
+    count++;
+    return innerText;
+  });
+  return { content: result, count };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -92,8 +115,10 @@ serve(async (req) => {
       slugToCategory.set(a.slug, a.category_slug);
     }
 
-    // Fetch posts - either specific post or batch
-    // We scan ALL published posts since broken links can be relative too
+    // Build a set of all valid slugs for fast lookup
+    const validSlugs = new Set(slugToCategory.keys());
+
+    // Fetch posts
     let query = supabase
       .from('blog_posts')
       .select('id, slug, content, category_slug')
@@ -113,18 +138,20 @@ serve(async (req) => {
       postSlug: string;
       broken: number;
       fixed: number;
-      unfixable: Array<{ url: string; reason: string }>;
+      stripped: number;
     }> = [];
 
     let totalFixed = 0;
     let totalBroken = 0;
-    let totalUnfixable = 0;
+    let totalStripped = 0;
 
     for (const post of posts || []) {
       let content = post.content;
       let fixCount = 0;
-      const unfixable: Array<{ url: string; reason: string }> = [];
+      let stripCount = 0;
       const originalContent = content;
+      // Collect hrefs to strip after all pattern rewrites
+      const hrefsToStrip: string[] = [];
 
       // ── Pattern 1: /blog/slug (absolute or relative) ──
       const blogRegex = new RegExp(`href="${ORIGIN}\\/blog\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
@@ -133,11 +160,14 @@ serve(async (req) => {
         if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
         const fuzzy = findTruncatedMatch(slug, slugToCategory);
         if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        unfixable.push({ url: `/blog/${slug}`, reason: 'No matching article found' });
-        return `href="/articles/${post.category_slug}/${slug}"`;
+        // No match — mark for stripping (don't guess a path)
+        const deadHref = `/articles/${post.category_slug}/${slug}`;
+        hrefsToStrip.push(deadHref);
+        // Temporarily rewrite so the strip pass can find it
+        return `href="${deadHref}"`;
       });
 
-      // ── Pattern 2: /category/ and /categories/ prefixed URLs (absolute or relative) ──
+      // ── Pattern 2: /category/ and /categories/ prefixed URLs ──
       const categoryPrefixRegex = new RegExp(`href="${ORIGIN}\\/(?:category|categories)\\/([^"]+)"`, 'gi');
       content = content.replace(categoryPrefixRegex, (_match: string, path: string) => {
         const cleanPath = path.replace(/\/$/, '');
@@ -147,8 +177,7 @@ serve(async (req) => {
         return `href="/templates/${templateCat}"`;
       });
 
-      // ── Pattern 3: Category-only links — /healthcare, /landlord-housing etc. (absolute or relative) ──
-      // Must run BEFORE bare slug matching so these don't get caught as article slugs
+      // ── Pattern 3: Category-only links ──
       const catOnlyRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/?\"`, 'gi');
       content = content.replace(catOnlyRegex, (_match: string, categoryPath: string) => {
         const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
@@ -156,8 +185,7 @@ serve(async (req) => {
         return `href="/articles/${blogCat}"`;
       });
 
-      // ── Pattern 4: Category-path + article slug (absolute or relative) ──
-      // e.g. /financial-services/loan-holiday-dispute-letter or /landlord-housing/roof-leak
+      // ── Pattern 4: Category-path + article slug ──
       const catSlugRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/([a-z0-9][a-z0-9_-]+)\\/?\"`, 'gi');
       content = content.replace(catSlugRegex, (_match: string, categoryPath: string, slug: string) => {
         const normalizedSlug = slug.replace(/_/g, '-');
@@ -171,46 +199,45 @@ serve(async (req) => {
           fixCount++;
           return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
         }
-        // Fallback: resolve to the category page (this IS a fix, not unfixable)
+        // Fallback: resolve to the category page
         const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
         fixCount++;
         return `href="/articles/${blogCat}"`;
       });
 
-      // ── Pattern 5: /mistakes/ path pattern (absolute or relative) ──
+      // ── Pattern 5: /mistakes/ path pattern ──
       const mistakesRegex = new RegExp(`href="${ORIGIN}\\/mistakes\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
       content = content.replace(mistakesRegex, (_match: string, slug: string) => {
         const cat = slugToCategory.get(slug);
         if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
         const fuzzy = findTruncatedMatch(slug, slugToCategory);
         if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        // Try matching with "mistakes" prefix variations
         for (const [fullSlug, c] of slugToCategory) {
           if (fullSlug.includes(slug) || slug.includes(fullSlug.split('-').slice(0, 3).join('-'))) {
             fixCount++;
             return `href="/articles/${c}/${fullSlug}"`;
           }
         }
-        unfixable.push({ url: `/mistakes/${slug}`, reason: 'No matching article' });
+        // No match — mark for stripping
+        hrefsToStrip.push(_match.slice(6, -1)); // extract href value
         return _match;
       });
 
-      // ── Pattern 6: Bare slugs (absolute only — relative bare slugs are too risky to auto-fix) ──
-      // e.g. https://letterofdispute.com/some-article-slug
+      // ── Pattern 6: Bare slugs (absolute only) ──
       content = content.replace(
         /href="https?:\/\/letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
         (_match: string, slug: string) => {
           if (RESERVED_PATHS.has(slug)) return _match;
           if (slug.startsWith('articles/') || slug.startsWith('templates/') || slug.startsWith('guides/')) return _match;
-          // Skip if it matches a known category (already handled by Pattern 3)
           if (CATEGORY_PATH_TO_SLUG[slug]) return _match;
 
           const cat = slugToCategory.get(slug);
           if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
           const fuzzy = findTruncatedMatch(slug, slugToCategory);
           if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-          unfixable.push({ url: `/${slug}`, reason: 'No matching article' });
-          return _match;
+          // No match — mark for stripping
+          hrefsToStrip.push(`/${slug}`);
+          return `href="/${slug}"`;
         }
       );
 
@@ -251,10 +278,67 @@ serve(async (req) => {
         }
       );
 
-      if (content !== originalContent) {
-        totalBroken += fixCount + unfixable.length;
+      // ── Pattern 10: Validate all /articles/category/slug links (orphan detection) ──
+      // Find all internal article links and check if the target slug actually exists
+      const articleLinkRegex = /href="\/articles\/([a-z0-9-]+)\/([a-z0-9][a-z0-9-]+)"/gi;
+      const orphanHrefs: string[] = [];
+      
+      // First pass: identify orphans
+      let articleMatch: RegExpExecArray | null;
+      while ((articleMatch = articleLinkRegex.exec(content)) !== null) {
+        const [, cat, slug] = articleMatch;
+        if (!validSlugs.has(slug)) {
+          // Check if it's a valid category at least
+          if (!VALID_CATEGORIES.has(cat)) continue;
+          
+          // Try fuzzy match
+          const fuzzy = findTruncatedMatch(slug, slugToCategory);
+          if (fuzzy) {
+            // Will be fixed in the replace pass below
+            continue;
+          }
+          orphanHrefs.push(`/articles/${cat}/${slug}`);
+        }
+      }
+
+      // Second pass: fix or strip orphans
+      if (orphanHrefs.length > 0) {
+        for (const orphanHref of orphanHrefs) {
+          const parts = orphanHref.split('/');
+          const slug = parts[parts.length - 1];
+          
+          // Try fuzzy match one more time
+          const fuzzy = findTruncatedMatch(slug, slugToCategory);
+          if (fuzzy) {
+            const oldHref = `href="${orphanHref}"`;
+            const newHref = `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
+            content = content.split(oldHref).join(newHref);
+            fixCount++;
+          } else {
+            // Strip the <a> tag, keep visible text
+            const result = stripAnchorTag(content, orphanHref);
+            if (result.count > 0) {
+              content = result.content;
+              stripCount += result.count;
+            }
+          }
+        }
+      }
+
+      // Strip any links collected from patterns 1, 5, 6 that had no match
+      for (const href of hrefsToStrip) {
+        const result = stripAnchorTag(content, href);
+        if (result.count > 0) {
+          content = result.content;
+          stripCount += result.count;
+        }
+      }
+
+      const totalIssues = fixCount + stripCount;
+      if (content !== originalContent && totalIssues > 0) {
+        totalBroken += totalIssues;
         totalFixed += fixCount;
-        totalUnfixable += unfixable.length;
+        totalStripped += stripCount;
 
         if (mode === 'fix') {
           const { error: updateErr } = await supabase
@@ -263,15 +347,15 @@ serve(async (req) => {
             .eq('id', post.id);
 
           if (updateErr) {
-            unfixable.push({ url: 'UPDATE_FAILED', reason: updateErr.message });
+            console.error(`Failed to update post ${post.slug}: ${updateErr.message}`);
           }
         }
 
         results.push({
           postSlug: post.slug,
-          broken: fixCount + unfixable.length,
+          broken: totalIssues,
           fixed: fixCount,
-          unfixable,
+          stripped: stripCount,
         });
       }
     }
@@ -291,7 +375,7 @@ serve(async (req) => {
         postsWithIssues: results.length,
         totalBrokenLinks: totalBroken,
         totalFixed: mode === 'fix' ? totalFixed : 0,
-        totalUnfixable,
+        totalStripped: mode === 'fix' ? totalStripped : 0,
       },
       results,
     }), {
