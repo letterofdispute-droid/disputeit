@@ -1,98 +1,80 @@
 
 
-# Emergency Fix: Stop Destroying Valid Links
+# Emergency: Restore 24,000+ Stripped Links and Fix Scanner
 
-## Root Cause
+## Damage Assessment
 
-The `fix-broken-links` edge function has a critical bug on **line 106-109**:
+- 5,406 posts had their content modified by the scanner
+- ~24,440 internal links were stripped (removed the `<a>` tag, kept text)
+- Average posts should have ~6.8 outbound links; most now have 0-2
+- The `article_embeddings.outbound_count` is now out of sync (shows old counts)
 
-```javascript
-const { data: allArticles } = await supabase
-  .from('blog_posts')
-  .select('slug, category_slug')
-  .eq('status', 'published');
-```
+## Restoration Strategy
 
-This query hits the **1,000-row default limit**. The function only loads 1,000 of 5,780 published article slugs into its lookup map. Pattern 10 then validates every internal link against this incomplete map and **strips links to the missing 4,780 articles as "orphans."**
+Since the database content was modified in place and there's no content versioning, we need a two-phase approach:
 
-### Real numbers
-- Actual orphan links (pointing to non-existent articles): **228 across 50 posts**
-- Links the scanner is destroying (valid articles missing from lookup): **~16,000**
-- That means **98.6% of "stripped" links were perfectly valid**
+### Phase 1: Immediate -- Disable the Scanner's Fix Mode
 
-## Plan
+Modify the edge function to **refuse "fix" mode entirely** for now. Make it scan-only so no more damage can occur.
 
-### 1. Fix the query limit bug (critical)
+### Phase 2: Re-Add Links Using Semantic Scan System
 
-Paginate the slug lookup query to load ALL 5,780 articles:
+The project already has a robust semantic linking pipeline:
+1. `scan-for-semantic-links` -- finds link opportunities using vector embeddings
+2. `link_suggestions` table -- stores approved link candidates
+3. `apply-links-bulk` -- inserts links into article content
 
-```javascript
-// Load ALL published slugs in batches of 1000
-let allArticles: Array<{slug: string, category_slug: string}> = [];
-let from = 0;
-const PAGE = 1000;
-while (true) {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('slug, category_slug')
-    .eq('status', 'published')
-    .range(from, from + PAGE - 1);
-  if (error) throw error;
-  if (!data || data.length === 0) break;
-  allArticles = allArticles.concat(data);
-  if (data.length < PAGE) break;
-  from += PAGE;
-}
-```
+**Restoration plan:**
+1. Create a new edge function `restore-stripped-links` that:
+   - Targets all 5,406 modified posts (identified by `updated_at > 2 hours ago`)
+   - For each post, triggers a semantic scan to find link opportunities
+   - Auto-approves suggestions with relevance >= 70
+   - Applies them in batches
+2. This won't be an exact restoration but will re-add meaningful, validated internal links based on actual content relevance
 
-### 2. Replace stripping with smart replacement
+### Phase 3: Reconcile Link Counters
 
-Instead of stripping orphan links, use the existing semantic embeddings (all 5,780 articles are embedded) to find a **replacement article** in the same category:
+Run the existing `reconcile_link_counts` RPC to sync `article_embeddings.outbound_count` with actual link counts in post content.
 
-- For each orphan slug, look up the source article's category
-- Query `article_embeddings` for the closest match in that category  
-- Replace the orphan link with the best real match (keeping the original anchor text)
-- Only strip if no semantic match exists (very rare edge case)
+### Phase 4: Fix the Scanner Permanently
 
-### 3. Add a "scan-only" dry run mode  
+Rewrite the scanner to be **read-only by default**:
+- Remove Pattern 10 entirely (orphan stripping was the destructive pattern)
+- Remove `stripAnchorTag` function -- the scanner should NEVER delete content
+- The scanner's only job: detect old URL patterns (`/blog/`, `/category/`, absolute URLs) and rewrite them to correct relative paths
+- Add a hard safeguard: if more than 50 links would be stripped in a single batch, abort
 
-Before fixing, show users what WILL happen:
-- How many links will be **rewritten** (pattern fixes)
-- How many will be **replaced** (orphan to real article via semantic match)  
-- How many will be **stripped** (truly unfixable, should be near zero)
-
-### 4. Reverse the damage already done
-
-The scan was at 17% (1000 of 5780 posts). We need to check if any posts were already updated with stripped content. If so, we cannot undo that damage from code alone -- but since the scanner only processed 1000 posts in "fix" mode and the screenshot shows 0 rewritten + 4826 stripped, it appears the scan may still be running. We should:
-
-- Immediately stop the current scan (it's batched, so it will stop between batches)
-- Check how many posts were actually modified
-
-## Files to Change
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/fix-broken-links/index.ts` | Fix 1000-row limit bug with paginated loading; add semantic replacement for orphans instead of stripping; add dry-run scan mode |
-| `src/components/admin/seo/BrokenLinkScanner.tsx` | Add scan-only preview before fixing; show replaced vs stripped counts; add confirmation step |
+| `supabase/functions/fix-broken-links/index.ts` | Remove Pattern 10, remove stripAnchorTag, add safety limit, make scan-only default |
+| `supabase/functions/restore-stripped-links/index.ts` | NEW: batch re-scan affected posts via semantic scan, auto-approve + apply links |
+| `src/components/admin/seo/BrokenLinkScanner.tsx` | Add "Restore Links" button for affected posts, remove stripped stat, add safety warnings |
+
+## Execution Order
+
+1. Deploy fixed scanner (prevents more damage)
+2. Reconcile link counters (sync outbound_count with reality)  
+3. Run semantic re-scan on all 5,406 affected posts (restores links)
+4. Apply approved suggestions in bulk
 
 ## Technical Details
 
-### Semantic replacement logic (new)
+### restore-stripped-links edge function
 
-For each orphan link (`/articles/cat/slug` where slug doesn't exist):
+```text
+For each batch of 50 affected posts:
+  1. Query posts WHERE updated_at > cutoff_time
+  2. For each post, invoke scan-for-semantic-links with postId
+  3. Auto-approve suggestions with relevance >= 70
+  4. Self-chain to next batch
+```
 
-1. Extract the category from the link
-2. Query `article_embeddings` for articles in that category
-3. Use word overlap between the orphan slug and real article slugs to find the best match (e.g., `loan-holiday-dispute-letter` should match an article about loan holidays)
-4. If a match scores above 60% word overlap, replace the href with the real article's path
-5. Keep the original anchor text (it's still topically relevant)
-6. If no match, strip the tag (expected to affect fewer than 50 links total)
+### Safety guardrails for fixed scanner
 
-### UI changes
-
-The BrokenLinkScanner will get a two-step flow:
-1. **Step 1 -- Scan**: Shows preview of what will happen (rewrite/replace/strip counts)
-2. **Step 2 -- Fix**: User confirms, then the fix runs
-
-Stats will show 4 columns: Scanned | Rewritten | Replaced | Stripped
+- Maximum 10 links can be modified per post per run
+- No stripping -- only URL pattern rewrites
+- Dry-run (scan) mode is the ONLY mode; "fix" requires explicit confirmation parameter
+- Log every change for audit trail
 
