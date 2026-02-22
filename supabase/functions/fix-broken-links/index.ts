@@ -64,13 +64,6 @@ const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
 const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
 const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
 
-// Valid blog category slugs (targets for /articles/CATEGORY)
-const VALID_CATEGORIES = new Set([
-  'financial', 'consumer-rights', 'insurance', 'housing', 'vehicle',
-  'employment', 'utilities', 'ecommerce', 'hoa', 'contractors',
-  'healthcare', 'travel', 'damaged-goods', 'refunds',
-]);
-
 /**
  * Load ALL published article slugs using paginated queries to avoid the 1000-row limit.
  */
@@ -100,81 +93,6 @@ async function loadAllSlugs(supabase: any): Promise<Map<string, string>> {
   return slugToCategory;
 }
 
-/**
- * Strip an <a> tag but keep its visible text content.
- */
-function stripAnchorTag(content: string, href: string): { content: string; count: number } {
-  const escapedHref = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const tagRegex = new RegExp(
-    `<a\\s[^>]*href="${escapedHref}"[^>]*>(.*?)<\\/a>`,
-    'gis'
-  );
-  let count = 0;
-  const result = content.replace(tagRegex, (_match: string, innerText: string) => {
-    count++;
-    return innerText;
-  });
-  return { content: result, count };
-}
-
-/**
- * Find the best slug match for an orphan slug using word overlap scoring.
- * Returns the best match if score >= 60% overlap.
- */
-function findSmartReplacement(
-  orphanSlug: string,
-  category: string,
-  slugToCategory: Map<string, string>
-): { slug: string; cat: string } | null {
-  const orphanWords = new Set(orphanSlug.split('-').filter(w => w.length > 2));
-  if (orphanWords.size < 2) return null;
-
-  let bestMatch: { slug: string; cat: string; score: number } | null = null;
-
-  for (const [realSlug, realCat] of slugToCategory) {
-    // Prefer same category, but allow cross-category
-    if (realCat !== category) continue;
-
-    const realWords = new Set(realSlug.split('-').filter(w => w.length > 2));
-    if (realWords.size < 2) continue;
-
-    // Calculate Jaccard-like overlap
-    let intersection = 0;
-    for (const w of orphanWords) {
-      if (realWords.has(w)) intersection++;
-    }
-    const union = new Set([...orphanWords, ...realWords]).size;
-    const score = union > 0 ? intersection / union : 0;
-
-    if (score >= 0.6 && (!bestMatch || score > bestMatch.score)) {
-      bestMatch = { slug: realSlug, cat: realCat, score };
-    }
-  }
-
-  // If no same-category match, try cross-category with higher threshold
-  if (!bestMatch) {
-    for (const [realSlug, realCat] of slugToCategory) {
-      if (realCat === category) continue;
-
-      const realWords = new Set(realSlug.split('-').filter(w => w.length > 2));
-      if (realWords.size < 2) continue;
-
-      let intersection = 0;
-      for (const w of orphanWords) {
-        if (realWords.has(w)) intersection++;
-      }
-      const union = new Set([...orphanWords, ...realWords]).size;
-      const score = union > 0 ? intersection / union : 0;
-
-      if (score >= 0.75 && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { slug: realSlug, cat: realCat, score };
-      }
-    }
-  }
-
-  return bestMatch ? { slug: bestMatch.slug, cat: bestMatch.cat } : null;
-}
-
 function findTruncatedMatch(
   partialSlug: string,
   slugMap: Map<string, string>
@@ -189,6 +107,15 @@ function findTruncatedMatch(
   return null;
 }
 
+/**
+ * SCAN-ONLY broken link scanner.
+ * 
+ * This function ONLY rewrites URL patterns (e.g. /blog/slug → /articles/cat/slug).
+ * It NEVER strips or removes <a> tags. It NEVER deletes content.
+ * 
+ * Pattern 10 (orphan stripping) has been permanently removed.
+ * The stripAnchorTag function has been permanently removed.
+ */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -200,6 +127,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const { mode = 'scan', limit = 50, offset = 0, postId } = await req.json().catch(() => ({}));
+
+    // SAFETY: Fix mode is permanently disabled. Only scan (read-only preview) is allowed.
+    if (mode === 'fix') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Fix mode has been permanently disabled for safety. Use the semantic linking pipeline (scan-for-semantic-links + apply-links-bulk) to manage internal links.',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+    }
 
     // Load ALL published slugs (paginated to avoid 1000-row limit)
     const slugToCategory = await loadAllSlugs(supabase);
@@ -227,32 +162,24 @@ serve(async (req) => {
       postSlug: string;
       broken: number;
       fixed: number;
-      replaced: number;
-      stripped: number;
     }> = [];
 
     let totalFixed = 0;
     let totalBroken = 0;
-    let totalStripped = 0;
-    let totalReplaced = 0;
 
     for (const post of posts || []) {
       let content = post.content;
       let fixCount = 0;
-      let stripCount = 0;
-      let replaceCount = 0;
       const originalContent = content;
-      const hrefsToStrip: string[] = [];
 
-      // ── Pattern 1: /blog/slug → find real article or mark for stripping ──
+      // ── Pattern 1: /blog/slug → find real article ──
       const blogRegex = new RegExp(`href="${ORIGIN}\\/blog\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
       content = content.replace(blogRegex, (_match: string, slug: string) => {
         const cat = slugToCategory.get(slug);
         if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
         const fuzzy = findTruncatedMatch(slug, slugToCategory);
         if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        // No match — mark for stripping (don't guess a path)
-        hrefsToStrip.push(`/blog/${slug}`);
+        // No match — leave as-is (NEVER strip)
         return _match;
       });
 
@@ -306,7 +233,7 @@ serve(async (req) => {
             return `href="/articles/${c}/${fullSlug}"`;
           }
         }
-        hrefsToStrip.push(_match.slice(6, -1));
+        // No match — leave as-is (NEVER strip)
         return _match;
       });
 
@@ -322,7 +249,8 @@ serve(async (req) => {
           if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
           const fuzzy = findTruncatedMatch(slug, slugToCategory);
           if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-          hrefsToStrip.push(`/${slug}`);
+          // Convert absolute to relative but don't strip
+          fixCount++;
           return `href="/${slug}"`;
         }
       );
@@ -364,89 +292,16 @@ serve(async (req) => {
         }
       );
 
-      // ── Pattern 10: Validate all /articles/category/slug links (orphan detection) ──
-      const articleLinkRegex = /href="\/articles\/([a-z0-9-]+)\/([a-z0-9][a-z0-9-]+)"/gi;
-      const orphanHrefs: Array<{ href: string; cat: string; slug: string }> = [];
-      
-      let articleMatch: RegExpExecArray | null;
-      while ((articleMatch = articleLinkRegex.exec(content)) !== null) {
-        const [, cat, slug] = articleMatch;
-        if (!validSlugs.has(slug)) {
-          if (!VALID_CATEGORIES.has(cat)) continue;
-          
-          // Try fuzzy match first
-          const fuzzy = findTruncatedMatch(slug, slugToCategory);
-          if (fuzzy) continue; // will be fixed in replace pass
-          
-          orphanHrefs.push({ href: `/articles/${cat}/${slug}`, cat, slug });
-        }
-      }
+      // ── NO Pattern 10 — orphan detection/stripping has been PERMANENTLY REMOVED ──
 
-      // Fix or replace orphans
-      if (orphanHrefs.length > 0) {
-        for (const orphan of orphanHrefs) {
-          // Try truncated match
-          const fuzzy = findTruncatedMatch(orphan.slug, slugToCategory);
-          if (fuzzy) {
-            const oldHref = `href="${orphan.href}"`;
-            const newHref = `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
-            content = content.split(oldHref).join(newHref);
-            fixCount++;
-            continue;
-          }
-
-          // Try smart slug-based replacement (word overlap)
-          const replacement = findSmartReplacement(orphan.slug, orphan.cat, slugToCategory);
-          if (replacement) {
-            const oldHref = `href="${orphan.href}"`;
-            const newHref = `href="/articles/${replacement.cat}/${replacement.slug}"`;
-            content = content.split(oldHref).join(newHref);
-            replaceCount++;
-            continue;
-          }
-
-          // Last resort: strip the <a> tag, keep visible text
-          const result = stripAnchorTag(content, orphan.href);
-          if (result.count > 0) {
-            content = result.content;
-            stripCount += result.count;
-          }
-        }
-      }
-
-      // Strip any links collected from patterns 1, 5, 6 that had no match
-      for (const href of hrefsToStrip) {
-        const result = stripAnchorTag(content, href);
-        if (result.count > 0) {
-          content = result.content;
-          stripCount += result.count;
-        }
-      }
-
-      const totalIssues = fixCount + replaceCount + stripCount;
-      if (content !== originalContent && totalIssues > 0) {
-        totalBroken += totalIssues;
+      if (content !== originalContent && fixCount > 0) {
+        totalBroken += fixCount;
         totalFixed += fixCount;
-        totalReplaced += replaceCount;
-        totalStripped += stripCount;
-
-        if (mode === 'fix') {
-          const { error: updateErr } = await supabase
-            .from('blog_posts')
-            .update({ content })
-            .eq('id', post.id);
-
-          if (updateErr) {
-            console.error(`Failed to update post ${post.slug}: ${updateErr.message}`);
-          }
-        }
 
         results.push({
           postSlug: post.slug,
-          broken: totalIssues,
+          broken: fixCount,
           fixed: fixCount,
-          replaced: replaceCount,
-          stripped: stripCount,
         });
       }
     }
@@ -459,22 +314,21 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      mode,
+      mode: 'scan',
       slugsLoaded: slugToCategory.size,
       pagination: { offset, limit, totalPosts },
       summary: {
         postsScanned: posts?.length || 0,
         postsWithIssues: results.length,
         totalBrokenLinks: totalBroken,
-        totalFixed: mode === 'fix' ? totalFixed : totalFixed,
-        totalReplaced: mode === 'fix' ? totalReplaced : totalReplaced,
-        totalStripped: mode === 'fix' ? totalStripped : totalStripped,
+        totalFixed,
       },
       results,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    console.error('[fix-broken-links] Error:', err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
