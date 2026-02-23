@@ -106,30 +106,32 @@ export default function CoverageStats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-      {statCards.map((stat, index) => {
-        const Icon = stat.icon;
-        return (
-          <Card key={index}>
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                    {stat.title}
-                  </p>
-                  <p className="text-xl font-bold mt-1 sm:text-2xl">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {stat.description}
-                  </p>
+    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-3 sm:gap-4 sm:grid sm:grid-cols-3 min-w-[600px] sm:min-w-0">
+        {statCards.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="min-w-[160px] sm:min-w-0 flex-shrink-0 sm:flex-shrink">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </p>
+                    <p className="text-xl font-bold mt-1 sm:text-2xl">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stat.description}
+                    </p>
+                  </div>
+                  <div className={`p-2 rounded-full bg-muted ${stat.color} shrink-0`}>
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </div>
                 </div>
-                <div className={`p-2 rounded-full bg-muted ${stat.color} shrink-0`}>
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
