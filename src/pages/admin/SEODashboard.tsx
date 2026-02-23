@@ -14,7 +14,7 @@ import ActivityFeed from '@/components/admin/seo/ActivityFeed';
 
 export default function SEODashboard() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-x-hidden max-w-full">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-x-hidden max-w-full pt-0 px-0">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-serif font-bold text-foreground">
@@ -100,6 +100,6 @@ export default function SEODashboard() {
           <KeywordManager />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>);
+
 }
