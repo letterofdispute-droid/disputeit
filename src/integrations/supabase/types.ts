@@ -882,6 +882,48 @@ export type Database = {
         }
         Relationships: []
       }
+      gsc_performance_cache: {
+        Row: {
+          clicks: number
+          country: string | null
+          ctr: number
+          date_range_end: string
+          date_range_start: string
+          fetched_at: string
+          id: string
+          impressions: number
+          page: string | null
+          position: number
+          query: string
+        }
+        Insert: {
+          clicks?: number
+          country?: string | null
+          ctr?: number
+          date_range_end: string
+          date_range_start: string
+          fetched_at?: string
+          id?: string
+          impressions?: number
+          page?: string | null
+          position?: number
+          query: string
+        }
+        Update: {
+          clicks?: number
+          country?: string | null
+          ctr?: number
+          date_range_end?: string
+          date_range_start?: string
+          fetched_at?: string
+          id?: string
+          impressions?: number
+          page?: string | null
+          position?: number
+          query?: string
+        }
+        Relationships: []
+      }
       image_optimization_jobs: {
         Row: {
           completed_at: string | null
