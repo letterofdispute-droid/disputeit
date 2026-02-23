@@ -8,6 +8,7 @@ import {
   Loader2,
   FileText,
   Crown,
+  Key,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -566,6 +567,9 @@ export default function TemplateCoverageMap() {
         })}
       </div>
 
+      {/* Keyword Campaigns Section */}
+      <KeywordCampaignsSection plans={plans} templateSlugs={templateSlugs} templateProgress={templateProgress} />
+
       {/* Cluster Planner Modal */}
       <ClusterPlanner
         open={plannerOpen}
@@ -584,6 +588,77 @@ export default function TemplateCoverageMap() {
         onConfirm={handleConfirmBulkPlan}
         isLoading={isStarting}
       />
+    </div>
+  );
+}
+
+/** Shows keyword-based content plans that don't map to hardcoded templates */
+function KeywordCampaignsSection({ 
+  plans, 
+  templateSlugs, 
+  templateProgress 
+}: { 
+  plans: ContentPlan[] | undefined; 
+  templateSlugs: Set<string>;
+  templateProgress: Record<string, { generated: number; total: number }> | undefined;
+}) {
+  const keywordPlans = useMemo(
+    () => (plans || []).filter(p => !templateSlugs.has(p.template_slug)),
+    [plans, templateSlugs]
+  );
+
+  // Group by category_id (which is the vertical for keyword campaigns)
+  const grouped = useMemo(() => {
+    const groups: Record<string, ContentPlan[]> = {};
+    keywordPlans.forEach(p => {
+      const key = p.category_id || 'uncategorized';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [keywordPlans]);
+
+  if (keywordPlans.length === 0) return null;
+
+  return (
+    <div className="space-y-3 mt-6">
+      <div className="flex items-center gap-2">
+        <Key className="h-5 w-5 text-purple-500" />
+        <h3 className="text-lg font-semibold">Keyword Campaigns</h3>
+        <Badge variant="secondary">{keywordPlans.length} plans</Badge>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Content plans created from keyword imports (not tied to hardcoded templates).
+      </p>
+      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+        {grouped.map(([vertical, vpPlans]) => (
+          <div key={vertical} className="rounded-lg border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-medium capitalize">{vertical}</span>
+              <Badge variant="outline">{vpPlans.length} topics</Badge>
+            </div>
+            <div className="space-y-2">
+              {vpPlans.map(plan => {
+                const progress = templateProgress?.[plan.template_slug];
+                const generated = progress?.generated || 0;
+                const total = progress?.total || plan.target_article_count;
+                const percent = total > 0 ? Math.round((generated / total) * 100) : 0;
+
+                return (
+                  <div key={plan.id} className="flex items-center gap-3 pl-2">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-sm truncate flex-1">{plan.template_name}</span>
+                    <div className="flex items-center gap-2 w-32">
+                      <Progress value={percent} className="h-1.5" />
+                      <span className="text-xs text-muted-foreground w-10 shrink-0">{generated}/{total}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

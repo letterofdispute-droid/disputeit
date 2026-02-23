@@ -1028,9 +1028,11 @@ export type Database = {
       }
       keyword_targets: {
         Row: {
+          batch_id: string | null
           column_group: string | null
           created_at: string
           id: string
+          imported_at: string | null
           is_seed: boolean | null
           keyword: string
           priority: number | null
@@ -1038,9 +1040,11 @@ export type Database = {
           vertical: string
         }
         Insert: {
+          batch_id?: string | null
           column_group?: string | null
           created_at?: string
           id?: string
+          imported_at?: string | null
           is_seed?: boolean | null
           keyword: string
           priority?: number | null
@@ -1048,9 +1052,11 @@ export type Database = {
           vertical: string
         }
         Update: {
+          batch_id?: string | null
           column_group?: string | null
           created_at?: string
           id?: string
+          imported_at?: string | null
           is_seed?: boolean | null
           keyword?: string
           priority?: number | null
@@ -1673,6 +1679,8 @@ export type Database = {
       get_keyword_stats: {
         Args: never
         Returns: {
+          latest_batch_id: string
+          latest_imported_at: string
           seeds: number
           total: number
           unused: number
@@ -1740,6 +1748,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_seo_metrics: { Args: never; Returns: Json }
       get_template_article_counts: {
         Args: never
         Returns: {

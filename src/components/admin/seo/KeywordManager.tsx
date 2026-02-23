@@ -1,12 +1,23 @@
-import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Zap, Trash2, BarChart3 } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Upload, FileSpreadsheet, Loader2, Zap, Trash2, BarChart3, Clock, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useKeywordTargets } from '@/hooks/useKeywordTargets';
+import { formatDistanceToNow } from 'date-fns';
 import ExcelJS from 'exceljs';
+
+// Known verticals for the dropdown
+const KNOWN_VERTICALS = [
+  'insurance', 'healthcare', 'employment', 'financial', 'housing', 'hoa',
+  'contractors', 'vehicle', 'utilities', 'travel', 'refunds', 'damaged-goods',
+  'ecommerce', 'consumer-rights',
+];
 
 // Map sheet names to vertical IDs
 const SHEET_NAME_MAP: Record<string, string> = {
@@ -37,10 +48,22 @@ function normalizeSheetName(name: string): string | null {
   return SHEET_NAME_MAP[lower] || null;
 }
 
+interface ParsedSheet {
+  sheetName: string;
+  vertical: string;
+  customVertical: string;
+  keywords: { keyword: string; isSeed: boolean; columnGroup: string }[];
+  total: number;
+  seeds: number;
+}
+
 export default function KeywordManager() {
   const { verticalStats, isLoading, importKeywords, isImporting, planFromKeywords, isPlanning, clearKeywords, planningJob } = useKeywordTargets();
-  const [parseResult, setParseResult] = useState<{ vertical: string; total: number; seeds: number }[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Vertical assignment dialog state
+  const [parsedSheets, setParsedSheets] = useState<ParsedSheet[] | null>(null);
+  const [showMappingDialog, setShowMappingDialog] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,38 +73,30 @@ export default function KeywordManager() {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(data);
 
-    const sheets: { vertical: string; keywords: { keyword: string; isSeed: boolean; columnGroup: string }[] }[] = [];
-    const preview: { vertical: string; total: number; seeds: number }[] = [];
+    const sheets: ParsedSheet[] = [];
 
-    workbook.eachSheet((worksheet, _sheetId) => {
+    workbook.eachSheet((worksheet) => {
       const sheetName = worksheet.name;
-      const vertical = normalizeSheetName(sheetName);
-      if (!vertical) return;
+      const detectedVertical = normalizeSheetName(sheetName);
 
-      // Convert sheet rows to 2D array
       const jsonData: any[][] = [];
       worksheet.eachRow({ includeEmpty: false }, (row) => {
         const rowValues = row.values as any[];
-        // ExcelJS rows are 1-indexed; slice(1) to remove the leading undefined
         jsonData.push(rowValues.slice(1));
       });
 
       if (!jsonData || jsonData.length === 0) return;
 
       const keywords: { keyword: string; isSeed: boolean; columnGroup: string }[] = [];
-
-      // Row 0 = headers (seed keywords)
       const headerRow = jsonData[0] || [];
       const seedKeywords = headerRow
         .filter((cell: any) => cell != null && String(cell).trim())
         .map((cell: any) => String(cell).trim());
 
-      // Add seed keywords
       for (const seed of seedKeywords) {
         keywords.push({ keyword: seed, isSeed: true, columnGroup: seed });
       }
 
-      // Rows 1+ = variations under each column
       for (let rowIdx = 1; rowIdx < jsonData.length; rowIdx++) {
         const row = jsonData[rowIdx] || [];
         for (let colIdx = 0; colIdx < seedKeywords.length; colIdx++) {
@@ -97,21 +112,68 @@ export default function KeywordManager() {
       }
 
       if (keywords.length > 0) {
-        sheets.push({ vertical, keywords });
-        preview.push({ vertical, total: keywords.length, seeds: seedKeywords.length });
+        sheets.push({
+          sheetName,
+          vertical: detectedVertical || '',
+          customVertical: '',
+          keywords,
+          total: keywords.length,
+          seeds: seedKeywords.length,
+        });
       }
     });
 
-    if (sheets.length === 0) {
-      return;
-    }
+    if (sheets.length === 0) return;
 
-    setParseResult(preview);
-    importKeywords(sheets);
+    // If all sheets have auto-detected verticals, show mapping for confirmation
+    setParsedSheets(sheets);
+    setShowMappingDialog(true);
 
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const updateSheetVertical = useCallback((index: number, vertical: string) => {
+    setParsedSheets(prev => {
+      if (!prev) return prev;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], vertical, customVertical: '' };
+      return updated;
+    });
+  }, []);
+
+  const updateSheetCustomVertical = useCallback((index: number, customVertical: string) => {
+    setParsedSheets(prev => {
+      if (!prev) return prev;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], vertical: 'custom', customVertical };
+      return updated;
+    });
+  }, []);
+
+  const handleConfirmImport = () => {
+    if (!parsedSheets) return;
+
+    const validSheets = parsedSheets
+      .filter(s => {
+        const v = s.vertical === 'custom' ? s.customVertical.trim().toLowerCase().replace(/\s+/g, '-') : s.vertical;
+        return v && v.length > 0;
+      })
+      .map(s => ({
+        vertical: s.vertical === 'custom' ? s.customVertical.trim().toLowerCase().replace(/\s+/g, '-') : s.vertical,
+        keywords: s.keywords,
+      }));
+
+    if (validSheets.length === 0) return;
+
+    importKeywords(validSheets);
+    setShowMappingDialog(false);
+    setParsedSheets(null);
+  };
+
+  const allMapped = parsedSheets?.every(s => {
+    if (s.vertical === 'custom') return s.customVertical.trim().length > 0;
+    return s.vertical.length > 0;
+  }) ?? false;
 
   const totalKeywords = verticalStats?.reduce((sum, v) => sum + v.total, 0) || 0;
   const totalUnused = verticalStats?.reduce((sum, v) => sum + v.unused, 0) || 0;
@@ -259,6 +321,7 @@ export default function KeywordManager() {
                   <TableHead className="text-right">Seeds</TableHead>
                   <TableHead className="text-right">Used</TableHead>
                   <TableHead className="text-right">Unused</TableHead>
+                  <TableHead className="text-right">Last Import</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -279,6 +342,16 @@ export default function KeywordManager() {
                       <Badge variant={stat.unused > 0 ? 'default' : 'secondary'}>
                         {stat.unused}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {stat.latestImportedAt ? (
+                        <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(stat.latestImportedAt), { addSuffix: true })}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -326,6 +399,68 @@ export default function KeywordManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* Vertical Assignment Dialog */}
+      <Dialog open={showMappingDialog} onOpenChange={setShowMappingDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Map Sheets to Verticals
+            </DialogTitle>
+            <DialogDescription>
+              Confirm or change the vertical for each sheet tab before importing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+            {parsedSheets?.map((sheet, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/20">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">"{sheet.sheetName}"</p>
+                  <p className="text-xs text-muted-foreground">{sheet.total} keywords ({sheet.seeds} seeds)</p>
+                </div>
+                <div className="w-48">
+                  <Select
+                    value={sheet.vertical}
+                    onValueChange={(val) => updateSheetVertical(index, val)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Select vertical" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KNOWN_VERTICALS.map(v => (
+                        <SelectItem key={v} value={v} className="capitalize">{v}</SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom...</SelectItem>
+                      <SelectItem value="">Skip this sheet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {sheet.vertical === 'custom' && (
+                    <Input
+                      className="mt-2 h-8 text-sm"
+                      placeholder="e.g. rent-reduction"
+                      value={sheet.customVertical}
+                      onChange={(e) => updateSheetCustomVertical(index, e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowMappingDialog(false); setParsedSheets(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmImport} disabled={!allMapped || isImporting}>
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing...</>
+              ) : (
+                <>Import {parsedSheets?.reduce((s, sh) => s + (sh.vertical ? sh.total : 0), 0)} Keywords</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

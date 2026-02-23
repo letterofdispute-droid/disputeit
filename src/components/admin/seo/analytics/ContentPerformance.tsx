@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, Eye, FileText, Link2 } from 'lucide-react';
+import { useSEOMetrics } from '@/hooks/useSEOMetrics';
 import GapAnalysis from './GapAnalysis';
 
 interface PostPerformance {
@@ -34,22 +35,8 @@ export default function ContentPerformance() {
     },
   });
 
-  const { data: linkStats } = useQuery({
-    queryKey: ['seo-link-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('link_suggestions')
-        .select('status');
-
-      if (error) throw error;
-      
-      const applied = data?.filter(l => l.status === 'applied').length || 0;
-      const pending = data?.filter(l => l.status === 'pending').length || 0;
-      const approved = data?.filter(l => l.status === 'approved').length || 0;
-      
-      return { applied, pending, approved, total: data?.length || 0 };
-    },
-  });
+  // Use shared metrics for link counts (server-side aggregation, no row limit)
+  const { data: seoMetrics } = useSEOMetrics();
 
   const metrics = useMemo(() => {
     if (!posts) return null;
@@ -59,7 +46,6 @@ export default function ContentPerformance() {
     const withTemplates = posts.filter(p => p.related_templates && p.related_templates.length > 0).length;
     const templateLinkRate = posts.length > 0 ? Math.round((withTemplates / posts.length) * 100) : 0;
 
-    // Group by article type
     const byType: Record<string, { count: number; views: number }> = {};
     posts.forEach(p => {
       const type = p.article_type || 'general';
@@ -139,8 +125,8 @@ export default function ContentPerformance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{linkStats?.applied || 0}</div>
-            <p className="text-xs text-muted-foreground">{linkStats?.pending || 0} pending</p>
+            <div className="text-2xl font-bold">{(seoMetrics?.linksApplied || 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{(seoMetrics?.linksPending || 0).toLocaleString()} pending</p>
           </CardContent>
         </Card>
       </div>
@@ -232,15 +218,15 @@ export default function ContentPerformance() {
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <div className="text-3xl font-bold text-primary">{linkStats?.applied || 0}</div>
+              <div className="text-3xl font-bold text-primary">{(seoMetrics?.linksApplied || 0).toLocaleString()}</div>
               <p className="text-sm text-muted-foreground mt-1">Links Applied</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <div className="text-3xl font-bold text-accent-foreground">{linkStats?.approved || 0}</div>
+              <div className="text-3xl font-bold text-accent-foreground">{(seoMetrics?.linksApproved || 0).toLocaleString()}</div>
               <p className="text-sm text-muted-foreground mt-1">Approved (Pending Apply)</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <div className="text-3xl font-bold text-muted-foreground">{linkStats?.pending || 0}</div>
+              <div className="text-3xl font-bold text-muted-foreground">{(seoMetrics?.linksPending || 0).toLocaleString()}</div>
               <p className="text-sm text-muted-foreground mt-1">Awaiting Review</p>
             </div>
           </div>
