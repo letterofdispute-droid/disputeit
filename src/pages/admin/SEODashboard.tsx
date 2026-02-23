@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Settings, KeyRound, Lightbulb } from 'lucide-react';
+import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Settings, KeyRound, Lightbulb, Globe } from 'lucide-react';
 import TemplateCoverageMap from '@/components/admin/seo/TemplateCoverageMap';
 import ContentQueue from '@/components/admin/seo/ContentQueue';
 import LinkSuggestions from '@/components/admin/seo/LinkSuggestions';
@@ -9,6 +9,7 @@ import ContentPerformance from '@/components/admin/seo/analytics/ContentPerforma
 import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
 import KeywordManager from '@/components/admin/seo/KeywordManager';
 import TopicDiscovery from '@/components/admin/seo/TopicDiscovery';
+import SearchConsolePanel from '@/components/admin/seo/SearchConsolePanel';
 
 export default function SEODashboard() {
   return (
@@ -28,10 +29,14 @@ export default function SEODashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="discover" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-flex">
           <TabsTrigger value="discover" className="gap-2">
             <Lightbulb className="h-4 w-4" />
             <span className="hidden sm:inline">Discover</span>
+          </TabsTrigger>
+          <TabsTrigger value="gsc" className="gap-2">
+            <Globe className="h-4 w-4" />
+            <span className="hidden sm:inline">Search Console</span>
           </TabsTrigger>
           <TabsTrigger value="coverage" className="gap-2">
             <LayoutGrid className="h-4 w-4" />
@@ -61,6 +66,10 @@ export default function SEODashboard() {
 
         <TabsContent value="discover" className="mt-4">
           <TopicDiscovery />
+        </TabsContent>
+
+        <TabsContent value="gsc" className="mt-4">
+          <SearchConsolePanel />
         </TabsContent>
 
         <TabsContent value="coverage" className="mt-4">

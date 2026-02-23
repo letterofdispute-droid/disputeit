@@ -99,7 +99,18 @@ serve(async (req) => {
       existingSeeds[row.vertical].push(row.keyword);
     }
 
-    // ── 6. Build context for AI ──────────────────────────────────────────
+    // ── 6b. Optional: GSC query data for data-driven suggestions ─────────
+    let gscTopQueries: any[] = [];
+    const { data: gscRows } = await supabase
+      .from('gsc_performance_cache')
+      .select('query, clicks, impressions, ctr, position')
+      .order('impressions', { ascending: false })
+      .limit(100);
+    if (gscRows && gscRows.length > 0) {
+      gscTopQueries = gscRows;
+    }
+
+    // ── 7. Build context for AI ──────────────────────────────────────────
     const kwSaturation = ((kwStats as any[]) ?? []).map((s: any) => ({
       vertical: s.vertical,
       total: Number(s.total),
@@ -117,18 +128,21 @@ serve(async (req) => {
       existingSeedSample: Object.fromEntries(
         Object.entries(existingSeeds).map(([v, kws]) => [v, kws.slice(0, 5)])
       ),
+      ...(gscTopQueries.length > 0 ? { gscTopQueries } : {}),
     };
 
-    // ── 7. Call Gemini 2.5 Pro ───────────────────────────────────────────
+    // ── 8. Call Gemini 2.5 Pro ───────────────────────────────────────────
+    const hasGscData = gscTopQueries.length > 0;
     const systemPrompt = `You are a senior SEO content strategist specializing in US consumer rights, dispute letters, and legal self-help content.
 
-Your job: analyze site data and identify the 3 highest-opportunity content topics that will drive the most organic traffic growth.
+Your job: analyze site data${hasGscData ? ' and real Google Search Console performance data' : ''} to identify the 3 highest-opportunity content topics that will drive the most organic traffic growth.
 
 Focus on topics where:
 1. Commercial intent is high (people need help resolving disputes, claiming refunds, writing formal letters)
 2. Current article density is low relative to that vertical's template count or commercial potential
 3. Keyword pipeline has room (low saturation) or existing seeds are thin
 4. A strong pillar + cluster structure will fill a real search-intent gap
+${hasGscData ? '5. GSC data shows real search queries with impressions where you lack dedicated content or have low CTR\n6. Queries at positions 8-20 where additional content could push to page 1' : ''}
 
 Return ONLY valid JSON. No markdown, no explanation, just the JSON array.`;
 
