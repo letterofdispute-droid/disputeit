@@ -27,7 +27,8 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { sheets, clearExisting } = await req.json() as { sheets: SheetData[]; clearExisting?: boolean };
+    const { sheets, clearExisting, batchId } = await req.json() as { sheets: SheetData[]; clearExisting?: boolean; batchId?: string };
+    const importBatchId = batchId || crypto.randomUUID();
 
     if (!sheets || !Array.isArray(sheets) || sheets.length === 0) {
       throw new Error('No sheet data provided');
@@ -63,6 +64,8 @@ serve(async (req) => {
           is_seed: kw.isSeed,
           column_group: kw.columnGroup,
           priority: kw.isSeed ? 100 : Math.max(1, 50 - Math.floor(idx / 10)),
+          batch_id: importBatchId,
+          imported_at: new Date().toISOString(),
         }));
 
         const { data, error } = await supabase

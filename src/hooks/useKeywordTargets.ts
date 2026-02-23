@@ -20,6 +20,8 @@ interface VerticalStats {
   seeds: number;
   used: number;
   unused: number;
+  latestBatchId: string | null;
+  latestImportedAt: string | null;
 }
 
 interface PlanningJob {
@@ -51,6 +53,8 @@ export function useKeywordTargets() {
         seeds: Number(row.seeds),
         used: Number(row.used),
         unused: Number(row.unused),
+        latestBatchId: row.latest_batch_id || null,
+        latestImportedAt: row.latest_imported_at || null,
       })) as VerticalStats[];
     },
   });
