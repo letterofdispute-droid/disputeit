@@ -1676,6 +1676,39 @@ export type Database = {
         Args: { p_batch_size: number; p_job_id: string }
         Returns: number
       }
+      get_article_health_data: {
+        Args: never
+        Returns: {
+          category_slug: string
+          content_length: number
+          featured_image_url: string
+          id: string
+          inbound_count: number
+          meta_description: string
+          meta_title: string
+          middle_image_1_url: string
+          middle_image_2_url: string
+          outbound_count: number
+          primary_keyword: string
+          published_at: string
+          related_templates: string[]
+          secondary_keywords: string[]
+          slug: string
+          title: string
+        }[]
+      }
+      get_declining_queries: {
+        Args: { min_regression?: number }
+        Returns: {
+          current_clicks: number
+          current_impressions: number
+          current_position: number
+          page: string
+          position_delta: number
+          previous_position: number
+          query: string
+        }[]
+      }
       get_keyword_stats: {
         Args: never
         Returns: {
