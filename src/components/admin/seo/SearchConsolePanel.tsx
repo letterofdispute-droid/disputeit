@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, TrendingUp, AlertTriangle, Search, Zap, Target, Copy, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { RefreshCw, TrendingUp, AlertTriangle, Search, Zap, Target, Copy, ArrowUpRight, ArrowDownRight, Minus, TrendingDown } from 'lucide-react';
 
 interface GscRow {
   query: string;
@@ -153,6 +153,7 @@ export default function SearchConsolePanel() {
           <TabsTrigger value="opportunities"><Target className="h-4 w-4 mr-1" />Opportunities</TabsTrigger>
           <TabsTrigger value="quickwins"><Zap className="h-4 w-4 mr-1" />Quick Wins</TabsTrigger>
           <TabsTrigger value="warnings"><AlertTriangle className="h-4 w-4 mr-1" />Warnings</TabsTrigger>
+          <TabsTrigger value="declining"><TrendingDown className="h-4 w-4 mr-1" />Declining</TabsTrigger>
         </TabsList>
 
         {/* Queries Table */}
@@ -322,7 +323,72 @@ export default function SearchConsolePanel() {
             </Card>
           )}
         </TabsContent>
+
+        {/* Declining Queries */}
+        <TabsContent value="declining">
+          <DecliningQueriesTab />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function DecliningQueriesTab() {
+  const { data: declining, isLoading } = useQuery({
+    queryKey: ['gsc-declining'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_declining_queries', { min_regression: 3 });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        query: string; page: string; previous_position: number; current_position: number;
+        position_delta: number; current_impressions: number; current_clicks: number;
+      }>;
+    },
+  });
+
+  if (isLoading) return <Card><CardContent className="py-8 text-center text-muted-foreground">Loading declining queries...</CardContent></Card>;
+
+  if (!declining?.length) {
+    return <Card><CardContent className="py-8 text-center text-muted-foreground">No declining queries found (position regression &gt; 3 spots).</CardContent></Card>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-500" />Declining Queries</CardTitle>
+        <CardDescription>{declining.length} queries losing ranking position</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Query</TableHead>
+              <TableHead className="text-right">Before</TableHead>
+              <TableHead className="text-right">Now</TableHead>
+              <TableHead className="text-right">Δ</TableHead>
+              <TableHead className="text-right">Impressions</TableHead>
+              <TableHead className="hidden md:table-cell">Suggested Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {declining.slice(0, 30).map((row, i) => {
+              const action = row.position_delta > 10 ? 'Update content' : row.current_position > 20 ? 'Add internal links' : 'Improve meta tags';
+              return (
+                <TableRow key={i}>
+                  <TableCell className="font-medium max-w-[250px] truncate">{row.query}</TableCell>
+                  <TableCell className="text-right"><PositionBadge position={row.previous_position} /></TableCell>
+                  <TableCell className="text-right"><PositionBadge position={row.current_position} /></TableCell>
+                  <TableCell className="text-right text-red-500 font-medium">+{row.position_delta.toFixed(1)}</TableCell>
+                  <TableCell className="text-right">{row.current_impressions.toLocaleString()}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Badge variant="outline" className="text-xs">{action}</Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

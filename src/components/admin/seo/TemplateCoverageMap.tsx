@@ -28,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ClusterPlanner from './ClusterPlanner';
 import BulkPlanConfirmDialog from './BulkPlanConfirmDialog';
 import BulkPlanningProgress from './BulkPlanningProgress';
+import CustomCampaignDialog from './CustomCampaignDialog';
 
 interface CategoryGroup {
   id: string;
@@ -602,6 +603,7 @@ function KeywordCampaignsSection({
   templateSlugs: Set<string>;
   templateProgress: Record<string, { generated: number; total: number }> | undefined;
 }) {
+  const [campaignOpen, setCampaignOpen] = useState(false);
   const keywordPlans = useMemo(
     () => (plans || []).filter(p => !templateSlugs.has(p.template_slug)),
     [plans, templateSlugs]
@@ -618,47 +620,57 @@ function KeywordCampaignsSection({
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
   }, [keywordPlans]);
 
-  if (keywordPlans.length === 0) return null;
-
   return (
     <div className="space-y-3 mt-6">
-      <div className="flex items-center gap-2">
-        <Key className="h-5 w-5 text-purple-500" />
-        <h3 className="text-lg font-semibold">Keyword Campaigns</h3>
-        <Badge variant="secondary">{keywordPlans.length} plans</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Key className="h-5 w-5 text-purple-500" />
+          <h3 className="text-lg font-semibold">Keyword Campaigns</h3>
+          {keywordPlans.length > 0 && <Badge variant="secondary">{keywordPlans.length} plans</Badge>}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setCampaignOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> New Campaign
+        </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Content plans created from keyword imports (not tied to hardcoded templates).
-      </p>
-      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-        {grouped.map(([vertical, vpPlans]) => (
-          <div key={vertical} className="rounded-lg border bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-medium capitalize">{vertical}</span>
-              <Badge variant="outline">{vpPlans.length} topics</Badge>
-            </div>
-            <div className="space-y-2">
-              {vpPlans.map(plan => {
-                const progress = templateProgress?.[plan.template_slug];
-                const generated = progress?.generated || 0;
-                const total = progress?.total || plan.target_article_count;
-                const percent = total > 0 ? Math.round((generated / total) * 100) : 0;
+      {keywordPlans.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No keyword campaigns yet. Create one to plan custom content clusters.</p>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Content plans created from keyword imports (not tied to hardcoded templates).
+          </p>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+            {grouped.map(([vertical, vpPlans]) => (
+              <div key={vertical} className="rounded-lg border bg-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium capitalize">{vertical}</span>
+                  <Badge variant="outline">{vpPlans.length} topics</Badge>
+                </div>
+                <div className="space-y-2">
+                  {vpPlans.map(plan => {
+                    const progress = templateProgress?.[plan.template_slug];
+                    const generated = progress?.generated || 0;
+                    const total = progress?.total || plan.target_article_count;
+                    const percent = total > 0 ? Math.round((generated / total) * 100) : 0;
 
-                return (
-                  <div key={plan.id} className="flex items-center gap-3 pl-2">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-sm truncate flex-1">{plan.template_name}</span>
-                    <div className="flex items-center gap-2 w-32">
-                      <Progress value={percent} className="h-1.5" />
-                      <span className="text-xs text-muted-foreground w-10 shrink-0">{generated}/{total}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <div key={plan.id} className="flex items-center gap-3 pl-2">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-sm truncate flex-1">{plan.template_name}</span>
+                        <div className="flex items-center gap-2 w-32">
+                          <Progress value={percent} className="h-1.5" />
+                          <span className="text-xs text-muted-foreground w-10 shrink-0">{generated}/{total}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+      <CustomCampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} />
     </div>
   );
 }

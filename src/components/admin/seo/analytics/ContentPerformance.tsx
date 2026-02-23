@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, Eye, FileText, Link2 } from 'lucide-react';
 import { useSEOMetrics } from '@/hooks/useSEOMetrics';
 import GapAnalysis from './GapAnalysis';
+import ArticleHealthTable from './ArticleHealthTable';
 
 interface PostPerformance {
   id: string;
@@ -232,6 +233,9 @@ export default function ContentPerformance() {
           </div>
         </CardContent>
       </Card>
+      {/* Article Health */}
+      <ArticleHealthTable />
+
       {/* Gap Analysis */}
       <GapAnalysis />
     </div>

@@ -10,6 +10,7 @@ import CategoryTierSettings from '@/components/admin/seo/CategoryTierSettings';
 import KeywordManager from '@/components/admin/seo/KeywordManager';
 import TopicDiscovery from '@/components/admin/seo/TopicDiscovery';
 import SearchConsolePanel from '@/components/admin/seo/SearchConsolePanel';
+import ActivityFeed from '@/components/admin/seo/ActivityFeed';
 
 export default function SEODashboard() {
   return (
@@ -26,6 +27,9 @@ export default function SEODashboard() {
 
       {/* Stats Overview */}
       <CoverageStats />
+
+      {/* Activity Feed */}
+      <ActivityFeed />
 
       {/* Main Tabs */}
       <Tabs defaultValue="discover" className="space-y-4">
