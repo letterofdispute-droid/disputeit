@@ -1,78 +1,140 @@
 
 
-# Fix Link Restoration: Full-Scale Scan and Recovery
+# Google Search Console Integration for Data-Driven SEO Recommendations
 
-## Current Problems
+## Overview
 
-1. **Health check only scans 500 posts** -- the `batchSize: 500` in the UI sends a single request with no pagination. There are 5,780 published posts, so 91% are never checked.
-2. **Restore processes 50 posts at a time** calling `scan-for-semantic-links` per post individually -- extremely slow and impractical for 3,700+ affected posts.
-3. **Counter sync not run first** -- `outbound_count` in `article_embeddings` is stale, making the health check unreliable.
+Integrate the Google Search Console (GSC) API into the SEO Command Center to pull real search performance data (queries, clicks, impressions, CTR, position) and use AI to generate actionable recommendations. This turns the "Discover" tab from a content-gap guessing tool into a data-driven decision engine.
 
-### Actual damage (from database):
-- 973 posts have 0 internal links
-- 2,759 posts have 1-2 internal links
-- 2,048 posts have 3+ links (healthy)
-- ~3,732 posts need link restoration
+## How GSC Authentication Works
 
-## Solution
+Google Search Console API requires a **Google Cloud Service Account** with access to your GSC property. There is no built-in connector for GSC in the platform, so we handle it via a service account JSON key stored as a secret.
 
-### Step 1: Fix Health Check to Paginate Through ALL Posts
+**You will need to:**
+1. Create a Google Cloud project (or use an existing one)
+2. Enable the "Search Console API"
+3. Create a Service Account and download the JSON key
+4. Add the service account email as a user in your GSC property (read-only access is sufficient)
+5. Paste the JSON key content as a secret when prompted
 
-Update `restore-stripped-links` scan mode to auto-paginate through all posts (like the URL scanner already does), accumulating totals across batches.
+## What Gets Built
 
-Update the UI (`BrokenLinkScanner.tsx`) to loop through batches client-side with a progress bar, exactly like the URL scanner's `runScan` function already does.
+### 1. New Database Table: `gsc_performance_cache`
 
-### Step 2: Use Existing Bulk Semantic Scan for Restoration
+Stores daily GSC data snapshots so we don't hit API rate limits and can show trends over time.
 
-Instead of the slow per-post restore approach, leverage the **existing bulk semantic scan system** that already handles batching, self-chaining, and job tracking:
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | uuid | Primary key |
+| `query` | text | Search query from GSC |
+| `page` | text | Landing page URL |
+| `clicks` | integer | Total clicks |
+| `impressions` | integer | Total impressions |
+| `ctr` | float | Click-through rate |
+| `position` | float | Average position |
+| `date_range_start` | date | Start of data period |
+| `date_range_end` | date | End of data period |
+| `fetched_at` | timestamp | When data was pulled |
+| `country` | text | Country filter (optional) |
 
-1. First reconcile counters (sync `outbound_count` with actual content)
-2. Then trigger a full semantic scan (the existing "Scan All" button in the Links panel)
-3. Auto-approve high-relevance suggestions
-4. Apply links in bulk
+### 2. New Edge Function: `fetch-gsc-data`
 
-The restore function will be simplified to:
-- **Step 1**: Reconcile counters
-- **Step 2**: Reset `next_scan_due_at` for all low-link posts so the existing scan picks them up
-- **Step 3**: Trigger the existing bulk semantic scan job
+Connects to Google Search Console API using service account credentials:
+- Fetches top queries (by impressions) for the last 28 days
+- Fetches top pages performance
+- Fetches queries where the site ranks (positions 5-30) but has low CTR -- these are the "quick win" opportunities
+- Stores results in `gsc_performance_cache`
+- Supports filtering by country (default: US)
 
-### Step 3: Update UI for Full Workflow
+### 3. New Edge Function: `gsc-recommendations`
 
-The BrokenLinkScanner's Link Restoration section will:
-- Show a paginated health check with real progress (e.g., "2,100 of 5,780 checked")
-- Show accurate totals across all posts
-- "Restore" button will: reconcile counters, reset scan timestamps for affected posts, then redirect user to use the existing semantic scan pipeline
+AI-powered analysis that combines GSC data with existing site data:
+- Reads cached GSC data
+- Cross-references with existing `keyword_targets`, `content_plans`, and `blog_posts`
+- Identifies:
+  - **Uncovered queries**: Queries getting impressions but no dedicated content
+  - **Underperforming pages**: Pages with high impressions but low CTR (needs better titles/meta)
+  - **Position opportunities**: Queries at positions 8-20 that could move to page 1 with more content
+  - **Cannibalization**: Multiple pages competing for the same query
+- Returns structured recommendations with suggested actions
 
-## Technical Details
+### 4. New UI Tab: "Search Console" in SEO Dashboard
 
-### `supabase/functions/restore-stripped-links/index.ts`
+Added as a new tab alongside Discover, Coverage, Queue, etc.
 
-**Scan mode changes:**
-- Remove per-post content checking (too slow for 5,780 posts)
-- Instead, use `outbound_count` from `article_embeddings` directly (after reconcile)
-- Return paginated results with `{ count: 'exact' }` for accurate totals
+**Sections:**
+- **Query Performance Table**: Top queries with clicks, impressions, CTR, position, and trend indicators
+- **Opportunity Cards**: AI-generated recommendations grouped by action type (create content, optimize existing, build links)
+- **Coverage Gaps**: Queries where you rank but have no dedicated article -- with a one-click "Plan Article" button that creates a content queue item
+- **Quick Wins**: Pages with high impressions but low CTR where meta title/description improvements could drive immediate gains
+- **Fetch Controls**: Button to pull fresh GSC data, shows last fetch timestamp
 
-**Restore mode changes:**
-- Step 1: Call `reconcile_link_counts` RPC
-- Step 2: Reset `next_scan_due_at = null` for all posts with `outbound_count <= 2`
-- Step 3: Return count of affected posts -- user then triggers existing semantic scan from the Links panel
+### 5. Enhanced Topic Discovery
 
-### `src/components/admin/seo/BrokenLinkScanner.tsx`
+The existing "Discover" tab will optionally consume GSC data to make AI suggestions more accurate:
+- Instead of guessing what topics to cover, it can see which queries already bring impressions
+- The `suggest-content-topics` edge function will include GSC query data in its AI prompt when available
 
-**Health check changes:**
-- Loop through batches of 1,000 with progress tracking (like the URL scanner)
-- Show running totals as each batch completes
-- Display final count of all posts needing links
-
-**Restore button changes:**
-- Calls restore endpoint which reconciles + resets scan timestamps
-- Shows toast directing user to run "Scan All" from the Links panel
-- Or auto-triggers the semantic scan via `scan-for-semantic-links`
-
-## Files Modified
+## Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/restore-stripped-links/index.ts` | Simplify: reconcile counters, reset scan timestamps, use outbound_count directly instead of per-post content checking |
-| `src/components/admin/seo/BrokenLinkScanner.tsx` | Paginated health check with progress bar, streamlined restore that uses existing semantic scan pipeline |
+| Database migration | Create `gsc_performance_cache` table with RLS policies (admin-only) |
+| `supabase/functions/fetch-gsc-data/index.ts` | NEW: Fetches data from GSC API using service account, stores in cache table |
+| `supabase/functions/gsc-recommendations/index.ts` | NEW: AI analysis combining GSC data with existing site data |
+| `src/components/admin/seo/SearchConsolePanel.tsx` | NEW: Full GSC dashboard UI with query table, opportunity cards, and fetch controls |
+| `src/pages/admin/SEODashboard.tsx` | Add "Search Console" tab |
+| `supabase/functions/suggest-content-topics/index.ts` | Enhance to optionally include GSC query data in AI prompt |
+
+## Technical Details
+
+### GSC API Authentication (Service Account)
+
+The edge function will:
+1. Read the `GOOGLE_SERVICE_ACCOUNT_KEY` secret (JSON string)
+2. Generate a JWT signed with the service account private key
+3. Exchange it for an access token via Google's OAuth2 endpoint
+4. Call `POST https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query`
+
+### API Calls Made
+
+```text
+POST /searchAnalytics/query
+{
+  "startDate": "28 days ago",
+  "endDate": "today",
+  "dimensions": ["query", "page"],
+  "rowLimit": 1000,
+  "startRow": 0
+}
+```
+
+### AI Recommendation Prompt Structure
+
+The AI receives:
+- Top 200 GSC queries with metrics
+- List of existing blog post slugs and their categories
+- Existing keyword targets and their usage status
+- Content plan coverage data
+
+It returns structured JSON with:
+- Uncovered query opportunities (with suggested vertical, article type, keywords)
+- Optimization suggestions for existing pages
+- Cannibalization warnings
+
+### Rate Limiting and Caching
+
+- GSC data is cached in the database; fetching is manual (button click) or daily via cron
+- Cache expiry: 24 hours (configurable)
+- Google API quota: 1,200 queries/minute (more than enough)
+
+## Implementation Order
+
+1. Store the Google Service Account key as a secret
+2. Create the cache table
+3. Build `fetch-gsc-data` edge function
+4. Build `SearchConsolePanel.tsx` UI
+5. Build `gsc-recommendations` edge function
+6. Wire into SEO Dashboard as a new tab
+7. Enhance Topic Discovery with GSC data
 
