@@ -1,127 +1,119 @@
 
 
-# Plan: Three Full-Featured Interactive Tools for Small Claims Hub
+# CRO/UX Audit: Small Claims Hub -- Page Restructuring Plan
 
-## Overview
+## The Problem
 
-Build three production-quality interactive tools, each with comprehensive inputs, detailed results, and clear CTAs. All are 100% client-side using existing data from `smallClaimsData.ts`, `legalKnowledge.ts`, and `templateCategories.ts`.
+The current `/small-claims` page has **13 distinct H2 sections** and contains **3 different interactive tools**, **2 state lookup tools**, **7-step filing guide**, **6 winning tips**, **8 FAQ items**, and **multiple CTAs** -- all on a single page. This creates several serious issues:
 
----
+### UX Issues Identified
 
-## Tool 1: Small Claims Court Cost Calculator
+1. **Cognitive overload.** A user landing from search has a specific intent (e.g., "how much does small claims court cost in California?") but gets buried under 13+ sections. They bounce before finding their answer.
 
-**File:** `src/components/small-claims/CostCalculator.tsx`
+2. **Tool confusion.** The "Cost Breakdown" section (static cards showing $15-300, $20-75, etc.) and the "Cost Calculator" (interactive form) appear back-to-back and answer the same question. Users see the static answer first and may never scroll to the interactive tool.
 
-A full-featured calculator with three inputs and comprehensive results:
+3. **Demand letter messaging is scattered.** "Send a Demand Letter" appears as:
+   - A CTA in the "What Is Small Claims Court?" section
+   - Step 2 in "How to File"
+   - An entire standalone tool (DemandLetterCostCalculator)
+   - Step 2 in the Escalation Flowchart
+   - The bottom CTA
+   This repetition feels like a sales pitch rather than a guide.
 
-**Inputs:**
-- **State** (dropdown from all 51 entries in smallClaimsData)
-- **Type of Dispute** (10 options: Breach of Written Contract, Breach of Verbal Agreement, Property Damage, Personal Injury, Security Deposit, Defective Product, Unpaid Debt, Auto Repair, Contractor Dispute, Other)
-- **Claim Amount** (dollar input with formatting)
+4. **The Escalation Flowchart duplicates the Filing Steps.** Both are step-by-step paths that largely overlap (contact -> demand letter -> file). Users encounter what feels like the same content twice.
 
-**Results Panel (shown after clicking "Calculate My Costs"):**
-1. **Eligibility Banner** -- green if within filing limit, amber warning if over limit with explanation of options (reduce claim or file in higher court)
-2. **Cost Breakdown Grid** (4 cards): Filing Fee, Service of Process ($20-75), Total Estimated Cost, Time to Hearing
-3. **Detailed Info Card**: Court name, filing limit, lawyers allowed (yes/no with icons), appeals allowed, relevant statute of limitations (dynamically selected based on dispute type -- e.g. "Written Contract: 6 years" for a contract dispute in California)
-4. **State-specific notes** from `specialNotes` array
-5. **ROI Analysis**: Shows cost as percentage of claim value ("Your costs of $55-130 represent just 1.3% of the claim value -- that's a strong return")
-6. **Action Buttons**: View state filing guide, Send a demand letter first, Visit court website
+5. **Anchor links don't work reliably.** The hero promotes 5 anchor links, but `ScrollToTop` resets position on navigation, making hash links unreliable from external sources (MegaMenu, mobile nav).
 
-**Technical:** Uses `parseFeeRange()` to extract min/max from strings like "$30-$75". Maps dispute types to the correct `statuteOfLimitations` fields (e.g. "contractor" maps to both propertyDamage and writtenContract SOLs).
+6. **No clear user journey.** A first-time visitor has no guided path -- they're presented with a wall of tools and content with no prioritization.
 
 ---
 
-## Tool 2: Demand Letter Cost Comparison Calculator
+## The Solution: Split Into Focused Pages
 
-**File:** `src/components/small-claims/DemandLetterCostCalculator.tsx`
+Restructure the Small Claims hub into **one pillar page + three dedicated tool pages**, each with a single clear purpose and its own SEO value.
 
-An interactive comparison tool showing three resolution paths side by side:
-
-**Input:**
-- **Claim Amount** (dollar input) -- used to calculate lawyer costs as a percentage
-
-**Three-Column Comparison (always visible):**
-
-| | DIY (Write It Yourself) | Hire a Lawyer | Letter of Dispute |
-|---|---|---|---|
-| Cost | Free | $150-500/hr ($300-1,500 total) | From $9.99 |
-| Time | 2-4 hours research + writing | 1-2 weeks for appointment + drafting | Under 5 minutes |
-| Legal Citations | None (unless you research) | Yes, state-specific | Yes, AI-grounded in real statutes |
-| Success Rate | Low -- often ignored | High, but expensive | High -- professional formatting + citations |
-| State-Specific | Manual research required | Yes | Yes, auto-selected |
-| Customization | Full control | Attorney handles | Guided wizard, full editing |
-
-**Dynamic Savings Section (shows when claim amount entered):**
-- Visual bar chart showing: Lawyer cost vs. Letter of Dispute cost vs. claim amount
-- "Save up to $X by using Letter of Dispute instead of a lawyer" calculation
-- "A lawyer would cost X% of your claim -- we cost less than Y%"
-
-**Bottom CTA:** "Browse Demand Letter Templates" button linking to /templates
-
----
-
-## Tool 3: Complaint Escalation Flowchart
-
-**File:** `src/components/small-claims/EscalationFlowchart.tsx`
-
-An interactive, category-aware escalation path visualization:
-
-**Input:**
-- **Dispute Category** (dropdown from all 13 categories in `templateCategories.ts`: Refunds, Housing, Insurance, Vehicle, Financial, etc.)
-
-**Default State (before selection):**
-Shows a generic 5-step escalation path that applies to most disputes:
-1. Contact the Company Directly (attempt resolution)
-2. Send a Formal Demand Letter (create paper trail)
-3. File Regulatory Complaint (CFPB, FTC, State AG, etc.)
-4. File BBB / Consumer Agency Report
-5. File in Small Claims Court
-
-**After Category Selection:**
-Pulls the `escalationPaths` array from `legalKnowledge.ts` for the selected category and renders:
-- Each step as a numbered card with connecting vertical line/arrow
-- **Relevant agencies** with names, abbreviations, and complaint URLs (clickable)
-- **Key timeframes** (e.g., "Credit bureau investigation: 30 days per FCRA 1681i")
-- **Federal statutes** that protect the user (e.g., "Fair Credit Reporting Act, 15 U.S.C. 1681")
-- **Typical violations** to reference (helps users identify if their rights were violated)
-- A "Your Rights" sidebar badge listing consumer rights for that category
-
-**Each step card includes:**
-- Step number (1, 2, 3...)
-- Title (from escalationPaths)
-- Relevant timeframe if applicable
-- CTA link: "Browse [Category] Templates" or "File complaint at [agency URL]"
-
-**Visual Design:**
-- Vertical flowchart with CSS connector lines (border-left + pseudo-elements for circles/arrows)
-- Steps alternate subtle background colors for visual separation
-- Color-coded by severity: green (contact) -> amber (formal letter) -> orange (regulatory) -> red (court)
-- Each step has an icon: MessageSquare -> FileText -> Building -> Scale
-
----
-
-## Page Integration
-
-**File:** `src/pages/SmallClaimsPage.tsx`
-
-Insert the three new tools after the existing `CostBreakdown` section:
+### New Page Architecture
 
 ```text
-...
-CostBreakdown (existing -- general info)
-CostCalculator (NEW -- personalized calculator)
-DemandLetterCostCalculator (NEW -- cost comparison)
-EscalationFlowchart (NEW -- category-driven paths)
-Do You Need a Lawyer? (existing)
-...
+/small-claims                         (Pillar Guide -- educational content)
+/small-claims/cost-calculator         (Tool -- interactive cost estimator)  
+/small-claims/demand-letter-cost      (Tool -- cost comparison calculator)
+/small-claims/escalation-guide        (Tool -- category-driven flowchart)
+/small-claims/statement-generator     (existing -- unchanged)
+/small-claims/:state                  (existing -- unchanged)
 ```
 
-Import and add:
-```tsx
-import CostCalculator from '@/components/small-claims/CostCalculator';
-import DemandLetterCostCalculator from '@/components/small-claims/DemandLetterCostCalculator';
-import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
-```
+---
+
+### Page 1: `/small-claims` (Pillar Guide)
+
+**Purpose:** Answer "What is small claims court?" -- the educational hub.
+
+**Keeps:**
+- Hero (updated -- tool links become page links, not anchors)
+- "What Is Small Claims Court?" section
+- US Map (interactive)
+- State Lookup (dropdown)
+- "Do I Have a Case?" CTA
+- Filing Steps (7-step accordion)
+- Cost Breakdown (static cards -- the quick-reference overview)
+- "Do You Need a Lawyer?" section
+- "How to Win" tips
+- FAQ
+- Bottom CTA
+
+**Removes (moved to own pages):**
+- CostCalculator component
+- DemandLetterCostCalculator component
+- EscalationFlowchart component
+
+**Adds:**
+- A "Free Tools" card grid (3 cards) between Cost Breakdown and "Do You Need a Lawyer?" that links to the three tool pages. Each card shows the tool name, a one-line description, and a "Try It Free" button. This replaces the inline tools with clear navigation.
+
+---
+
+### Page 2: `/small-claims/cost-calculator`
+
+**Purpose:** "How much will my small claims case cost?" -- one focused tool.
+
+**Contains:**
+- SEO Head with targeted title: "Small Claims Court Cost Calculator -- Estimate Filing Fees by State"
+- Brief intro paragraph (2-3 sentences)
+- The full CostCalculator component (state + dispute type + amount)
+- After results: a "What's Next?" section with links to:
+  - "Send a Demand Letter First" (links to `/small-claims/demand-letter-cost`)
+  - "View Your State's Full Guide" (links to `/small-claims/:state`)
+  - "Back to Small Claims Guide" (links to `/small-claims`)
+
+---
+
+### Page 3: `/small-claims/demand-letter-cost`
+
+**Purpose:** "Should I write my own demand letter, hire a lawyer, or use a template?" -- one focused comparison.
+
+**Contains:**
+- SEO Head: "Demand Letter Cost Comparison -- DIY vs. Lawyer vs. Templates"
+- Brief intro explaining why a demand letter matters
+- The full DemandLetterCostCalculator component (3-column comparison + savings calculator)
+- After the tool: "What's Next?" section with links to:
+  - "Browse Letter Templates" (links to `/templates`)
+  - "Estimate Your Court Costs" (links to `/small-claims/cost-calculator`)
+  - "Not Sure What to Do? Follow the Escalation Guide" (links to `/small-claims/escalation-guide`)
+
+---
+
+### Page 4: `/small-claims/escalation-guide`
+
+**Purpose:** "What should I do step by step to resolve my dispute?" -- one focused flowchart.
+
+**Contains:**
+- SEO Head: "Complaint Escalation Guide -- Step-by-Step Dispute Resolution Path"
+- Brief intro explaining the escalation concept
+- The full EscalationFlowchart component (category selector + flowchart)
+- After the tool: "What's Next?" section with links to:
+  - "Estimate Court Costs" (links to `/small-claims/cost-calculator`)
+  - "Compare Demand Letter Options" (links to `/small-claims/demand-letter-cost`)
+  - "Take the Case Strength Quiz" (links to `/do-i-have-a-case`)
 
 ---
 
@@ -129,19 +121,56 @@ import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
 
 | File | Change |
 |------|--------|
-| `src/components/small-claims/CostCalculator.tsx` | New -- full interactive cost calculator with state/type/amount inputs |
-| `src/components/small-claims/DemandLetterCostCalculator.tsx` | New -- 3-column cost comparison with dynamic savings calculator |
-| `src/components/small-claims/EscalationFlowchart.tsx` | New -- category-driven escalation path with legal data |
-| `src/pages/SmallClaimsPage.tsx` | Import and place the three new components |
+| `src/pages/SmallClaimsPage.tsx` | Remove 3 tool imports; add "Free Tools" card grid linking to new pages |
+| `src/pages/SmallClaimsCostCalculatorPage.tsx` | **New** -- wrapper page for CostCalculator tool |
+| `src/pages/SmallClaimsDemandLetterPage.tsx` | **New** -- wrapper page for DemandLetterCostCalculator tool |
+| `src/pages/SmallClaimsEscalationPage.tsx` | **New** -- wrapper page for EscalationFlowchart tool |
+| `src/App.tsx` | Add 3 new routes before the `:state` wildcard |
+| `src/routes.ts` | Add 3 new static routes for SSG |
+| `src/components/layout/MegaMenu.tsx` | Update tool links from hash anchors to real page URLs |
+| `src/components/layout/Header.tsx` | Update mobile nav tool links from hash anchors to real page URLs |
 
 ---
 
-## Technical Notes
+## Technical Details
 
-- All three tools are 100% client-side -- no backend, no API calls, no edge functions
-- Data sources: `smallClaimsData.ts` (51 states + DC with fees, limits, SOLs, notes), `legalKnowledge.ts` (statutes, agencies, timeframes, escalation paths for 10+ categories), `templateCategories.ts` (13 categories)
-- Components use existing shadcn/ui primitives: Card, Select, Input, Badge, Button, Label
-- Results sections use `animate-fade-up` for smooth reveal
-- Fully responsive -- single column on mobile, grid layouts on desktop
-- Escalation flowchart uses CSS borders/pseudo-elements for connector lines (no charting library)
+### Route Order (Critical)
+
+The three new routes must be added **before** the `/small-claims/:state` wildcard route in `App.tsx` to prevent React Router from matching "cost-calculator" as a state slug:
+
+```tsx
+<Route path="/small-claims" element={<SmallClaimsPage />} />
+<Route path="/small-claims/cost-calculator" element={<SmallClaimsCostCalculatorPage />} />
+<Route path="/small-claims/demand-letter-cost" element={<SmallClaimsDemandLetterPage />} />
+<Route path="/small-claims/escalation-guide" element={<SmallClaimsEscalationPage />} />
+<Route path="/small-claims/statement-generator" element={<SmallClaimsGeneratorPage />} />
+<Route path="/small-claims/:state" element={<SmallClaimsStatePage />} />
+```
+
+### "Free Tools" Card Grid on Pillar Page
+
+Replaces the 3 inline tools with a clean navigation section:
+
+```text
++----------------------------+  +----------------------------+  +----------------------------+
+| Calculator icon            |  | DollarSign icon            |  | GitBranch icon             |
+|                            |  |                            |  |                            |
+| Court Cost Calculator      |  | Demand Letter Costs        |  | Escalation Guide           |
+| Estimate filing fees,      |  | Compare DIY vs. lawyer     |  | Step-by-step path from     |
+| service costs & ROI for    |  | vs. our templates.         |  | first contact to court.    |
+| your specific case.        |  |                            |  |                            |
+|                            |  |                            |  |                            |
+| [Try It Free ->]           |  | [Compare Options ->]       |  | [See the Steps ->]         |
++----------------------------+  +----------------------------+  +----------------------------+
+```
+
+### SEO Benefits
+
+- Each tool page gets its own `<title>`, `<meta description>`, canonical URL, and FAQ schema -- tripling the number of indexable, rankable pages.
+- The pillar page `/small-claims` becomes cleaner and faster (smaller JS bundle, less DOM), improving Core Web Vitals.
+- Internal linking between tools creates a strong topic cluster around "small claims court."
+
+### Navigation Updates
+
+MegaMenu and mobile nav links change from hash anchors (`/small-claims#cost-calculator`) to real routes (`/small-claims/cost-calculator`), which resolves the unreliable hash scrolling issue.
 
