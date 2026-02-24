@@ -2,6 +2,7 @@ import { allTemplates, getCategoryIdFromName } from './data/allTemplates';
 import { templateCategories } from './data/templateCategories';
 import { inferSubcategory, getSubcategoriesForCategory } from './data/subcategoryMappings';
 import { US_STATES, CATEGORY_LABELS, getStateSlug } from './data/stateSpecificLaws';
+import { smallClaimsData } from './data/smallClaimsData';
 
 // Build unique subcategory routes
 const getSubcategoryRoutes = (): string[] => {
@@ -60,6 +61,9 @@ export const routes = [
   '/deadlines',
   '/consumer-news',
   '/analyze-letter',
+  '/small-claims',
+  '/small-claims/statement-generator',
+  ...smallClaimsData.map(s => `/small-claims/${s.slug}`),
   ...templateCategories.map(c => `/guides/${c.id}`),
   ...templateCategories.map(c => `/templates/${c.id}`),
   ...getSubcategoryRoutes(),
