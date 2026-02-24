@@ -215,6 +215,27 @@ const Header = () => {
                           Small Claims Court Guide
                         </Link>
                         <Link 
+                          to="/small-claims#cost-calculator" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2 pl-3"
+                          onClick={() => setOpen(false)}
+                        >
+                          ↳ Court Cost Calculator
+                        </Link>
+                        <Link 
+                          to="/small-claims#demand-letter-cost" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2 pl-3"
+                          onClick={() => setOpen(false)}
+                        >
+                          ↳ Demand Letter Cost Compare
+                        </Link>
+                        <Link 
+                          to="/small-claims#escalation-flowchart" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2 pl-3"
+                          onClick={() => setOpen(false)}
+                        >
+                          ↳ Escalation Flowchart
+                        </Link>
+                        <Link 
                           to="/state-rights" 
                           className="text-sm text-muted-foreground hover:text-foreground py-2"
                           onClick={() => setOpen(false)}
