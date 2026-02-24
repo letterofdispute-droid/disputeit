@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import USMap from '@/components/small-claims/USMap';
 import StateLookup from '@/components/small-claims/StateLookup';
 import FilingSteps from '@/components/small-claims/FilingSteps';
 import CostBreakdown from '@/components/small-claims/CostBreakdown';
@@ -104,7 +105,10 @@ const SmallClaimsPage = () => {
         </div>
       </section>
 
-      {/* Interactive State Lookup */}
+      {/* Interactive US Map */}
+      <USMap />
+
+      {/* Interactive State Lookup (dropdown fallback) */}
       <StateLookup />
 
       {/* How to File Steps */}

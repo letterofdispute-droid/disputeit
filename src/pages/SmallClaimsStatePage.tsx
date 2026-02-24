@@ -254,6 +254,35 @@ const SmallClaimsStatePage = () => {
         </div>
       </section>
 
+      {/* Related Consumer Rights */}
+      <section className="py-12">
+        <div className="container-wide max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold font-serif text-foreground mb-6">
+            {stateData.name} Consumer Rights by Category
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Small claims cases often involve these dispute types. Learn your specific rights under {stateData.name} law:
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { slug: 'housing', icon: '🏠', label: 'Housing & Tenant' },
+              { slug: 'vehicle', icon: '🚗', label: 'Vehicle & Lemon Law' },
+              { slug: 'contractors', icon: '🔨', label: 'Contractors' },
+              { slug: 'financial', icon: '💳', label: 'Financial' },
+            ].map(cat => (
+              <Link
+                key={cat.slug}
+                to={`/state-rights/${stateData.slug}/${cat.slug}`}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/40 hover:shadow-md transition-all bg-card text-center group"
+              >
+                <span className="text-2xl">{cat.icon}</span>
+                <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">{cat.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-12 bg-primary text-primary-foreground">
         <div className="container-wide text-center max-w-2xl mx-auto">
