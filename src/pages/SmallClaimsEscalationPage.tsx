@@ -10,13 +10,18 @@ const SmallClaimsEscalationPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Complaint Escalation Guide — Step-by-Step Dispute Resolution Path"
+        title="Complaint Escalation Guide - Step-by-Step Dispute Resolution Path"
         description="Follow the proven escalation path from first contact to court filing. Select your dispute category to see specific agencies, statutes, and next steps."
         canonicalPath="/small-claims/escalation-guide"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },
           { name: 'Small Claims Court Guide', url: `${siteUrl}/small-claims` },
           { name: 'Escalation Guide', url: `${siteUrl}/small-claims/escalation-guide` },
+        ]}
+        faqItems={[
+          { question: 'What is the complaint escalation process?', answer: 'Escalation follows a structured path: direct contact with the company, written complaint, regulatory agency filing, mediation, and finally small claims court if all else fails.' },
+          { question: 'When should I file a complaint with a government agency?', answer: 'File with a regulatory agency after the company fails to respond to your written complaint within 14-30 days, or if the issue involves consumer fraud, safety violations, or unfair business practices.' },
+          { question: 'What is the difference between a complaint and a lawsuit?', answer: 'A complaint is an informal or regulatory filing that asks for resolution. A lawsuit is a formal legal action filed in court that results in a binding judgment.' },
         ]}
       />
 
@@ -31,7 +36,7 @@ const SmallClaimsEscalationPage = () => {
               Complaint Escalation Guide
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Not every dispute needs to go to court. Follow this step-by-step path to resolve your issue — starting with direct contact and escalating only when needed.
+              Not every dispute needs to go to court. Follow this step-by-step path to resolve your issue - starting with direct contact and escalating only when needed.
             </p>
           </div>
         </div>
@@ -39,6 +44,21 @@ const SmallClaimsEscalationPage = () => {
 
       {/* Tool */}
       <EscalationFlowchart />
+
+      {/* Educational Content */}
+      <section className="py-12">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto prose prose-slate">
+            <h2 className="text-2xl font-bold font-serif text-foreground">How Complaint Escalation Works</h2>
+            <p className="text-muted-foreground">
+              Most consumer disputes can be resolved without going to court. The key is following a structured escalation path that builds your case at each step. Start with a direct phone call or email to the company's customer service. If that fails, send a formal written complaint that documents the issue and your desired resolution.
+            </p>
+            <p className="text-muted-foreground">
+              If the company still doesn't respond, your next steps depend on the type of dispute. For financial issues, you can file with the CFPB or your state's banking regulator. For product safety, contact the CPSC. For general consumer fraud, your state attorney general's office is often the most effective resource. Each of these agencies can investigate and sometimes compel the company to act.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* What's Next */}
       <section className="py-16">

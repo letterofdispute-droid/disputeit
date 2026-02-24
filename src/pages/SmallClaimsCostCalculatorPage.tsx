@@ -11,13 +11,18 @@ const SmallClaimsCostCalculatorPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Small Claims Court Cost Calculator — Estimate Filing Fees by State"
+        title="Small Claims Court Cost Calculator - Estimate Filing Fees by State"
         description="Calculate your total small claims court costs including filing fees, service fees, and ROI. Free interactive tool with state-specific data for all 50 states."
         canonicalPath="/small-claims/cost-calculator"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },
           { name: 'Small Claims Court Guide', url: `${siteUrl}/small-claims` },
           { name: 'Cost Calculator', url: `${siteUrl}/small-claims/cost-calculator` },
+        ]}
+        faqItems={[
+          { question: 'How much does it cost to file in small claims court?', answer: 'Filing fees vary by state and claim amount, typically ranging from $30 to $200. Our calculator provides exact fees for your state and situation.' },
+          { question: 'Are there hidden fees in small claims court?', answer: 'Beyond filing fees, you may need to pay for service of process ($20-75), court copies, and potentially a small judgment recording fee. Our tool includes all common costs.' },
+          { question: 'Is it worth suing in small claims court for $500?', answer: 'It depends on your state\'s filing fees and the strength of your case. Use our ROI calculator to see whether the potential recovery justifies the costs.' },
         ]}
       />
 
@@ -40,6 +45,21 @@ const SmallClaimsCostCalculatorPage = () => {
 
       {/* Tool */}
       <CostCalculator />
+
+      {/* Educational Content */}
+      <section className="py-12">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto prose prose-slate">
+            <h2 className="text-2xl font-bold font-serif text-foreground">Understanding Small Claims Court Costs</h2>
+            <p className="text-muted-foreground">
+              Small claims court is designed to be affordable and accessible, but costs vary significantly by state. Filing fees typically range from $30 for small claims under $1,000 to over $200 for claims near the state maximum. In addition to the filing fee, you may need to pay for service of process, which can cost between $20 and $75 depending on whether you use the sheriff or a private process server.
+            </p>
+            <p className="text-muted-foreground">
+              Before filing, it's important to calculate whether the potential recovery justifies the costs. If your claim is for $300 and filing plus service fees total $100, you need to weigh the likelihood of winning and actually collecting the judgment. Our calculator factors in all these variables to give you a clear picture of your expected return.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* What's Next */}
       <section className="py-16">
