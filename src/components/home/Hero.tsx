@@ -11,11 +11,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const CATEGORY_CHIPS = [
-  { label: 'Refunds', href: '/letters/refunds' },
-  { label: 'Housing', href: '/letters/housing' },
-  { label: 'Insurance', href: '/letters/insurance' },
-  { label: 'Contractors', href: '/letters/contractors' },
-];
+{ label: 'Refunds', href: '/letters/refunds' },
+{ label: 'Housing', href: '/letters/housing' },
+{ label: 'Insurance', href: '/letters/insurance' },
+{ label: 'Contractors', href: '/letters/contractors' }];
+
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -25,29 +25,29 @@ const Hero = () => {
   const { data: successStats } = useQuery({
     queryKey: ['dispute-success-rate'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('dispute_outcomes')
-        .select('status');
+      const { data, error } = await supabase.
+      from('dispute_outcomes').
+      select('status');
       if (error) throw error;
       const total = data.length;
-      const resolved = data.filter(d => d.status === 'resolved').length;
-      const rate = total >= 10 ? Math.round((resolved / total) * 100) : null;
+      const resolved = data.filter((d) => d.status === 'resolved').length;
+      const rate = total >= 10 ? Math.round(resolved / total * 100) : null;
       return { total, resolved, rate };
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 10
   });
 
   // Total letters created
   const { data: letterCount } = useQuery({
     queryKey: ['total-letter-count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('letter_purchases')
-        .select('*', { count: 'exact', head: true });
+      const { count, error } = await supabase.
+      from('letter_purchases').
+      select('*', { count: 'exact', head: true });
       if (error) throw error;
       return count ?? 0;
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 10
   });
 
   const handleAssistantOpen = () => {
@@ -65,9 +65,9 @@ const Hero = () => {
     }
   };
 
-  const formattedLetterCount = letterCount && letterCount >= 100
-    ? `${Math.floor(letterCount / 1000)}K+`
-    : '12,000+';
+  const formattedLetterCount = letterCount && letterCount >= 100 ?
+  `${Math.floor(letterCount / 1000)}K+` :
+  '12,000+';
 
   return (
     <section className="relative overflow-hidden bg-background py-24 md:py-32 lg:py-36">
@@ -101,7 +101,7 @@ const Hero = () => {
 
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              Stop hitting a brick wall with landlords, insurers, and retailers. Our legally-vetted letter templates help you demand action and get the results you deserve — without the $300/hour lawyer.
+              Stop hitting a brick wall with landlords, insurers, and retailers. Our legally-vetted letter templates help you demand action and get the results you deserve; without the $300/hour lawyer.
             </p>
 
             {/* CTAs */}
@@ -117,13 +117,13 @@ const Hero = () => {
 
             {/* Category Chips */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-10 animate-fade-up" style={{ animationDelay: '0.25s' }}>
-              {CATEGORY_CHIPS.map(chip => (
-                <Link key={chip.label} to={chip.href}>
+              {CATEGORY_CHIPS.map((chip) =>
+              <Link key={chip.label} to={chip.href}>
                   <Badge variant="secondary" className="cursor-pointer hover:bg-accent/10 hover:text-accent transition-colors px-3 py-1 text-xs">
                     {chip.label}
                   </Badge>
                 </Link>
-              ))}
+              )}
             </div>
 
             {/* Trust Indicators */}
@@ -144,9 +144,9 @@ const Hero = () => {
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 flex-shrink-0 text-success" />
                 <span className="text-sm font-semibold text-success whitespace-nowrap">
-                  {successStats?.rate != null
-                    ? `${successStats.rate}% of tracked disputes resolved`
-                    : '550+ professional letter templates'}
+                  {successStats?.rate != null ?
+                  `${successStats.rate}% of tracked disputes resolved` :
+                  '550+ professional letter templates'}
                 </span>
               </div>
             </div>
@@ -203,10 +203,10 @@ const Hero = () => {
       {/* AI Assistant Modal */}
       <DisputeAssistantModal
         isOpen={isAssistantOpen}
-        onClose={() => { setIsAssistantOpen(false); setAutoStartVoice(false); }}
+        onClose={() => {setIsAssistantOpen(false);setAutoStartVoice(false);}}
         autoStartListening={autoStartVoice} />
-    </section>
-  );
+    </section>);
+
 };
 
 export default Hero;
