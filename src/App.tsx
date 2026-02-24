@@ -56,6 +56,7 @@ const CategoryGuidePage = lazy(() => import("./pages/CategoryGuidePage"));
 const SmallClaimsPage = lazy(() => import("./pages/SmallClaimsPage"));
 const SmallClaimsStatePage = lazy(() => import("./pages/SmallClaimsStatePage"));
 const SmallClaimsGeneratorPage = lazy(() => import("./pages/SmallClaimsGeneratorPage"));
+const CaseQuizPage = lazy(() => import("./pages/CaseQuizPage"));
 
 // Helper to retry dynamic imports on chunk load failure (stale cache)
 const lazyRetry = (importFn: () => Promise<any>) =>
@@ -147,6 +148,7 @@ const App = () => (
             <Route path="/small-claims" element={<SmallClaimsPage />} />
             <Route path="/small-claims/statement-generator" element={<SmallClaimsGeneratorPage />} />
             <Route path="/small-claims/:state" element={<SmallClaimsStatePage />} />
+            <Route path="/do-i-have-a-case" element={<CaseQuizPage />} />
             <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
             <Route path="/letters/:purchaseId/edit" element={<LetterEditorPage />} />
             

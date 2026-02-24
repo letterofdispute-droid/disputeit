@@ -63,6 +63,7 @@ export const routes = [
   '/analyze-letter',
   '/small-claims',
   '/small-claims/statement-generator',
+  '/do-i-have-a-case',
   ...smallClaimsData.map(s => `/small-claims/${s.slug}`),
   ...templateCategories.map(c => `/guides/${c.id}`),
   ...templateCategories.map(c => `/templates/${c.id}`),
