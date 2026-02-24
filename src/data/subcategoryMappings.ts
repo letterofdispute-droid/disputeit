@@ -54,11 +54,15 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /rail|train|bus|coach/, subcategory: { name: 'Rail & Bus', slug: 'rail-bus' } },
   ],
   'Employment': [
-    { pattern: /wage|pay|salary|overtime|commission|bonus|paycheck/, subcategory: { name: 'Wages & Pay', slug: 'wages' } },
+    { pattern: /wage|pay|salary|overtime|commission|bonus|paycheck|equal-pay/, subcategory: { name: 'Wages & Pay', slug: 'wages' } },
     { pattern: /terminat|fired|dismissal|wrongful|severance/, subcategory: { name: 'Termination', slug: 'termination' } },
-    { pattern: /discriminat|harassment|hostile|retaliation|whistleblower/, subcategory: { name: 'Discrimination', slug: 'discrimination' } },
+    { pattern: /sexual-harassment/, subcategory: { name: 'Sexual Harassment', slug: 'sexual-harassment' } },
+    { pattern: /mobbing/, subcategory: { name: 'Workplace Mobbing', slug: 'mobbing' } },
+    { pattern: /retaliation|fmla/, subcategory: { name: 'Retaliation & Leave', slug: 'retaliation' } },
+    { pattern: /hostile-work-environment/, subcategory: { name: 'Hostile Work Environment', slug: 'hostile-environment' } },
+    { pattern: /discriminat|harassment|racial|age-discrim|disability-harass|religious-discrim|lgbtq|pregnancy-discrim/, subcategory: { name: 'Discrimination', slug: 'discrimination' } },
     { pattern: /benefit|401k|health-insurance|pto|vacation|leave/, subcategory: { name: 'Benefits', slug: 'benefits' } },
-    { pattern: /workplace|safety|osha|condition|ergonomic/, subcategory: { name: 'Workplace Conditions', slug: 'workplace' } },
+    { pattern: /workplace|safety|osha|condition|ergonomic|bullying/, subcategory: { name: 'Workplace Conditions', slug: 'workplace' } },
   ],
   'Utilities & Telecom': [
     { pattern: /energy|gas|electric|power|utility-bill/, subcategory: { name: 'Energy', slug: 'energy' } },
