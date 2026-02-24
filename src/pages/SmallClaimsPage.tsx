@@ -118,6 +118,30 @@ const SmallClaimsPage = () => {
       {/* Interactive State Lookup (dropdown fallback) */}
       <StateLookup />
 
+      {/* Do I Have a Case? CTA */}
+      <section className="py-12">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-accent/5 border border-accent/20 rounded-xl p-8 flex flex-col sm:flex-row items-start gap-5">
+              <div className="p-3 rounded-xl bg-accent/10 flex-shrink-0">
+                <Scale className="h-7 w-7 text-accent" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold font-serif text-foreground mb-2">Not Sure If You Have a Case?</h3>
+                <p className="text-muted-foreground mb-4">
+                  Answer a few quick questions about your situation and we'll help you figure out whether small claims court is the right path — and what to do next.
+                </p>
+                <Button variant="accent" asChild>
+                  <Link to="/do-i-have-a-case">
+                    Take the Free Quiz <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How to File Steps */}
       <FilingSteps />
 
