@@ -1,0 +1,212 @@
+import Layout from '@/components/layout/Layout';
+import SEOHead from '@/components/SEOHead';
+import StateLookup from '@/components/small-claims/StateLookup';
+import FilingSteps from '@/components/small-claims/FilingSteps';
+import CostBreakdown from '@/components/small-claims/CostBreakdown';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Scale, FileText, Shield, ArrowRight, Gavel } from 'lucide-react';
+
+const faqItems = [
+  { question: 'What is small claims court?', answer: 'Small claims court is a special court where disputes are resolved quickly and inexpensively. The rules are simplified so that individuals can represent themselves without an attorney. Filing limits range from $2,500 to $25,000 depending on the state.' },
+  { question: 'How much can I sue for in small claims court?', answer: 'Filing limits vary by state — from $2,500 (Kentucky) to $25,000 (Delaware, Tennessee). Most states set the limit between $5,000 and $10,000. Use our state lookup tool above to find your state\'s exact limit.' },
+  { question: 'Do I need a lawyer for small claims court?', answer: 'In most cases, no. Small claims courts are designed for self-representation. In fact, many states (including California, Michigan, and Washington) don\'t allow lawyers at all. You present your case directly to the judge.' },
+  { question: 'How long does a small claims case take?', answer: 'From filing to hearing, most cases take 30–60 days. The hearing itself typically lasts 15–30 minutes. The judge usually issues a decision the same day or within a few weeks.' },
+  { question: 'What can I sue for in small claims court?', answer: 'Common small claims cases include: unpaid debts, security deposit disputes, property damage, breach of contract, defective products, auto repair disputes, landlord-tenant issues, and personal injury claims under the limit.' },
+  { question: 'Should I send a demand letter before filing?', answer: 'Yes — almost always. Many courts require you to show you attempted to resolve the dispute first. A formal demand letter often resolves the issue without court. It also strengthens your case if you do go to court.' },
+  { question: 'What happens if I win but the defendant doesn\'t pay?', answer: 'If the defendant doesn\'t voluntarily pay the judgment, you can use enforcement mechanisms: wage garnishment, bank levies, property liens, or having the sheriff seize assets. The court clerk can guide you through the collection process.' },
+  { question: 'Can I file small claims court online?', answer: 'Many states now offer e-filing for small claims, including New York, California, Utah, and Wisconsin. Check your state\'s court website or use our state lookup tool to find online filing options.' },
+];
+
+const SmallClaimsPage = () => {
+  const siteUrl = 'https://letterofdispute.com';
+
+  return (
+    <Layout>
+      <SEOHead
+        title="Small Claims Court: The Complete Guide (2026) — Filing Limits, Fees & Forms"
+        description="Everything you need to know about small claims court: state-by-state filing limits, fees, forms, and step-by-step instructions. Free interactive tools to help you file and win."
+        canonicalPath="/small-claims"
+        faqItems={faqItems}
+        breadcrumbs={[
+          { name: 'Home', url: `${siteUrl}/` },
+          { name: 'Small Claims Court Guide', url: `${siteUrl}/small-claims` },
+        ]}
+      />
+
+      {/* Hero */}
+      <section className="relative bg-[var(--gradient-hero)] text-primary-foreground py-20 md:py-28 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] bg-cover bg-center opacity-10" />
+        <div className="container-wide relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 text-sm font-medium">
+              <Gavel className="h-4 w-4" />
+              Free Interactive Guide — Updated for 2026
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-serif mb-6 leading-tight">
+              Small Claims Court: The Complete Guide
+            </h1>
+            <p className="text-xl md:text-2xl text-primary-foreground/80 mb-8 leading-relaxed">
+              File your case with confidence. State-by-state filing limits, fees, forms, and a step-by-step walkthrough — everything in one place.
+            </p>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button size="lg" variant="secondary" asChild>
+                <a href="#state-lookup">
+                  <Scale className="mr-2 h-5 w-5" /> Look Up Your State
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/30 text-primary-foreground hover:bg-white/10" asChild>
+                <Link to="/small-claims/statement-generator">
+                  <FileText className="mr-2 h-5 w-5" /> Free Statement Generator
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What is Small Claims Court */}
+      <section className="py-16">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold font-serif text-foreground mb-6">What Is Small Claims Court?</h2>
+            <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed space-y-4">
+              <p>
+                Small claims court is a special division of the court system designed to resolve disputes involving relatively small amounts of money — quickly, affordably, and without the need for an attorney. Every state has one, though the name, rules, and dollar limits vary.
+              </p>
+              <p>
+                Unlike regular civil court, small claims cases are heard by a judge (no jury), the rules of evidence are relaxed, and the entire process — from filing to hearing — typically takes just 30–60 days. Filing fees are minimal, usually between $15 and $100.
+              </p>
+              <p>
+                Common small claims cases include unpaid debts, security deposit disputes, property damage from a car accident, breach of contract, defective products, and disputes with contractors or landlords.
+              </p>
+            </div>
+
+            {/* CTA: Demand Letter */}
+            <div className="mt-10 bg-accent/5 border border-accent/20 rounded-xl p-6 flex flex-col sm:flex-row items-start gap-4">
+              <div className="p-3 rounded-xl bg-accent/10 flex-shrink-0">
+                <Shield className="h-6 w-6 text-accent" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground mb-1">Before You File: Send a Demand Letter</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Most courts require proof that you tried to resolve the dispute first. A professional demand letter often resolves the issue without needing to go to court — saving you time and money.
+                </p>
+                <Button variant="default" size="sm" asChild>
+                  <Link to="/templates">
+                    Browse Demand Letter Templates <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive State Lookup */}
+      <StateLookup />
+
+      {/* How to File Steps */}
+      <FilingSteps />
+
+      {/* Cost Breakdown */}
+      <CostBreakdown />
+
+      {/* Do You Need a Lawyer? */}
+      <section className="py-16">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold font-serif text-foreground mb-6">Do You Need a Lawyer for Small Claims Court?</h2>
+            <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed space-y-4">
+              <p>
+                <strong>Short answer: No.</strong> Small claims courts are specifically designed so that ordinary people can represent themselves. The procedures are simplified, the rules of evidence are relaxed, and judges are accustomed to hearing from non-lawyers.
+              </p>
+              <p>
+                In fact, many states — including California, Michigan, Washington, Kansas, Idaho, and Nebraska — don't allow lawyers at all in small claims hearings. Even in states where lawyers are permitted, most people choose to represent themselves.
+              </p>
+              <p>
+                The key to success isn't legal training — it's <strong>preparation</strong>. Bring organized evidence (contracts, photos, receipts, messages), be concise, and focus on the facts. The judge wants to hear what happened, what you're owed, and why.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How to Win */}
+      <section className="py-16 bg-secondary/30">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold font-serif text-foreground mb-6">How to Win in Small Claims Court</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                { title: 'Document Everything', desc: 'Contracts, receipts, photos, texts, and emails. The more evidence you have, the stronger your case.' },
+                { title: 'Send a Demand Letter', desc: 'Shows the judge you tried to resolve it first. Courts look favorably on plaintiffs who made good-faith efforts.' },
+                { title: 'Know Your State\'s Laws', desc: 'Reference specific consumer protection statutes when applicable. Our state guides can help you identify relevant laws.' },
+                { title: 'Be Professional & Concise', desc: 'Dress professionally, speak calmly, stick to the facts. Judges appreciate clear, organized presentations.' },
+                { title: 'Bring Witnesses', desc: 'If someone witnessed the incident, bring them to testify. Written statements (affidavits) can also be submitted.' },
+                { title: 'Practice Your Presentation', desc: 'You\'ll have 10–15 minutes. Practice telling your story chronologically: what happened, the harm, and what you want.' },
+              ].map((tip, i) => (
+                <div key={i} className="bg-card border border-border rounded-xl p-5">
+                  <h3 className="font-semibold text-foreground mb-2">{tip.title}</h3>
+                  <p className="text-sm text-muted-foreground">{tip.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-16">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold font-serif text-foreground mb-8 text-center">
+              Frequently Asked Questions
+            </h2>
+            <Accordion type="single" collapsible className="space-y-3">
+              {faqItems.map((faq, i) => (
+                <AccordionItem
+                  key={i}
+                  value={`faq-${i}`}
+                  className="border border-border rounded-xl px-5"
+                >
+                  <AccordionTrigger className="hover:no-underline py-4 text-left font-semibold text-foreground">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed pb-5">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="py-16 bg-primary text-primary-foreground">
+        <div className="container-wide text-center">
+          <h2 className="text-3xl font-bold font-serif mb-4">Ready to Take Action?</h2>
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+            Start with a professional demand letter. It often resolves disputes without needing court — and strengthens your case if you do file.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button size="lg" variant="secondary" asChild>
+              <Link to="/templates">
+                <FileText className="mr-2 h-5 w-5" /> Browse Letter Templates
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="border-white/30 text-primary-foreground hover:bg-white/10" asChild>
+              <Link to="/small-claims/statement-generator">
+                Free Statement Generator <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
+};
+
+export default SmallClaimsPage;
