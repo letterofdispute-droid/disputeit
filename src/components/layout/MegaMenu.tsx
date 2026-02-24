@@ -10,7 +10,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search } from 'lucide-react';
+import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
@@ -23,6 +23,7 @@ const resources = [
 ];
 
 const freeTools = [
+  { title: 'Do I Have a Case?', description: 'Free 2-min case strength quiz', href: '/do-i-have-a-case', icon: Scale },
   { title: 'Small Claims Court Guide', description: 'Filing limits, fees & forms by state', href: '/small-claims', icon: Search },
   { title: 'State Rights Lookup', description: 'Find laws for your state', href: '/state-rights', icon: MapPin },
   { title: 'Deadlines Calculator', description: 'See how long you have to act', href: '/deadlines', icon: Clock },
