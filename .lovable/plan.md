@@ -1,75 +1,106 @@
-# Update: Align Homepage FAQ, FAQ Page, and Legal Pages with Current Platform
 
-## Problem Summary
 
-Several content areas are out of sync with the platform's current offerings:
+# AI-Generated OG Images for All Pages
 
-1. **Homepage FAQ** (`src/components/home/FAQ.tsx`) has critical inaccuracies:
-  - Uses **EUR pricing** (EUR 9.99, EUR 19.99, EUR 29.99) instead of current USD pricing ($9.99 / $14.99) - this should be updated when admin change price in admin dadhboard
-  - References a "Final Notice" third tier that no longer exists
-  - Mentions "editable DOCX" downloads when the model is now "PDF + 30-day Edit Access"
-  - No mention of free tools (Small Claims, State Rights, Letter Analyzer, Deadlines)
-  - No mention of the AI Dispute Assistant
-2. **FAQ Page** (`src/pages/FAQPage.tsx`):
-  - Missing an entire "Free Tools" FAQ category (Cost Calculator, Demand Letter Costs, Escalation Guide, State Rights, Deadlines, Letter Analyzer)
-  - Pricing section references "$9.99 for PDF + Editable" but not the $5.99 PDF-only tier name. Prices need to match admin dashboard
-  - No mention of the AI Dispute Assistant guided intake flow
-  - "500+ templates" should be "550+"
-3. **Legal pages** (Terms, Privacy, Disclaimer, Cookie Policy): Already up-to-date - no changes needed. They already reference the AI Dispute Assistant, Free Tools, Dispute Tracker, and evidence uploads.
-4. **Homepage sections**: Hero, Pricing, HowItWorks - already current.
+## Current State
 
-## Changes
+- Blog articles already get unique AI-generated featured images via `generate-blog-image` edge function + Google Gemini
+- All other pages (40+) fall back to `/ld-logo.svg` which most social platforms don't even render
+- OG images need to be 1200x630 PNG/JPG for proper social sharing
 
-### File 1: `src/components/home/FAQ.tsx` (Homepage FAQ Section)
+## Strategy
 
-**Complete rewrite of the FAQ data array** to reflect current platform state:
+Rather than generating 800+ unique images (expensive, slow), we generate **~50 distinct OG images** covering every page type, then map pages to the appropriate image:
 
-- **Fix pricing**: Replace EUR amounts with current USD pricing ($5.99 PDF Only, $9.99 PDF + Edit Access, $5.99 edit unlock)
-- **Fix product model**: Replace "DOCX" references with "PDF + 30-day in-app editing" model
-- **Remove "Final Notice" tier** references (does not exist)
-- **Add FAQ about free tools**: "What free tools do you offer?" covering State Rights Lookup, Statute of Limitations Calculator, Small Claims Court Guide (with Cost Calculator, Demand Letter Costs, Escalation Guide), Letter Strength Analyzer, Consumer News Hub
-- **Add FAQ about AI Dispute Assistant**: "What is the AI Dispute Assistant?" explaining the guided intake flow
-- **Update "How quickly" FAQ**: Mention the AI assistant path as well as direct template browsing
-- **Fix currency in "Do I need to mail" FAQ**: Replace EUR 500 with $500
-- **Update template count**: 500+ to 550+
-- Trim total FAQs to ~10-12 most impactful (homepage should be concise)
+| Page Group | Count | Image Strategy |
+|------------|-------|----------------|
+| Homepage | 1 | Unique hero-style image |
+| Static pages (pricing, FAQ, about, contact, how-it-works, terms, privacy, disclaimer, cookie, deadlines, analyze-letter, consumer-news) | 12 | One unique image each |
+| Category pages (13 categories) | 13 | One per category (reused by subcategory + guide + template pages in same category) |
+| Small Claims hub + 3 tools | 4 | One each |
+| State Rights hub | 1 | One generic |
+| Do I Have a Case | 1 | One unique |
+| **Total AI generations** | **~32** | |
 
-### File 2: `src/pages/FAQPage.tsx` (Dedicated FAQ Page)
+Template pages, subcategory pages, guide pages, state pages, and state+category pages inherit their parent category's OG image. This is standard practice and keeps costs reasonable.
 
-**Add a "Free Tools" FAQ category** and update existing content:
+## Architecture
 
-- Add new category block (id: `free-tools`, icon: `Wrench` or `Calculator`):
-  - "What free tools do you offer?"
-  - "What is the Small Claims Court Guide?"
-  - "How does the State Consumer Rights Lookup work?"
-  - "What is the Letter Strength Analyzer?"
-- Add new category or entry for AI Dispute Assistant under "Getting Started":
-  - "What is the AI Dispute Assistant?"
-- **Fix pricing**: Update "Getting Started" and "Pricing" sections to match current $9.99 / $14.99 model - sync with admin dashboard
-- **Update template count**: 500+ to 550+
-- Fix "PDF + Editable ($14.99)" description to match current naming: "PDF + Edit Access"
+### 1. New Storage Bucket: `og-images`
+Store generated OG images with predictable filenames like `homepage.jpg`, `pricing.jpg`, `category-housing.jpg`, `small-claims-hub.jpg`.
 
-### File 3: `src/components/home/FAQ.tsx` - Schema Update
+### 2. New Edge Function: `generate-og-images`
+- Accepts a `pages` array (e.g., `[{ key: "homepage", title: "Letter of Dispute", description: "..." }]`)
+- Uses Google Gemini (same as `generate-blog-image`) with a prompt optimized for 1200x630 social sharing images
+- Uploads to `og-images` bucket with the key as filename
+- Can generate one at a time or batch (with rate limiting delays)
+- Returns the public URLs
 
-The FAQ schema (JSON-LD) auto-generates from the `faqs` array, so fixing the data fixes the schema automatically. No separate schema change needed.
+### 3. New Database Table: `og_images`
+Tracks which pages have generated OG images:
+- `id` (uuid, PK)
+- `page_key` (text, unique) - e.g., "homepage", "category-housing", "small-claims-cost-calculator"
+- `image_url` (text) - public storage URL
+- `prompt_used` (text) - for regeneration reference
+- `created_at` / `updated_at`
 
-## What Is NOT Changing
+### 4. Admin UI: "Generate OG Images" Button
+Add a card/section to the Admin SEO Dashboard with:
+- A "Generate All OG Images" button that triggers batch generation
+- Status showing which images exist and which are missing
+- Ability to regenerate individual images
 
-- **Terms of Service** - Already references AI Dispute Assistant, Free Tools, Dispute Tracker
-- **Privacy Policy** - Already covers AI intake data, Letter Analyzer, Dispute Tracker data retention
-- **Disclaimer** - Already covers AI Dispute Assistant, user responsibility for intake descriptions
-- **Cookie Policy** - Already current (no new cookies from free tools)
-- **Homepage Hero** - Already current (550+ templates, AI assistant CTA)
-- **Pricing component** - Already pulls from site settings ($5.99 / $9.99)
-- **HowItWorks** - Already current
+### 5. Frontend: `SEOHead` Update
+- Fetch OG images from the `og_images` table (cached via React Query)
+- Create a helper hook `useOgImage(pageKey)` that returns the URL
+- Each page passes its `pageKey` to determine which OG image to use
+- Fallback chain: specific page image → category image → default image → logo SVG
+
+### 6. Page Key Mapping Logic
+```
+/ → "homepage"
+/pricing → "pricing"
+/faq → "faq"
+/templates/housing → "category-housing"
+/templates/housing/repairs → "category-housing" (inherits)
+/templates/housing/repairs/some-template → "category-housing" (inherits)
+/guides/housing → "category-housing" (inherits)
+/small-claims → "small-claims-hub"
+/small-claims/cost-calculator → "small-claims-cost-calculator"
+/state-rights → "state-rights"
+/state-rights/california → "state-rights" (inherits)
+/articles/consumer-rights/some-slug → uses featured_image_url (existing)
+```
+
+## Prompt Design
+
+The prompts will request photorealistic 1200x630 images with:
+- No text overlays (text gets added by social platforms from og:title)
+- Professional stock-photo quality
+- Topic-relevant imagery (e.g., housing → apartment/keys, vehicle → car/mechanic)
+- Clean composition with space for platform overlays
+- Consumer rights / legal advice theme
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/functions/generate-og-images/index.ts` | New edge function for batch OG image generation |
+| `supabase/config.toml` | Add function config |
+| Migration | Create `og_images` table + `og-images` storage bucket |
+| `src/hooks/useOgImage.ts` | New hook to fetch OG image URL by page key |
+| `src/components/SEOHead.tsx` | Integrate `useOgImage` for automatic OG image resolution |
+| `src/pages/admin/SEODashboard.tsx` | Add OG image management section |
+| All page files | Add `pageKey` prop or derive from `canonicalPath` (can be automatic) |
+
+## Cost Estimate
+
+~32 Gemini image generations at ~$0.02 each = ~$0.64 total. Regeneration on demand.
 
 ## Technical Details
 
+- Images stored as JPG (smaller than PNG for photos) at 1200x630
+- The `SEOHead` component can auto-derive the page key from `canonicalPath` so most pages need zero changes
+- OG images are cached indefinitely in storage (no expiry)
+- The hook uses a single query to fetch all OG images (small table, <50 rows) and caches client-side
 
-| File                          | Type of Change                                                                                                                                |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/components/home/FAQ.tsx` | Rewrite `faqs` array (~12 items), fix pricing/product model, add free tools + AI assistant FAQs                                               |
-| `src/pages/FAQPage.tsx`       | Add "Free Tools" category (~4 FAQs), add AI assistant FAQ to Getting Started, fix pricing references, update template count from 500+ to 550+ |
-
-
-No new dependencies. No database changes. No edge function changes.
