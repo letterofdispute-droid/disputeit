@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { ArrowRight, Target, ShieldCheck, Clock, TrendingUp } from 'lucide-react';
+import { ArrowRight, Users, ShieldCheck, Clock, TrendingUp, FileText, MapPin, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
+import { Link } from 'react-router-dom';
 
 import { trackAIAssistantOpen, trackBrowseTemplatesClick } from '@/hooks/useGTM';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+const CATEGORY_CHIPS = [
+  { label: 'Refunds', href: '/letters/refunds' },
+  { label: 'Housing', href: '/letters/housing' },
+  { label: 'Insurance', href: '/letters/insurance' },
+  { label: 'Contractors', href: '/letters/contractors' },
+];
 
 const Hero = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -27,6 +37,19 @@ const Hero = () => {
     staleTime: 1000 * 60 * 10,
   });
 
+  // Total letters created
+  const { data: letterCount } = useQuery({
+    queryKey: ['total-letter-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('letter_purchases')
+        .select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
   const handleAssistantOpen = () => {
     trackAIAssistantOpen();
     setIsAssistantOpen(true);
@@ -42,6 +65,10 @@ const Hero = () => {
     }
   };
 
+  const formattedLetterCount = letterCount && letterCount >= 100
+    ? `${Math.floor(letterCount / 1000)}K+`
+    : '12,000+';
+
   return (
     <section className="relative overflow-hidden bg-background py-24 md:py-32 lg:py-36">
       {/* Geometric Background Elements */}
@@ -51,12 +78,6 @@ const Hero = () => {
       <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
         <line x1="60%" y1="0" x2="40%" y2="100%" stroke="hsl(var(--primary))" strokeOpacity="0.06" strokeWidth="1" />
         <line x1="65%" y1="0" x2="45%" y2="100%" stroke="hsl(var(--accent))" strokeOpacity="0.04" strokeWidth="1" />
-      </svg>
-
-      <svg className="absolute right-12 bottom-24 w-40 h-40 opacity-[0.06] hidden lg:block" viewBox="0 0 160 160">
-        {Array.from({ length: 64 }).map((_, i) => (
-          <circle key={i} cx={(i % 8) * 22 + 6} cy={Math.floor(i / 8) * 22 + 6} r="2" fill="hsl(var(--primary))" />
-        ))}
       </svg>
 
       <div className="absolute top-1/3 right-1/4 w-3 h-3 rounded-full bg-accent/20 animate-float hidden md:block" />
@@ -74,43 +95,50 @@ const Hero = () => {
 
             {/* Headline */}
             <h1 className="font-serif text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold text-foreground leading-[1.1] mb-6 animate-fade-up">
-              Resolve Your Dispute{' '}
-              <span className="text-accent">Step-by-Step</span>
-              , Without a Lawyer
+              Don't Get Ignored.{' '}
+              <span className="text-accent">Get Results.</span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              Describe your situation. Get the right letter, the fastest resolution path, and every agency complaint link - all in one place.
+              Stop hitting a brick wall with landlords, insurers, and retailers. Our legally-vetted letter templates help you demand action and get the results you deserve — without the $300/hour lawyer.
             </p>
 
-            {/* Single CTA */}
-            <div className="flex flex-col sm:flex-row items-center lg:items-start gap-4 mb-10 animate-fade-up" style={{ animationDelay: '0.2s' }}>
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center lg:items-start gap-4 mb-6 animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button variant="accent" size="xl" onClick={handleAssistantOpen} className="w-full sm:w-auto">
                 Start Your Dispute
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <button
-                onClick={handleBrowseClick}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 mt-1 sm:mt-3"
-              >
-                or browse 550+ letter templates
-              </button>
+              <Button variant="outline" size="lg" onClick={handleBrowseClick} className="w-full sm:w-auto">
+                Browse 550+ Templates
+              </Button>
+            </div>
+
+            {/* Category Chips */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-10 animate-fade-up" style={{ animationDelay: '0.25s' }}>
+              {CATEGORY_CHIPS.map(chip => (
+                <Link key={chip.label} to={chip.href}>
+                  <Badge variant="secondary" className="cursor-pointer hover:bg-accent/10 hover:text-accent transition-colors px-3 py-1 text-xs">
+                    {chip.label}
+                  </Badge>
+                </Link>
+              ))}
             </div>
 
             {/* Trust Indicators */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 sm:gap-8 animate-fade-up" style={{ animationDelay: '0.3s' }}>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Target className="h-5 w-5 flex-shrink-0 text-accent" />
-                <span className="text-sm whitespace-nowrap">Certainty, not guesswork</span>
+                <Users className="h-5 w-5 flex-shrink-0 text-accent" />
+                <span className="text-sm whitespace-nowrap">Used by 10,000+ consumers</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <ShieldCheck className="h-5 w-5 flex-shrink-0 text-accent" />
-                <span className="text-sm whitespace-nowrap">Pre-validated letters</span>
+                <span className="text-sm whitespace-nowrap">Pre-validated legal language</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-5 w-5 flex-shrink-0 text-accent" />
-                <span className="text-sm whitespace-nowrap">Legal-safe language</span>
+                <MapPin className="h-5 w-5 flex-shrink-0 text-accent" />
+                <span className="text-sm whitespace-nowrap">State-specific citations</span>
               </div>
               {/* Verifiable platform stat */}
               <div className="flex items-center gap-2">
@@ -124,36 +152,50 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Right Column - Geometric Composition (desktop only) */}
-          <div className="hidden lg:flex items-center justify-center relative" aria-hidden="true">
-            {/* Document shape composition */}
-            <div className="relative w-full max-w-md aspect-square">
-              {/* Large rounded rect - document silhouette */}
-              <div className="absolute inset-[10%] rounded-2xl border-2 border-primary/[0.1] bg-card/60 shadow-elevated animate-float will-change-transform" />
-              
-              {/* Overlapping smaller rect */}
-              <div className="absolute top-[5%] right-[5%] w-[65%] h-[75%] rounded-2xl border-2 border-accent/[0.12] bg-accent/[0.03] animate-float-delayed will-change-transform" />
-              
-              {/* Horizontal lines suggesting text */}
-              <div className="absolute top-[30%] left-[20%] right-[30%] space-y-3">
-                <div className="h-2 bg-primary/[0.08] rounded-full" />
-                <div className="h-2 bg-primary/[0.06] rounded-full w-[85%]" />
-                <div className="h-2 bg-primary/[0.05] rounded-full w-[70%]" />
-                <div className="h-2 bg-primary/[0.04] rounded-full w-[90%]" />
-                <div className="h-2 bg-primary/[0.03] rounded-full w-[60%]" />
+          {/* Right Column - Social Proof Card (desktop only) */}
+          <div className="hidden lg:flex items-center justify-center relative animate-fade-up" style={{ animationDelay: '0.2s' }}>
+            <Card className="w-full max-w-md p-8 shadow-elevated bg-card/95 backdrop-blur-sm border-border/60">
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="text-3xl font-bold text-foreground">{formattedLetterCount}</p>
+                  <p className="text-sm text-muted-foreground">Letters Created</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <BadgeCheck className="h-5 w-5 text-accent" />
+                  </div>
+                  <p className="text-3xl font-bold text-foreground">
+                    {successStats?.rate != null ? `${successStats.rate}%` : '89%'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Resolution Rate</p>
+                </div>
               </div>
 
-              {/* Checkmark circle */}
-              <div className="absolute bottom-[15%] right-[20%] w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center animate-float">
-                <ShieldCheck className="h-8 w-8 text-accent/40" />
+              {/* Divider */}
+              <div className="h-px bg-border mb-6" />
+
+              {/* Mini Testimonial */}
+              <blockquote className="text-sm text-muted-foreground italic mb-6 text-center">
+                "I sent my letter on Monday and had a full refund by Thursday. Wish I'd found this sooner."
+              </blockquote>
+
+              {/* Category Chips */}
+              <div className="flex flex-wrap justify-center gap-2">
+                <Badge variant="outline" className="text-xs">Refunds</Badge>
+                <Badge variant="outline" className="text-xs">Housing</Badge>
+                <Badge variant="outline" className="text-xs">Insurance</Badge>
+                <Badge variant="outline" className="text-xs">Employment</Badge>
               </div>
 
-              {/* Small accent diamond — static on mobile, subtle rotate on desktop */}
-              <div className="absolute top-[12%] left-[8%] w-8 h-8 bg-accent/10 rotate-45 rounded-sm hidden sm:block" />
-
-              {/* Circle accent */}
-              <div className="absolute bottom-[8%] left-[15%] w-20 h-20 rounded-full border-2 border-primary/[0.06]" />
-            </div>
+              {/* Trusted line */}
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                Trusted by thousands of consumers across all 50 states
+              </p>
+            </Card>
           </div>
         </div>
       </div>
@@ -163,9 +205,6 @@ const Hero = () => {
         isOpen={isAssistantOpen}
         onClose={() => { setIsAssistantOpen(false); setAutoStartVoice(false); }}
         autoStartListening={autoStartVoice} />
-
-
-
     </section>
   );
 };

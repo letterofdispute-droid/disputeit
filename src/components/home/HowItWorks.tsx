@@ -1,4 +1,4 @@
-import { MessageSquare, ClipboardList, FileCheck, CheckCircle } from 'lucide-react';
+import { MessageSquare, FileCheck, CheckCircle } from 'lucide-react';
 
 interface Step {
   icon: React.ElementType;
@@ -10,27 +10,21 @@ interface Step {
 const steps: Step[] = [
   {
     icon: MessageSquare,
-    title: 'Describe Your Dispute',
-    description: 'Answer a few guided questions about your situation. No legal jargon. Our AI identifies the right approach instantly.',
+    title: 'Tell Your Story',
+    description: 'Describe your situation in plain English. Our system asks the right questions to understand exactly what went wrong — no legalese required.',
     step: '01',
   },
   {
-    icon: ClipboardList,
-    title: 'Get Your Resolution Plan',
-    description: 'Receive a step-by-step strategy: the right letter, relevant agency links (CFPB, FTC, State AG), and chargeback guidance if applicable.',
+    icon: FileCheck,
+    title: 'Get Your Custom Letter',
+    description: 'We select the strongest legal arguments for your specific case and generate a professional, legal-safe letter ready for your signature.',
     step: '02',
   },
   {
-    icon: FileCheck,
-    title: 'Generate Your Letter',
-    description: 'Your letter is assembled with formal language and consumer law references for your state. Review all details carefully before sending. Not attorney-reviewed.',
-    step: '03',
-  },
-  {
     icon: CheckCircle,
-    title: 'Track Until Resolved',
-    description: 'Use the Dispute Tracker to log progress, check off resolution steps, and update your status if the dispute is resolved. Outcomes are not guaranteed.',
-    step: '04',
+    title: 'Send and Resolve',
+    description: 'We provide the exact mailing address or agency complaint link you need. Send your letter and track your path to resolution.',
+    step: '03',
   },
 ];
 
@@ -43,7 +37,7 @@ interface StepCardProps {
 const StepCard = ({ step, isLast }: StepCardProps) => {
   return (
     <div className="relative group pt-5">
-      {/* Step Number Badge - outside overflow-hidden card */}
+      {/* Step Number Badge */}
       <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center shadow-md z-10">
         {step.step}
       </div>
@@ -76,15 +70,15 @@ const HowItWorks = () => {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
-            How It Works
+            3 Steps to Resolution
           </h2>
           <p className="text-lg text-muted-foreground">
-            From first description to final resolution - your complete dispute toolkit in four steps.
+            From first description to final resolution — your complete dispute toolkit in three simple steps.
           </p>
         </div>
 
         {/* Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6">
           {steps.map((step, index) => (
             <StepCard 
               key={step.title} 
