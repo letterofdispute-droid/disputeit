@@ -4,13 +4,10 @@ import USMap from '@/components/small-claims/USMap';
 import StateLookup from '@/components/small-claims/StateLookup';
 import FilingSteps from '@/components/small-claims/FilingSteps';
 import CostBreakdown from '@/components/small-claims/CostBreakdown';
-import CostCalculator from '@/components/small-claims/CostCalculator';
-import DemandLetterCostCalculator from '@/components/small-claims/DemandLetterCostCalculator';
-import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Scale, FileText, Shield, ArrowRight, Gavel } from 'lucide-react';
+import { Scale, FileText, Shield, ArrowRight, Gavel, Calculator, DollarSign, GitBranch } from 'lucide-react';
 
 const faqItems = [
   { question: 'What is small claims court?', answer: 'Small claims court is a special court where disputes are resolved quickly and inexpensively. The rules are simplified so that individuals can represent themselves without an attorney. Filing limits range from $2,500 to $25,000 depending on the state.' },
@@ -63,19 +60,19 @@ const SmallClaimsPage = () => {
             </p>
             <div className="flex flex-wrap gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button size="lg" variant="accent" asChild>
-                <a href="#cost-calculator">
+                <Link to="/small-claims/cost-calculator">
                   <Scale className="mr-2 h-5 w-5" /> Cost Calculator
-                </a>
+                </Link>
               </Button>
               <Button size="lg" variant="heroOutline" asChild>
-                <a href="#demand-letter-cost">
+                <Link to="/small-claims/demand-letter-cost">
                   <FileText className="mr-2 h-5 w-5" /> Demand Letter Costs
-                </a>
+                </Link>
               </Button>
               <Button size="lg" variant="heroOutline" asChild>
-                <a href="#escalation-flowchart">
+                <Link to="/small-claims/escalation-guide">
                   <Gavel className="mr-2 h-5 w-5" /> Escalation Guide
-                </a>
+                </Link>
               </Button>
             </div>
             <div className="flex flex-wrap gap-3 justify-center mt-4 animate-fade-up" style={{ animationDelay: '0.3s' }}>
@@ -169,14 +166,47 @@ const SmallClaimsPage = () => {
       {/* Cost Breakdown */}
       <CostBreakdown />
 
-      {/* Interactive Cost Calculator */}
-      <CostCalculator />
-
-      {/* Demand Letter Cost Comparison */}
-      <DemandLetterCostCalculator />
-
-      {/* Escalation Flowchart */}
-      <EscalationFlowchart />
+      {/* Free Tools Grid */}
+      <section className="py-16">
+        <div className="container-wide">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold font-serif text-foreground mb-2 text-center">Free Interactive Tools</h2>
+            <p className="text-muted-foreground text-center mb-8">Deep-dive into the numbers with our free calculators and guides.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <Link to="/small-claims/cost-calculator" className="group bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all hover:border-primary/30">
+                <div className="p-3 rounded-xl bg-primary/8 w-fit mb-4">
+                  <Calculator className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Court Cost Calculator</h3>
+                <p className="text-sm text-muted-foreground mb-4">Estimate filing fees, service costs & ROI for your specific case.</p>
+                <span className="text-sm font-medium text-primary flex items-center gap-1">
+                  Try It Free <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+              <Link to="/small-claims/demand-letter-cost" className="group bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all hover:border-primary/30">
+                <div className="p-3 rounded-xl bg-primary/8 w-fit mb-4">
+                  <DollarSign className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Demand Letter Costs</h3>
+                <p className="text-sm text-muted-foreground mb-4">Compare DIY vs. lawyer vs. our templates.</p>
+                <span className="text-sm font-medium text-primary flex items-center gap-1">
+                  Compare Options <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+              <Link to="/small-claims/escalation-guide" className="group bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all hover:border-primary/30">
+                <div className="p-3 rounded-xl bg-primary/8 w-fit mb-4">
+                  <GitBranch className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Escalation Guide</h3>
+                <p className="text-sm text-muted-foreground mb-4">Step-by-step path from first contact to court.</p>
+                <span className="text-sm font-medium text-primary flex items-center gap-1">
+                  See the Steps <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Do You Need a Lawyer? */}
       <section className="py-16">
