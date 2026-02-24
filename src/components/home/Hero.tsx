@@ -100,8 +100,8 @@ const Hero = () => {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              Stop hitting a brick wall with landlords, insurers, and retailers. Our legally-vetted letter templates help you demand action and get the results you deserve; without the $300/hour lawyer.
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>Stop hitting a brick wall with landlords, insurers, and retailers. Our law-referenced letter templates help you demand action and get the results you deserve; without the $300/hour lawyer.
+
             </p>
 
             {/* CTAs */}
