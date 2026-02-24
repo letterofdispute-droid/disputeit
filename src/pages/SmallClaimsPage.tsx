@@ -4,6 +4,9 @@ import USMap from '@/components/small-claims/USMap';
 import StateLookup from '@/components/small-claims/StateLookup';
 import FilingSteps from '@/components/small-claims/FilingSteps';
 import CostBreakdown from '@/components/small-claims/CostBreakdown';
+import CostCalculator from '@/components/small-claims/CostCalculator';
+import DemandLetterCostCalculator from '@/components/small-claims/DemandLetterCostCalculator';
+import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -146,7 +149,17 @@ const SmallClaimsPage = () => {
       <FilingSteps />
 
       {/* Cost Breakdown */}
+      {/* Cost Breakdown */}
       <CostBreakdown />
+
+      {/* Interactive Cost Calculator */}
+      <CostCalculator />
+
+      {/* Demand Letter Cost Comparison */}
+      <DemandLetterCostCalculator />
+
+      {/* Escalation Flowchart */}
+      <EscalationFlowchart />
 
       {/* Do You Need a Lawyer? */}
       <section className="py-16">
