@@ -223,9 +223,9 @@ serve(async (req) => {
         results.push({ key, url: publicUrl });
         console.log(`[OG] ✅ ${key} → ${publicUrl}`);
 
-        // Rate limit delay between generations (2 seconds)
+        // Rate limit delay between generations (1 second)
         if (pageKeys.indexOf(key) < pageKeys.length - 1) {
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise(r => setTimeout(r, 1000));
         }
       } catch (err) {
         console.error(`[OG] Error generating ${key}:`, err);
