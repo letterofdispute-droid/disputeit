@@ -7,7 +7,7 @@ import CostBreakdown from '@/components/small-claims/CostBreakdown';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Scale, FileText, Shield, ArrowRight, Gavel, Calculator, DollarSign, GitBranch } from 'lucide-react';
+import { Scale, FileText, Shield, ArrowRight, Gavel, Calculator, DollarSign, GitBranch, ChevronDown } from 'lucide-react';
 
 const faqItems = [
   { question: 'What is small claims court?', answer: 'Small claims court is a special court where disputes are resolved quickly and inexpensively. The rules are simplified so that individuals can represent themselves without an attorney. Filing limits range from $2,500 to $25,000 depending on the state.' },
@@ -70,12 +70,18 @@ const SmallClaimsPage = () => {
                 </a>
               </Button>
             </div>
+
+            {/* Scroll indicator */}
+            <a href="#what-is" className="mt-10 inline-flex flex-col items-center gap-1 text-white/50 hover:text-white/80 transition-colors animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <span className="text-xs font-medium tracking-wide uppercase">Learn more</span>
+              <ChevronDown className="h-5 w-5 animate-bounce" />
+            </a>
           </div>
         </div>
       </section>
 
       {/* What is Small Claims Court */}
-      <section className="py-16">
+      <section id="what-is" className="py-16">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl font-bold font-serif text-foreground mb-6">What Is Small Claims Court?</h2>
