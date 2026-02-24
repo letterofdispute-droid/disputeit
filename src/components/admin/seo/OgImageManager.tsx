@@ -20,6 +20,7 @@ const ALL_PAGE_KEYS = [
 export default function OgImageManager() {
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState('');
   const [regeneratingKey, setRegeneratingKey] = useState<string | null>(null);
 
   const { data: ogImages, isLoading } = useQuery({
@@ -32,6 +33,7 @@ export default function OgImageManager() {
       if (error) throw error;
       return data as Array<{ id: string; page_key: string; image_url: string; prompt_used: string; created_at: string; updated_at: string }>;
     },
+    refetchInterval: isGenerating ? 5000 : false,
   });
 
   const existingKeys = new Set(ogImages?.map(i => i.page_key) || []);
@@ -40,19 +42,43 @@ export default function OgImageManager() {
   const totalCount = ALL_PAGE_KEYS.length;
 
   const generateAll = async () => {
+    const keysToGenerate = missingKeys.length > 0 ? missingKeys : ALL_PAGE_KEYS;
+    const isRegenerate = missingKeys.length === 0;
+    const chunkSize = 3;
+    const chunks: string[][] = [];
+    for (let i = 0; i < keysToGenerate.length; i += chunkSize) {
+      chunks.push(keysToGenerate.slice(i, i + chunkSize));
+    }
+
     setIsGenerating(true);
+    let completed = 0;
+    let totalFailed = 0;
+
     try {
-      const { data, error } = await supabase.functions.invoke('generate-og-images', {
-        body: { pages: missingKeys.length > 0 ? missingKeys : undefined, regenerate: missingKeys.length === 0 },
-      });
-      if (error) throw error;
-      toast.success(data.message || 'OG images generated');
-      queryClient.invalidateQueries({ queryKey: ['admin-og-images'] });
-      queryClient.invalidateQueries({ queryKey: ['og-images'] });
+      for (const chunk of chunks) {
+        setGenerationProgress(`${completed}/${keysToGenerate.length}`);
+        const { data, error } = await supabase.functions.invoke('generate-og-images', {
+          body: { pages: chunk, regenerate: isRegenerate },
+        });
+        if (error) throw error;
+        completed += data?.generated || 0;
+        totalFailed += data?.failed || 0;
+        queryClient.invalidateQueries({ queryKey: ['admin-og-images'] });
+        queryClient.invalidateQueries({ queryKey: ['og-images'] });
+
+        // Check for rate limiting bail
+        if (data?.results?.some((r: any) => r.error?.includes('rate limit') || r.error?.includes('Skipped'))) {
+          toast.error('Rate limited — pausing. Try again in a minute.');
+          break;
+        }
+      }
+      toast.success(`Generated ${completed} OG images${totalFailed > 0 ? ` (${totalFailed} failed)` : ''}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate OG images');
     } finally {
       setIsGenerating(false);
+      setGenerationProgress('');
+      queryClient.invalidateQueries({ queryKey: ['admin-og-images'] });
     }
   };
 
@@ -89,7 +115,7 @@ export default function OgImageManager() {
           size="sm"
         >
           {isGenerating ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating {generationProgress}...</>
           ) : missingKeys.length > 0 ? (
             `Generate ${missingKeys.length} Missing`
           ) : (
