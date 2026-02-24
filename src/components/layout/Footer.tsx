@@ -8,9 +8,9 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-card">
       <div className="container-wide py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center mb-4">
               <img 
                 src="/ld-logo.svg" 

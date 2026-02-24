@@ -323,10 +323,10 @@ const DemandLetterCostCalculator = () => {
               </div>
 
               <div className="mt-6 pt-4 border-t border-border text-center">
-                <Button variant="default" size="lg" asChild>
+                <Button variant="default" size="lg" asChild className="whitespace-normal h-auto py-3">
                   <Link to="/templates">
-                    <FileText className="mr-2 h-5 w-5" /> Browse Demand Letter Templates
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <FileText className="mr-2 h-5 w-5 shrink-0" /> Browse Demand Letter Templates
+                    <ArrowRight className="ml-2 h-4 w-4 shrink-0 hidden sm:inline" />
                   </Link>
                 </Button>
               </div>
