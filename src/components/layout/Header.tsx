@@ -201,6 +201,20 @@ const Header = () => {
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1">Free Tools</p>
                         </div>
                         <Link 
+                          to="/do-i-have-a-case" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Do I Have a Case?
+                        </Link>
+                        <Link 
+                          to="/small-claims" 
+                          className="text-sm text-muted-foreground hover:text-foreground py-2"
+                          onClick={() => setOpen(false)}
+                        >
+                          Small Claims Court Guide
+                        </Link>
+                        <Link 
                           to="/state-rights" 
                           className="text-sm text-muted-foreground hover:text-foreground py-2"
                           onClick={() => setOpen(false)}
