@@ -177,12 +177,6 @@ export default function StateRightsCategoryPage() {
         faqItems={faqItems.map(f => ({ question: f.q, answer: f.a }))}
       />
 
-      {/* Inject FAQ schema */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-
       {/* Breadcrumb */}
       <div className="bg-muted/30 border-b">
         <div className="container-wide py-3">
