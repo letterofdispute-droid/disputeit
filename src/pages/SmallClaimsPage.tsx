@@ -37,27 +37,34 @@ const SmallClaimsPage = () => {
       />
 
       {/* Hero */}
-      <section className="relative bg-[var(--gradient-hero)] text-primary-foreground py-20 md:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] bg-cover bg-center opacity-10" />
-        <div className="container-wide relative z-10">
+      <section className="relative overflow-hidden bg-background py-20 md:py-28">
+        {/* Geometric accents */}
+        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] rounded-full bg-accent/[0.07] animate-float will-change-transform" />
+        <div className="absolute -bottom-20 -left-20 w-[250px] h-[250px] rounded-full border-2 border-primary/[0.08] animate-float-delayed will-change-transform" />
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+          <line x1="60%" y1="0" x2="40%" y2="100%" stroke="hsl(var(--primary))" strokeOpacity="0.06" strokeWidth="1" />
+        </svg>
+
+        <div className="container-wide relative">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 text-sm font-medium">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/[0.06] text-primary text-sm font-medium mb-6 animate-fade-in">
               <Gavel className="h-4 w-4" />
-              Free Interactive Guide — Updated for 2026
+              <span>Free Interactive Guide — Updated for 2026</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-serif mb-6 leading-tight">
-              Small Claims Court: The Complete Guide
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-serif text-foreground mb-6 leading-tight animate-fade-up">
+              Small Claims Court:{' '}
+              <span className="text-accent">The Complete Guide</span>
             </h1>
-            <p className="text-xl md:text-2xl text-primary-foreground/80 mb-8 leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
               File your case with confidence. State-by-state filing limits, fees, forms, and a step-by-step walkthrough — everything in one place.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" variant="secondary" asChild>
+            <div className="flex flex-wrap gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.2s' }}>
+              <Button size="lg" variant="accent" asChild>
                 <a href="#state-lookup">
                   <Scale className="mr-2 h-5 w-5" /> Look Up Your State
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-primary-foreground hover:bg-white/10" asChild>
+              <Button size="lg" variant="outline" asChild>
                 <Link to="/small-claims/statement-generator">
                   <FileText className="mr-2 h-5 w-5" /> Free Statement Generator
                 </Link>
