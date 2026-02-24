@@ -11,6 +11,7 @@ import KeywordManager from '@/components/admin/seo/KeywordManager';
 import TopicDiscovery from '@/components/admin/seo/TopicDiscovery';
 import SearchConsolePanel from '@/components/admin/seo/SearchConsolePanel';
 import ActivityFeed from '@/components/admin/seo/ActivityFeed';
+import OgImageManager from '@/components/admin/seo/OgImageManager';
 
 export default function SEODashboard() {
   return (
@@ -21,7 +22,7 @@ export default function SEODashboard() {
           SEO Content Command Center
         </h1>
         <p className="text-muted-foreground mt-1">
-          Orchestrate your content strategy across 500+ templates
+          Orchestrate your content strategy across 550+ templates
         </p>
       </div>
 
@@ -30,6 +31,9 @@ export default function SEODashboard() {
 
       {/* Activity Feed */}
       <ActivityFeed />
+
+      {/* OG Image Manager */}
+      <OgImageManager />
 
       {/* Main Tabs */}
       <Tabs defaultValue="discover" className="space-y-4">

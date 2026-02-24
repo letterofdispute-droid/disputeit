@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { useOgImage } from '@/hooks/useOgImage';
 
 interface BreadcrumbItem {
   name: string;
@@ -53,9 +54,10 @@ const SEOHead = ({
     ? '/' 
     : canonicalPath.replace(/\/+$/, '');
   const canonicalUrl = `${siteUrl}${normalizedPath}`;
-  // Fall back to logo SVG (always exists) until a proper OG image is created
+  // Use AI-generated OG image from database, falling back to logo
+  const aiOgImage = useOgImage(canonicalPath);
   const defaultOgImage = `${siteUrl}/ld-logo.svg`;
-  const resolvedOgImage = ogImage || defaultOgImage;
+  const resolvedOgImage = ogImage || aiOgImage || defaultOgImage;
   
   // FAQPage schema when faqItems are provided
   const faqSchema = faqItems && faqItems.length > 0 ? {

@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.fix-broken-links]
 verify_jwt = false
+
+[functions.generate-og-images]
+verify_jwt = false
