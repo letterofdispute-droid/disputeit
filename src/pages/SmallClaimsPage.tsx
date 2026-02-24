@@ -60,31 +60,14 @@ const SmallClaimsPage = () => {
             </p>
             <div className="flex flex-wrap gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button size="lg" variant="accent" asChild>
-                <Link to="/small-claims/cost-calculator">
-                  <Scale className="mr-2 h-5 w-5" /> Cost Calculator
-                </Link>
-              </Button>
-              <Button size="lg" variant="heroOutline" asChild>
-                <Link to="/small-claims/demand-letter-cost">
-                  <FileText className="mr-2 h-5 w-5" /> Demand Letter Costs
-                </Link>
-              </Button>
-              <Button size="lg" variant="heroOutline" asChild>
-                <Link to="/small-claims/escalation-guide">
-                  <Gavel className="mr-2 h-5 w-5" /> Escalation Guide
-                </Link>
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-3 justify-center mt-4 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-              <Button size="sm" variant="heroOutline" asChild>
                 <a href="#state-lookup">
-                  Look Up Your State
+                  <Scale className="mr-2 h-5 w-5" /> Look Up Your State
                 </a>
               </Button>
-              <Button size="sm" variant="heroOutline" asChild>
-                <Link to="/small-claims/statement-generator">
-                  Free Statement Generator
-                </Link>
+              <Button size="lg" variant="heroOutline" asChild>
+                <a href="#free-tools">
+                  Explore Free Tools <ArrowRight className="ml-2 h-5 w-5" />
+                </a>
               </Button>
             </div>
           </div>
@@ -167,7 +150,7 @@ const SmallClaimsPage = () => {
       <CostBreakdown />
 
       {/* Free Tools Grid */}
-      <section className="py-16">
+      <section id="free-tools" className="py-16">
         <div className="container-wide">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold font-serif text-foreground mb-2 text-center">Free Interactive Tools</h2>
