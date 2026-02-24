@@ -347,6 +347,10 @@ function generateSitemapIndex(blogPageCount) {
     <loc>${SITE_URL}/sitemap-state-rights.xml</loc>
     <lastmod>${BUILD_DATE}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>${SITE_URL}/sitemap-small-claims.xml</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+  </sitemap>
 ${blogEntries.join('\n')}
 </sitemapindex>`;
 }
@@ -369,6 +373,9 @@ function generateStaticSitemap() {
     { loc: '/consumer-news', priority: '0.6', changefreq: 'daily' },
     { loc: '/analyze-letter', priority: '0.7', changefreq: 'monthly' },
     { loc: '/cookie-policy', priority: '0.3', changefreq: 'monthly' },
+    { loc: '/small-claims', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/small-claims/statement-generator', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/do-i-have-a-case', priority: '0.7', changefreq: 'monthly' },
   ];
   
   const urls = staticPages.map(page => `
@@ -584,6 +591,48 @@ function generateStateRightsSitemap() {
 }
 
 // ============================================
+// Small Claims Sitemap Generator
+// ============================================
+
+function generateSmallClaimsSitemap() {
+  const urls = [];
+
+  // Hub page
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+
+  // Statement generator
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims/statement-generator</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
+  // All 51 state pages (50 states + DC)
+  for (const state of US_STATES_BUILD) {
+    const stateSlug = getStateBuildSlug(state.name);
+    urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims/${stateSlug}</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}
+</urlset>`;
+}
+
+// ============================================
 // Main Build Function
 // ============================================
 
@@ -604,13 +653,18 @@ async function buildSitemaps() {
 
   // State rights: 1 hub + 51 state hubs + 51×13 category pages = 715 URLs
   const stateRightsUrlCount = 1 + US_STATES_BUILD.length + (US_STATES_BUILD.length * STATE_RIGHTS_CATEGORIES.length);
-  console.log(`🗺️  State rights pages: ${stateRightsUrlCount} URLs (1 hub + ${US_STATES_BUILD.length} state hubs + ${US_STATES_BUILD.length * STATE_RIGHTS_CATEGORIES.length} category pages)`);
+  console.log(`🗺️  State rights pages: ${stateRightsUrlCount} URLs`);
+
+  // Small claims: 1 hub + 1 generator + 51 state pages = 53 URLs
+  const smallClaimsUrlCount = 2 + US_STATES_BUILD.length;
+  console.log(`⚖️  Small claims pages: ${smallClaimsUrlCount} URLs`);
   
   // Generate content
   const sitemapStatic = generateStaticSitemap();
   const sitemapCategories = generateCategoriesSitemap();
   const sitemapTemplates = generateTemplatesSitemap(templates);
   const sitemapStateRights = generateStateRightsSitemap();
+  const sitemapSmallClaims = generateSmallClaimsSitemap();
   const blogSitemapPages = generateBlogSitemaps(blogPosts);
   const sitemapIndex = generateSitemapIndex(blogSitemapPages.length);
   
@@ -625,6 +679,7 @@ async function buildSitemaps() {
     fs.writeFileSync(path.join(dir, 'sitemap-categories.xml'), sitemapCategories);
     fs.writeFileSync(path.join(dir, 'sitemap-templates.xml'), sitemapTemplates);
     fs.writeFileSync(path.join(dir, 'sitemap-state-rights.xml'), sitemapStateRights);
+    fs.writeFileSync(path.join(dir, 'sitemap-small-claims.xml'), sitemapSmallClaims);
     
     // Write paginated blog sitemaps
     for (let i = 0; i < blogSitemapPages.length; i++) {
@@ -633,12 +688,13 @@ async function buildSitemaps() {
     console.log(`   ✅ Sitemaps written to ${label}/`);
   }
   
-  const staticPageCount = 16; // matches staticPages array in generateStaticSitemap()
+  const staticPageCount = 19; // matches staticPages array in generateStaticSitemap()
   const subcatCount = Object.values(subcategoriesByCategory).flat().length;
   const blogUrlCount = blogCategories.length + blogPosts.length;
-  const totalUrls = staticPageCount + categories.length + subcatCount + categories.length + templates.length + blogUrlCount + stateRightsUrlCount;
-  console.log(`\n✨ Generated ${totalUrls} URLs across ${4 + blogSitemapPages.length} sitemap files (in both dist/ and public/)`);
-  console.log(`   📍 State rights: ${stateRightsUrlCount} URLs in sitemap-state-rights.xml\n`);
+  const totalUrls = staticPageCount + categories.length + subcatCount + categories.length + templates.length + blogUrlCount + stateRightsUrlCount + smallClaimsUrlCount;
+  console.log(`\n✨ Generated ${totalUrls} URLs across ${5 + blogSitemapPages.length} sitemap files (in both dist/ and public/)`);
+  console.log(`   📍 State rights: ${stateRightsUrlCount} URLs in sitemap-state-rights.xml`);
+  console.log(`   ⚖️  Small claims: ${smallClaimsUrlCount} URLs in sitemap-small-claims.xml\n`);
 }
 
 buildSitemaps().catch(console.error);

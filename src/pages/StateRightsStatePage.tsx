@@ -13,6 +13,7 @@ import {
   US_STATES, stateSpecificLaws, getStateFromSlug, CATEGORY_LABELS,
   getStateStatutesForCategory,
 } from '@/data/stateSpecificLaws';
+import { getSmallClaimsStateBySlug, formatFilingLimit } from '@/data/smallClaimsData';
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
@@ -237,6 +238,35 @@ export default function StateRightsStatePage() {
                 </ul>
               </CardContent>
             </Card>
+
+            {/* Small Claims Court Card */}
+            {(() => {
+              const scData = stateSlug ? getSmallClaimsStateBySlug(stateSlug) : null;
+              if (!scData) return null;
+              return (
+                <Card className="border-accent/30 bg-accent/5">
+                  <CardContent className="pt-5">
+                    <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+                      <Gavel className="h-4 w-4 text-accent" />
+                      Small Claims Court in {stateName}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      File up to <strong className="text-foreground">{formatFilingLimit(scData.filingLimit)}</strong> in {scData.courtName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Filing fee: {scData.filingFee} · {scData.hearingTimeframe}
+                    </p>
+                    <Button asChild variant="default" size="sm" className="w-full gap-2">
+                      <Link to={`/small-claims/${scData.slug}`}>
+                        <Scale className="h-4 w-4" />
+                        View Filing Guide
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* CTA */}
             <Card className="bg-primary/5 border-primary/20">
