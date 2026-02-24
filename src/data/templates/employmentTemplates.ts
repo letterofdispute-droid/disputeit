@@ -4,6 +4,7 @@ import { terminationTemplates } from './employment/terminationTemplates';
 import { workplaceConditionsTemplates } from './employment/workplaceConditionsTemplates';
 import { benefitsDocumentationTemplates } from './employment/benefitsDocumentationTemplates';
 import { additionalEmploymentTemplates } from './employment/additionalEmploymentTemplates';
+import { workplaceAbuseTemplates } from './employment/workplaceAbuseTemplates';
 
 
 const standardJurisdictions = [
@@ -150,4 +151,5 @@ export const employmentTemplates: LetterTemplate[] = [
   ...workplaceConditionsTemplates,
   ...benefitsDocumentationTemplates,
   ...additionalEmploymentTemplates,
+  ...workplaceAbuseTemplates,
 ];
