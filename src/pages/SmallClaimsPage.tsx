@@ -63,13 +63,30 @@ const SmallClaimsPage = () => {
             </p>
             <div className="flex flex-wrap gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button size="lg" variant="accent" asChild>
-                <a href="#state-lookup">
-                  <Scale className="mr-2 h-5 w-5" /> Look Up Your State
+                <a href="#cost-calculator">
+                  <Scale className="mr-2 h-5 w-5" /> Cost Calculator
                 </a>
               </Button>
               <Button size="lg" variant="heroOutline" asChild>
+                <a href="#demand-letter-cost">
+                  <FileText className="mr-2 h-5 w-5" /> Demand Letter Costs
+                </a>
+              </Button>
+              <Button size="lg" variant="heroOutline" asChild>
+                <a href="#escalation-flowchart">
+                  <Gavel className="mr-2 h-5 w-5" /> Escalation Guide
+                </a>
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center mt-4 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+              <Button size="sm" variant="heroOutline" asChild>
+                <a href="#state-lookup">
+                  Look Up Your State
+                </a>
+              </Button>
+              <Button size="sm" variant="heroOutline" asChild>
                 <Link to="/small-claims/statement-generator">
-                  <FileText className="mr-2 h-5 w-5" /> Free Statement Generator
+                  Free Statement Generator
                 </Link>
               </Button>
             </div>
