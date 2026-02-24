@@ -1,37 +1,69 @@
 
 
-# Fix: OG Image Generation Timeout
+# Missing Employment Templates: Mobbing, Harassment Variants, and Related Workplace Issues
 
-## Root Cause
+## Current State
 
-The edge function processes all 28 images sequentially in one HTTP request. Each image takes ~8s to generate + 2s delay = ~10s per image. Total: ~280 seconds, far exceeding the edge function timeout (~60s). The function generated 11 images before the timeout killed it. The UI shows 0/28 because it only refreshes after the function returns - which it never does (timeout error).
+The Employment category has ~30 templates. There is one generic "Workplace Harassment Complaint" and one "Workplace Bullying Complaint," but several high-demand, legally distinct scenarios are missing.
 
-**Proof:** Database already has 11 images from the partial run. Logs show successful generation of homepage through do-i-have-a-case before silence.
+## Missing Templates to Add
 
-## Solution
+### New file: `src/data/templates/employment/workplaceAbuse Templates.ts`
 
-### File 1: `src/components/admin/seo/OgImageManager.tsx` - Batch from frontend
+**~12 new templates covering gaps:**
 
-Change `generateAll` to process images in batches of 3 from the frontend:
+| Template | Why it's distinct from existing |
+|----------|-------------------------------|
+| **Workplace Mobbing Complaint** | Group-based systematic harassment (distinct from individual harassment/bullying) |
+| **Sexual Harassment Complaint** | Specific legal framework (Title VII/Title IX), quid pro quo vs hostile environment |
+| **Retaliation Complaint** | Filing complaint after protected activity (distinct from general harassment) |
+| **Hostile Work Environment Complaint** | Pattern-based, pervasive conduct — different legal test than single-incident harassment |
+| **Racial Harassment Complaint** | Race-specific hostile conduct, Title VII specific |
+| **Age Discrimination Complaint** | ADEA-specific, distinct legal thresholds (40+) |
+| **Disability Harassment Complaint** | ADA-specific, failure to accommodate + harassment combined |
+| **Religious Discrimination Complaint** | Accommodation refusal + harassment for religious practice |
+| **Gender Identity / LGBTQ+ Discrimination Complaint** | Bostock v. Clayton County framework |
+| **Pregnancy Discrimination Complaint** | PDA + ADA pregnancy accommodation |
+| **Equal Pay Complaint** | EPA-specific, pay gap documentation |
+| **FMLA Interference / Retaliation Complaint** | Medical leave denial or punishment for taking leave |
 
-- Split `missingKeys` into chunks of 3
-- Call the edge function for each chunk sequentially
-- After each batch completes, invalidate queries to refresh the UI (so user sees progress)
-- Track progress with a counter state (e.g., "Generating 6/17...")
-- If a batch returns a bail reason (rate limit), stop and show a toast
-- Add a `refetchInterval` of 5000ms while `isGenerating` is true so the grid updates live
-
-### File 2: `supabase/functions/generate-og-images/index.ts` - Reduce batch delay
-
-- Reduce the inter-image delay from 2000ms to 1000ms (since batches are now only 3 images, less risk of rate limiting)
-- No other changes needed - the function already handles small page arrays correctly
-
-## Technical Details
+### File changes
 
 | File | Change |
 |------|--------|
-| `src/components/admin/seo/OgImageManager.tsx` | Batch processing loop (chunks of 3), live progress counter, refetchInterval during generation |
-| `supabase/functions/generate-og-images/index.ts` | Reduce delay from 2000ms to 1000ms |
+| `src/data/templates/employment/workplaceAbuseTemplates.ts` | New file with ~12 templates |
+| `src/data/templates/employmentTemplates.ts` | Import and spread `workplaceAbuseTemplates` |
+| `src/data/subcategoryMappings.ts` | Add patterns for new slugs (mobbing, sexual-harassment, retaliation, etc.) to route to correct subcategories |
 
-No database changes. No new dependencies.
+### Template structure
+
+Each template follows the existing pattern with:
+- US-focused legal references (Title VII, ADA, ADEA, EPA, PDA, FMLA) as primary jurisdiction
+- UK (Equality Act 2010), EU, and INTL as secondary jurisdictions  
+- AI-enhanced fields with evidence hints
+- Impact levels on all fields
+- 3 tones (neutral, firm, final)
+- Specific fields relevant to each scenario (e.g., sexual harassment gets "quid pro quo or hostile environment" selector, mobbing gets "number of perpetrators" and "duration of campaign")
+
+### Why these are legally distinct (not duplicates)
+
+The existing generic "harassment complaint" template has a dropdown for harassment type but uses the same letter structure regardless. These new templates have:
+- **Different legal citations** (Title VII sexual harassment vs ADEA age discrimination vs ADA disability)
+- **Different evidentiary requirements** (equal pay needs pay comparator data, mobbing needs timeline of escalating group behavior)
+- **Different relief/remedy options** (FMLA: reinstatement + back pay, Equal Pay: wage adjustment + back pay)
+- **Different filing deadlines** mentioned in the letter (EEOC 180/300 days, EPA 2-year statute)
+
+### SEO value
+
+These are high-search-volume terms: "sexual harassment complaint letter template," "workplace mobbing letter," "equal pay complaint letter," "FMLA retaliation letter" — currently not served by any template.
+
+## Technical Details
+
+- No database changes
+- No edge function changes  
+- No new dependencies
+- Templates auto-register via the `allTemplates` aggregation in `allTemplates.ts`
+- SSG routes auto-generate from `routes.ts` which reads `allTemplates`
+- Subcategory mapping patterns already partially cover these (discrimination pattern catches harassment/hostile/retaliation) but new patterns may be needed for clean routing
+- Total template count will increase from ~550 to ~562
 
