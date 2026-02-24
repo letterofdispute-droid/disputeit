@@ -1,124 +1,59 @@
 
 
-# Plan: Complete Small Claims SEO Gaps
+# Plan: Fix Small Claims Page -- Hero + Real SVG Map + Polish
 
-## Overview
-The small claims pages are built and routed, but several SEO and internal linking gaps prevent them from reaching full ranking potential. This plan addresses the 5 critical gaps found during the audit.
+## Problem
 
----
-
-## Task 1: Add Small Claims Sitemap
-
-The build script (`scripts/build-static.mjs`) generates sitemaps for templates, categories, state-rights, and blog posts -- but **not** for the 53 small claims URLs or the quiz page. Without sitemap coverage, Google relies solely on crawling to discover these pages.
-
-**Changes:**
-- Add `sitemap-small-claims.xml` generator to `scripts/build-static.mjs`
-- Include all 51 state pages + hub + statement generator + quiz page (54 URLs total)
-- Register it in the sitemap index
-- Also add `/small-claims`, `/small-claims/statement-generator`, and `/do-i-have-a-case` to the static sitemap
-
-**File:** `scripts/build-static.mjs`
+1. **Hero looks terrible** -- dark overlay on a background image creates poor contrast and feels dated compared to the clean homepage hero
+2. **US Map is ugly** -- uses crude hand-drawn rectangular shapes instead of proper geographic state outlines
+3. **General polish** -- the page could use some refinement
 
 ---
 
-## Task 2: Cross-Link State Rights Pages to Small Claims
+## Task 1: Fix the Hero Section
 
-Each of the 51 State Rights hub pages (`/state-rights/[state]`) should link to the corresponding small claims page (`/small-claims/[state]`). This creates 51 high-value internal links flowing authority to the new pages.
+Replace the dark background-image hero with a clean, modern hero matching the homepage pattern (light background, geometric accents, proper typography).
 
-**Changes:**
-- Add a "Small Claims Court" card/link in `StateRightsStatePage.tsx`
-- Display the state's filing limit and a link to the full small claims guide
-- Import `getSmallClaimsStateBySlug` to pull the filing limit dynamically
-
-**File:** `src/pages/StateRightsStatePage.tsx`
-
----
-
-## Task 3: Cross-Link Small Claims State Pages Back to State Rights
-
-The state pages already link to `/state-rights/[state]` in the bottom CTA, which is good. But we should also add links to specific category-relevant state rights pages (e.g., housing, vehicle) based on common small claims dispute types.
-
-**Changes:**
-- Add a "Related Consumer Rights" section to `SmallClaimsStatePage.tsx`
-- Link to 3-4 most relevant state rights categories (housing, vehicle, contractors, financial)
-
-**File:** `src/pages/SmallClaimsStatePage.tsx`
+**Changes to `src/pages/SmallClaimsPage.tsx`:**
+- Remove the `bg-[var(--gradient-hero)]` dark hero with background image overlay
+- Use a clean light hero with geometric background elements (circles, subtle lines) matching the homepage `Hero.tsx` pattern
+- Fix button styling -- use `variant="accent"` for primary CTA, clean `variant="outline"` for secondary
+- Add subtle animations (`animate-fade-in`, `animate-fade-up`)
 
 ---
 
-## Task 4: Add Interactive US Map Component
+## Task 2: Replace US Map with Real SVG
 
-An interactive clickable US map where users can click their state to jump to the state guide. This serves as both a UX improvement and a shareable/linkable visual asset.
+Copy the uploaded `us.svg` (from simplemaps.com, free for commercial use) into the project assets and rebuild `USMap.tsx` to use the real geographic paths.
 
-**Changes:**
-- Create `src/components/small-claims/USMap.tsx` -- an SVG-based clickable map of US states
-- Each state is clickable and navigates to `/small-claims/[state]`
-- Hover tooltips show state name and filing limit
-- Add the map to the hub page (`SmallClaimsPage.tsx`) above or alongside the dropdown state lookup
+**Steps:**
+- Copy `user-uploads://us.svg` to `public/images/us-map.svg` (for reference/attribution)
+- Rewrite `src/components/small-claims/USMap.tsx` to extract the real SVG path `d` attributes from the uploaded file for all 50 states + DC
+- Each state path uses the proper `id` attribute (MA, NY, CA, etc.) that matches `smallClaimsData` codes
+- Keep the same interactive behavior: hover tooltips, click-to-navigate, color coding by filing limit
+- The map will look like an actual US map instead of crude rectangles
 
-**Files:**
-- `src/components/small-claims/USMap.tsx` (new)
-- `src/pages/SmallClaimsPage.tsx` (add map section)
-
----
-
-## Task 5: Add `/do-i-have-a-case` and `/small-claims` to Static Sitemap
-
-These two tool pages plus the statement generator are missing from the static sitemap entries in `build-static.mjs`.
-
-**Changes:**
-- Add 3 entries to the `staticPages` array in `generateStaticSitemap()`
-
-**File:** `scripts/build-static.mjs` (same file as Task 1)
+**Technical approach:**
+- Extract all `<path>` elements from the uploaded SVG (each has `id="XX"` matching state codes)
+- Store the `d` attribute strings in a `STATE_PATHS` record, replacing the current crude ones
+- Use the same `viewBox="0 0 1000 589"` from the source SVG
+- Apply fill colors based on filing limits, with hover/active states
+- Keep tooltips and navigation
 
 ---
 
-## Technical Details
+## Task 3: General Polish
 
-### Sitemap Generator Function (Task 1)
-
-A new function `generateSmallClaimsSitemap()` in `build-static.mjs` that:
-- Hardcodes the 51 state slugs (same as `smallClaimsData`)
-- Generates URLs for `/small-claims/[slug]` with priority 0.7, changefreq weekly
-- Includes `/small-claims` (priority 0.8) and `/small-claims/statement-generator` (priority 0.7)
-- Writes to `sitemap-small-claims.xml`
-- Registers in the sitemap index
-
-### US Map Component (Task 4)
-
-An inline SVG map with:
-- All 50 states + DC as clickable path elements
-- `react-router-dom` `useNavigate` for client-side navigation
-- Hover state showing state name + filing limit tooltip
-- Responsive sizing (scales down on mobile)
-- Color coding: states with higher limits shown in darker shades
-
-### State Rights Cross-Link (Task 2)
-
-A new card added to `StateRightsStatePage.tsx` in the category grid or as a standalone section:
-```text
-+------------------------------------------+
-|  Small Claims Court in [State]           |
-|  File up to $XX,XXX in [Court Name]      |
-|  [View Filing Guide ->]                  |
-+------------------------------------------+
-```
-
-### Implementation Order
-
-1. Sitemap additions (Tasks 1 + 5) -- immediate SEO impact
-2. Cross-linking (Tasks 2 + 3) -- internal link authority
-3. Interactive map (Task 4) -- UX and linkable asset
+- Clean up spacing between hero and "What Is Small Claims Court" section
+- Ensure the map section has a subtle background to visually separate it
+- Make the legend more compact on mobile
 
 ---
 
-## Summary
+## Files Changed
 
-| Task | Impact | Files |
-|------|--------|-------|
-| Add small claims sitemap | Google discovery of 54 URLs | `scripts/build-static.mjs` |
-| State Rights -> Small Claims links | 51 internal links | `StateRightsStatePage.tsx` |
-| Small Claims -> State Rights categories | Deeper cross-linking | `SmallClaimsStatePage.tsx` |
-| Interactive US map | UX + linkable asset | `USMap.tsx`, `SmallClaimsPage.tsx` |
-| Static sitemap entries | 3 missing tool pages | `scripts/build-static.mjs` |
+| File | Change |
+|------|--------|
+| `src/pages/SmallClaimsPage.tsx` | Replace dark hero with clean light hero |
+| `src/components/small-claims/USMap.tsx` | Replace crude paths with real SVG state paths from uploaded file |
 
