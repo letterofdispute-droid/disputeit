@@ -95,6 +95,49 @@ const USMap = () => {
         setTooltipState(null);
       });
     });
+
+    // Add state abbreviation labels at path centroids (desktop only)
+    const labelOffsets: Record<string, { dx: number; dy: number }> = {
+      FL: { dx: 15, dy: -10 }, NH: { dx: 10, dy: 0 }, VT: { dx: -5, dy: 0 },
+      MA: { dx: 12, dy: 0 }, RI: { dx: 12, dy: 0 }, CT: { dx: 10, dy: 5 },
+      NJ: { dx: 10, dy: 0 }, DE: { dx: 12, dy: 0 }, MD: { dx: 20, dy: 5 },
+      DC: { dx: 20, dy: 10 }, HI: { dx: 0, dy: -5 }, MI: { dx: 15, dy: 10 },
+      LA: { dx: -5, dy: 5 }, ID: { dx: 0, dy: 10 },
+    };
+
+    const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    labelGroup.classList.add('state-labels');
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = `
+      @media (max-width: 768px) { .state-labels { display: none; } }
+      .state-label { pointer-events: none; font-family: system-ui, sans-serif; }
+    `;
+    svgEl.appendChild(styleEl);
+
+    paths.forEach(path => {
+      const code = path.getAttribute('id') || '';
+      if (!stateByCode.has(code)) return;
+
+      const bbox = (path as SVGGraphicsElement).getBBox();
+      const offset = labelOffsets[code] || { dx: 0, dy: 0 };
+      const cx = bbox.x + bbox.width / 2 + offset.dx;
+      const cy = bbox.y + bbox.height / 2 + offset.dy;
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', String(cx));
+      text.setAttribute('y', String(cy));
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'central');
+      text.setAttribute('class', 'state-label');
+      const size = Math.min(bbox.width, bbox.height) < 20 ? 7 : 9;
+      text.setAttribute('font-size', String(size));
+      text.setAttribute('font-weight', '600');
+      text.setAttribute('fill', 'hsl(var(--foreground))');
+      text.textContent = code;
+      labelGroup.appendChild(text);
+    });
+
+    svgEl.appendChild(labelGroup);
   }, [svgContent, navigate]);
 
   return (
