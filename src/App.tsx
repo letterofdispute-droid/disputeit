@@ -56,6 +56,9 @@ const CategoryGuidePage = lazy(() => import("./pages/CategoryGuidePage"));
 const SmallClaimsPage = lazy(() => import("./pages/SmallClaimsPage"));
 const SmallClaimsStatePage = lazy(() => import("./pages/SmallClaimsStatePage"));
 const SmallClaimsGeneratorPage = lazy(() => import("./pages/SmallClaimsGeneratorPage"));
+const SmallClaimsCostCalculatorPage = lazy(() => import("./pages/SmallClaimsCostCalculatorPage"));
+const SmallClaimsDemandLetterPage = lazy(() => import("./pages/SmallClaimsDemandLetterPage"));
+const SmallClaimsEscalationPage = lazy(() => import("./pages/SmallClaimsEscalationPage"));
 const CaseQuizPage = lazy(() => import("./pages/CaseQuizPage"));
 
 // Helper to retry dynamic imports on chunk load failure (stale cache)
@@ -146,6 +149,9 @@ const App = () => (
             <Route path="/consumer-news" element={<ConsumerNewsPage />} />
             <Route path="/analyze-letter" element={<LetterAnalyzerPage />} />
             <Route path="/small-claims" element={<SmallClaimsPage />} />
+            <Route path="/small-claims/cost-calculator" element={<SmallClaimsCostCalculatorPage />} />
+            <Route path="/small-claims/demand-letter-cost" element={<SmallClaimsDemandLetterPage />} />
+            <Route path="/small-claims/escalation-guide" element={<SmallClaimsEscalationPage />} />
             <Route path="/small-claims/statement-generator" element={<SmallClaimsGeneratorPage />} />
             <Route path="/small-claims/:state" element={<SmallClaimsStatePage />} />
             <Route path="/do-i-have-a-case" element={<CaseQuizPage />} />

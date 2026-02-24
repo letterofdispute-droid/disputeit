@@ -25,9 +25,9 @@ const resources = [
 const freeTools = [
   { title: 'Do I Have a Case?', description: 'Free 2-min case strength quiz', href: '/do-i-have-a-case', icon: Scale },
   { title: 'Small Claims Court Guide', description: 'Filing limits, fees & forms by state', href: '/small-claims', icon: Search },
-  { title: 'Court Cost Calculator', description: 'Estimate filing fees for your claim', href: '/small-claims#cost-calculator', icon: Calculator },
-  { title: 'Demand Letter Cost Compare', description: 'DIY vs. lawyer vs. our templates', href: '/small-claims#demand-letter-cost', icon: DollarSign },
-  { title: 'Escalation Flowchart', description: 'Step-by-step complaint resolution path', href: '/small-claims#escalation-flowchart', icon: GitBranch },
+  { title: 'Court Cost Calculator', description: 'Estimate filing fees for your claim', href: '/small-claims/cost-calculator', icon: Calculator },
+  { title: 'Demand Letter Cost Compare', description: 'DIY vs. lawyer vs. our templates', href: '/small-claims/demand-letter-cost', icon: DollarSign },
+  { title: 'Escalation Flowchart', description: 'Step-by-step complaint resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
   { title: 'State Rights Lookup', description: 'Find laws for your state', href: '/state-rights', icon: MapPin },
   { title: 'Deadlines Calculator', description: 'See how long you have to act', href: '/deadlines', icon: Clock },
   { title: 'Consumer News', description: 'Latest FTC, CFPB & recall alerts', href: '/consumer-news', icon: Newspaper },
