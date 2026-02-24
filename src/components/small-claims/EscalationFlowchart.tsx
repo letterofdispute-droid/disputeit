@@ -26,7 +26,7 @@ const connectorColors = ['bg-green-400', 'bg-amber-400', 'bg-orange-400', 'bg-or
 const defaultSteps = [
   {
     title: 'Contact the Company Directly',
-    description: 'Start by contacting the business directly — by phone, email, or in writing. Document the date, who you spoke with, and what was discussed. Many disputes are resolved at this stage.',
+    description: 'Start by contacting the business directly, by phone, email, or in writing. Document the date, who you spoke with, and what was discussed. Many disputes are resolved at this stage.',
     timeframe: 'Give them 7–14 days to respond',
   },
   {
@@ -47,7 +47,7 @@ const defaultSteps = [
   },
   {
     title: 'File in Small Claims Court',
-    description: 'If all else fails, file your case in small claims court. You\'ll have documented evidence of every attempt to resolve the dispute — which judges love to see.',
+    description: 'If all else fails, file your case in small claims court. You\'ll have documented evidence of every attempt to resolve the dispute, which judges love to see.',
     timeframe: 'Hearing typically 30–60 days after filing',
     cta: { label: 'Look Up Your State', to: '#state-lookup' },
   },
@@ -75,7 +75,7 @@ const EscalationFlowchart = () => {
               Complaint Escalation Flowchart
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Not sure what to do next? Follow this proven escalation path — from first contact to filing in court. Select your dispute category for tailored guidance.
+              Not sure what to do next? Follow this proven escalation path, from first contact to filing in court. Select your dispute category for tailored guidance.
             </p>
           </div>
 
@@ -228,7 +228,7 @@ const EscalationFlowchart = () => {
             <Card className="mt-8 border-border animate-fade-up">
               <CardContent className="p-5">
                 <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" /> Your Rights — {categoryData?.category}
+                  <Shield className="h-5 w-5 text-primary" /> Your Rights: {categoryData?.category}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {usInfo.federalStatutes.flatMap(s => s.consumerRights).slice(0, 8).map((right, i) => (
