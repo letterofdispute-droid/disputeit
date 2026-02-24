@@ -136,7 +136,7 @@ const CostCalculator = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <Gavel className="h-5 w-5 text-primary" />
-              Court Details — {stateData.name}
+              Court Details: {stateData.name}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -216,7 +216,7 @@ const CostCalculator = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   Your estimated costs of {formatCurrency(totalMin)}–{formatCurrency(totalMax)} represent just{' '}
                   <strong className="text-foreground">{roiMin.toFixed(1)}%–{roiMax.toFixed(1)}%</strong> of your {formatCurrency(amount)} claim.
-                  {roiMax < 5 && " That's an excellent return — well worth filing."}
+                  {roiMax < 5 && " That's an excellent return, well worth filing."}
                   {roiMax >= 5 && roiMax < 15 && " That's a reasonable cost for pursuing your claim."}
                   {roiMax >= 15 && " Consider whether the cost justifies pursuing this claim, or try resolving it with a demand letter first."}
                 </p>
@@ -267,7 +267,7 @@ const CostCalculator = () => {
               Small Claims Court Cost Calculator
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Enter your state, dispute type, and claim amount to get a personalized cost estimate — including filing fees, service costs, and whether your claim is eligible.
+              Enter your state, dispute type, and claim amount to get a personalized cost estimate, including filing fees, service costs, and whether your claim is eligible.
             </p>
           </div>
 

@@ -11,11 +11,11 @@ import { Scale, FileText, Shield, ArrowRight, Gavel, Calculator, DollarSign, Git
 
 const faqItems = [
   { question: 'What is small claims court?', answer: 'Small claims court is a special court where disputes are resolved quickly and inexpensively. The rules are simplified so that individuals can represent themselves without an attorney. Filing limits range from $2,500 to $25,000 depending on the state.' },
-  { question: 'How much can I sue for in small claims court?', answer: 'Filing limits vary by state — from $2,500 (Kentucky) to $25,000 (Delaware, Tennessee). Most states set the limit between $5,000 and $10,000. Use our state lookup tool above to find your state\'s exact limit.' },
+  { question: 'How much can I sue for in small claims court?', answer: 'Filing limits vary by state, from $2,500 (Kentucky) to $25,000 (Delaware, Tennessee). Most states set the limit between $5,000 and $10,000. Use our state lookup tool above to find your state\'s exact limit.' },
   { question: 'Do I need a lawyer for small claims court?', answer: 'In most cases, no. Small claims courts are designed for self-representation. In fact, many states (including California, Michigan, and Washington) don\'t allow lawyers at all. You present your case directly to the judge.' },
   { question: 'How long does a small claims case take?', answer: 'From filing to hearing, most cases take 30–60 days. The hearing itself typically lasts 15–30 minutes. The judge usually issues a decision the same day or within a few weeks.' },
   { question: 'What can I sue for in small claims court?', answer: 'Common small claims cases include: unpaid debts, security deposit disputes, property damage, breach of contract, defective products, auto repair disputes, landlord-tenant issues, and personal injury claims under the limit.' },
-  { question: 'Should I send a demand letter before filing?', answer: 'Yes — almost always. Many courts require you to show you attempted to resolve the dispute first. A formal demand letter often resolves the issue without court. It also strengthens your case if you do go to court.' },
+  { question: 'Should I send a demand letter before filing?', answer: 'Yes, almost always. Many courts require you to show you attempted to resolve the dispute first. A formal demand letter often resolves the issue without court. It also strengthens your case if you do go to court.' },
   { question: 'What happens if I win but the defendant doesn\'t pay?', answer: 'If the defendant doesn\'t voluntarily pay the judgment, you can use enforcement mechanisms: wage garnishment, bank levies, property liens, or having the sheriff seize assets. The court clerk can guide you through the collection process.' },
   { question: 'Can I file small claims court online?', answer: 'Many states now offer e-filing for small claims, including New York, California, Utah, and Wisconsin. Check your state\'s court website or use our state lookup tool to find online filing options.' },
 ];
@@ -26,7 +26,7 @@ const SmallClaimsPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Small Claims Court: The Complete Guide (2026) — Filing Limits, Fees & Forms"
+        title="Small Claims Court: The Complete Guide (2026) - Filing Limits, Fees & Forms"
         description="Everything you need to know about small claims court: state-by-state filing limits, fees, forms, and step-by-step instructions. Free interactive tools to help you file and win."
         canonicalPath="/small-claims"
         faqItems={faqItems}
@@ -49,14 +49,14 @@ const SmallClaimsPage = () => {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white/90 text-sm font-medium mb-6 animate-fade-in">
               <Gavel className="h-4 w-4" />
-              <span>Free Interactive Guide — Updated for 2026</span>
+              <span>Free Interactive Guide - Updated for 2026</span>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-serif text-white mb-6 leading-tight animate-fade-up">
               Small Claims Court:{' '}
               <span className="text-accent">The Complete Guide</span>
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              File your case with confidence. State-by-state filing limits, fees, forms, and a step-by-step walkthrough — everything in one place.
+              File your case with confidence. State-by-state filing limits, fees, forms, and a step-by-step walkthrough, all in one place.
             </p>
             <div className="flex flex-wrap gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.2s' }}>
               <Button size="lg" variant="accent" asChild>
@@ -87,10 +87,10 @@ const SmallClaimsPage = () => {
             <h2 className="text-3xl font-bold font-serif text-foreground mb-6">What Is Small Claims Court?</h2>
             <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed space-y-4">
               <p>
-                Small claims court is a special division of the court system designed to resolve disputes involving relatively small amounts of money — quickly, affordably, and without the need for an attorney. Every state has one, though the name, rules, and dollar limits vary.
+                Small claims court is a special division of the court system designed to resolve disputes involving relatively small amounts of money, quickly, affordably, and without the need for an attorney. Every state has one, though the name, rules, and dollar limits vary.
               </p>
               <p>
-                Unlike regular civil court, small claims cases are heard by a judge (no jury), the rules of evidence are relaxed, and the entire process — from filing to hearing — typically takes just 30–60 days. Filing fees are minimal, usually between $15 and $100.
+                Unlike regular civil court, small claims cases are heard by a judge (no jury), the rules of evidence are relaxed, and the entire process from filing to hearing typically takes just 30-60 days. Filing fees are minimal, usually between $15 and $100.
               </p>
               <p>
                 Common small claims cases include unpaid debts, security deposit disputes, property damage from a car accident, breach of contract, defective products, and disputes with contractors or landlords.
@@ -105,7 +105,7 @@ const SmallClaimsPage = () => {
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground mb-1">Before You File: Send a Demand Letter</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Most courts require proof that you tried to resolve the dispute first. A professional demand letter often resolves the issue without needing to go to court — saving you time and money.
+                  Most courts require proof that you tried to resolve the dispute first. A professional demand letter often resolves the issue without needing to go to court, saving you time and money.
                 </p>
                 <Button variant="default" size="sm" asChild>
                   <Link to="/templates">
@@ -135,7 +135,7 @@ const SmallClaimsPage = () => {
               <div className="flex-1">
                 <h3 className="text-xl font-bold font-serif text-foreground mb-2">Not Sure If You Have a Case?</h3>
                 <p className="text-muted-foreground mb-4">
-                  Answer a few quick questions about your situation and we'll help you figure out whether small claims court is the right path — and what to do next.
+                  Answer a few quick questions about your situation and we'll help you figure out whether small claims court is the right path and what to do next.
                 </p>
                 <Button variant="accent" asChild>
                   <Link to="/do-i-have-a-case">
@@ -207,10 +207,10 @@ const SmallClaimsPage = () => {
                 <strong>Short answer: No.</strong> Small claims courts are specifically designed so that ordinary people can represent themselves. The procedures are simplified, the rules of evidence are relaxed, and judges are accustomed to hearing from non-lawyers.
               </p>
               <p>
-                In fact, many states — including California, Michigan, Washington, Kansas, Idaho, and Nebraska — don't allow lawyers at all in small claims hearings. Even in states where lawyers are permitted, most people choose to represent themselves.
+                In fact, many states including California, Michigan, Washington, Kansas, Idaho, and Nebraska don't allow lawyers at all in small claims hearings. Even in states where lawyers are permitted, most people choose to represent themselves.
               </p>
               <p>
-                The key to success isn't legal training — it's <strong>preparation</strong>. Bring organized evidence (contracts, photos, receipts, messages), be concise, and focus on the facts. The judge wants to hear what happened, what you're owed, and why.
+                The key to success isn't legal training, it's <strong>preparation</strong>. Bring organized evidence (contracts, photos, receipts, messages), be concise, and focus on the facts. The judge wants to hear what happened, what you're owed, and why.
               </p>
             </div>
           </div>
@@ -273,7 +273,7 @@ const SmallClaimsPage = () => {
         <div className="container-wide text-center">
           <h2 className="text-3xl font-bold font-serif mb-4">Ready to Take Action?</h2>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Start with a professional demand letter. It often resolves disputes without needing court — and strengthens your case if you do file.
+            Start with a professional demand letter. It often resolves disputes without needing court and strengthens your case if you do file.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>

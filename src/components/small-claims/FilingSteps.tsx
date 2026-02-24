@@ -5,12 +5,12 @@ const steps = [
   {
     icon: ClipboardList,
     title: 'Step 1: Determine If Small Claims Is Right for You',
-    content: 'Check if your claim amount falls within your state\'s filing limit. Small claims courts handle disputes involving money — from unpaid debts and security deposits to property damage and breach of contract. If your claim exceeds the limit, you can either reduce it to fit or file in a higher court.',
+    content: 'Check if your claim amount falls within your state\'s filing limit. Small claims courts handle disputes involving money, from unpaid debts and security deposits to property damage and breach of contract. If your claim exceeds the limit, you can either reduce it to fit or file in a higher court.',
   },
   {
     icon: Send,
     title: 'Step 2: Send a Demand Letter First',
-    content: 'Before filing, send a formal demand letter to the other party. This is often required by courts and shows you attempted to resolve the dispute. A well-crafted demand letter frequently resolves the issue without needing to go to court — saving you time and filing fees.',
+    content: 'Before filing, send a formal demand letter to the other party. This is often required by courts and shows you attempted to resolve the dispute. A well-crafted demand letter frequently resolves the issue without needing to go to court, saving you time and filing fees.',
   },
   {
     icon: FileText,
@@ -35,7 +35,7 @@ const steps = [
   {
     icon: CheckCircle,
     title: 'Step 7: Attend Your Hearing',
-    content: 'Arrive early, dress professionally, and bring all your evidence. Present your case clearly and concisely — explain what happened, what you\'re owed, and why. The judge will typically issue a decision the same day or within a few weeks.',
+    content: 'Arrive early, dress professionally, and bring all your evidence. Present your case clearly and concisely. Explain what happened, what you\'re owed, and why. The judge will typically issue a decision the same day or within a few weeks.',
   },
 ];
 
@@ -48,7 +48,7 @@ const FilingSteps = () => {
             How to File a Small Claims Case
           </h2>
           <p className="text-lg text-muted-foreground text-center mb-10">
-            A step-by-step guide to filing and winning your case — no lawyer required.
+            A step-by-step guide to filing and winning your case, no lawyer required.
           </p>
 
           <Accordion type="single" collapsible className="space-y-3">

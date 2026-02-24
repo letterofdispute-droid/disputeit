@@ -64,7 +64,7 @@ const CostBreakdown = () => {
             Total Typical Cost: $50–$150
           </p>
           <p className="text-muted-foreground">
-            For most claims, the total out-of-pocket cost is under $150 — often less than an hour of a lawyer's time. 
+            For most claims, the total out-of-pocket cost is under $150, often less than an hour of a lawyer's time. 
             If you win, most states allow you to recover your filing fees from the defendant.
           </p>
         </div>
