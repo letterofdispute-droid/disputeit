@@ -200,6 +200,7 @@ const PurchaseSuccessPage = () => {
         title="Purchase Successful | Letter of Dispute"
         description="Your letter purchase was successful. Download your documents."
         canonicalPath="/purchase-success"
+        noIndex={true}
       />
       <div className="min-h-[60vh] py-16 md:py-24 bg-background">
         <div className="container-wide max-w-2xl">

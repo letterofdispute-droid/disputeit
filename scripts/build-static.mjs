@@ -615,6 +615,33 @@ function generateSmallClaimsSitemap() {
     <priority>0.7</priority>
   </url>`);
 
+  // Cost calculator
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims/cost-calculator</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
+  // Demand letter cost
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims/demand-letter-cost</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
+  // Escalation guide
+  urls.push(`
+  <url>
+    <loc>${SITE_URL}/small-claims/escalation-guide</loc>
+    <lastmod>${BUILD_DATE}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`);
+
   // All 51 state pages (50 states + DC)
   for (const state of US_STATES_BUILD) {
     const stateSlug = getStateBuildSlug(state.name);
@@ -655,8 +682,8 @@ async function buildSitemaps() {
   const stateRightsUrlCount = 1 + US_STATES_BUILD.length + (US_STATES_BUILD.length * STATE_RIGHTS_CATEGORIES.length);
   console.log(`🗺️  State rights pages: ${stateRightsUrlCount} URLs`);
 
-  // Small claims: 1 hub + 1 generator + 51 state pages = 53 URLs
-  const smallClaimsUrlCount = 2 + US_STATES_BUILD.length;
+  // Small claims: 1 hub + 4 tools + 51 state pages = 56 URLs
+  const smallClaimsUrlCount = 5 + US_STATES_BUILD.length;
   console.log(`⚖️  Small claims pages: ${smallClaimsUrlCount} URLs`);
   
   // Generate content
