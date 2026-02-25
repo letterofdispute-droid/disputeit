@@ -120,11 +120,19 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
         </ul>
       </div>
       <div className="bg-muted/50 px-6 py-4 flex items-center justify-between">
-        <Link to={footerLink} className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
-          <FooterIcon className="size-4" />
-          {footerLabel}
-          <span className="text-xs font-normal text-muted-foreground">· {totalCount}+ {footerUnit}</span>
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to={footerLink} className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
+            <FooterIcon className="size-4" />
+            {footerLabel}
+            <span className="text-xs font-normal text-muted-foreground">· {totalCount}+ {footerUnit}</span>
+          </Link>
+          {showAiHelp && (
+            <Link to="/guides" className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+              <BookOpen className="size-4" />
+              Consumer Rights Guides →
+            </Link>
+          )}
+        </div>
         {showAiHelp && onAiHelp && (
           <button onClick={onAiHelp} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             <Sparkles className="size-4" />
@@ -154,20 +162,6 @@ const MegaMenu = () => {
                 footerIcon={FileText}
                 showAiHelp
                 onAiHelp={() => setAssistantOpen(true)}
-              />
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-
-          {/* Guides */}
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">Guides</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <CategoryGrid
-                basePath="/guides"
-                footerLink="/guides"
-                footerLabel="View all guides"
-                footerIcon={ArrowRight}
-                footerUnit="guides"
               />
             </NavigationMenuContent>
           </NavigationMenuItem>
