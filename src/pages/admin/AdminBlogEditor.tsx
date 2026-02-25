@@ -188,6 +188,11 @@ const AdminBlogEditor = () => {
         toast({ title: 'Post created', description: 'Your post has been created.' });
         navigate('/admin/blog');
       }
+
+      // Fire-and-forget: reconcile link counts in the background
+      supabase.rpc('reconcile_link_counts').then(({ error }) => {
+        if (error) console.warn('Background link reconciliation failed:', error);
+      });
     } catch (error) {
       console.error('Error saving post:', error);
       toast({ title: 'Error', description: 'Failed to save post.', variant: 'destructive' });
