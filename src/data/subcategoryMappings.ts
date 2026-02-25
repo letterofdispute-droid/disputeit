@@ -115,6 +115,15 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /neighbor|dispute|noise|parking/, subcategory: { name: 'Neighbor Disputes', slug: 'neighbor' } },
     { pattern: /governance|board|meeting|election/, subcategory: { name: 'Governance', slug: 'governance' } },
   ],
+  'Real Estate & Mortgages': [
+    { pattern: /payment-misapplication|misappl/, subcategory: { name: 'Payment Issues', slug: 'payment-issues' } },
+    { pattern: /escrow|tax-payment|insurance-payment/, subcategory: { name: 'Escrow', slug: 'escrow' } },
+    { pattern: /pmi|mortgage-insurance/, subcategory: { name: 'PMI', slug: 'pmi' } },
+    { pattern: /loan-modification|foreclosure|dual-tracking|loss-mitigation/, subcategory: { name: 'Foreclosure & Modification', slug: 'foreclosure' } },
+    { pattern: /payoff|heloc|closing-cost|respa/, subcategory: { name: 'Closing & Payoff', slug: 'closing' } },
+    { pattern: /force-placed|lender-placed/, subcategory: { name: 'Force-Placed Insurance', slug: 'force-placed-insurance' } },
+    { pattern: /successor|inherited|estate/, subcategory: { name: 'Inherited Property', slug: 'inherited' } },
+  ],
 };
 
 /**

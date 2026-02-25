@@ -34,6 +34,7 @@ const shortDescriptions: Record<string, string> = {
   'ecommerce': 'Online sellers & accounts',
   'hoa': 'HOA fees & neighbor issues',
   'contractors': 'Workmanship & project issues',
+  'mortgage': 'Mortgages & home equity',
 };
 
 const assessmentTools = [
