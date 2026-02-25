@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Settings, KeyRound, Lightbulb, Globe } from 'lucide-react';
+import { LayoutGrid, ListTodo, Link2, Calendar, BarChart3, Settings, KeyRound, Lightbulb, Globe, Image } from 'lucide-react';
 import TemplateCoverageMap from '@/components/admin/seo/TemplateCoverageMap';
 import ContentQueue from '@/components/admin/seo/ContentQueue';
 import LinkSuggestions from '@/components/admin/seo/LinkSuggestions';
@@ -29,15 +29,9 @@ export default function SEODashboard() {
       {/* Stats Overview */}
       <CoverageStats />
 
-      {/* Activity Feed */}
-      <ActivityFeed />
-
-      {/* OG Image Manager */}
-      <OgImageManager />
-
       {/* Main Tabs */}
       <Tabs defaultValue="discover" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-9 lg:w-auto lg:inline-flex">
           <TabsTrigger value="discover" className="gap-2">
             <Lightbulb className="h-4 w-4" />
             <span className="hidden sm:inline">Discover</span>
@@ -69,6 +63,10 @@ export default function SEODashboard() {
           <TabsTrigger value="keywords" className="gap-2">
             <KeyRound className="h-4 w-4" />
             <span className="hidden sm:inline">Keywords</span>
+          </TabsTrigger>
+          <TabsTrigger value="og-images" className="gap-2">
+            <Image className="h-4 w-4" />
+            <span className="hidden sm:inline">OG Images</span>
           </TabsTrigger>
         </TabsList>
 
@@ -102,6 +100,10 @@ export default function SEODashboard() {
 
         <TabsContent value="keywords" className="mt-4">
           <KeywordManager />
+        </TabsContent>
+
+        <TabsContent value="og-images" className="mt-4">
+          <OgImageManager />
         </TabsContent>
       </Tabs>
     </div>);
