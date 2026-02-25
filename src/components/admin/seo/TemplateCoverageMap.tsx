@@ -248,7 +248,37 @@ export default function TemplateCoverageMap() {
     }
   });
 
-  // Create missing plans mutation
+  // Detect orphan plans (plans with no queue items and no blog posts)
+  const { data: orphanPlanCount } = useQuery({
+    queryKey: ['orphan-plan-count', templatePlans.length],
+    queryFn: async () => {
+      if (templatePlans.length === 0) return 0;
+
+      const planIds = templatePlans.map(p => p.id);
+      const plansWithContent = new Set<string>();
+
+      for (let i = 0; i < planIds.length; i += 500) {
+        const batch = planIds.slice(i, i + 500);
+
+        const { data: queueData } = await supabase
+          .from('content_queue')
+          .select('plan_id')
+          .in('plan_id', batch);
+        (queueData || []).forEach(r => { if (r.plan_id) plansWithContent.add(r.plan_id); });
+
+        const { data: postData } = await supabase
+          .from('blog_posts')
+          .select('content_plan_id')
+          .in('content_plan_id', batch);
+        (postData || []).forEach(r => { if (r.content_plan_id) plansWithContent.add(r.content_plan_id); });
+      }
+
+      return planIds.filter(id => !plansWithContent.has(id)).length;
+    },
+    enabled: templatePlans.length > 0,
+  });
+
+  // Create missing plans mutation — now uses bulk planning pipeline
   const createMissingPlansMutation = useMutation({
     mutationFn: async () => {
       // Fetch ALL existing plan slugs in batches (avoid 1000-row limit)
@@ -271,37 +301,131 @@ export default function TemplateCoverageMap() {
 
       // Find templates without plans
       const missing = allTemplates.filter((t) => !existingSlugs.has(t.slug));
-      if (missing.length === 0) return { created: 0 };
+      if (missing.length === 0) return { started: 0 };
 
-      // Build insert rows
-      const rows = missing.map((t) => {
+      // Group missing templates by category for bulk planning
+      const byCategory: Record<string, { name: string; templates: Array<{ slug: string; name: string; subcategorySlug?: string }> }> = {};
+      for (const t of missing) {
         const categoryId = getCategoryIdFromName(t.category);
-        const tier = getTierForCategory(categoryId);
-        const tierConfig = VALUE_TIERS[tier];
-        return {
-          template_slug: t.slug,
-          template_name: t.title,
-          category_id: categoryId,
-          subcategory_slug: t.subcategorySlug || null,
-          value_tier: tier,
-          target_article_count: tierConfig.articleCount
-        };
-      });
+        if (!byCategory[categoryId]) {
+          const cat = templateCategories.find(c => c.id === categoryId);
+          byCategory[categoryId] = { name: cat?.name || categoryId, templates: [] };
+        }
+        byCategory[categoryId].templates.push({
+          slug: t.slug,
+          name: t.title,
+          subcategorySlug: t.subcategorySlug,
+        });
+      }
 
-      const { error } = await supabase.from('content_plans').insert(rows);
-      if (error) throw error;
-      return { created: rows.length };
+      // Start bulk planning jobs per category
+      let startedCount = 0;
+      for (const [categoryId, group] of Object.entries(byCategory)) {
+        const tier = getTierForCategory(categoryId);
+        await supabase.functions.invoke('bulk-plan-category', {
+          body: {
+            categoryId,
+            categoryName: group.name,
+            valueTier: tier,
+            templates: group.templates,
+          },
+        });
+        startedCount += group.templates.length;
+      }
+
+      return { started: startedCount };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['content-plans'] });
       queryClient.invalidateQueries({ queryKey: ['template-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-jobs-active'] });
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
       toast({
-        title: 'Missing plans created',
-        description: `${data.created} content plans added`
+        title: data.started > 0 ? 'Planning started in background' : 'No missing plans',
+        description: data.started > 0
+          ? `${data.started} templates are being planned with AI-generated articles. This may take a few minutes.`
+          : 'All templates already have content plans.',
       });
     },
     onError: (error) => {
       toast({ title: 'Failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    }
+  });
+
+  // Backfill orphan plans mutation — triggers bulk planning for plans that exist but have no articles
+  const backfillOrphansMutation = useMutation({
+    mutationFn: async () => {
+      if (templatePlans.length === 0) return { started: 0 };
+
+      const planIds = templatePlans.map(p => p.id);
+      const plansWithContent = new Set<string>();
+
+      for (let i = 0; i < planIds.length; i += 500) {
+        const batch = planIds.slice(i, i + 500);
+        const { data: queueData } = await supabase
+          .from('content_queue')
+          .select('plan_id')
+          .in('plan_id', batch);
+        (queueData || []).forEach(r => { if (r.plan_id) plansWithContent.add(r.plan_id); });
+
+        const { data: postData } = await supabase
+          .from('blog_posts')
+          .select('content_plan_id')
+          .in('content_plan_id', batch);
+        (postData || []).forEach(r => { if (r.content_plan_id) plansWithContent.add(r.content_plan_id); });
+      }
+
+      const orphanPlans = templatePlans.filter(p => !plansWithContent.has(p.id));
+      if (orphanPlans.length === 0) return { started: 0 };
+
+      // Group orphan plans by category
+      const byCategory: Record<string, { name: string; templates: Array<{ slug: string; name: string; subcategorySlug?: string }> }> = {};
+      for (const p of orphanPlans) {
+        const categoryId = p.category_id;
+        if (!byCategory[categoryId]) {
+          const cat = templateCategories.find(c => c.id === categoryId);
+          byCategory[categoryId] = { name: cat?.name || categoryId, templates: [] };
+        }
+        byCategory[categoryId].templates.push({
+          slug: p.template_slug,
+          name: p.template_name,
+          subcategorySlug: p.subcategory_slug || undefined,
+        });
+      }
+
+      let startedCount = 0;
+      for (const [categoryId, group] of Object.entries(byCategory)) {
+        const tier = getTierForCategory(categoryId);
+        await supabase.functions.invoke('bulk-plan-category', {
+          body: {
+            categoryId,
+            categoryName: group.name,
+            valueTier: tier,
+            templates: group.templates,
+          },
+        });
+        startedCount += group.templates.length;
+      }
+
+      return { started: startedCount };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['content-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['template-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-planning-jobs-active'] });
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['orphan-plan-count'] });
+      toast({
+        title: data.started > 0 ? 'Backfill started in background' : 'Nothing to backfill',
+        description: data.started > 0
+          ? `Generating articles for ${data.started} empty plans. This may take a few minutes.`
+          : 'All plans already have articles.',
+      });
+    },
+    onError: (error) => {
+      toast({ title: 'Backfill failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     }
   });
 
@@ -474,9 +598,23 @@ export default function TemplateCoverageMap() {
             variant="default">
 
               {createMissingPlansMutation.isPending ?
-            <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Creating...</> :
+            <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Planning...</> :
 
-            <><Plus className="h-4 w-4 mr-1.5" /> Create {allTemplates.length - templatePlans.length} Missing Plans</>
+            <><Plus className="h-4 w-4 mr-1.5" /> Plan {allTemplates.length - templatePlans.length} Missing Templates</>
+            }
+            </Button>
+          }
+          {(orphanPlanCount ?? 0) > 0 &&
+          <Button
+            onClick={() => backfillOrphansMutation.mutate()}
+            disabled={backfillOrphansMutation.isPending}
+            size="sm"
+            variant="secondary">
+
+              {backfillOrphansMutation.isPending ?
+            <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Starting...</> :
+
+            <><FileText className="h-4 w-4 mr-1.5" /> Backfill {orphanPlanCount} Empty Plans</>
             }
             </Button>
           }
