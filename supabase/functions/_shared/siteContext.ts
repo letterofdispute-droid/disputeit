@@ -130,8 +130,8 @@ wrong-item-sent, missing-items-order, restocking-fee-dispute, voucher-instead-of
 -- Special Purchases --
 auction-purchase-refund, secondhand-purchase-refund, layaway-cancellation-refund,
 extended-warranty-refund, bundle-partial-refund, flash-sale-refund,
--- Subscription --
-subscription-cancellation-refund
+-- Special Purchases (continued) --
+flash-sale-refund
 
 financial (category-id: financial):
 -- Banking --
@@ -175,6 +175,9 @@ government-impersonation-scam-complaint, tech-support-scam-refund-claim,
 romance-pig-butchering-scam-bank-claim, recovery-room-scam-complaint
 
 housing (category-id: housing):
+-- Core Housing --
+landlord-repairs-general, landlord-heating-complaint, deposit-return-request,
+deposit-deduction-dispute, rent-increase-dispute, landlord-harassment-complaint,
 -- Tenancy Disputes --
 tenancy-renewal-request, early-termination-request, subletting-permission-request,
 tenant-reference-request, joint-tenancy-removal-request, rent-reduction-request,
@@ -183,7 +186,7 @@ service-charge-dispute, unauthorized-entry-complaint,
 landlord-roof-leak-complaint, landlord-window-repair-request, landlord-flooring-repair-request,
 landlord-structural-damage-complaint, landlord-garden-maintenance-request,
 landlord-gutter-repair-request, landlord-external-repair-request, landlord-door-repair-request,
-deposit-deduction-dispute, repair-request-letter, mould-damp-complaint,
+repair-request-letter, mould-damp-complaint,
 -- Safety & Compliance --
 epc-certificate-request, electrical-safety-certificate-request, smoke-alarm-request,
 fire-safety-complaint, hmo-licensing-complaint, asbestos-concern-letter,
@@ -255,6 +258,9 @@ sewerage-complaint, water-meter-installation, hosepipe-ban-exemption,
 surface-water-drainage-rebate, supply-interruption-compensation
 
 insurance (category-id: insurance):
+-- Core Insurance --
+insurance-claim-denial-appeal, insurance-claim-underpayment, insurance-claim-delay,
+insurance-cancellation-refund,
 -- Health Insurance --
 prior-auth-denial-appeal, out-of-network-denial-appeal, prescription-coverage-denial,
 mental-health-parity-complaint, ambulance-charge-dispute, balance-billing-dispute,
@@ -274,6 +280,7 @@ travel-delay-insurance-claim, missed-connection-insurance-claim,
 pet-insurance-claim-denial, pet-preexisting-condition-dispute,
 pet-hereditary-condition-claim, pet-dental-coverage-dispute,
 business-interruption-claim, professional-indemnity-claim, public-liability-claim,
+employers-liability-claim, cyber-insurance-claim, directors-officers-claim,
 -- Additional --
 insurance-premium-dispute, insurance-policy-dispute, third-party-insurance-claim,
 insurance-bad-faith-complaint
@@ -352,12 +359,14 @@ paypal-dispute-escalation, credit-card-chargeback-support, klarna-afterpay-dispu
 refund-delay-complaint, gift-card-scam, store-credit-cash-refund, double-charge-dispute
 
 hoa (category-id: hoa):
+-- Core HOA --
+hoa-complaint-letter, hoa-architectural-request,
 -- Fee Disputes --
-hoa-fee-dispute, hoa-special-assessment-dispute, hoa-late-fee-waiver-request,
+hoa-special-assessment-dispute, hoa-late-fee-waiver-request,
 hoa-payment-plan-request, hoa-billing-error-dispute, hoa-reserve-fund-inquiry,
-hoa-budget-objection,
+hoa-budget-objection, hoa-audit-request,
 -- Violations --
-hoa-rule-violation-appeal, hoa-violation-appeal, hoa-selective-enforcement-complaint,
+hoa-violation-appeal, hoa-selective-enforcement-complaint,
 hoa-reasonable-accommodation-request, hoa-board-harassment-complaint,
 hoa-rental-restriction-dispute, hoa-cease-desist-to-neighbor, hoa-mediation-request,
 -- Governance --
@@ -365,11 +374,11 @@ hoa-meeting-request, hoa-records-request, hoa-rule-change-proposal,
 hoa-board-recall-petition, hoa-voting-dispute, hoa-conflict-of-interest-complaint,
 hoa-vendor-contract-objection, hoa-management-company-complaint, hoa-governance-complaint,
 -- Maintenance --
-hoa-maintenance-request, hoa-common-area-repair-request, hoa-pest-control-request,
+hoa-common-area-repair-request, hoa-pest-control-request,
 hoa-landscaping-complaint, hoa-pool-spa-complaint, hoa-security-concern,
 hoa-parking-lot-repair-request, hoa-elevator-complaint, hoa-trash-recycling-complaint,
 -- Neighbor Disputes --
-hoa-neighbor-noise-complaint, neighbor-noise-complaint, neighbor-boundary-dispute,
+neighbor-noise-complaint, neighbor-boundary-dispute,
 neighbor-tree-dispute, neighbor-parking-dispute, neighbor-pet-complaint,
 neighbor-property-damage-claim, neighbor-harassment-complaint, neighbor-light-pollution-complaint
 
