@@ -1,0 +1,1 @@
+ALTER TABLE public.content_queue ADD COLUMN scheduled_at TIMESTAMPTZ;

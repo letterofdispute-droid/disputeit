@@ -568,6 +568,7 @@ export type Database = {
           primary_keyword: string | null
           priority: number | null
           published_at: string | null
+          scheduled_at: string | null
           secondary_keywords: string[] | null
           started_at: string | null
           status: string
@@ -589,6 +590,7 @@ export type Database = {
           primary_keyword?: string | null
           priority?: number | null
           published_at?: string | null
+          scheduled_at?: string | null
           secondary_keywords?: string[] | null
           started_at?: string | null
           status?: string
@@ -610,6 +612,7 @@ export type Database = {
           primary_keyword?: string | null
           priority?: number | null
           published_at?: string | null
+          scheduled_at?: string | null
           secondary_keywords?: string[] | null
           started_at?: string | null
           status?: string

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Loader2, Trash2, Play, RotateCcw, Settings2 } from 'lucide-react';
+import { Loader2, Trash2, Play, RotateCcw, Settings2, CalendarClock } from 'lucide-react';
+import ScheduleDialog from './ScheduleDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,8 @@ interface QueueActionsProps {
   onDeleteSelected: () => void;
   onClearFailed: () => void;
   onRetryFailed: () => void;
+  scheduleItemCount: number;
+  onScheduleConfirm: (startDate: Date, batchSize: number, intervalDays: number) => void;
 }
 
 export default function QueueActions({
@@ -41,9 +44,12 @@ export default function QueueActions({
   onDeleteSelected,
   onClearFailed,
   onRetryFailed,
+  scheduleItemCount,
+  onScheduleConfirm,
 }: QueueActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showClearFailedDialog, setShowClearFailedDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
   const handleConfirmDelete = () => {
     onDeleteSelected();
@@ -58,6 +64,18 @@ export default function QueueActions({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+        {/* Schedule Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowScheduleDialog(true)}
+          disabled={scheduleItemCount === 0}
+        >
+          <CalendarClock className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">Schedule ({scheduleItemCount})</span>
+          <span className="sm:hidden">{scheduleItemCount}</span>
+        </Button>
+
         {/* Batch Size Settings */}
         <Popover>
           <PopoverTrigger asChild>
@@ -164,6 +182,14 @@ export default function QueueActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule Dialog */}
+      <ScheduleDialog
+        open={showScheduleDialog}
+        onOpenChange={setShowScheduleDialog}
+        itemCount={scheduleItemCount}
+        onConfirm={onScheduleConfirm}
+      />
     </>
   );
 }
