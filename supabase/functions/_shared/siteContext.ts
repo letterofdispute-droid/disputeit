@@ -20,7 +20,7 @@ export const CATEGORIES = [
   { id: 'insurance', name: 'Insurance Claims', description: 'Claim denials, settlement disputes, policy cancellation challenges, premium disputes', templateCount: 50 },
   { id: 'vehicle', name: 'Vehicle & Auto', description: 'Dealer complaints, warranty disputes, repair shop issues, lemon law claims, parking disputes', templateCount: 45 },
   { id: 'employment', name: 'Employment & Workplace', description: 'Wage disputes, wrongful termination, discrimination complaints, workplace safety', templateCount: 50 },
-  { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Seller disputes, account issues, data privacy requests, subscription traps, marketplace complaints', templateCount: 44 },
+  { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Seller disputes, account issues, data privacy requests, subscription traps, marketplace complaints', templateCount: 45 },
   { id: 'hoa', name: 'HOA & Neighbor Disputes', description: 'Fee disputes, rule violations, neighbor conflicts, property boundaries', templateCount: 50 },
   { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Poor workmanship, incomplete projects, contract disputes, payment issues', templateCount: 61 },
   { id: 'mortgage', name: 'Real Estate & Mortgages', description: 'Payment misapplication, escrow disputes, PMI removal, foreclosure defense, closing cost disputes', templateCount: 10 },
@@ -125,6 +125,7 @@ bank-fund-availability-hold-complaint, bank-nsf-fee-dispute, bank-power-of-attor
 credit-card-dispute, credit-card-billing-error-dispute, credit-card-unauthorized-transaction-dispute,
 credit-card-interest-rate-increase-challenge, credit-card-late-fee-dispute,
 credit-card-rewards-points-dispute, credit-card-promotional-apr-expiration-dispute,
+credit-limit-reduction-dispute, credit-application-denial-dispute, balance-transfer-dispute,
 -- Credit Reporting --
 credit-report-error-dispute, credit-bureau-dispute-experian, credit-bureau-dispute-equifax,
 credit-bureau-dispute-transunion, credit-report-incorrect-payment-history,
@@ -214,14 +215,18 @@ unpaid-overtime-demand, unpaid-commission-demand, wage-deduction-dispute,
 pension-contribution-dispute, non-compete-dispute, flexible-working-request
 
 ecommerce (category-id: ecommerce):
+-- Core --
+marketplace-seller-complaint, data-privacy-request,
 -- Marketplace --
 amazon-a-to-z-claim, ebay-money-back-guarantee, etsy-case-escalation, aliexpress-dispute,
 wish-refund-request, walmart-marketplace-complaint, facebook-marketplace-scam, depop-vinted-complaint,
 -- Subscriptions --
 subscription-cancellation-refund, free-trial-unwanted-charge, auto-renewal-dispute,
-price-increase-subscription, dark-pattern-complaint, streaming-quality-complaint,
--- Account & Privacy --
-account-suspended-appeal, data-deletion-request, gdpr-data-access-request, ccpa-data-deletion-request,
+price-increase-subscription, streaming-service-complaint, software-subscription-refund,
+membership-fee-dispute, gym-membership-cancellation,
+-- Privacy & Data --
+gdpr-data-deletion, gdpr-data-portability, ccpa-do-not-sell, data-breach-notification-request,
+marketing-opt-out, cookie-consent-complaint, account-deletion-request, automated-decision-challenge,
 -- Consumer Protection --
 drip-pricing-complaint, counterfeit-goods-complaint, fake-reviews-product-complaint,
 platform-account-ban-with-balance,
@@ -230,7 +235,7 @@ package-not-received, delivery-to-wrong-address, damaged-in-transit, late-delive
 partial-order-missing, porch-piracy, return-shipping-refund, signature-required-not-obtained,
 -- Payment & Refund --
 paypal-dispute-escalation, credit-card-chargeback-support, klarna-afterpay-dispute,
-refund-delay-complaint, gift-card-scam, seller-non-delivery-complaint
+refund-delay-complaint, gift-card-scam, store-credit-cash-refund, double-charge-dispute
 
 hoa (category-id: hoa):
 hoa-fee-dispute, hoa-rule-violation-appeal, hoa-maintenance-request,
