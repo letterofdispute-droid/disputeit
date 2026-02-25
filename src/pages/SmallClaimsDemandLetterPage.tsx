@@ -2,7 +2,7 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import DemandLetterCostCalculator from '@/components/small-claims/DemandLetterCostCalculator';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Calculator, GitBranch, FileText } from 'lucide-react';
+import { ArrowLeft, Calculator, GitBranch, FileText, DollarSign } from 'lucide-react';
 
 const SmallClaimsDemandLetterPage = () => {
   const siteUrl = 'https://letterofdispute.com';
@@ -25,17 +25,20 @@ const SmallClaimsDemandLetterPage = () => {
         ]}
       />
 
-      {/* Intro */}
-      <section className="py-12 md:py-16">
+      {/* Hero */}
+      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
-            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-primary-foreground/60 hover:text-primary-foreground mb-6 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to Small Claims Guide
             </Link>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-foreground mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-full px-4 py-1.5 text-sm text-primary-foreground/80 mb-4">
+              <DollarSign className="h-4 w-4" /> Cost Comparison
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif mb-4">
               Demand Letter Cost Comparison
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
               A demand letter is often required before filing in court - and it frequently resolves the dispute on its own. Compare your three options below to find the best approach for your situation.
             </p>
           </div>

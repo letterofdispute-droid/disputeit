@@ -2,7 +2,7 @@ import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
 import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Calculator, DollarSign, Scale } from 'lucide-react';
+import { ArrowLeft, Calculator, DollarSign, Scale, GitBranch } from 'lucide-react';
 
 const SmallClaimsEscalationPage = () => {
   const siteUrl = 'https://letterofdispute.com';
@@ -25,17 +25,20 @@ const SmallClaimsEscalationPage = () => {
         ]}
       />
 
-      {/* Intro */}
-      <section className="py-12 md:py-16">
+      {/* Hero */}
+      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
-            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-primary-foreground/60 hover:text-primary-foreground mb-6 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to Small Claims Guide
             </Link>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-foreground mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-full px-4 py-1.5 text-sm text-primary-foreground/80 mb-4">
+              <GitBranch className="h-4 w-4" /> Escalation Flowchart
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif mb-4">
               Complaint Escalation Guide
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
               Not every dispute needs to go to court. Follow this step-by-step path to resolve your issue - starting with direct contact and escalating only when needed.
             </p>
           </div>
