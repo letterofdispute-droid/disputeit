@@ -1,32 +1,61 @@
 
 
-# Fix: Mega Menu Right-Edge Clipping
+# De-duplicating the Letter Templates and Guides Mega Menus
 
-## Problem
-The 980px-wide dropdown panel overflows the right side of the viewport. The third column's text is cut off (e.g., "Healthcare & Medical Bill..." instead of "Healthcare & Medical Billing").
+## The Problem
+Both "Letter Templates" and "Guides" dropdowns show the **identical** 13-category grid. The only difference is the URL prefix (`/templates/` vs `/guides/`) and footer text. This is wasted navigation real estate and confusing for users.
 
-## Root Cause
-In `src/components/ui/navigation-menu.tsx`, the `NavigationMenuViewport` wrapper uses `left-0`, which anchors the dropdown to the left edge of the `NavigationMenu` component. Since the nav menu isn't flush with the left edge of the screen, the 980px panel extends past the right viewport edge.
+## Recommended Approach: Merge Into a Single "Letter Templates" Dropdown With Two Paths
 
-## Fix
+Remove the standalone "Guides" top-level menu item. Instead, add a **secondary column or footer row** inside the existing "Letter Templates" dropdown that links to guides. This eliminates the duplication while keeping guides discoverable.
 
-### File: `src/components/ui/navigation-menu.tsx`
-Change the viewport wrapper's positioning from `left-0` to `right-0` (or use a negative left offset) so the panel stays within the viewport:
+### Option A — Footer CTA Row (Minimal Change, Recommended)
 
-```tsx
-// Current:
-<div className={cn("absolute left-0 top-full flex justify-center")}>
+Keep the single 3-column category grid under "Letter Templates". In the footer bar, add a second link for guides alongside "Browse all templates":
 
-// Change to:
-<div className={cn("absolute left-1/2 -translate-x-1/2 top-full flex justify-center")}>
+```text
+┌─────────────────────────────────────────────────────┐
+│  Refunds & Purchases  │ Landlord & Housing │ Travel │
+│  Damaged Goods        │ Utilities          │ ...    │
+│  ...                  │ ...                │ ...    │
+├─────────────────────────────────────────────────────┤
+│ 📄 Browse all templates · 631+      📖 Consumer Rights Guides →  │
+│                           ✨ Not sure? Get AI help                │
+└─────────────────────────────────────────────────────┘
 ```
 
-This centers the dropdown relative to the navigation menu, preventing right-edge overflow. If the nav is too far right for centering to work, an alternative is to simply use `right-0` to anchor to the right edge instead.
+- Remove the "Guides" `NavigationMenuItem` entirely
+- Add a "Consumer Rights Guides" link in the footer of the Templates panel
+- Pros: Simplest change, no duplication, clean
+- Cons: Guides are slightly less prominent
 
-### No changes needed to `MegaMenu.tsx`
-The 980px width is fine — the issue is purely about viewport positioning.
+### Option B — Two-Tab Panel (More Prominent)
+
+Replace both menus with a single "Browse" dropdown that has **tabs** at the top: `Templates | Guides`. Clicking a tab switches the grid's link prefix. Footer updates accordingly.
+
+```text
+┌─ [Templates] [Guides] ─────────────────────────────┐
+│  Refunds & Purchases  │ Landlord & Housing │ Travel │
+│  ...                                               │
+├─────────────────────────────────────────────────────┤
+│ Browse all templates · 631+        ✨ Get AI help   │
+└─────────────────────────────────────────────────────┘
+```
+
+- Pros: Both equally prominent, single source of truth
+- Cons: More code, adds state management for active tab
+
+---
+
+## My Recommendation: **Option A** (Footer CTA)
+
+It is the cleanest UX. Guides are a Tier 2 educational resource — they don't need equal nav prominence to the Tier 1 templates (the primary conversion points). A clear footer link like **"📖 Read Consumer Rights Guides →"** is sufficient and keeps the nav simple.
+
+## Technical Changes
 
 | File | Change |
 |------|--------|
-| `src/components/ui/navigation-menu.tsx` | Update viewport wrapper from `left-0` to centered positioning (`left-1/2 -translate-x-1/2`) |
+| `src/components/layout/MegaMenu.tsx` | 1. Remove the "Guides" `NavigationMenuItem` block entirely. 2. Add a `Link to="/guides"` in the Templates footer bar alongside the existing "Browse all templates" link. Style it as a secondary CTA (e.g., `BookOpen` icon + "Consumer Rights Guides →"). |
+
+No other files need changes — routes, pages, and data stay the same.
 
