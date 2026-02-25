@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   FileText, BookOpen, Sparkles, MapPin, Clock, Newspaper,
   Search, Scale, Calculator, DollarSign, GitBranch, ArrowRight,
-  GraduationCap, FileQuestion, Calendar,
+  GraduationCap, FileQuestion, Calendar, Mail,
 } from 'lucide-react';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 import { format } from 'date-fns';
@@ -49,6 +49,13 @@ const courtTools = [
   { title: 'Demand Letter Compare', description: 'DIY vs. lawyer costs', href: '/small-claims/demand-letter-cost', icon: DollarSign },
   { title: 'Escalation Flowchart', description: 'Best resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
   { title: 'State Rights Lookup', description: 'Laws for your state', href: '/state-rights', icon: MapPin },
+];
+
+const getStartedItems = [
+  { title: 'How It Works', description: 'Step-by-step guide', href: '/how-it-works', icon: Sparkles },
+  { title: 'FAQ', description: 'Common questions answered', href: '/faq', icon: FileQuestion },
+  { title: 'About Us', description: 'Our mission & story', href: '/about', icon: BookOpen },
+  { title: 'Contact', description: 'Get in touch', href: '/contact', icon: Mail },
 ];
 
 const notableStateLinks = [
@@ -192,7 +199,7 @@ const MegaMenu = () => {
                     <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assessment & Analysis</p>
                     <ul className="space-y-0.5">
                       {assessmentTools.map((t) => (
-                        <CompactMenuCard key={t.title} {...t} />
+                        <MenuCard key={t.title} {...t} />
                       ))}
                     </ul>
                   </div>
@@ -200,7 +207,7 @@ const MegaMenu = () => {
                     <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Court & Legal</p>
                     <ul className="space-y-0.5">
                       {courtTools.map((t) => (
-                        <CompactMenuCard key={t.title} {...t} />
+                        <MenuCard key={t.title} {...t} />
                       ))}
                     </ul>
                   </div>
@@ -235,19 +242,19 @@ const MegaMenu = () => {
                   <div>
                     <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Guides & Knowledge</p>
                     <ul className="space-y-0.5">
-                      <CompactMenuCard
+                      <MenuCard
                         title="Consumer Rights Guides"
                         description="Category-specific guides"
                         icon={GraduationCap}
                         href="/guides"
                       />
-                      <CompactMenuCard
+                      <MenuCard
                         title="All Articles"
                         description="500+ expert articles"
                         icon={BookOpen}
                         href="/articles"
                       />
-                      <CompactMenuCard
+                      <MenuCard
                         title="Knowledge Center"
                         description="Tips & how-tos"
                         icon={FileText}
@@ -307,11 +314,20 @@ const MegaMenu = () => {
             </NavigationMenuContent>
           </NavigationMenuItem>
 
-          {/* 4. Get Started (direct link) */}
+          {/* 4. Get Started */}
           <NavigationMenuItem>
-            <Link to="/how-it-works">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>Get Started</NavigationMenuLink>
-            </Link>
+            <NavigationMenuTrigger className="bg-transparent">Get Started</NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-[400px]">
+                <div className="p-4">
+                  <ul className="space-y-0.5">
+                    {getStartedItems.map((item) => (
+                      <MenuCard key={item.title} {...item} />
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </NavigationMenuContent>
           </NavigationMenuItem>
 
           {/* 5. Pricing (direct link) */}
