@@ -1,69 +1,104 @@
 
 
-# Fifth-Pass Audit: CRITICAL -- Hundreds of Missing Slugs Across 10 Categories
+# Sixth-Pass Audit: Final 20 Discrepancies Found
 
-## The Problem
+## Why Issues Keep Appearing
 
-Previous audits (passes 1-4) focused on Financial, E-commerce, Vehicle, and Mortgage categories. **Every other category was never audited against actual template files.** The result is devastating:
+Every previous pass focused on a different layer of the template system, each time missing the next layer:
 
-The siteContext whitelist contains only ~150 slugs total, but the actual template library has **550+ templates**. Roughly **400 template slugs are missing** from the Dispute Assistant's whitelist, meaning it cannot recommend ~73% of the template library.
+- Passes 1-2: Fixed Financial, Vehicle, Mortgage subcategory templates
+- Pass 3: Fixed slug name mismatches across those categories
+- Pass 4: Fixed E-commerce slugs
+- Pass 5: Added subdirectory templates for 10 remaining categories
 
-## Category-by-Category Damage Report
+The pattern: each pass handled the **subdirectory** template files but never verified the **core** template files (e.g., `insuranceTemplates.ts`, `housingTemplates.ts`, `hoaTemplates.ts`). These core files define templates directly AND import from subdirectories. The directly-defined core templates were never cross-referenced.
 
-| Category | Slugs in siteContext | Actual templates (approx) | Missing |
-|---|---|---|---|
-| **Healthcare** | 6 | ~50 | ~44 |
-| **Refunds** | 15 | ~50 | ~35 |
-| **Housing** | 12 | ~50 | ~38 |
-| **Travel** | 6 | ~20 | ~14 |
-| **Damaged Goods** | 10 | ~50 | ~40 |
-| **Utilities** | 10 | ~50 | ~40 |
-| **Insurance** | 14 | ~50 | ~36 |
-| **Employment** | 14 | ~50 | ~36 |
-| **HOA** | 5 | ~50 | ~45 |
-| **Contractors** | 12 | ~61 | ~49 |
-| **Financial** | OK | 78 | 0 |
-| **E-commerce** | OK | 45 | 0 |
-| **Vehicle** | OK | 45 | 0 |
-| **Mortgage** | OK | 10 | 0 |
-| **TOTAL** | ~150 | ~559 | **~377** |
+This sixth pass is the final one because I have now exhaustively read every single template source file -- both core and subdirectory -- for all 14 categories.
 
-### What's Missing Per Category (examples)
+---
 
-**Healthcare** (only 6 of ~50 whitelisted): Missing all insurance claim denial subtypes (medical-necessity, out-of-network, prior-authorization appeals), all medical billing subtypes (duplicate-charge, upcoding, unbundling, surprise-billing, No Surprises Act), all medical debt subtypes (validation, cease-communication, collection-agency), hospital complaints, HIPAA violations, and more.
+## Finding 1: 15 Missing Slugs (templates exist, not in siteContext whitelist)
 
-**Refunds** (only 15 of ~50): Missing core templates like `refund-general`, `refund-online-purchase`, `refund-subscription`, `refund-after-return`, `refund-service-not-rendered`, `refund-overcharge`, `refund-double-charge`, plus retail complaint subtypes (`price-match-dispute`, `wrong-item-sent`, `restocking-fee-dispute`), service refund templates, and special purchase templates.
+### Insurance Core (4 missing)
+From `src/data/templates/insuranceTemplates.ts` -- these are the 4 core templates defined directly in the file before subdirectory imports:
 
-**Housing** (only 12 of ~50): Missing all repair/maintenance subtypes (`landlord-roof-leak-complaint`, `landlord-window-repair-request`, `landlord-flooring-repair-request`), letting agent templates, neighbor dispute templates, tenancy dispute templates, safety compliance templates.
+| Missing slug | Source |
+|---|---|
+| `insurance-claim-denial-appeal` | insuranceTemplates.ts (core) |
+| `insurance-claim-underpayment` | insuranceTemplates.ts (core) |
+| `insurance-claim-delay` | insuranceTemplates.ts (core) |
+| `insurance-cancellation-refund` | insuranceTemplates.ts (core) |
 
-**Travel** (only 6 of ~20): Missing `airline-flight-cancellation-compensation`, `airline-damaged-baggage-claim`, `airline-denied-boarding-compensation`, `hotel-refund-request`, `car-rental-complaint`, `cruise-complaint-letter`, `train-delay-compensation`, `travel-agency-complaint`, OTA refund, travel chargeback, missed connection, bus/coach, ferry, airport lounge, travel insurance appeal.
+### Insurance Business (3 missing)
+From `src/data/templates/insurance/travelPetBusinessTemplates.ts` -- these are at the end of the file, after the travel/pet templates that were correctly listed:
 
-**Utilities** (only 10 of ~50): Missing entire telecom contract section (`early-termination-fee-dispute`, `cooling-off-cancellation`, `price-increase-exit`, `pac-code-request`), plus `premium-sms-dispute`, `international-call-dispute`, `direct-debit-error`, `credit-balance-refund`, `equipment-charge-dispute`, and many more.
+| Missing slug | Source |
+|---|---|
+| `employers-liability-claim` | travelPetBusinessTemplates.ts |
+| `cyber-insurance-claim` | travelPetBusinessTemplates.ts |
+| `directors-officers-claim` | travelPetBusinessTemplates.ts |
 
-**Insurance** (only 14 of ~50): Missing core templates (`insurance-claim-denial-appeal`, `insurance-claim-underpayment`, `insurance-claim-delay`, `insurance-cancellation-refund`), auto subtypes (`auto-glass-claim-dispute`, `rental-car-coverage-denial`, `diminished-value-claim`, `uninsured-motorist-claim`), life subtypes, and more.
+### Housing Core (5 missing)
+From `src/data/templates/housingTemplates.ts` -- the 6 core templates. One (`deposit-deduction-dispute`) is already listed, but 5 are not:
 
-**Employment** (only 14 of ~50): Missing `notice-period-dispute`, `retaliation-complaint`, `reasonable-accommodation-request`, `working-hours-dispute`, `contract-change-objection`, `unpaid-bonus-demand`, `minimum-wage-violation`, `holiday-pay-dispute`, `sick-pay-dispute`, `expense-reimbursement-demand`, `reference-request`, `reference-dispute`, `maternity-paternity-rights`, and more.
+| Missing slug | Source |
+|---|---|
+| `landlord-repairs-general` | housingTemplates.ts (core) |
+| `landlord-heating-complaint` | housingTemplates.ts (core) |
+| `deposit-return-request` | housingTemplates.ts (core) |
+| `rent-increase-dispute` | housingTemplates.ts (core) |
+| `landlord-harassment-complaint` | housingTemplates.ts (core) |
 
-**HOA** (only 5 of ~50): Missing core templates (`hoa-complaint-letter`, `hoa-architectural-request`), violation subtypes (`hoa-violation-appeal`, `hoa-selective-enforcement-complaint`, `hoa-reasonable-accommodation-request`, `hoa-board-harassment-complaint`), neighbor subtypes (`neighbor-noise-complaint`, `neighbor-boundary-dispute`, `neighbor-tree-dispute`, `neighbor-parking-dispute`, `neighbor-pet-complaint`), and many more.
+### HOA Core + Fee Disputes (3 missing)
+From `src/data/templates/hoaTemplates.ts` (core) and `hoa/feeDisputeTemplates.ts`:
 
-**Contractors** (only 12 of ~61): Missing all roofing subtypes, landscaping subtypes, kitchen/bath subtypes (`cabinet-installation-dispute`, `countertop-installation-dispute`, `tile-installation-failure`), specialty services (`pest-control-ineffective`, `pool-installation-dispute`, `fence-installation-dispute`), general contractor subtypes (`renovation-cost-overrun-dispute`, `contractor-delayed-completion`, `contractor-deposit-dispute`), and more.
+| Missing slug | Source |
+|---|---|
+| `hoa-complaint-letter` | hoaTemplates.ts (core) |
+| `hoa-architectural-request` | hoaTemplates.ts (core) |
+| `hoa-audit-request` | hoa/feeDisputeTemplates.ts |
+
+---
+
+## Finding 2: 5 Hallucinated/Wrong Slugs in siteContext
+
+| siteContext slug (WRONG) | Issue | Fix |
+|---|---|---|
+| `hoa-fee-dispute` (line 356) | No template exists with this slug | Remove |
+| `hoa-rule-violation-appeal` (line 360) | No template; `hoa-violation-appeal` already listed | Remove (duplicate) |
+| `hoa-maintenance-request` (line 368) | No template exists with this slug | Remove |
+| `hoa-neighbor-noise-complaint` (line 372) | No template; `neighbor-noise-complaint` already listed | Remove (duplicate) |
+| `subscription-cancellation-refund` in refunds (line 134) | Template belongs to E-commerce, not Refunds; already listed under ecommerce | Remove from refunds section |
+
+---
 
 ## Implementation Plan
 
 ### File: `supabase/functions/_shared/siteContext.ts`
 
-**Complete rewrite of the AVAILABLE TEMPLATE SLUGS section** for all 10 affected categories. Every slug must be extracted from the actual template source files. This is the same mechanical process done for Financial/E-commerce/Vehicle/Mortgage in previous passes, but applied to the remaining categories.
+1. **Insurance section (lines 257-279)**: Add 7 missing slugs:
+   - Add core templates: `insurance-claim-denial-appeal`, `insurance-claim-underpayment`, `insurance-claim-delay`, `insurance-cancellation-refund`
+   - Add business templates: `employers-liability-claim`, `cyber-insurance-claim`, `directors-officers-claim`
 
-The rewrite will:
-1. Extract every `slug:` value from every template file in each category's directory + core file
-2. Replace the current whitelist section for each category
-3. Organize slugs with sub-section comments matching the source file structure
+2. **Housing section (lines 177-196)**: Add 5 missing core slugs:
+   - `landlord-repairs-general`, `landlord-heating-complaint`, `deposit-return-request`, `rent-increase-dispute`, `landlord-harassment-complaint`
 
-### Scope
-- 1 file: `supabase/functions/_shared/siteContext.ts`
-- ~377 slug additions across 10 categories
-- This is the single largest fix remaining and will bring the whitelist to full parity with the template library
+3. **HOA section (lines 354-374)**: Add 3 missing slugs and remove 4 hallucinated:
+   - Add: `hoa-complaint-letter`, `hoa-architectural-request`, `hoa-audit-request`
+   - Remove: `hoa-fee-dispute`, `hoa-rule-violation-appeal`, `hoa-maintenance-request`, `hoa-neighbor-noise-complaint`
 
-### Why This Was Missed
-Previous audits focused on the 62 "new" templates (Financial subtypes, Vehicle additions, Mortgage, E-commerce expansion). The original categories (Healthcare, Housing, Refunds, etc.) were also expanded with subdirectory template files, but those expansions were never cross-referenced against the siteContext whitelist.
+4. **Refunds section (line 134)**: Remove `subscription-cancellation-refund` (belongs in ecommerce, already listed there)
+
+### Why This Is the Last Pass
+
+This is the first time every single template source file has been exhaustively read -- both the root-level core files (`insuranceTemplates.ts`, `housingTemplates.ts`, `hoaTemplates.ts`, etc.) AND every subdirectory file. Previous passes always missed one layer or the other. The total fix count is small (20 items), confirming convergence.
+
+### Summary
+
+| Action | Count |
+|---|---|
+| Missing slugs to add | 15 |
+| Hallucinated slugs to remove | 5 |
+| **Total fixes** | **20** |
+| Files changed | 1 (`siteContext.ts`) |
 
