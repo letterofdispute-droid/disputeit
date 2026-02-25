@@ -1,112 +1,150 @@
 
 
-# Verification Results: Template Count Mismatches and Subcategory Pattern Bugs
+# Post-Fix Audit + AI Coverage Gap Analysis + Specialized AI Architecture
 
-After a thorough audit of every template file in the project, I found three categories of issues that need fixing.
+## Part 1: Template & Subcategory Re-Audit (Post-Fix Leftovers)
+
+After reviewing all template files against the current `subcategoryMappings.ts` patterns, here are the remaining issues:
+
+### 1A. Subcategory Pattern Gaps (Leftovers)
+
+| Template ID | File | Expected Subcategory | Current Match | Issue |
+|-------------|------|---------------------|---------------|-------|
+| `credit-score-correction-request` | creditDisputeTemplates | Credit Reporting | Credit Cards | `credit-` prefix hits credit-cards pattern before credit-reporting |
+| `authorized-push-payment-fraud` | scamFraudTemplates | Fraud & Scams | General | No pattern matches `authorized-push` |
+| `bank-security-breach-complaint` | scamFraudTemplates | Fraud & Scams | Banking | `bank-` prefix matches banking pattern first |
+| `card-fraud-dispute` | scamFraudTemplates | Fraud & Scams | Credit Cards | `card-` matches credit-card pattern |
+| `cryptocurrency-scam-complaint` | scamFraudTemplates | Fraud & Scams | General | `cryptocurrency` not in fraud pattern |
+| `pension-transfer-dispute` | investmentDisputeTemplates | Investments | General | `pension` not in investments pattern |
+| `financial-advice-complaint` | investmentDisputeTemplates | Investments | General | `financial-advice` not in investments pattern |
+| `trading-platform-error-complaint` | investmentDisputeTemplates | Investments | General | `trading` not in investments pattern |
+
+### Fix for `subcategoryMappings.ts` (Financial section)
+- **Banking pattern**: Remove bare `bank-account` (too broad, catches `bank-security-breach`). Use `bank-account-closure|checking|savings|atm|branch|overdraft|wire-transfer|nsf|fund-availability|zelle|venmo|direct-debit|standing-order|poa-recognition|interest-rate-dispute`
+- **Credit Cards pattern**: Narrow `credit-` matching to avoid catching credit-score. Use `credit-card|charge-dispute|statement-error|apr(?!-)|billing-error|rewards-dispute|promotional-apr|credit-limit|credit-application|balance-transfer`
+- **Credit Reporting pattern**: Add `credit-score`
+- **Investments pattern**: Add `pension|financial-advice|trading`
+- **Fraud pattern**: Add `authorized-push|card-fraud|bank-security|cryptocurrency-scam`
+- **Pattern ordering**: Move Fraud & Scams ABOVE Banking and Credit Cards so specific fraud IDs match first
+
+### 1B. Template Count Verification (Still Accurate)
+The counts set in the last fix (Financial: 78, Vehicle: 45, E-commerce: 44) remain correct. No new files were added.
 
 ---
 
-## Issue 1: Template Count Mismatches in `templateCategories.ts`
+## Part 2: AI Systems Not Updated for New Templates
 
-The `templateCount` field is hardcoded and has drifted from reality. Here are the verified actual counts vs. what is displayed:
+Three AI systems reference template data and are **NOT updated** to cover the 62 new templates:
+
+### 2A. `siteContext.ts` - Dispute Assistant Slug Whitelist (CRITICAL)
+
+**Problem**: The `DISPUTE_ASSISTANT_CONTEXT` contains a hardcoded whitelist of valid template slugs (lines 110-183). None of the 62 new templates are listed. This means the Dispute Assistant **cannot recommend** any of the new Credit Reporting, Identity Theft, Debt Collection, Credit Card, Banking, Mortgage, Scam, Investment, Vehicle, or E-commerce templates.
+
+**Also stale**:
+- `SITE_CONFIG.templateCount` says `'450+'` -- should be `'550+'` or `'600+'`
+- `CATEGORIES` array (line 12-26) has outdated `templateCount` values (e.g., Financial shows 10 instead of 78)
+- `CATEGORIES` array is missing the `Real Estate & Mortgages` category entirely
+
+**Fix**: Update the slug whitelist with all 62 new slugs, update SITE_CONFIG.templateCount, update CATEGORIES counts, and add the mortgage category.
+
+### 2B. `generate-legal-letter/index.ts` - LEGAL_KNOWLEDGE (MODERATE)
+
+**Problem**: The `LEGAL_KNOWLEDGE` object (line 21-176) has entries for `financial`, `insurance`, `vehicle`, `housing`, `refunds`, `travel`, `utilities`, `employment`, `healthcare`, `ecommerce`, `hoa`, `contractors`, `damaged-goods` -- but **NO entry for `mortgage` / `real-estate-mortgages`**. Any mortgage template that hits this edge function will fall back to generic knowledge with no RESPA, TILA, or Dodd-Frank citations.
+
+**Fix**: Add a `mortgage` entry with RESPA, TILA, Dodd-Frank statutes, CFPB agency, and relevant timeframes.
+
+### 2C. `form-assistant/index.ts` - categoryExpertise (MODERATE)
+
+**Problem**: The `categoryExpertise` object (line 12-61) has entries for Travel, Insurance, Housing, Contractors, Financial, Healthcare, Vehicle -- but is **missing**:
+- `Real Estate & Mortgages` -- no mortgage-specific expertise
+- `E-commerce` -- falls back to generic
+- `Employment` -- falls back to generic
+- `HOA & Property` -- falls back to generic
+- `Refunds & Purchases` -- falls back to generic
+- `Damaged Goods` -- falls back to generic
+
+While these last few are less critical (the generic fallback is reasonable), the **Mortgage** gap is significant since RESPA/TILA/servicing rules are highly specialized.
+
+**Fix**: Add `'Real Estate & Mortgages'` expertise entry with RESPA QWR procedures, escrow analysis, PMI rules, dual tracking prohibitions, and CFPB servicing rules.
+
+### 2D. `categoryKnowledge.ts` - Client-side Knowledge Base (MODERATE)
+
+**Problem**: No `'Real Estate & Mortgages'` key exists. The form-level knowledge (evidence requirements, regulations, tips) will be empty for all 10 mortgage templates.
+
+**Fix**: Add a `'Real Estate & Mortgages'` entry with subcategories for Payment Issues, Escrow, PMI, Foreclosure, Closing, Force-Placed Insurance, and Inherited Property.
+
+### 2E. `legalKnowledge.ts` - Legal Knowledge Database (MODERATE)
+
+**Problem**: No entry with `categoryId: 'mortgage'` or `'real-estate-mortgages'`. The `ResolutionPlanPanel` and `EscalationFlowchart` components will show no legal data for mortgage templates.
+
+**Fix**: Add a mortgage entry with RESPA, TILA, Dodd-Frank, HPA statutes and CFPB/HUD agencies.
+
+---
+
+## Part 3: Specialized AI Per Category -- Architecture Assessment
+
+**Your question**: Should we have multiple AI "experts" -- one specialized for each template category (e.g., Financial vs Healthcare vs Vehicle)?
+
+**Answer: You already have the foundation for this, and yes -- deepening it is both possible and valuable.**
+
+### What Already Exists
+
+The `form-assistant/index.ts` edge function already implements a **category-specific expertise** pattern via the `categoryExpertise` object. When a user fills out a Financial template, the AI gets Financial-specific context; when they fill out a Travel template, it gets Travel context. This is the right architecture.
+
+The `generate-legal-letter/index.ts` edge function similarly switches `LEGAL_KNOWLEDGE` by category to inject the right statutes and agencies.
+
+### What Would Make It Better
+
+Currently each category's expertise is a **single paragraph**. A truly specialized AI per category would mean:
 
 ```text
-Category              Listed    Actual    Delta
-────────────────────  ──────    ──────    ─────
-Financial Services       94        78      -16
-Vehicle & Auto           54        45       -9
-E-commerce               54       ~45      ~-9
+Current (shallow):
+  Financial: "You understand FCRA, FDCPA, and banking regulations..." (5 lines)
+
+Proposed (deep):
+  Financial > Credit Reporting: 
+    - FCRA dispute lifecycle (30-day investigation, reinsertion rules)
+    - Bureau-specific procedures (Experian online vs TransUnion mail)
+    - Furnisher vs CRA obligations under § 1681s-2
+    
+  Financial > Debt Collection:
+    - FDCPA validation timeline (30 days from G-Notice)
+    - 7-in-7 call harassment rule
+    - Time-barred debt revival rules by state
+    
+  Financial > Identity Theft:
+    - FTC recovery plan steps
+    - Extended fraud alert vs credit freeze
+    - IRS Form 14039 process
 ```
 
-### Financial Services Breakdown (verified count: 78)
+### Recommended Architecture
 
-| Sub-file                     | Templates |
-|------------------------------|-----------|
-| Core (financialTemplates.ts) | 4         |
-| bankingDisputeTemplates      | 12        |
-| creditCardTemplates          | 6         |
-| creditDisputeTemplates       | 6         |
-| creditReportingTemplates     | 10        |
-| debtCollectionTemplates      | 8         |
-| identityTheftTemplates       | 8         |
-| loanDisputeTemplates         | 6         |
-| investmentDisputeTemplates   | 9         |
-| scamFraudTemplates           | 9         |
-| **Total**                    | **78**    |
+Instead of creating separate edge functions per category (which increases maintenance), **deepen the existing `categoryExpertise` object into a two-level system**: category + subcategory. The edge function already receives the `category` parameter -- we just need to also pass the subcategory or template slug so it can select the right specialized context.
 
-### Vehicle & Auto Breakdown (verified count: 45)
+### Implementation Plan
 
-| Sub-file                     | Templates |
-|------------------------------|-----------|
-| dealerComplaintTemplates     | 9         |
-| parkingTrafficTemplates      | 8         |
-| garageRepairTemplates        | 6         |
-| warrantyLemonLawTemplates    | 6         |
-| financeLeaseTemplates        | 6         |
-| additionalVehicleTemplates   | 10        |
-| **Total**                    | **45**    |
-
-### Fix
-Update `templateCategories.ts` to use correct counts: Financial = 78, Vehicle = 45. For E-commerce, I will do a final count during implementation.
-
-**Better long-term fix**: Replace hardcoded `templateCount` with a computed value derived from `getTemplatesByCategory()` at build time, so counts never drift again.
+| File | Change |
+|------|--------|
+| `form-assistant/index.ts` | Expand `categoryExpertise` from 7 entries to ~20 subcategory-aware entries, accept `subcategory` param, and add mortgage expertise |
+| `generate-legal-letter/index.ts` | Add `mortgage` to `LEGAL_KNOWLEDGE`, expand `financial` into sub-entries for credit-reporting, identity-theft, debt-collection |
+| `siteContext.ts` | Update slug whitelist with 62 new slugs, fix counts, add mortgage category |
+| `categoryKnowledge.ts` | Add `'Real Estate & Mortgages'` category entry |
+| `legalKnowledge.ts` | Add mortgage `CategoryLegalKnowledge` entry |
+| `subcategoryMappings.ts` | Fix 8 remaining pattern conflicts |
 
 ---
 
-## Issue 2: Subcategory Pattern Conflicts in `subcategoryMappings.ts`
+## Summary of All Changes
 
-The Financial subcategory patterns have ordering and specificity bugs that cause templates to land in the wrong subcategory:
+| Priority | What | Files |
+|----------|------|-------|
+| Critical | Update Dispute Assistant slug whitelist + counts | `siteContext.ts` |
+| Critical | Fix 8 remaining subcategory pattern conflicts | `subcategoryMappings.ts` |
+| High | Add mortgage legal knowledge to letter generator | `generate-legal-letter/index.ts` |
+| High | Add mortgage category expertise to form assistant | `form-assistant/index.ts` |
+| High | Add mortgage to client-side knowledge bases | `categoryKnowledge.ts`, `legalKnowledge.ts` |
+| Medium | Deepen `categoryExpertise` with subcategory-level specialization (Phase 2 enhancement) | `form-assistant/index.ts` |
 
-| Template ID                          | Expected Subcategory | Actual Match     | Why                                     |
-|--------------------------------------|---------------------|------------------|-----------------------------------------|
-| `zelle-venmo-unauthorized-transfer`  | Banking             | Fraud & Scams    | `unauthorized` matches fraud pattern    |
-| `direct-debit-unauthorized`          | Banking             | Fraud & Scams    | `unauthorized` matches fraud pattern    |
-| `account-takeover-complaint`         | Fraud & Scams       | Banking          | `account` matches banking pattern first |
-| `interest-rate-dispute`              | Banking             | Credit Cards     | `interest` matches credit-cards pattern |
-| `standing-order-dispute`             | Banking             | General (no match) | No pattern matches                    |
-| `credit-limit-reduction-dispute`     | Credit Cards        | General          | No pattern matches                     |
-| `credit-application-denial`          | Credit Cards        | General          | No pattern matches                     |
-| `balance-transfer-dispute`           | Credit Cards        | General          | No pattern matches                     |
-| `late-payment-removal-request`       | Credit Reporting    | General          | No pattern matches                     |
-| `default-notice-dispute`             | Debt Collection     | General          | No pattern matches                     |
-
-### Fix
-1. Make the banking pattern more specific: add `zelle|venmo|direct-debit|standing-order|interest-rate-dispute` and remove the generic `account` match
-2. Make the credit-cards pattern include: `credit-limit|credit-application|balance-transfer`
-3. Make the credit-reporting pattern include: `late-payment-removal`
-4. Make the debt-collection pattern include: `default-notice`
-5. Make the fraud pattern exclude banking terms by reordering (banking should be checked before fraud) and narrowing `unauthorized` to `unauthorized.*fraud|unauthorized.*transaction` or moving specific banking IDs before the fraud check
-6. Exclude `account-takeover` from the banking pattern by using `bank-account|checking-account|savings-account` instead of bare `account`
-
----
-
-## Issue 3: Template Routing Verification
-
-The user's current route (`/templates/financial/identity-theft/identity-theft-ftc-report-cover-letter`) resolves correctly:
-- Template `identity-theft-ftc-report-cover-letter` exists in `identityTheftTemplates.ts`
-- The `inferSubcategory` function correctly maps ID `identity-theft-ftc-report-cover` to the `identity-theft` subcategory
-- Route pattern `/templates/:categoryId/:subcategorySlug/:templateSlug` matches
-
-No routing issues found for the new templates.
-
----
-
-## Implementation Plan
-
-### File: `src/data/templateCategories.ts`
-- Update `templateCount` for Financial from 94 to 78
-- Update `templateCount` for Vehicle from 54 to 45
-- Verify and update E-commerce count (estimated ~45, need final count)
-
-### File: `src/data/subcategoryMappings.ts`
-- Fix the Financial patterns to resolve all 10 misclassification bugs listed above
-- Specifically:
-  - Banking pattern: replace `bank|account` with `bank|checking|savings|atm|branch|overdraft|wire-transfer|nsf|fund-availability|zelle|venmo|direct-debit|standing-order|poa-recognition|interest-rate-dispute`
-  - Credit Cards pattern: add `credit-limit|credit-application|balance-transfer`
-  - Credit Reporting pattern: add `late-payment-removal`
-  - Debt Collection pattern: add `default-notice`
-  - Fraud pattern: narrow `unauthorized` to avoid matching banking templates, add `account-takeover` explicitly
-
-### Optional Enhancement
-- Add a dev-time validation script or console warning that flags templates falling to "General" subcategory, to catch future drift automatically
+This is a single implementation batch -- all files can be updated together. The subcategory-level AI deepening (the "specialized AI per category" question) can be done in a follow-up pass once the foundation is solid.
 
