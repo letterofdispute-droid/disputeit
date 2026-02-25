@@ -120,18 +120,30 @@ export default function TemplateCoverageMap() {
       if (templatePlans.length === 0) return 0;
 
       const planIds = templatePlans.map(p => p.id);
-
-      // Fetch in batches of 500 to stay under row limits
       const existingPillarPlanIds = new Set<string>();
+
+      // Check both content_queue AND blog_posts in batches of 500
       for (let i = 0; i < planIds.length; i += 500) {
         const batch = planIds.slice(i, i + 500);
-        const { data } = await supabase
+
+        // 1. Check content_queue for pillar entries
+        const { data: queueData } = await supabase
           .from('content_queue')
           .select('plan_id')
           .eq('article_type', 'pillar')
           .in('plan_id', batch);
-        (data || []).forEach(r => {
+        (queueData || []).forEach(r => {
           if (r.plan_id) existingPillarPlanIds.add(r.plan_id);
+        });
+
+        // 2. Check blog_posts for published pillar articles linked via content_plan_id
+        const { data: postData } = await supabase
+          .from('blog_posts')
+          .select('content_plan_id')
+          .eq('article_type', 'pillar')
+          .in('content_plan_id', batch);
+        (postData || []).forEach(r => {
+          if (r.content_plan_id) existingPillarPlanIds.add(r.content_plan_id);
         });
       }
 
@@ -143,40 +155,76 @@ export default function TemplateCoverageMap() {
   // Bulk pillar creation mutation
   const createAllPillarsMutation = useMutation({
     mutationFn: async () => {
-      // Find all content plans that don't have a pillar article in the queue
-      const { data: allPlans } = await supabase.from('content_plans').select('id, template_slug, template_name, category_id');
-      if (!allPlans || allPlans.length === 0) throw new Error('No content plans found');
+      // Fetch all content plans in batches to avoid 1000-row default limit
+      const allPlans: Array<{ id: string; template_slug: string; template_name: string; category_id: string }> = [];
+      let offset = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('content_plans')
+          .select('id, template_slug, template_name, category_id')
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allPlans.push(...data);
+        if (data.length < batchSize) break;
+        offset += batchSize;
+      }
+      if (allPlans.length === 0) throw new Error('No content plans found');
 
-      // Check which plans already have a pillar queued
-      const { data: existingPillars } = await supabase.
-      from('content_queue').
-      select('plan_id').
-      eq('article_type', 'pillar');
+      // Filter to only real template plans
+      const validPlans = allPlans.filter(p => templateSlugs.has(p.template_slug));
 
-      const existingPillarPlanIds = new Set(existingPillars?.map((p) => p.plan_id) || []);
-      const plansWithoutPillar = allPlans.filter((p) => !existingPillarPlanIds.has(p.id));
+      // Check which plans already have pillars in BOTH content_queue and blog_posts
+      const existingPillarPlanIds = new Set<string>();
+      const planIds = validPlans.map(p => p.id);
+
+      for (let i = 0; i < planIds.length; i += 500) {
+        const batch = planIds.slice(i, i + 500);
+
+        // Check content_queue
+        const { data: queueData } = await supabase
+          .from('content_queue')
+          .select('plan_id')
+          .eq('article_type', 'pillar')
+          .in('plan_id', batch);
+        (queueData || []).forEach(r => { if (r.plan_id) existingPillarPlanIds.add(r.plan_id); });
+
+        // Check blog_posts
+        const { data: postData } = await supabase
+          .from('blog_posts')
+          .select('content_plan_id')
+          .eq('article_type', 'pillar')
+          .in('content_plan_id', batch);
+        (postData || []).forEach(r => { if (r.content_plan_id) existingPillarPlanIds.add(r.content_plan_id); });
+      }
+
+      const plansWithoutPillar = validPlans.filter(p => !existingPillarPlanIds.has(p.id));
 
       if (plansWithoutPillar.length === 0) {
         return { queued: 0, message: 'All plans already have pillar articles' };
       }
 
-      // Queue pillar articles for each plan
+      // Queue pillar articles in batches of 500
       const pillarItems = plansWithoutPillar.map((plan) => ({
         plan_id: plan.id,
         article_type: 'pillar' as const,
         suggested_title: getPillarTitle(plan.template_name, plan.template_slug),
         suggested_keywords: [
-        cleanTemplateName(plan.template_name).toLowerCase(),
-        `${cleanTemplateName(plan.template_name).toLowerCase()} guide`,
-        'consumer rights',
-        'dispute letter'],
-
+          cleanTemplateName(plan.template_name).toLowerCase(),
+          `${cleanTemplateName(plan.template_name).toLowerCase()} guide`,
+          'consumer rights',
+          'dispute letter',
+        ],
         priority: 1,
-        status: 'queued' as const
+        status: 'queued' as const,
       }));
 
-      const { error } = await supabase.from('content_queue').insert(pillarItems);
-      if (error) throw error;
+      for (let i = 0; i < pillarItems.length; i += 500) {
+        const batch = pillarItems.slice(i, i + 500);
+        const { error } = await supabase.from('content_queue').insert(batch);
+        if (error) throw error;
+      }
 
       return { queued: pillarItems.length };
     },
