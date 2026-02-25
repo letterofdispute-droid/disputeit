@@ -1,50 +1,54 @@
 
 
-# Mega Menu Fix - Compact 3-Column Layout
+# Mega Menu Audit — Issues Found
 
-## Problem
+## Problem 1: Broken Description Truncation (Most Visible)
+Line 93 uses `category.description.split('.')[0].split(',')[0]` to shorten descriptions. This produces wildly inconsistent results because some descriptions have early commas and some don't:
 
-The current 2-column layout at 760px is too wide and overflows the viewport, especially on laptops. The panels extend past the right edge of the screen. The Resources panel with 9 free tools stacks vertically way too long.
+| Category | Full description | After split |
+|----------|-----------------|-------------|
+| Refunds & Purchases | "Get your money back for products or services that did not meet expectations." | Full sentence (no early comma) — wraps to 3 lines |
+| Landlord & Housing | "Request repairs, address deposit disputes, or document housing issues." | "Request repairs" — 1 line |
+| Financial Services | "Challenge bank fees, credit report errors, identity theft..." | "Challenge bank fees" — 1 line |
+| Damaged & Defective Goods | "File complaints for items that arrived broken, defective, or not as described." | "File complaints for items that arrived broken" — 2 lines |
 
-## Changes
+This creates **uneven row heights** across the 3-column grid, making it look broken.
 
-### Templates & Guides Panel (`CategoryGrid`)
-- Switch from **2-column** (`grid-cols-2 w-[760px]`) to **3-column** (`grid-cols-3 w-[620px]`)
-- Reduce card padding from `p-4 gap-x-6` to `p-3 gap-x-3`
-- Shrink icon container from `size-11` to `size-9` and icon from `size-6` to `size-5`
-- Truncate descriptions to shorter text (first sentence fragment)
-- 13 items in 3 cols = 5 rows - much more compact vertically
+**Fix:** Write dedicated short descriptions (max ~6 words each) as a `shortDescription` map inside MegaMenu, instead of splitting the category's long description. Every item gets one consistent line.
 
-```text
-┌────────────────────────────────────────────────────┐
-│  (icon) Refunds    (icon) Housing    (icon) Travel │
-│  Get money…        Repairs…          Flight…       │
-│                                                    │
-│  (icon) Damaged    (icon) Utilities  (icon) Finance│
-│  ...               ...              ...            │
-│  ... 5 rows total for 13 categories ...            │
-│ ────────────────────────────────────────────────── │
-│  📄 Browse all · 550+        ✨ Not sure? AI help  │
-└────────────────────────────────────────────────────┘
-```
+## Problem 2: Guides Footer Says "templates"
+The `CategoryGrid` component always shows `{totalCount}+ templates` in the footer, even when used for the Guides dropdown. Should say "guides" for Guides.
 
-### Resources Panel
-- Reduce width from `w-[760px]` to `w-[580px]`
-- Keep 2-column layout (General 5 items + Free Tools 9 items)
-- Apply same compact card styling (smaller icons, tighter padding)
-- For Free Tools column: use a more compact list style (smaller icon, single-line descriptions)
+**Fix:** Add a `footerUnit` prop to `CategoryGrid` (default "templates") and pass "guides" from the Guides menu item.
 
-### Shared Card Styling
-- Icon container: `size-9 rounded-lg bg-muted` (down from size-11)
-- Icon: `size-5` (down from size-6)
-- Card: `flex gap-x-3 rounded-lg p-3 hover:bg-accent/50` (tighter gaps)
-- Description text: `text-xs` instead of `text-sm` for compactness
+## Problem 3: Both Menus Show Identical Content
+Letter Templates and Guides render the same 13 categories. This is by design (same categories, different base paths), but worth noting — not a bug to fix here.
 
 ## File Changes
 
 | File | Change |
 |------|--------|
-| `src/components/layout/MegaMenu.tsx` | Change Templates/Guides to 3-col grid at 620px width; reduce card padding/icon sizes; compact Resources panel to 580px with tighter spacing |
+| `src/components/layout/MegaMenu.tsx` | 1. Replace the `split('.')` logic with a static `shortDescriptions` map (one short phrase per category). 2. Add `footerUnit` prop to `CategoryGrid` so Guides says "guides" not "templates". |
 
-No changes needed to `navigation-menu.tsx` - the viewport component already uses `rounded-3xl` and adapts to content width.
+## Short Descriptions Map (proposed)
+
+```typescript
+const shortDescriptions: Record<string, string> = {
+  'refunds': 'Product & service refunds',
+  'housing': 'Repairs, deposits & tenancy',
+  'travel': 'Flights, hotels & bookings',
+  'damaged-goods': 'Broken or defective items',
+  'utilities': 'Billing & service disputes',
+  'financial': 'Banks, credit & debt',
+  'insurance': 'Claims & coverage issues',
+  'vehicle': 'Dealers, repairs & lemon law',
+  'healthcare': 'Medical bills & denials',
+  'employment': 'Wages & workplace issues',
+  'ecommerce': 'Online sellers & accounts',
+  'hoa': 'HOA fees & neighbor issues',
+  'contractors': 'Workmanship & project issues',
+};
+```
+
+Each description is 3–5 words, ensuring uniform single-line height across all columns.
 
