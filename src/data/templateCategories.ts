@@ -1,6 +1,6 @@
 import { 
   Receipt, Home, Package, Plane, Wifi, CreditCard, Shield, Car, 
-  Stethoscope, Briefcase, ShoppingCart, Building2, Hammer
+  Stethoscope, Briefcase, ShoppingCart, Building2, Hammer, Landmark
 } from 'lucide-react';
 
 export interface TemplateCategory {
@@ -70,7 +70,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Financial Services',
     description: 'Challenge bank fees, credit report errors, identity theft, debt collection, or data access requests.',
     icon: CreditCard,
-    templateCount: 76,
+    templateCount: 87,
     color: 'hsl(var(--chart-1))',
     popular: true,
     imageKeywords: ['credit card statement', 'bank documents', 'financial papers'],
@@ -144,6 +144,16 @@ export const templateCategories: TemplateCategory[] = [
     color: 'hsl(var(--chart-3))',
     popular: true,
     imageKeywords: ['home renovation', 'construction site', 'contractor tools'],
+  },
+  {
+    id: 'mortgage',
+    name: 'Real Estate & Mortgages',
+    description: 'Dispute payment errors, escrow issues, PMI removal, foreclosure, or closing cost overcharges.',
+    icon: Landmark,
+    templateCount: 10,
+    color: 'hsl(var(--chart-4))',
+    popular: true,
+    imageKeywords: ['house keys', 'mortgage documents', 'real estate contract'],
   },
 ];
 
