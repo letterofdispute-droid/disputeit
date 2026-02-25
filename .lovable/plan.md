@@ -1,82 +1,43 @@
 
 
-# Plan: Deepen Form-Assistant Subcategory Expertise
+# Plan: Fix False "Missing Pillars" Count
 
-## Problem
+## Root Cause
 
-The `form-assistant` edge function (`supabase/functions/form-assistant/index.ts`) has two tiers of AI expertise:
+The data tells the full story:
 
-1. **`categoryExpertise`** - One paragraph per category (all 14 covered)
-2. **`subcategoryExpertise`** - Detailed per-subcategory entries with specific statutes, procedures, and validation rules
+| Location | Pillar Count |
+|---|---|
+| `content_queue` (where the code looks) | **0** |
+| `blog_posts` (where they actually are) | **547** (all published) |
 
-Currently, only **2 of 14 categories** have subcategory-level expertise:
-- Financial (7 subcategories)
-- Real Estate & Mortgages (4 subcategories)
+The `missingPillarCount` query in `TemplateCoverageMap.tsx` (lines 117-141) only checks `content_queue` for rows with `article_type = 'pillar'`. But after pillar articles were generated and published, their `content_queue` entries were cleaned up (deleted). The 547 pillar articles exist as published blog posts linked to their content plans via `content_plan_id`, but the code never checks there.
 
-The remaining **12 categories have zero subcategory entries**, meaning users get only generic category-level guidance regardless of their specific dispute type.
+Result: the UI reports 559 "missing" pillars when only ~12 are actually missing (687 plans minus the ~547 that have published pillars, plus some keyword-campaign plans).
 
 ## What Changes
 
-**1 file edited**: `supabase/functions/form-assistant/index.ts`
+**1 file edited**: `src/components/admin/seo/TemplateCoverageMap.tsx`
 
-Expand `subcategoryExpertise` to cover all 14 categories, matching the subcategory slugs defined in `src/data/subcategoryMappings.ts`. Each entry includes specific statutes, procedures, deadlines, and validation rules.
+### Fix 1: Update `missingPillarCount` query (lines 117-141)
 
-### New Subcategory Entries by Category
+Change the query to check **both** `content_queue` and `blog_posts` for existing pillars:
 
-| Category | Current Subcategories | New Subcategories to Add |
-|---|---|---|
-| Financial | 7 (credit-reporting, debt-collection, identity-theft, banking, credit-cards, investments, fraud) | 0 - already complete |
-| Real Estate & Mortgages | 4 (payment-issues, escrow, pmi, foreclosure) | 3: closing, force-placed-insurance, inherited |
-| Travel | 0 | 6: flights, hotels, cruises, car-rentals, tours, rail-bus |
-| Insurance | 0 | 5: auto, home, health, life, travel |
-| Housing | 0 | 6: repairs, deposits, tenancy, neighbor, letting-agents, safety |
-| Contractors | 0 | 6: general, plumbing, electrical, roofing, hvac, specialty |
-| Healthcare | 0 | 6: insurance-claims, billing, debt-collection, provider, pharmacy, privacy-records |
-| Vehicle | 0 | 5: dealer, repair, warranty-lemon, finance, parking |
-| Utilities & Telecom | 0 | 5: energy, water, internet, phone, tv-cable |
-| E-commerce | 0 | 6: refunds, delivery, marketplace, subscriptions, privacy, consumer-protection |
-| Employment | 0 | 6: wages, termination, discrimination, benefits, workplace, retaliation |
-| HOA & Property | 0 | 5: fees, violations, maintenance, neighbor, governance |
-| Refunds & Purchases | 0 | 5: refunds, warranty, subscriptions, delivery, service |
-| Damaged Goods | 0 | 4: delivery-damage, defective, misrepresentation, warranty-repair |
-
-**Total: ~68 new subcategory expertise entries** added to the existing 11 (7 Financial + 4 Mortgage).
-
-### Content per Entry
-
-Each subcategory entry is a focused multi-line string containing:
-- **Applicable statutes** with specific USC/CFR sections or state law references
-- **Key procedures** (filing deadlines, notice requirements, escalation steps)
-- **Validation rules** (what evidence strengthens the case, common pitfalls)
-- **Regulatory contact points** (which agency to file with)
-
-Example for Travel > flights:
-```
-Deep expertise in airline flight disputes:
-- DOT passenger protections: tarmac delay rules (3hrs domestic, 4hrs international)
-- Denied boarding compensation: 200%-400% of one-way fare under 14 CFR 250
-- Refund rules: airlines must refund within 7 days (credit card) or 20 days (cash/check)
-- Automatic refund rule for significant delays and cancellations (2024 DOT final rule)
-- Baggage fee refunds for significantly delayed checked bags
-- Disability accommodation requirements under Air Carrier Access Act
+```text
+For each batch of plan IDs:
+  1. Check content_queue for article_type='pillar' matching plan_id  (existing logic)
+  2. ALSO check blog_posts for article_type='pillar' matching content_plan_id  (new)
+  3. Union both sets of plan IDs → these plans have pillars
+  4. Missing = plans NOT in that union
 ```
 
-### How It Integrates
+### Fix 2: Update `createAllPillarsMutation` (lines 144-180)
 
-The existing code at lines 253-258 already handles the merge logic:
+The mutation at line 151-154 has the same bug -- it only checks `content_queue`. It also has a secondary bug: no `.limit()` call, so it's capped at 1000 rows by PostgREST default. Fix both:
 
-```typescript
-let expertise = categoryExpertise[category] || '...';
-const subExpertise = subcategory && subcategoryExpertise[category]?.[subcategory];
-if (subExpertise) {
-  expertise += '\n\n' + subExpertise;
-}
-```
+1. Also query `blog_posts` for existing pillar `content_plan_id` values
+2. Merge both sets before filtering
+3. Add batching to handle >1000 plans
 
-No logic changes needed. The subcategory slug is passed from the frontend via the `subcategory` field in the request body, which is already inferred by `inferSubcategory()` in the UI layer.
-
-### Scope
-- **1 file edited**: `supabase/functions/form-assistant/index.ts` (expanding `subcategoryExpertise` object)
-- **No new files, no schema changes, no new dependencies**
-- Edge function auto-deploys on save
+### No schema changes, no new files, no new dependencies
 
