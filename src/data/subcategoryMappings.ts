@@ -78,8 +78,8 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /credit-bureau|credit-report|credit-score|equifax|experian|transunion|inquiry|mixed-file|aged-debt|duplicate-account|public-record|payment-history|investigation-violation/, subcategory: { name: 'Credit Reporting', slug: 'credit-reporting' } },
     { pattern: /debt-validation|debt-collection|cease-desist|time-barred|harassment|third-party-contact|paid-debt|incorrect-amount|medical-debt/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
     { pattern: /identity-theft|fraudulent-account|credit-freeze|fraud-alert|tax-identity|employment-fraud|medical-identity|phone-utility-fraud/, subcategory: { name: 'Identity Theft', slug: 'identity-theft' } },
-    { pattern: /investment|broker|advisor|retirement|401k/, subcategory: { name: 'Investments', slug: 'investments' } },
-    { pattern: /scam|fraud|unauthorized/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
+    { pattern: /investment|broker|advisor|retirement|401k|sec-complaint|finra|ponzi/, subcategory: { name: 'Investments', slug: 'investments' } },
+    { pattern: /scam|fraud|unauthorized|impersonation|tech-support|romance|pig-butchering|recovery-room/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
   ],
   'Refunds & Purchases': [
     { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },
@@ -95,10 +95,10 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /warranty|repair/, subcategory: { name: 'Warranty & Repair', slug: 'warranty-repair' } },
   ],
   'Vehicle': [
-    { pattern: /dealer|dealership|sales|purchase/, subcategory: { name: 'Dealer Disputes', slug: 'dealer' } },
+    { pattern: /dealer|dealership|sales|purchase|spot-delivery|rate-markup/, subcategory: { name: 'Dealer Disputes', slug: 'dealer' } },
     { pattern: /repair|mechanic|garage|service-center/, subcategory: { name: 'Repair & Service', slug: 'repair' } },
     { pattern: /warranty|lemon|defect/, subcategory: { name: 'Warranty & Lemon Law', slug: 'warranty-lemon' } },
-    { pattern: /finance|loan|lease|payment/, subcategory: { name: 'Finance & Lease', slug: 'finance' } },
+    { pattern: /finance|loan|lease|payment|gap-insurance|kill-switch/, subcategory: { name: 'Finance & Lease', slug: 'finance' } },
     { pattern: /parking|ticket|tow|traffic/, subcategory: { name: 'Parking & Traffic', slug: 'parking' } },
   ],
   'E-commerce': [
@@ -107,6 +107,7 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /seller|marketplace|amazon|ebay/, subcategory: { name: 'Marketplace Disputes', slug: 'marketplace' } },
     { pattern: /subscription|recurring|trial/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
     { pattern: /privacy|data|account|gdpr|ccpa/, subcategory: { name: 'Privacy & Data', slug: 'privacy' } },
+    { pattern: /drip-pricing|counterfeit|fake-review|platform-account-ban/, subcategory: { name: 'Consumer Protection', slug: 'consumer-protection' } },
   ],
   'HOA & Property': [
     { pattern: /fee|assessment|dues|charge/, subcategory: { name: 'Fees & Assessments', slug: 'fees' } },
