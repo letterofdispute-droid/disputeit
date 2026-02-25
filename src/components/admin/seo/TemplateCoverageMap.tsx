@@ -251,12 +251,23 @@ export default function TemplateCoverageMap() {
   // Create missing plans mutation
   const createMissingPlansMutation = useMutation({
     mutationFn: async () => {
-      // Get all existing plan slugs from DB
-      const { data: existingPlans } = await supabase.
-      from('content_plans').
-      select('template_slug');
+      // Fetch ALL existing plan slugs in batches (avoid 1000-row limit)
+      const allSlugs: string[] = [];
+      let planOffset = 0;
+      const planBatchSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('content_plans')
+          .select('template_slug')
+          .range(planOffset, planOffset + planBatchSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allSlugs.push(...data.map(p => p.template_slug));
+        if (data.length < planBatchSize) break;
+        planOffset += planBatchSize;
+      }
 
-      const existingSlugs = new Set(existingPlans?.map((p) => p.template_slug) || []);
+      const existingSlugs = new Set(allSlugs);
 
       // Find templates without plans
       const missing = allTemplates.filter((t) => !existingSlugs.has(t.slug));
