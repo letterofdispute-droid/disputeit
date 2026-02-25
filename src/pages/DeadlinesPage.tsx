@@ -259,8 +259,10 @@ const DeadlinesPage = () => {
       </div>
 
       {/* Hero — split layout */}
-      <section className="bg-primary py-14 md:py-20 overflow-hidden">
-        <div className="container-wide">
+      <section className="relative bg-primary py-14 md:py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-primary/90" />
+        <div className="container-wide relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             <div>
               <div className="inline-flex items-center gap-2 bg-primary-foreground/10 rounded-full px-4 py-1.5 mb-5">

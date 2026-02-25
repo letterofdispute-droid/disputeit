@@ -26,8 +26,10 @@ const SmallClaimsEscalationPage = () => {
       />
 
       {/* Hero */}
-      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
-        <div className="container-wide">
+      <section className="relative overflow-hidden text-primary-foreground py-16 md:py-20">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-primary/90" />
+        <div className="container-wide relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <Link to="/small-claims" className="flex justify-center items-center gap-1 text-sm text-primary-foreground/60 hover:text-primary-foreground mb-8 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to Small Claims Guide
