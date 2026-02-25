@@ -78,8 +78,8 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /credit-bureau|credit-report|credit-score|equifax|experian|transunion|inquiry|mixed-file|aged-debt|duplicate-account|public-record|payment-history|investigation-violation|late-payment-removal/, subcategory: { name: 'Credit Reporting', slug: 'credit-reporting' } },
     { pattern: /debt-validation|debt-collection|cease-desist|time-barred|harassment|third-party-contact|paid-debt|incorrect-amount|medical-debt|default-notice/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
     { pattern: /identity-theft|fraudulent-account|credit-freeze|fraud-alert|tax-identity|employment-fraud|medical-identity|phone-utility-fraud/, subcategory: { name: 'Identity Theft', slug: 'identity-theft' } },
-    { pattern: /investment|broker|advisor|retirement|401k|sec-complaint|finra|ponzi/, subcategory: { name: 'Investments', slug: 'investments' } },
-    { pattern: /scam|impersonation|tech-support|romance|pig-butchering|recovery-room|account-takeover/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
+    { pattern: /investment|broker|advisor|retirement|401k|sec-complaint|finra|ponzi|pension|financial-advice|trading/, subcategory: { name: 'Investments', slug: 'investments' } },
+    { pattern: /scam|impersonation|tech-support|romance|pig-butchering|recovery-room|account-takeover|authorized-push|card-fraud|bank-security|cryptocurrency/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
   ],
   'Refunds & Purchases': [
     { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },

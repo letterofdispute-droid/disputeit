@@ -767,6 +767,111 @@ export const categoryKnowledge: Record<string, CategoryKnowledgeEntry> = {
       },
     },
   },
+
+  // ============= REAL ESTATE & MORTGAGES =============
+  'Real Estate & Mortgages': {
+    description: 'Mortgage servicing disputes, escrow errors, PMI removal, foreclosure defense',
+    generalTips: [
+      'Send all disputes via Qualified Written Request (QWR) for RESPA protection',
+      'Keep copies of every payment confirmation and statement',
+      'Request a complete payment history and escrow analysis from your servicer',
+      'Note that servicers must acknowledge QWRs within 5 business days',
+    ],
+    regulatoryBodies: [
+      { name: 'Consumer Financial Protection Bureau (CFPB)', jurisdiction: 'US', website: 'https://www.consumerfinance.gov' },
+      { name: 'Department of Housing and Urban Development (HUD)', jurisdiction: 'US', website: 'https://www.hud.gov' },
+      { name: 'State Banking/Financial Regulator', jurisdiction: 'US' },
+    ],
+    subcategories: {
+      'Payment Issues': {
+        regulations: [
+          {
+            name: 'RESPA - Qualified Written Requests',
+            description: 'Requires servicers to respond to borrower inquiries about payment application',
+            jurisdiction: 'US',
+            keyPoints: [
+              'Servicer must acknowledge QWR within 5 business days',
+              'Must respond substantively within 30 business days',
+              'Cannot report disputed amount as delinquent during investigation',
+              'Borrower can recover actual damages and attorney fees for violations',
+            ],
+          },
+        ],
+        requiredEvidence: [
+          { item: 'Payment receipts/bank statements', importance: 'essential', tip: 'Show every payment made with dates and amounts' },
+          { item: 'Mortgage statements', importance: 'essential', tip: 'Compare applied amounts to what you actually paid' },
+          { item: 'Payment history from servicer', importance: 'essential', tip: 'Request complete history under RESPA' },
+          { item: 'Loan documents', importance: 'recommended', tip: 'Original note and deed of trust' },
+        ],
+        successTips: [
+          'Label your letter as a "Qualified Written Request under RESPA"',
+          'Include your loan number and property address',
+          'Specify the exact payments that were misapplied',
+          'Request a corrected payment history',
+        ],
+        typicalTimeline: '5 days acknowledgment, 30 days substantive response',
+        escalationPath: ['QWR to servicer', 'CFPB complaint', 'State banking regulator', 'RESPA litigation'],
+      },
+      'Escrow': {
+        requiredEvidence: [
+          { item: 'Annual escrow analysis statement', importance: 'essential', tip: 'Servicer must provide annually' },
+          { item: 'Tax bills', importance: 'essential', tip: 'Compare actual taxes to escrow estimates' },
+          { item: 'Insurance premium notices', importance: 'essential', tip: 'Verify amounts match escrow charges' },
+          { item: 'Escrow account history', importance: 'recommended', tip: 'Track all disbursements and deposits' },
+        ],
+        successTips: [
+          'Request a new escrow analysis if you believe estimates are wrong',
+          'Verify cushion does not exceed 2 months of escrow payments (RESPA limit)',
+          'Check if taxes or insurance decreased but payments stayed the same',
+        ],
+        typicalTimeline: '30 days for escrow analysis correction',
+      },
+      'PMI': {
+        regulations: [
+          {
+            name: 'Homeowners Protection Act (HPA)',
+            description: 'Governs PMI cancellation and termination',
+            jurisdiction: 'US',
+            keyPoints: [
+              'Borrower can request PMI cancellation at 80% LTV (based on original value)',
+              'Automatic termination at 78% LTV',
+              'Final termination at midpoint of amortization schedule',
+              'Good payment history required (no 30-day lates in past 12 months)',
+            ],
+          },
+        ],
+        requiredEvidence: [
+          { item: 'Current loan balance statement', importance: 'essential', tip: 'Shows your current LTV ratio' },
+          { item: 'Original appraisal', importance: 'essential', tip: 'Used to calculate LTV against original value' },
+          { item: 'Payment history', importance: 'essential', tip: 'Must show good payment record' },
+          { item: 'New appraisal (if applicable)', importance: 'recommended', tip: 'May be required if requesting based on current value' },
+        ],
+        successTips: [
+          'Calculate your exact LTV ratio before requesting cancellation',
+          'Ensure you have no late payments in the past 12 months',
+          'If home value increased substantially, a new appraisal may help',
+        ],
+        typicalTimeline: '30 days for servicer response to PMI cancellation request',
+      },
+      'Foreclosure & Modification': {
+        requiredEvidence: [
+          { item: 'Complete loss mitigation application', importance: 'essential', tip: 'Submit all required financial documents' },
+          { item: 'Hardship letter', importance: 'essential', tip: 'Explain circumstances clearly' },
+          { item: 'Income documentation', importance: 'essential', tip: 'Pay stubs, tax returns, benefit letters' },
+          { item: 'Bank statements', importance: 'essential', tip: 'Usually 2-3 months required' },
+          { item: 'Correspondence from servicer', importance: 'recommended', tip: 'Document dual tracking if occurring' },
+        ],
+        successTips: [
+          'CFPB rules prohibit dual tracking (foreclosing while reviewing modification)',
+          'Servicer must evaluate for ALL available options, not just one',
+          'You have right to appeal a modification denial',
+          'Submit complete application at least 37 days before foreclosure sale',
+        ],
+        typicalTimeline: '30 days for complete application review, 14 days for appeal',
+        escalationPath: ['Complete loss mitigation application', 'Appeal denial', 'CFPB complaint', 'HUD counselor', 'Legal aid'],
+      },
+    },
+  },
 };
 
 // ============= Helper Functions =============
