@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
+import StateRightsMap from '@/components/small-claims/StateRightsMap';
 import SEOHead from '@/components/SEOHead';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,102 +31,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   healthcare: 'Healthcare',
 };
 
-// Simplified US map — 10-state regional overview SVG
-function USMapIllustration({ selectedState }: { selectedState: string }) {
-  // Simplified rectangular state blocks arranged geographically
-  const states: { code: string; x: number; y: number; w: number; h: number; label: string }[] = [
-    // Pacific
-    { code: 'WA', x: 30, y: 20, w: 55, h: 40, label: 'WA' },
-    { code: 'OR', x: 30, y: 62, w: 55, h: 40, label: 'OR' },
-    { code: 'CA', x: 20, y: 104, w: 55, h: 80, label: 'CA' },
-    // Mountain
-    { code: 'MT', x: 90, y: 20, w: 65, h: 40, label: 'MT' },
-    { code: 'ID', x: 90, y: 62, w: 40, h: 60, label: 'ID' },
-    { code: 'WY', x: 132, y: 62, w: 55, h: 45, label: 'WY' },
-    { code: 'NV', x: 78, y: 104, w: 50, h: 60, label: 'NV' },
-    { code: 'UT', x: 130, y: 109, w: 55, h: 50, label: 'UT' },
-    { code: 'CO', x: 132, y: 109, w: 55, h: 45, label: 'CO' },
-    { code: 'AZ', x: 80, y: 166, w: 55, h: 60, label: 'AZ' },
-    { code: 'NM', x: 137, y: 157, w: 55, h: 60, label: 'NM' },
-    // Central/Plains
-    { code: 'ND', x: 192, y: 20, w: 55, h: 35, label: 'ND' },
-    { code: 'SD', x: 192, y: 57, w: 55, h: 35, label: 'SD' },
-    { code: 'NE', x: 192, y: 94, w: 60, h: 35, label: 'NE' },
-    { code: 'KS', x: 192, y: 131, w: 60, h: 35, label: 'KS' },
-    { code: 'MN', x: 250, y: 20, w: 50, h: 55, label: 'MN' },
-    { code: 'IA', x: 255, y: 77, w: 50, h: 35, label: 'IA' },
-    { code: 'MO', x: 255, y: 114, w: 50, h: 42, label: 'MO' },
-    { code: 'AR', x: 255, y: 158, w: 50, h: 38, label: 'AR' },
-    { code: 'OK', x: 192, y: 168, w: 70, h: 35, label: 'OK' },
-    { code: 'TX', x: 192, y: 205, w: 80, h: 70, label: 'TX' },
-    // Great Lakes
-    { code: 'WI', x: 308, y: 34, w: 45, h: 48, label: 'WI' },
-    { code: 'MI', x: 355, y: 20, w: 55, h: 55, label: 'MI' },
-    { code: 'IL', x: 308, y: 84, w: 40, h: 60, label: 'IL' },
-    { code: 'IN', x: 350, y: 77, w: 38, h: 52, label: 'IN' },
-    { code: 'OH', x: 390, y: 60, w: 50, h: 55, label: 'OH' },
-    { code: 'KY', x: 350, y: 131, w: 70, h: 35, label: 'KY' },
-    { code: 'TN', x: 310, y: 167, w: 90, h: 32, label: 'TN' },
-    { code: 'MS', x: 295, y: 198, w: 42, h: 55, label: 'MS' },
-    { code: 'AL', x: 339, y: 198, w: 42, h: 55, label: 'AL' },
-    { code: 'LA', x: 268, y: 220, w: 55, h: 50, label: 'LA' },
-    // Northeast
-    { code: 'PA', x: 443, y: 57, w: 58, h: 40, label: 'PA' },
-    { code: 'NY', x: 443, y: 15, w: 68, h: 42, label: 'NY' },
-    { code: 'WV', x: 430, y: 99, w: 42, h: 40, label: 'WV' },
-    { code: 'VA', x: 440, y: 100, w: 60, h: 38, label: 'VA' },
-    { code: 'NC', x: 400, y: 140, w: 75, h: 32, label: 'NC' },
-    { code: 'SC', x: 420, y: 174, w: 55, h: 38, label: 'SC' },
-    { code: 'GA', x: 383, y: 196, w: 55, h: 55, label: 'GA' },
-    { code: 'FL', x: 390, y: 230, w: 70, h: 50, label: 'FL' },
-    { code: 'MD', x: 502, y: 95, w: 35, h: 20, label: 'MD' },
-    { code: 'DE', x: 504, y: 75, w: 20, h: 18, label: 'DE' },
-    { code: 'NJ', x: 510, y: 55, w: 20, h: 30, label: 'NJ' },
-    { code: 'CT', x: 515, y: 38, w: 22, h: 18, label: 'CT' },
-    { code: 'RI', x: 538, y: 38, w: 16, h: 16, label: 'RI' },
-    { code: 'MA', x: 514, y: 20, w: 40, h: 18, label: 'MA' },
-    { code: 'VT', x: 505, y: 15, w: 20, h: 18, label: 'VT' },
-    { code: 'NH', x: 525, y: 10, w: 20, h: 22, label: 'NH' },
-    { code: 'ME', x: 532, y: 8, w: 24, h: 28, label: 'ME' },
-  ];
-
-  return (
-    <svg viewBox="0 0 580 290" className="w-full" aria-label="US state map">
-      <rect width="580" height="290" fill="hsl(210 20% 98%)" rx="8" />
-      {states.map((s) => {
-        const isSelected = s.code === selectedState;
-        return (
-          <g key={s.code}>
-            <rect
-              x={s.x} y={s.y} width={s.w} height={s.h} rx="2"
-              fill={isSelected ? 'hsl(222 47% 20%)' : 'hsl(215 25% 88%)'}
-              stroke="hsl(210 20% 98%)"
-              strokeWidth="1.5"
-              style={{ transition: 'fill 0.3s ease' }}
-            />
-            {s.w > 35 && s.h > 30 && (
-              <text
-                x={s.x + s.w / 2} y={s.y + s.h / 2 + 4}
-                textAnchor="middle"
-                fontSize={s.w > 55 ? '9' : '7'}
-                fill={isSelected ? 'hsl(210 40% 98%)' : 'hsl(222 47% 30%)'}
-                fontWeight={isSelected ? '700' : '500'}
-                style={{ transition: 'fill 0.3s ease' }}
-              >
-                {s.label}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      {!selectedState && (
-        <text x="290" y="270" textAnchor="middle" fontSize="10" fill="hsl(215 16% 60%)">
-          Select a state to highlight it
-        </text>
-      )}
-    </svg>
-  );
-}
 
 const NOTABLE_STATES = [
   {
@@ -277,7 +182,7 @@ const StateRightsPage = () => {
               </div>
             </div>
             <div className="hidden md:block rounded-xl overflow-hidden border border-primary-foreground/10 bg-primary-foreground/5 p-3">
-              <USMapIllustration selectedState={selectedState} />
+              <StateRightsMap selectedState={selectedState} onStateSelect={setSelectedState} />
             </div>
           </div>
         </div>
