@@ -173,6 +173,20 @@ const LEGAL_KNOWLEDGE: Record<string, {
     timeframes: [{ context: 'Reject defective goods', days: 30 }, { context: 'Warranty claim response', days: 30 }],
     escalations: ['Return within reasonable time', 'File chargeback', 'Report unsafe products to CPSC', 'File small claims'],
   },
+  mortgage: {
+    statutes: [
+      { name: 'Real Estate Settlement Procedures Act', citation: '12 U.S.C. § 2601 (RESPA)', rights: ['Right to Qualified Written Request (QWR)', 'Right to accurate escrow accounting', 'Right to be free from kickbacks'] },
+      { name: 'Truth in Lending Act', citation: '15 U.S.C. § 1601 (TILA)', rights: ['Right to accurate disclosure of loan terms', 'Right to rescind certain transactions within 3 days', 'Right to sue for violations'] },
+      { name: 'Homeowners Protection Act', citation: '12 U.S.C. § 4901 (HPA)', rights: ['Right to request PMI cancellation at 80% LTV', 'Right to automatic PMI termination at 78% LTV'] },
+      { name: 'Dodd-Frank Wall Street Reform Act', citation: 'Pub. L. 111-203', rights: ['Protection from abusive mortgage servicing', 'Dual tracking prohibition', 'Loss mitigation review requirements'] },
+    ],
+    agencies: [
+      { name: 'Consumer Financial Protection Bureau', abbr: 'CFPB', website: 'consumerfinance.gov' },
+      { name: 'Department of Housing and Urban Development', abbr: 'HUD', website: 'hud.gov' },
+    ],
+    timeframes: [{ context: 'Servicer acknowledgment of QWR', days: 5 }, { context: 'Servicer response to QWR', days: 30 }, { context: 'PMI cancellation response', days: 30 }, { context: 'Loss mitigation application review', days: 30 }],
+    escalations: ['Send Qualified Written Request via certified mail', 'File CFPB complaint', 'File HUD complaint', 'Contact State Attorney General', 'Pursue RESPA/TILA litigation'],
+  },
 };
 
 const TONE_INSTRUCTIONS: Record<string, string> = {

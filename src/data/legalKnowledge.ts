@@ -1002,6 +1002,119 @@ export const legalKnowledgeDatabase: CategoryLegalKnowledge[] = [
         ]
       }
     }
+  },
+
+  // ============================================================
+  // REAL ESTATE & MORTGAGES
+  // ============================================================
+  {
+    category: 'Real Estate & Mortgages',
+    categoryId: 'mortgage',
+    description: 'Mortgage servicing disputes, escrow errors, PMI removal, foreclosure defense, closing cost disputes',
+    jurisdictions: {
+      US: {
+        federalStatutes: [
+          {
+            name: 'Real Estate Settlement Procedures Act',
+            citation: '12 U.S.C. § 2601 (RESPA)',
+            relevantSections: ['§ 2605 - Servicing of mortgage loans', '§ 2607 - Anti-kickback provisions', '§ 2609 - Escrow accounts'],
+            consumerRights: [
+              'Right to send Qualified Written Request (QWR) and receive response',
+              'Right to accurate escrow accounting',
+              'Right to be free from kickbacks and referral fees',
+              'Right to Good Faith Estimate of settlement costs'
+            ],
+            typicalViolations: [
+              'Failure to respond to QWR within 30 business days',
+              'Misapplication of mortgage payments',
+              'Excessive escrow cushion (over 2 months)',
+              'Force-placed insurance without proper notice'
+            ]
+          },
+          {
+            name: 'Truth in Lending Act',
+            citation: '15 U.S.C. § 1601 (TILA)',
+            relevantSections: ['§ 1635 - Right of rescission', '§ 1639c - Minimum standards for mortgages'],
+            consumerRights: [
+              'Right to accurate disclosure of loan terms (APR, finance charges)',
+              'Right to rescind certain transactions within 3 business days',
+              'Right to sue for TILA violations'
+            ],
+            typicalViolations: [
+              'Inaccurate APR disclosure',
+              'Failure to provide required disclosures',
+              'Improper denial of rescission rights'
+            ]
+          },
+          {
+            name: 'Homeowners Protection Act',
+            citation: '12 U.S.C. § 4901 (HPA)',
+            consumerRights: [
+              'Right to request PMI cancellation at 80% LTV',
+              'Right to automatic PMI termination at 78% LTV',
+              'Right to final termination at amortization midpoint'
+            ],
+            typicalViolations: [
+              'Failure to cancel PMI at 80% LTV upon request',
+              'Failure to automatically terminate PMI at 78% LTV',
+              'Imposing unreasonable conditions for PMI cancellation'
+            ]
+          },
+          {
+            name: 'Dodd-Frank Act - Mortgage Servicing Rules',
+            citation: 'Pub. L. 111-203; 12 CFR Part 1024 (Regulation X)',
+            consumerRights: [
+              'Protection from dual tracking during loss mitigation review',
+              'Right to complete loss mitigation evaluation',
+              'Right to appeal modification denial',
+              'Successor-in-interest notification rights'
+            ],
+            typicalViolations: [
+              'Dual tracking (foreclosing while reviewing modification)',
+              'Failure to evaluate for all available loss mitigation options',
+              'Proceeding with foreclosure sale within 37 days of complete application'
+            ]
+          }
+        ],
+        stateStatuteNotes: 'Most states have additional foreclosure protections including judicial vs. non-judicial procedures, redemption periods, and mandatory mediation programs. Some states require loss mitigation conferences before foreclosure.',
+        regulatoryAgencies: [
+          {
+            name: 'Consumer Financial Protection Bureau',
+            abbreviation: 'CFPB',
+            website: 'https://www.consumerfinance.gov',
+            complaintUrl: 'https://www.consumerfinance.gov/complaint/',
+            jurisdiction: 'federal'
+          },
+          {
+            name: 'Department of Housing and Urban Development',
+            abbreviation: 'HUD',
+            website: 'https://www.hud.gov',
+            complaintUrl: 'https://www.hud.gov/program_offices/housing/sfh/res/consfaq',
+            jurisdiction: 'federal'
+          },
+          {
+            name: 'State Banking/Financial Services Regulator',
+            abbreviation: 'DFS',
+            website: 'Varies by state',
+            jurisdiction: 'state'
+          }
+        ],
+        timeframes: [
+          { context: 'Servicer acknowledgment of QWR', days: 5, source: 'RESPA § 2605(e)' },
+          { context: 'Servicer substantive response to QWR', days: 30, source: 'RESPA § 2605(e)' },
+          { context: 'PMI cancellation response', days: 30, source: 'HPA' },
+          { context: 'Loss mitigation application review', days: 30, source: 'Regulation X § 1024.41' },
+          { context: 'Notice before force-placing insurance', days: 45, source: 'Regulation X § 1024.37' }
+        ],
+        escalationPaths: [
+          'Send Qualified Written Request (QWR) via certified mail',
+          'File complaint with CFPB (companies must respond within 15 days)',
+          'Contact HUD-approved housing counselor',
+          'File complaint with State Banking Regulator',
+          'Pursue RESPA/TILA litigation (actual damages, statutory damages, attorney fees)'
+        ]
+      }
+    }
   }
 ];
 

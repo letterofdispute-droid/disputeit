@@ -18,6 +18,7 @@ interface FormAssistantRequest {
   fieldLabel: string;
   fieldValue: string;
   category: string;
+  subcategory?: string;
   templateTitle: string;
   allFieldValues?: Record<string, string>;
 }
@@ -36,6 +37,7 @@ export function useFormAssistant() {
     fieldLabel,
     fieldValue,
     category,
+    subcategory,
     templateTitle,
     allFieldValues,
   }: FormAssistantRequest) => {
@@ -59,6 +61,7 @@ export function useFormAssistant() {
           fieldLabel,
           fieldValue,
           category,
+          subcategory,
           templateTitle,
           context: allFieldValues,
         },
@@ -106,10 +109,12 @@ export function useFormAssistant() {
   // Get overall letter analysis
   const analyzeLetter = useCallback(async ({
     category,
+    subcategory,
     templateTitle,
     allFieldValues,
   }: {
     category: string;
+    subcategory?: string;
     templateTitle: string;
     allFieldValues: Record<string, string>;
   }) => {
@@ -124,6 +129,7 @@ export function useFormAssistant() {
         body: {
           action: 'analyze',
           category,
+          subcategory,
           templateTitle,
           context: allFieldValues,
         },
