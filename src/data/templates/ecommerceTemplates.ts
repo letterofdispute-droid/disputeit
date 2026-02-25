@@ -4,6 +4,7 @@ import { subscriptionTemplates } from './ecommerce/subscriptionTemplates';
 import { privacyDataTemplates } from './ecommerce/privacyDataTemplates';
 import { deliveryShippingTemplates } from './ecommerce/deliveryShippingTemplates';
 import { paymentRefundTemplates } from './ecommerce/paymentRefundTemplates';
+import { consumerProtectionTemplates } from './ecommerce/consumerProtectionTemplates';
 
 
 const standardJurisdictions = [
@@ -71,4 +72,5 @@ export const ecommerceTemplates: LetterTemplate[] = [
   ...privacyDataTemplates,
   ...deliveryShippingTemplates,
   ...paymentRefundTemplates,
+  ...consumerProtectionTemplates,
 ];
