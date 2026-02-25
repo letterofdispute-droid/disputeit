@@ -52,9 +52,9 @@ const MenuCard = ({ title, description, icon: Icon, href }: {
         <div className="mt-0.5 flex size-9 flex-none items-center justify-center rounded-lg bg-muted group-hover:bg-background">
           <Icon className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <div className="min-w-0">
+        <div>
           <span className="text-sm font-semibold text-foreground">{title}</span>
-          <p className="mt-0.5 text-xs leading-snug text-muted-foreground truncate">{description}</p>
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{description}</p>
         </div>
       </Link>
     </NavigationMenuLink>
@@ -86,7 +86,7 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
 }) => {
   const totalCount = getTotalTemplateCount();
   return (
-    <div className="min-w-[180px] max-w-screen-xl w-[780px]">
+    <div className="w-[980px]">
       <div className="p-4">
         <ul className="grid grid-cols-3 gap-1">
           {templateCategories.map((category) => {
@@ -159,7 +159,7 @@ const MegaMenu = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">Resources</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="min-w-[180px] max-w-screen-xl w-[780px]">
+              <div className="w-[980px]">
                 <div className="p-4 grid grid-cols-2 gap-x-2">
                   <div>
                     <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">General</p>
