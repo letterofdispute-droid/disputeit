@@ -1,54 +1,32 @@
 
 
-# Mega Menu Audit — Issues Found
+# Fix: Mega Menu Right-Edge Clipping
 
-## Problem 1: Broken Description Truncation (Most Visible)
-Line 93 uses `category.description.split('.')[0].split(',')[0]` to shorten descriptions. This produces wildly inconsistent results because some descriptions have early commas and some don't:
+## Problem
+The 980px-wide dropdown panel overflows the right side of the viewport. The third column's text is cut off (e.g., "Healthcare & Medical Bill..." instead of "Healthcare & Medical Billing").
 
-| Category | Full description | After split |
-|----------|-----------------|-------------|
-| Refunds & Purchases | "Get your money back for products or services that did not meet expectations." | Full sentence (no early comma) — wraps to 3 lines |
-| Landlord & Housing | "Request repairs, address deposit disputes, or document housing issues." | "Request repairs" — 1 line |
-| Financial Services | "Challenge bank fees, credit report errors, identity theft..." | "Challenge bank fees" — 1 line |
-| Damaged & Defective Goods | "File complaints for items that arrived broken, defective, or not as described." | "File complaints for items that arrived broken" — 2 lines |
+## Root Cause
+In `src/components/ui/navigation-menu.tsx`, the `NavigationMenuViewport` wrapper uses `left-0`, which anchors the dropdown to the left edge of the `NavigationMenu` component. Since the nav menu isn't flush with the left edge of the screen, the 980px panel extends past the right viewport edge.
 
-This creates **uneven row heights** across the 3-column grid, making it look broken.
+## Fix
 
-**Fix:** Write dedicated short descriptions (max ~6 words each) as a `shortDescription` map inside MegaMenu, instead of splitting the category's long description. Every item gets one consistent line.
+### File: `src/components/ui/navigation-menu.tsx`
+Change the viewport wrapper's positioning from `left-0` to `right-0` (or use a negative left offset) so the panel stays within the viewport:
 
-## Problem 2: Guides Footer Says "templates"
-The `CategoryGrid` component always shows `{totalCount}+ templates` in the footer, even when used for the Guides dropdown. Should say "guides" for Guides.
+```tsx
+// Current:
+<div className={cn("absolute left-0 top-full flex justify-center")}>
 
-**Fix:** Add a `footerUnit` prop to `CategoryGrid` (default "templates") and pass "guides" from the Guides menu item.
+// Change to:
+<div className={cn("absolute left-1/2 -translate-x-1/2 top-full flex justify-center")}>
+```
 
-## Problem 3: Both Menus Show Identical Content
-Letter Templates and Guides render the same 13 categories. This is by design (same categories, different base paths), but worth noting — not a bug to fix here.
+This centers the dropdown relative to the navigation menu, preventing right-edge overflow. If the nav is too far right for centering to work, an alternative is to simply use `right-0` to anchor to the right edge instead.
 
-## File Changes
+### No changes needed to `MegaMenu.tsx`
+The 980px width is fine — the issue is purely about viewport positioning.
 
 | File | Change |
 |------|--------|
-| `src/components/layout/MegaMenu.tsx` | 1. Replace the `split('.')` logic with a static `shortDescriptions` map (one short phrase per category). 2. Add `footerUnit` prop to `CategoryGrid` so Guides says "guides" not "templates". |
-
-## Short Descriptions Map (proposed)
-
-```typescript
-const shortDescriptions: Record<string, string> = {
-  'refunds': 'Product & service refunds',
-  'housing': 'Repairs, deposits & tenancy',
-  'travel': 'Flights, hotels & bookings',
-  'damaged-goods': 'Broken or defective items',
-  'utilities': 'Billing & service disputes',
-  'financial': 'Banks, credit & debt',
-  'insurance': 'Claims & coverage issues',
-  'vehicle': 'Dealers, repairs & lemon law',
-  'healthcare': 'Medical bills & denials',
-  'employment': 'Wages & workplace issues',
-  'ecommerce': 'Online sellers & accounts',
-  'hoa': 'HOA fees & neighbor issues',
-  'contractors': 'Workmanship & project issues',
-};
-```
-
-Each description is 3–5 words, ensuring uniform single-line height across all columns.
+| `src/components/ui/navigation-menu.tsx` | Update viewport wrapper from `left-0` to centered positioning (`left-1/2 -translate-x-1/2`) |
 
