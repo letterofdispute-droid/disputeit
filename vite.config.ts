@@ -7,6 +7,23 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Plugin to validate template slugs before build starts
+const templateSlugValidator = () => ({
+  name: 'template-slug-validator',
+  async buildStart() {
+    console.log('\n🔍 Validating template slugs against siteContext whitelist...');
+    try {
+      const { stdout, stderr } = await execAsync('node scripts/validate-template-slugs.mjs');
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
+    } catch (error) {
+      const err = error as { stdout?: string; message?: string };
+      console.error('❌ Template slug validation failed:', err.stdout || err.message);
+      throw new Error('Template slug validation failed. Fix drift before building.');
+    }
+  }
+});
+
 // Plugin to generate static HTML files and inject SEO content after build
 const staticFileGenerator = () => ({
   name: 'static-file-generator',
@@ -39,6 +56,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    mode === "production" && templateSlugValidator(),
     mode === "production" && staticFileGenerator()
   ].filter(Boolean),
   resolve: {
