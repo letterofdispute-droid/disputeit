@@ -94,7 +94,7 @@ const SmallClaimsGeneratorPage = () => {
         ]}
       />
 
-      <section className="bg-[var(--gradient-hero)] text-primary-foreground py-14">
+      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-14">
         <div className="container-wide text-center max-w-2xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold font-serif mb-3">
             Small Claims Statement Generator

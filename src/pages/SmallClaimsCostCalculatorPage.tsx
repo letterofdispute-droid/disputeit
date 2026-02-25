@@ -3,7 +3,7 @@ import SEOHead from '@/components/SEOHead';
 import CostCalculator from '@/components/small-claims/CostCalculator';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, FileText, MapPin, ArrowLeft } from 'lucide-react';
+import { ArrowRight, FileText, MapPin, ArrowLeft, Calculator } from 'lucide-react';
 
 const SmallClaimsCostCalculatorPage = () => {
   const siteUrl = 'https://letterofdispute.com';
@@ -26,17 +26,20 @@ const SmallClaimsCostCalculatorPage = () => {
         ]}
       />
 
-      {/* Intro */}
-      <section className="py-12 md:py-16">
+      {/* Hero */}
+      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
-            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+            <Link to="/small-claims" className="inline-flex items-center gap-1 text-sm text-primary-foreground/60 hover:text-primary-foreground mb-6 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to Small Claims Guide
             </Link>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-foreground mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-full px-4 py-1.5 text-sm text-primary-foreground/80 mb-4">
+              <Calculator className="h-4 w-4" /> Interactive Tool
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif mb-4">
               Small Claims Court Cost Calculator
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
               Enter your state, dispute type, and claim amount to get a personalized breakdown of filing fees, service costs, and whether it's worth pursuing in court.
             </p>
           </div>

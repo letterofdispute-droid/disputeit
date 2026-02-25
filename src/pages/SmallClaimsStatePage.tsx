@@ -82,7 +82,7 @@ const SmallClaimsStatePage = () => {
       />
 
       {/* Hero */}
-      <section className="bg-[var(--gradient-hero)] text-primary-foreground py-16 md:py-20">
+      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
         <div className="container-wide">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-4 text-sm">
