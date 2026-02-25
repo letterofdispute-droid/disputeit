@@ -260,8 +260,73 @@ async function generatePlanForTemplate(
     .single();
 
   if (existingPlan) {
-    return { success: true, articlesCreated: 0 }; // Already exists, skip
+    // Plan exists — check if it already has queue items or published posts
+    const { count: queueCount } = await supabase
+      .from('content_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('plan_id', existingPlan.id);
+
+    const { count: postCount } = await supabase
+      .from('blog_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('content_plan_id', existingPlan.id);
+
+    if ((queueCount ?? 0) > 0 || (postCount ?? 0) > 0) {
+      // Healthy plan — skip
+      return { success: true, articlesCreated: 0 };
+    }
+
+    // Orphan plan (exists but empty) — repair by generating queue items for it
+    console.log(`[BULK-PLAN] Repairing orphan plan for ${template.slug} (plan ${existingPlan.id})`);
+    
+    // Skip plan creation below, jump straight to generating articles for this existing plan
+    return await generateQueueItemsForPlan(
+      supabase, apiKey, existingPlan.id, template, categoryId, valueTier,
+      existingTitles, seenFirstWords
+    );
   }
+
+  // Create the content plan
+  const { data: newPlan, error: planError } = await supabase
+    .from('content_plans')
+    .insert({
+      template_slug: template.slug,
+      template_name: template.name,
+      category_id: categoryId,
+      subcategory_slug: template.subcategorySlug || null,
+      value_tier: valueTier,
+      target_article_count: targetCount,
+    })
+    .select()
+    .single();
+
+  if (planError) {
+    throw new Error(`Failed to create plan: ${planError.message}`);
+  }
+
+  // Generate queue items for the new plan
+  return await generateQueueItemsForPlan(
+    supabase, apiKey, newPlan.id, template, categoryId, valueTier,
+    existingTitles, seenFirstWords
+  );
+}
+
+/**
+ * Generate queue items (articles) for an existing plan.
+ * Used both for new plans and repairing orphan plans.
+ */
+async function generateQueueItemsForPlan(
+  supabase: ReturnType<typeof createClient>,
+  apiKey: string,
+  planId: string,
+  template: { slug: string; name: string; subcategorySlug?: string },
+  categoryId: string,
+  valueTier: 'high' | 'medium' | 'longtail',
+  existingTitles: string[],
+  seenFirstWords: Set<string>
+): Promise<{ success: boolean; error?: string; articlesCreated?: number }> {
+  const tierConfig = VALUE_TIER_CONFIGS[valueTier];
+  const targetCount = tierConfig.articleCount;
 
   const articleTypesToGenerate = ARTICLE_TYPES
     .filter(t => tierConfig.articleTypes.includes(t.id))
@@ -425,28 +490,10 @@ Return JSON:
     throw new Error('Failed to generate any valid titles after retries');
   }
 
-  // Create the content plan
-  const { data: newPlan, error: planError } = await supabase
-    .from('content_plans')
-    .insert({
-      template_slug: template.slug,
-      template_name: template.name,
-      category_id: categoryId,
-      subcategory_slug: template.subcategorySlug || null,
-      value_tier: valueTier,
-      target_article_count: targetCount,
-    })
-    .select()
-    .single();
-
-  if (planError) {
-    throw new Error(`Failed to create plan: ${planError.message}`);
-  }
-
   // Create queue items with validated article types
   const queueItems = validatedArticles.map((article, index) => ({
-    plan_id: newPlan.id,
-    article_type: normalizeArticleType(article.type), // Validate to prevent constraint errors
+    plan_id: planId,
+    article_type: normalizeArticleType(article.type),
     suggested_title: article.title,
     suggested_keywords: article.keywords,
     priority: 50 - index,
