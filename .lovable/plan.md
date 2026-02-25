@@ -1,51 +1,57 @@
 
 
-# Seventh-Pass Audit Results
+# Backend & Dashboard Sync Audit Results
 
-## Overall Status: CLEAN (1 minor cosmetic issue)
+## Overall Status: One Real Gap Found
 
-After exhaustively reviewing the current state of `siteContext.ts` (all 616 lines), `templateCategories.ts`, console logs, and network requests, the system is in excellent shape. The previous six passes have resolved all material issues.
+After reviewing the admin dashboard, SEO metrics pipeline, link counting system, template coverage data, and frontend console/network logs, everything is aligned **except for one functional gap** you specifically called out.
 
-### What Was Verified
+## What's In Sync (Verified)
 
-- **All 14 category slug sections** in siteContext.ts cross-referenced against template source files
-- **templateCategories.ts** counts match siteContext.ts CATEGORIES array counts
-- **No console errors** in the frontend
-- **No network errors** detected
-- **No hallucinated slugs** remaining (all slugs verified against source files)
-- **No missing slugs** remaining across all categories
-
-### One Minor Cosmetic Issue Found
-
-**File:** `supabase/functions/_shared/siteContext.ts`, lines 133-134
-
-When `subscription-cancellation-refund` was removed from the Refunds section in the sixth pass, it left behind a vestigial comment and a duplicate entry:
-
-```
-line 132: extended-warranty-refund, bundle-partial-refund, flash-sale-refund,
-line 133: -- Special Purchases (continued) --
-line 134: flash-sale-refund
-```
-
-`flash-sale-refund` appears on both line 132 AND line 134. The "Special Purchases (continued)" comment and the duplicate slug on line 134 are remnants that should be removed.
-
-### Fix
-
-Remove lines 133-134 from `siteContext.ts` (the orphaned comment and duplicate slug). This is purely cosmetic cleanup -- it does not affect functionality since the AI simply sees a duplicate slug in its prompt, which is harmless but untidy.
-
-### Template Count Note
-
-The display counts in `templateCategories.ts` (e.g., Refunds showing 50) are approximate marketing numbers. The actual template count from source files may differ slightly (e.g., Refunds has 47 actual templates). These display counts are used for UI presentation and do not affect any system logic. The `allTemplates.ts` module uses the real array length for accurate counts.
-
-### Summary
-
-| Check | Status |
+| System | Status |
 |---|---|
-| All slug whitelists match source files | PASS |
-| No hallucinated slugs | PASS |
-| No missing slugs | PASS |
-| Console errors | NONE |
-| Network errors | NONE |
-| Category counts in sync (siteContext vs templateCategories) | PASS |
-| Duplicate slug cleanup needed | 1 (cosmetic) |
+| `templateCategories.ts` counts vs `siteContext.ts` CATEGORIES | MATCH (all 14 categories identical) |
+| `useSEOMetrics` hook via `get_seo_metrics` RPC | Working (200 responses, no errors) |
+| `get_template_progress` RPC | Working (returns accurate generated/total per template) |
+| Admin Dashboard stats (letters, users, views) | Working via direct queries |
+| Network requests | All 200s, no failures |
+| Console errors | One harmless React ref warning in AlertDialogContent (Radix library issue, cosmetic) |
+
+## The Gap: Link Counts Do NOT Auto-Update on Manual Edits
+
+You said you expect link counts to update each time you add a link in any page or post. **Currently, they don't.**
+
+Here's how it works today:
+
+1. **Automated link insertion** (`apply-links-bulk` edge function): Calls `increment_link_counters` per link -- counts update correctly.
+2. **Manual editing** (AdminBlogEditor `handleSave`): Saves the post content directly to `blog_posts` table. **No link count reconciliation runs.** The `inbound_count` and `outbound_count` in `article_embeddings` go stale.
+3. **Manual fix**: You must go to the SEO dashboard Links tab and click "Sync Counters" (which calls `reconcile_link_counts` RPC) to re-sync.
+
+### The Fix
+
+Add an automatic call to `reconcile_link_counts` after every blog post save in `AdminBlogEditor.tsx`. When a post is saved (create or update), the system should fire a background reconciliation so link counts stay accurate without manual intervention.
+
+**File: `src/pages/admin/AdminBlogEditor.tsx`**
+- After the successful `.update()` or `.insert()` call, fire `supabase.rpc('reconcile_link_counts')` as a fire-and-forget background call
+- This runs the full HTML regex scan across all published posts and updates `article_embeddings.inbound_count` and `outbound_count`
+- No UI blocking needed -- it runs silently in the background
+
+### Performance Note
+
+The `reconcile_link_counts` function has a 120-second timeout and scans all published posts. For the current content volume this is fine. If the blog grows to thousands of posts, a targeted single-post reconciliation function would be more efficient, but that's a future optimization.
+
+## Summary
+
+| Item | Status | Action |
+|---|---|---|
+| Template counts (UI vs AI context) | In sync | None |
+| SEO metrics RPC | Working | None |
+| Dashboard stats | Working | None |
+| Link counts auto-update on manual edit | **BROKEN** | Add auto-reconcile after blog post save |
+| Console errors | 1 cosmetic Radix warning | None (library issue) |
+| Network errors | None | None |
+
+### Scope
+- 1 file changed: `src/pages/admin/AdminBlogEditor.tsx`
+- Add ~5 lines after the save success block
 
