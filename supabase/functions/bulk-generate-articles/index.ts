@@ -1101,6 +1101,7 @@ Respond with ONLY this JSON:
       content_plan_id: item.plan_id,
       article_type: item.article_type,
       author: getAuthorForCategory(plan.category_id),
+      ...(item.scheduled_at ? { scheduled_at: item.scheduled_at } : {}),
     });
 
     if (postError) {

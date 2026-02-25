@@ -32,6 +32,7 @@ export default function ContentQueue() {
     retryFailed,
     isRetrying,
     deleteItems,
+    scheduleItems,
     getFailedIds,
     fetchAllFailedIds,
     fetchAllQueuedIds,
@@ -232,6 +233,23 @@ export default function ContentQueue() {
           onDeleteSelected={handleDeleteSelected}
           onClearFailed={handleClearFailed}
           onRetryFailed={handleRetryFailed}
+          scheduleItemCount={selectedIds.size > 0 ? selectedIds.size : filteredItems.filter(i => i.status === 'queued').length}
+          onScheduleConfirm={(startDate, perBatch, interval) => {
+            // Determine which items to schedule: selected or all queued
+            const itemsToSchedule = selectedIds.size > 0
+              ? filteredItems.filter(i => selectedIds.has(i.id))
+              : filteredItems.filter(i => i.status === 'queued');
+            
+            const updates = itemsToSchedule.map((item, index) => {
+              const batchIndex = Math.floor(index / perBatch);
+              const date = new Date(startDate);
+              date.setDate(date.getDate() + batchIndex * interval);
+              return { id: item.id, scheduled_at: date.toISOString() };
+            });
+            
+            scheduleItems(updates);
+            setSelectedIds(new Set());
+          }}
         />
       </div>
 

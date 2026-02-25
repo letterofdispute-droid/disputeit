@@ -14,6 +14,7 @@ export interface ContentQueueItem {
   blog_post_id: string | null;
   generated_at: string | null;
   published_at: string | null;
+  scheduled_at: string | null;
   error_message: string | null;
   created_at: string;
   parent_queue_id: string | null;
@@ -225,6 +226,34 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     return data?.map(i => i.id) || [];
   }, []);
 
+  // Schedule items: bulk update scheduled_at
+  const scheduleItemsMutation = useMutation({
+    mutationFn: async (updates: { id: string; scheduled_at: string }[]) => {
+      // Batch in groups of 50
+      for (let i = 0; i < updates.length; i += 50) {
+        const batch = updates.slice(i, i + 50);
+        for (const item of batch) {
+          const { error } = await supabase
+            .from('content_queue')
+            .update({ scheduled_at: item.scheduled_at } as any)
+            .eq('id', item.id);
+          if (error) throw error;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      toast({ title: 'Schedule applied', description: 'Publishing dates have been assigned.' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Scheduling failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     queueItems,
     isLoading,
@@ -236,6 +265,8 @@ export function useContentQueue(planId?: string, categoryId?: string, statusFilt
     isRetrying: retryFailedMutation.isPending,
     updateStatus: updateStatusMutation.mutate,
     deleteItems: deleteItemsMutation.mutate,
+    scheduleItems: scheduleItemsMutation.mutate,
+    isScheduling: scheduleItemsMutation.isPending,
     getFailedIds,
     fetchAllFailedIds,
     fetchAllQueuedIds,

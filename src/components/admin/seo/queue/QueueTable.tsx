@@ -1,4 +1,5 @@
-import { Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Loader2, ExternalLink, AlertCircle, CalendarClock } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export default function QueueTable({
             <TableHead className="w-28">Type</TableHead>
             <TableHead className="w-28">Category</TableHead>
             <TableHead className="w-36">Template</TableHead>
+            <TableHead className="w-28">Scheduled</TableHead>
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-16">Actions</TableHead>
           </TableRow>
@@ -71,7 +73,7 @@ export default function QueueTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 No items in queue
               </TableCell>
             </TableRow>
@@ -132,6 +134,16 @@ export default function QueueTable({
                     <span className="truncate block max-w-36 text-sm text-muted-foreground">
                       {item.content_plans?.template_name || '-'}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {item.scheduled_at ? (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarClock className="h-3 w-3" />
+                        {format(new Date(item.scheduled_at), 'MMM d')}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell>
