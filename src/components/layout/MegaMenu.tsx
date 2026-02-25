@@ -86,7 +86,7 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
 }) => {
   const totalCount = getTotalTemplateCount();
   return (
-    <div className="w-[620px]">
+    <div className="min-w-[180px] max-w-screen-xl w-[780px]">
       <div className="p-4">
         <ul className="grid grid-cols-3 gap-1">
           {templateCategories.map((category) => {
@@ -159,7 +159,7 @@ const MegaMenu = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">Resources</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[580px]">
+              <div className="min-w-[180px] max-w-screen-xl w-[780px]">
                 <div className="p-4 grid grid-cols-2 gap-x-2">
                   <div>
                     <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">General</p>
