@@ -1,61 +1,109 @@
 
 
-# De-duplicating the Letter Templates and Guides Mega Menus
+# Mega Menu Restructure: 5 Top-Level Items
 
-## The Problem
-Both "Letter Templates" and "Guides" dropdowns show the **identical** 13-category grid. The only difference is the URL prefix (`/templates/` vs `/guides/`) and footer text. This is wasted navigation real estate and confusing for users.
-
-## Recommended Approach: Merge Into a Single "Letter Templates" Dropdown With Two Paths
-
-Remove the standalone "Guides" top-level menu item. Instead, add a **secondary column or footer row** inside the existing "Letter Templates" dropdown that links to guides. This eliminates the duplication while keeping guides discoverable.
-
-### Option A — Footer CTA Row (Minimal Change, Recommended)
-
-Keep the single 3-column category grid under "Letter Templates". In the footer bar, add a second link for guides alongside "Browse all templates":
+## New Structure
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  Refunds & Purchases  │ Landlord & Housing │ Travel │
-│  Damaged Goods        │ Utilities          │ ...    │
-│  ...                  │ ...                │ ...    │
-├─────────────────────────────────────────────────────┤
-│ 📄 Browse all templates · 631+      📖 Consumer Rights Guides →  │
-│                           ✨ Not sure? Get AI help                │
-└─────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  Logo   Letter Templates ▾   Free Tools ▾   Learn ▾   Get Started   Pricing │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Remove the "Guides" `NavigationMenuItem` entirely
-- Add a "Consumer Rights Guides" link in the footer of the Templates panel
-- Pros: Simplest change, no duplication, clean
-- Cons: Guides are slightly less prominent
+### 1. Letter Templates (keep as-is)
+13-category grid, 980px. No changes.
 
-### Option B — Two-Tab Panel (More Prominent)
-
-Replace both menus with a single "Browse" dropdown that has **tabs** at the top: `Templates | Guides`. Clicking a tab switches the grid's link prefix. Footer updates accordingly.
+### 2. Free Tools (new dropdown, extracted from Resources)
+~700px, two-column layout:
 
 ```text
-┌─ [Templates] [Guides] ─────────────────────────────┐
-│  Refunds & Purchases  │ Landlord & Housing │ Travel │
-│  ...                                               │
-├─────────────────────────────────────────────────────┤
-│ Browse all templates · 631+        ✨ Get AI help   │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  ASSESSMENT & ANALYSIS           │  COURT & LEGAL            │
+│  ○ Do I Have a Case?             │  ○ Small Claims Guide     │
+│  ○ Analyze My Letter             │  ○ Court Cost Calculator  │
+│  ○ Deadlines Calculator          │  ○ Demand Letter Compare  │
+│  ○ Consumer News                 │  ○ Escalation Flowchart   │
+├──────────────────────────────────────────────────────────────┤
+│  STATE LAWS  CA California  TX Texas  NY New York  FL ...   │
+│                                         Browse all 50 →     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- Pros: Both equally prominent, single source of truth
-- Cons: More code, adds state management for active tab
+### 3. Learn (new dropdown, articles-focused)
+~780px, two-column layout with a featured article card:
 
----
+```text
+┌────────────────────────────────────────────────────────────────┐
+│  GUIDES & KNOWLEDGE              │  LATEST ARTICLE            │
+│  ○ Consumer Rights Guides        │  ┌──────────────────────┐  │
+│  ○ All Articles (500+ expert)    │  │  [image]             │  │
+│  ○ Knowledge Center              │  │  Article title here  │  │
+│                                  │  │  Feb 24, 2026        │  │
+│                                  │  └──────────────────────┘  │
+├────────────────────────────────────────────────────────────────┤
+│  📖 Browse all articles →                                     │
+└────────────────────────────────────────────────────────────────┘
+```
 
-## My Recommendation: **Option A** (Footer CTA)
+- Fetches the single most recent published `blog_posts` row via `useQuery` for the preview card
+- Fallback: if no article, hides the card column and goes single-column
 
-It is the cleanest UX. Guides are a Tier 2 educational resource — they don't need equal nav prominence to the Tier 1 templates (the primary conversion points). A clear footer link like **"📖 Read Consumer Rights Guides →"** is sufficient and keeps the nav simple.
+### 4. Get Started (direct link, no dropdown)
+Points to `/how-it-works`. Contains the items previously under "General" in Resources:
+- **Not** a dropdown — it's a single link like Pricing
+- The items (FAQ, About, Contact) move to the footer and are already in the mobile menu
+
+### 5. Pricing (keep as direct link)
+No changes.
+
+## Where Do FAQ, About, Contact Go?
+
+These are low-traffic informational pages. They remain in:
+- The **footer** (already linked there)
+- The **mobile accordion menu** (already there)
+- Removing them from the mega menu declutters it — they don't drive conversions
 
 ## Technical Changes
 
 | File | Change |
 |------|--------|
-| `src/components/layout/MegaMenu.tsx` | 1. Remove the "Guides" `NavigationMenuItem` block entirely. 2. Add a `Link to="/guides"` in the Templates footer bar alongside the existing "Browse all templates" link. Style it as a secondary CTA (e.g., `BookOpen` icon + "Consumer Rights Guides →"). |
+| `src/components/layout/MegaMenu.tsx` | 1. Remove the "Resources" `NavigationMenuItem`. 2. Add "Free Tools" dropdown with two-column grouped layout (assessment vs court/legal) + state laws footer. 3. Add "Learn" dropdown with guides/articles column + latest article preview card (useQuery from `blog_posts`). 4. Add "Get Started" as a direct `Link` to `/how-it-works` (same pattern as Pricing). 5. Remove `resources` array; split `freeTools` into two sub-arrays. |
+| `src/components/layout/Header.tsx` | Update mobile accordion: rename "Resources" to split into "Free Tools" and "Learn" sections. Add "Get Started" as a direct link (like Pricing). Remove duplicated FAQ/About/Contact from accordion if desired, or keep for mobile discoverability. |
 
-No other files need changes — routes, pages, and data stay the same.
+### Free Tools Grouping
+
+```typescript
+const assessmentTools = [
+  { title: 'Do I Have a Case?', href: '/do-i-have-a-case', icon: Scale, description: 'Free case assessment' },
+  { title: 'Analyze My Letter', href: '/analyze-letter', icon: Search, description: 'AI draft scoring' },
+  { title: 'Deadlines Calculator', href: '/deadlines', icon: Clock, description: 'Time limits to act' },
+  { title: 'Consumer News', href: '/consumer-news', icon: Newspaper, description: 'FTC & CFPB alerts' },
+];
+
+const courtTools = [
+  { title: 'Small Claims Guide', href: '/small-claims', icon: Search, description: 'Filing limits & forms' },
+  { title: 'Court Cost Calculator', href: '/small-claims/cost-calculator', icon: Calculator, description: 'Estimate filing fees' },
+  { title: 'Demand Letter Compare', href: '/small-claims/demand-letter-cost', icon: DollarSign, description: 'DIY vs. lawyer costs' },
+  { title: 'Escalation Flowchart', href: '/small-claims/escalation-guide', icon: GitBranch, description: 'Best resolution path' },
+  { title: 'State Rights Lookup', href: '/state-rights', icon: MapPin, description: 'Laws for your state' },
+];
+```
+
+### Latest Article Query
+
+```typescript
+const { data: latestPost } = useQuery({
+  queryKey: ['latest-post-nav'],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('title, slug, featured_image_url, published_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(1);
+    return data?.[0] || null;
+  },
+  staleTime: 5 * 60 * 1000, // 5 min cache
+});
+```
 
