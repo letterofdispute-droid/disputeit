@@ -1,47 +1,75 @@
 
 
-# Mega Menu Refinements: Consistent Styling + Get Started Dropdown
+# Two Changes: Menu Cleanup + State Rights Map Fix
 
-## Three Changes
+## 1. MegaMenu Restructure
 
-### 1. Free Tools — Use `MenuCard` style (same as Letter Templates)
-Currently uses `CompactMenuCard` (inline icon, no description below). Switch to `MenuCard` which has the gray square icon background and description below the title.
+### Remove from Free Tools:
+- Remove "State Rights Lookup" from `courtTools` array (line 51)
+- Remove the entire "Popular State Laws" footer bar from Free Tools dropdown (lines 215-230)
 
-The panel width stays at ~700px with a 2-column grid layout, same as Letter Templates but with fewer items per column.
+### Fix Learn dropdown:
+- Remove the duplicate "Knowledge Center" entry (lines 257-262) — it points to `/articles`, same as "All Articles"
+- Add "State Rights Lookup" as a MenuCard in the Guides & Knowledge column (icon: MapPin, description: "Laws for your state", href: /state-rights)
+- Move the "Popular State Laws" badge bar into the Learn dropdown footer, alongside the existing "Browse all articles" link
 
-### 2. Learn — Use `MenuCard` style for the links column
-Same change: swap `CompactMenuCard` to `MenuCard` for the three Guides & Knowledge items so they get the gray icon box and description below.
+The Learn footer will show both: `Browse all articles →` on the left, and the state law badges (CA, TX, NY, FL + "Browse all 50 →") on the right or below.
 
-### 3. Get Started — Convert from direct link to dropdown
-Add a dropdown with the "General" items that were removed earlier:
+### File: `src/components/layout/MegaMenu.tsx`
+- Remove `State Rights Lookup` entry from `courtTools` array
+- Remove "Popular State Laws" footer from Free Tools `NavigationMenuContent`
+- Remove "Knowledge Center" `MenuCard` from Learn column
+- Add "State Rights Lookup" `MenuCard` to Learn's Guides & Knowledge column
+- Add state law badges to Learn's footer bar
 
-```text
-┌──────────────────────────────────────┐
-│  ○ How It Works    Getting started   │
-│  ○ FAQ             Common questions  │
-│  ○ About Us        Our mission       │
-│  ○ Contact         Get in touch      │
-└──────────────────────────────────────┘
-```
+## 2. State Rights Page — Replace Rectangle Map with Real US Map SVG
 
-Uses `MenuCard` style for consistency. Single-column, ~400px wide. No footer needed — it is a simple list.
+The current `USMapIllustration` component (lines 34-128 in StateRightsPage.tsx) renders ugly gray rectangles. Replace it with the same approach used in `src/components/small-claims/USMap.tsx`: fetch `/images/us-map.svg`, inject it, color states, and add interactivity.
 
-## Technical Changes
+### File: `src/pages/StateRightsPage.tsx`
+- Remove the entire `USMapIllustration` component (lines 34-128)
+- Create a new `StateRightsMap` component that:
+  - Fetches `/images/us-map.svg` via `fetch()` and injects via `dangerouslySetInnerHTML`
+  - Highlights the currently `selectedState` in primary color
+  - Colors all other states in a subtle muted tone
+  - On click, calls `onStateSelect(code)` to update the parent's `selectedState`
+  - Adds state abbreviation labels at path centroids (same as USMap.tsx)
+  - Uses light fills appropriate for the dark hero background (primary-foreground tones instead of accent)
+- Update the hero section to render `StateRightsMap` instead of `USMapIllustration`, passing `selectedState` and `onStateSelect={setSelectedState}`
 
-| File | Change |
-|------|--------|
-| `src/components/layout/MegaMenu.tsx` | 1. In Free Tools dropdown, replace `CompactMenuCard` with `MenuCard` for both `assessmentTools` and `courtTools`. 2. In Learn dropdown, replace `CompactMenuCard` with `MenuCard` for the three guide links. 3. Add a `getStartedItems` array with How It Works, FAQ, About, Contact (with icons and descriptions). 4. Convert "Get Started" from a direct `Link` to a `NavigationMenuTrigger` + `NavigationMenuContent` with a single-column `MenuCard` grid (~400px). |
-
-### Get Started Items
-
+### Technical approach (mirroring USMap.tsx pattern):
 ```typescript
-const getStartedItems = [
-  { title: 'How It Works', description: 'Step-by-step guide', href: '/how-it-works', icon: Sparkles },
-  { title: 'FAQ', description: 'Common questions answered', href: '/faq', icon: FileQuestion },
-  { title: 'About Us', description: 'Our mission & story', href: '/about', icon: BookOpen },
-  { title: 'Contact', description: 'Get in touch', href: '/contact', icon: Mail },
-];
+function StateRightsMap({ selectedState, onStateSelect }: { 
+  selectedState: string; 
+  onStateSelect: (code: string) => void; 
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svgContent, setSvgContent] = useState<string | null>(null);
+
+  // Fetch SVG
+  useEffect(() => {
+    fetch('/images/us-map.svg')
+      .then(r => r.text())
+      .then(text => {
+        const cleaned = text
+          .replace('stroke:#000; fill: none;', 'stroke-linejoin: round;')
+          .replace(/fill:#f9f9f9/g, 'fill:hsl(var(--primary-foreground) / 0.15)');
+        setSvgContent(cleaned);
+      });
+  }, []);
+
+  // Apply interactivity after SVG injection
+  useEffect(() => {
+    // Style paths, highlight selectedState, add click handlers
+    // Add state abbreviation labels
+  }, [svgContent, selectedState]);
+}
 ```
 
-Will need to import `Mail` from lucide-react.
+Key differences from USMap.tsx:
+- Uses lighter fills suitable for dark background (primary-foreground tones)
+- On click, updates parent state selection instead of navigating
+- Highlights selectedState persistently (not just on hover)
+- No tooltip needed (the lookup tool below serves that purpose)
+- No color scale legend needed (not showing filing limits)
 
