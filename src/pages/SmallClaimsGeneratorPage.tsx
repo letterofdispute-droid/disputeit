@@ -96,7 +96,7 @@ const SmallClaimsGeneratorPage = () => {
 
       <section className="relative overflow-hidden text-primary-foreground py-14">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
-        <div className="absolute inset-0 bg-primary/90" />
+        <div className="absolute inset-0 bg-primary/45" />
         <div className="container-wide text-center max-w-2xl mx-auto relative z-10">
           <h1 className="text-3xl md:text-4xl font-bold font-serif mb-3">
             Small Claims Statement Generator
