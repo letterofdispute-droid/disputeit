@@ -1,6 +1,9 @@
 import { LetterTemplate } from '../letterTemplates';
 import { bankingDisputeTemplates } from './financial/bankingDisputeTemplates';
 import { creditDisputeTemplates } from './financial/creditDisputeTemplates';
+import { creditReportingTemplates } from './financial/creditReportingTemplates';
+import { debtCollectionTemplates } from './financial/debtCollectionTemplates';
+import { identityTheftTemplates } from './financial/identityTheftTemplates';
 import { loanDisputeTemplates } from './financial/loanDisputeTemplates';
 import { investmentDisputeTemplates } from './financial/investmentDisputeTemplates';
 import { scamFraudTemplates } from './financial/scamFraudTemplates';
@@ -139,6 +142,9 @@ export const financialTemplates: LetterTemplate[] = [
   ...coreFinancialTemplates,
   ...bankingDisputeTemplates,
   ...creditDisputeTemplates,
+  ...creditReportingTemplates,
+  ...debtCollectionTemplates,
+  ...identityTheftTemplates,
   ...loanDisputeTemplates,
   ...investmentDisputeTemplates,
   ...scamFraudTemplates,

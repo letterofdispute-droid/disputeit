@@ -70,7 +70,7 @@ export const templateCategories: TemplateCategory[] = [
     name: 'Financial Services',
     description: 'Challenge bank fees, credit report errors, identity theft, debt collection, or data access requests.',
     icon: CreditCard,
-    templateCount: 50,
+    templateCount: 76,
     color: 'hsl(var(--chart-1))',
     popular: true,
     imageKeywords: ['credit card statement', 'bank documents', 'financial papers'],
