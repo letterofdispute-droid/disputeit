@@ -72,13 +72,13 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /cable|tv|streaming|satellite/, subcategory: { name: 'TV & Cable', slug: 'tv-cable' } },
   ],
   'Financial': [
-    { pattern: /bank-account|checking|savings|atm|branch|overdraft|wire-transfer|nsf|fund-availability|zelle|venmo|direct-debit|standing-order|poa-recognition|interest-rate-dispute/, subcategory: { name: 'Banking', slug: 'banking' } },
+    { pattern: /bank-account|bank-fee|account-closure|checking|savings|atm|branch|overdraft|wire-transfer|nsf|fund-availability|zelle|venmo|direct-debit|standing-order|poa-recognition|interest-rate-dispute/, subcategory: { name: 'Banking', slug: 'banking' } },
     { pattern: /credit-card|charge-dispute|statement-error|apr|billing-error|rewards-dispute|promotional|credit-limit|credit-application|balance-transfer/, subcategory: { name: 'Credit Cards', slug: 'credit-cards' } },
     { pattern: /loan|mortgage|lending/, subcategory: { name: 'Loans', slug: 'loans' } },
     { pattern: /credit-bureau|credit-report|credit-score|equifax|experian|transunion|inquiry|mixed-file|aged-debt|duplicate-account|public-record|payment-history|investigation-violation|late-payment-removal/, subcategory: { name: 'Credit Reporting', slug: 'credit-reporting' } },
     { pattern: /debt-validation|debt-collection|cease-desist|time-barred|harassment|third-party-contact|paid-debt|incorrect-amount|medical-debt|default-notice/, subcategory: { name: 'Debt Collection', slug: 'debt-collection' } },
     { pattern: /identity-theft|fraudulent-account|credit-freeze|fraud-alert|tax-identity|employment-fraud|medical-identity|phone-utility-fraud/, subcategory: { name: 'Identity Theft', slug: 'identity-theft' } },
-    { pattern: /investment|broker|advisor|retirement|401k|sec-complaint|finra|ponzi|pension|financial-advice|trading/, subcategory: { name: 'Investments', slug: 'investments' } },
+    { pattern: /investment|broker|advisor|retirement|401k|sec-complaint|finra|ponzi|pension|financial-advice|trading|fscs/, subcategory: { name: 'Investments', slug: 'investments' } },
     { pattern: /scam|impersonation|tech-support|romance|pig-butchering|recovery-room|account-takeover|authorized-push|card-fraud|bank-security|cryptocurrency/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
   ],
   'Refunds & Purchases': [

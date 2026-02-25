@@ -10,19 +10,19 @@ export const SITE_CONFIG = {
 };
 
 export const CATEGORIES = [
-  { id: 'refunds', name: 'Refunds & Purchases', description: 'Product returns, service refunds, billing disputes, warranty claims, subscription cancellations', templateCount: 15 },
-  { id: 'housing', name: 'Landlord & Housing', description: 'Repairs, deposit disputes, habitability complaints, lease disputes, eviction responses', templateCount: 14 },
-  { id: 'travel', name: 'Travel & Transportation', description: 'Flight compensation, lost baggage, hotel complaints, car rental disputes', templateCount: 12 },
+  { id: 'refunds', name: 'Refunds & Purchases', description: 'Product returns, service refunds, billing disputes, warranty claims, subscription cancellations', templateCount: 50 },
+  { id: 'housing', name: 'Landlord & Housing', description: 'Repairs, deposit disputes, habitability complaints, lease disputes, eviction responses', templateCount: 50 },
+  { id: 'travel', name: 'Travel & Transportation', description: 'Flight compensation, lost baggage, hotel complaints, car rental disputes', templateCount: 20 },
   { id: 'healthcare', name: 'Healthcare & Medical', description: 'Insurance claim denials, medical billing errors, debt collection, hospital complaints', templateCount: 50 },
-  { id: 'damaged-goods', name: 'Damaged & Defective Goods', description: 'Broken items on arrival, manufacturer defects, product recalls, quality issues', templateCount: 8 },
-  { id: 'utilities', name: 'Utilities & Telecommunications', description: 'Billing errors, service quality complaints, contract disputes, early termination fees', templateCount: 10 },
+  { id: 'damaged-goods', name: 'Damaged & Defective Goods', description: 'Broken items on arrival, manufacturer defects, product recalls, quality issues', templateCount: 50 },
+  { id: 'utilities', name: 'Utilities & Telecommunications', description: 'Billing errors, service quality complaints, contract disputes, early termination fees', templateCount: 50 },
   { id: 'financial', name: 'Financial Services', description: 'Banking disputes, credit reporting errors, debt collection, identity theft, investment complaints, fraud', templateCount: 78 },
-  { id: 'insurance', name: 'Insurance Claims', description: 'Claim denials, settlement disputes, policy cancellation challenges, premium disputes', templateCount: 14 },
+  { id: 'insurance', name: 'Insurance Claims', description: 'Claim denials, settlement disputes, policy cancellation challenges, premium disputes', templateCount: 50 },
   { id: 'vehicle', name: 'Vehicle & Auto', description: 'Dealer complaints, warranty disputes, repair shop issues, lemon law claims, parking disputes', templateCount: 45 },
-  { id: 'employment', name: 'Employment & Workplace', description: 'Wage disputes, wrongful termination, discrimination complaints, workplace safety', templateCount: 14 },
+  { id: 'employment', name: 'Employment & Workplace', description: 'Wage disputes, wrongful termination, discrimination complaints, workplace safety', templateCount: 50 },
   { id: 'ecommerce', name: 'E-commerce & Online Services', description: 'Seller disputes, account issues, data privacy requests, subscription traps, marketplace complaints', templateCount: 44 },
-  { id: 'hoa', name: 'HOA & Neighbor Disputes', description: 'Fee disputes, rule violations, neighbor conflicts, property boundaries', templateCount: 5 },
-  { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Poor workmanship, incomplete projects, contract disputes, payment issues', templateCount: 10 },
+  { id: 'hoa', name: 'HOA & Neighbor Disputes', description: 'Fee disputes, rule violations, neighbor conflicts, property boundaries', templateCount: 50 },
+  { id: 'contractors', name: 'Contractors & Home Improvement', description: 'Poor workmanship, incomplete projects, contract disputes, payment issues', templateCount: 61 },
   { id: 'mortgage', name: 'Real Estate & Mortgages', description: 'Payment misapplication, escrow disputes, PMI removal, foreclosure defense, closing cost disputes', templateCount: 10 },
 ];
 
@@ -116,38 +116,44 @@ software-refund, app-store-refund, streaming-service-refund, subscription-cancel
 auction-purchase-refund, extended-warranty-refund, retail-store-complaint
 
 financial (category-id: financial):
-overdraft-fee-dispute, wire-transfer-error-dispute, unauthorized-direct-debit-dispute,
+-- Banking --
+bank-fee-dispute, overdraft-fee-dispute, wire-transfer-error-dispute, unauthorized-direct-debit-dispute,
 bank-account-closure-dispute, atm-dispute-letter, interest-rate-dispute, standing-order-dispute,
-nsf-fee-reversal-request, fund-availability-dispute, zelle-venmo-unauthorized-transfer,
-direct-debit-unauthorized-complaint, poa-recognition-demand,
-credit-card-annual-fee-dispute, charge-dispute-letter, statement-error-dispute,
-apr-increase-dispute, billing-error-dispute, rewards-dispute-letter,
-promotional-apr-dispute, credit-limit-reduction-dispute, credit-application-denial-dispute,
-balance-transfer-fee-dispute,
-credit-bureau-dispute-letter, credit-report-error-dispute, credit-score-correction-request,
-equifax-dispute-letter, experian-dispute-letter, transunion-dispute-letter,
-mixed-file-dispute, inquiry-removal-request, aged-debt-removal-request,
-duplicate-account-dispute, public-record-dispute, payment-history-dispute,
-investigation-violation-complaint, late-payment-removal-request,
-debt-validation-request, debt-collection-cease-desist, time-barred-debt-dispute,
-harassment-complaint-debt-collector, third-party-contact-violation,
-paid-debt-still-reporting, incorrect-amount-dispute, medical-debt-dispute,
-default-notice-dispute,
-identity-theft-affidavit-letter, identity-theft-ftc-report-cover-letter,
-fraudulent-account-closure-request, credit-freeze-dispute,
-fraud-alert-request, tax-identity-theft-complaint,
-employment-fraud-dispute, medical-identity-theft-complaint, phone-utility-fraud-dispute,
-loan-early-repayment-dispute, payday-loan-complaint,
-debt-statute-barred-letter, loan-affordability-complaint,
-mortgage-payment-dispute, loan-modification-request,
+zelle-venmo-unauthorized-transfer-dispute, bank-account-freeze-dispute,
+bank-fund-availability-hold-complaint, bank-nsf-fee-dispute, bank-power-of-attorney-recognition-demand,
+-- Credit Cards --
+credit-card-dispute, credit-card-billing-error-dispute, credit-card-unauthorized-transaction-dispute,
+credit-card-interest-rate-increase-challenge, credit-card-late-fee-dispute,
+credit-card-rewards-points-dispute, credit-card-promotional-apr-expiration-dispute,
+-- Credit Reporting --
+credit-report-error-dispute, credit-bureau-dispute-experian, credit-bureau-dispute-equifax,
+credit-bureau-dispute-transunion, credit-report-incorrect-payment-history,
+credit-report-mixed-file-dispute, unauthorized-credit-inquiry-removal,
+credit-report-public-record-error, credit-report-investigation-violation,
+credit-report-aged-debt-removal, credit-report-duplicate-account-dispute,
+credit-score-correction-request, late-payment-removal-request,
+-- Debt Collection --
+debt-collection-dispute, debt-validation-demand-letter, debt-collection-cease-desist-letter,
+time-barred-debt-defense-letter, debt-collector-harassment-complaint,
+debt-collector-third-party-contact-violation, paid-debt-still-collected-dispute,
+debt-collection-incorrect-amount-dispute, medical-debt-collection-dispute, default-notice-dispute,
+-- Identity Theft --
+identity-theft-ftc-report-cover-letter, identity-theft-fraudulent-account-dispute,
+credit-freeze-request-letter, fraud-alert-request-letter, tax-identity-theft-irs-letter,
+identity-theft-phone-utility-fraud-dispute, medical-identity-theft-dispute,
+employment-identity-theft-notification,
+-- Loans --
+loan-early-repayment-dispute, ppi-mis-selling-claim, payday-loan-complaint,
+loan-payment-holiday-dispute, debt-statute-barred-letter, loan-affordability-complaint,
+-- Investments --
 investment-mis-selling-complaint, broker-fee-dispute, financial-advice-complaint,
-sec-complaint-letter, finra-complaint-letter, ponzi-scheme-complaint,
-pension-transfer-dispute, retirement-account-dispute, trading-platform-error-complaint,
+sec-complaint-letter, finra-arbitration-demand-letter, ponzi-scheme-complaint-letter,
+pension-transfer-complaint, trading-platform-error-complaint, fscs-claim-letter,
+-- Fraud & Scams --
 app-fraud-refund-claim, card-fraud-dispute, account-takeover-fraud-complaint,
-cryptocurrency-scam-complaint, impersonation-scam-complaint,
-tech-support-scam-complaint, romance-scam-complaint,
-pig-butchering-scam-complaint, recovery-room-scam-complaint,
-authorized-push-payment-fraud, bank-security-breach-complaint
+bank-security-failure-complaint, cryptocurrency-scam-complaint,
+government-impersonation-scam-complaint, tech-support-scam-refund-claim,
+romance-pig-butchering-scam-bank-claim, recovery-room-scam-complaint
 
 housing (category-id: housing):
 tenancy-renewal-request, early-termination-request, subletting-permission-request,
@@ -178,19 +184,28 @@ auto-total-loss-dispute, gap-insurance-claim, insurance-premium-dispute, insuran
 life-insurance-claim-denial
 
 vehicle (category-id: vehicle):
+-- Garage & Repair --
 garage-overcharging-dispute, garage-damage-claim, incomplete-service-complaint,
-unauthorized-repair-dispute, diagnostic-fee-dispute, warranty-repair-refusal-complaint,
-dealer-misrepresentation-complaint, dealer-deposit-refund, dealer-hidden-fees-complaint,
-spot-delivery-rescission, title-branding-dispute, rate-markup-complaint,
-dealer-warranty-repair-refusal, dealer-recall-completion-demand, trade-in-undervaluation,
-pcp-dispute-letter, hp-finance-dispute, voluntary-termination-notice,
-gap-insurance-refund-request, kill-switch-removal-demand, lease-end-dispute,
-lemon-law-demand-letter, warranty-extension-dispute, defect-buyback-request,
-recall-completion-demand, transmission-defect-complaint, paint-defect-warranty-claim,
-car-rental-dispute, pothole-damage-claim, dvla-vehicle-tax-dispute,
-parking-ticket-appeal, towing-dispute, boot-removal-demand,
-residential-parking-permit-appeal, handicap-parking-violation-dispute,
-private-lot-dispute, meter-malfunction-dispute, speed-camera-dispute
+mot-failure-dispute, garage-vehicle-not-returned, garage-warranty-work-refusal,
+-- Dealer --
+dealer-misrepresentation-complaint, clocked-mileage-complaint, outstanding-finance-complaint,
+category-damage-undisclosed, dealer-deposit-refund, dealer-delivery-delay,
+dealer-wrong-vehicle-delivered, dealer-hidden-fees-complaint, private-sale-misrepresentation,
+-- Finance & Lease --
+pcp-dispute-letter, hp-finance-dispute, section-75-vehicle-claim, voluntary-termination-notice,
+excess-mileage-charge-dispute, vehicle-condition-charge-dispute,
+-- Warranty & Lemon Law --
+manufacturer-warranty-denial-appeal, lemon-law-rejection, extended-warranty-claim-dispute,
+short-term-right-to-reject, final-right-to-reject, recall-repair-demand,
+-- Parking & Traffic --
+private-parking-appeal, council-pcn-appeal, clamping-removal-demand, bus-lane-fine-appeal,
+congestion-charge-appeal, ulez-clean-air-zone-appeal, speeding-ticket-appeal,
+parking-bay-suspension-challenge,
+-- Additional --
+dvla-vehicle-tax-dispute, car-wash-damage-claim, valet-parking-damage, tyre-fitting-damage,
+road-damage-pothole-claim, car-rental-dispute, spot-delivery-fraud-complaint,
+electronic-kill-switch-complaint, gap-insurance-refund-demand,
+dealer-interest-rate-markup-complaint
 
 employment (category-id: employment):
 constructive-dismissal-claim, unfair-dismissal-appeal, severance-negotiation, redundancy-dispute,
@@ -199,13 +214,23 @@ unpaid-overtime-demand, unpaid-commission-demand, wage-deduction-dispute,
 pension-contribution-dispute, non-compete-dispute, flexible-working-request
 
 ecommerce (category-id: ecommerce):
-amazon-a-to-z-claim, ebay-money-back-guarantee, subscription-cancellation-refund,
-free-trial-unwanted-charge, auto-renewal-dispute, price-increase-subscription,
-facebook-marketplace-scam, account-suspended-appeal, data-deletion-request,
-drip-pricing-complaint, counterfeit-product-complaint, fake-review-complaint,
-platform-account-ban-appeal, seller-non-delivery-complaint,
-chargeback-request-letter, digital-product-refund, marketplace-fraud-complaint,
-gdpr-data-access-request, ccpa-data-deletion-request
+-- Marketplace --
+amazon-a-to-z-claim, ebay-money-back-guarantee, etsy-case-escalation, aliexpress-dispute,
+wish-refund-request, walmart-marketplace-complaint, facebook-marketplace-scam, depop-vinted-complaint,
+-- Subscriptions --
+subscription-cancellation-refund, free-trial-unwanted-charge, auto-renewal-dispute,
+price-increase-subscription, dark-pattern-complaint, streaming-quality-complaint,
+-- Account & Privacy --
+account-suspended-appeal, data-deletion-request, gdpr-data-access-request, ccpa-data-deletion-request,
+-- Consumer Protection --
+drip-pricing-complaint, counterfeit-goods-complaint, fake-reviews-product-complaint,
+platform-account-ban-with-balance,
+-- Delivery & Shipping --
+package-not-received, delivery-to-wrong-address, damaged-in-transit, late-delivery-compensation,
+partial-order-missing, porch-piracy, return-shipping-refund, signature-required-not-obtained,
+-- Payment & Refund --
+paypal-dispute-escalation, credit-card-chargeback-support, klarna-afterpay-dispute,
+refund-delay-complaint, gift-card-scam, seller-non-delivery-complaint
 
 hoa (category-id: hoa):
 hoa-fee-dispute, hoa-rule-violation-appeal, hoa-maintenance-request,
@@ -222,10 +247,11 @@ medical-billing-dispute, insurance-claim-denial-appeal, hospital-complaint-lette
 prescription-error-complaint, medical-debt-dispute, hipaa-violation-complaint
 
 mortgage (category-id: mortgage):
-payment-misapplication-dispute, escrow-analysis-dispute, pmi-removal-request,
-loan-modification-request, foreclosure-defense-letter, dual-tracking-complaint,
-payoff-statement-dispute, heloc-dispute, closing-cost-dispute,
-force-placed-insurance-complaint, respa-qwr-letter, successor-interest-notice
+mortgage-payment-misapplication-dispute, mortgage-escrow-account-error-dispute,
+pmi-removal-request-letter, mortgage-loan-modification-delay-complaint,
+foreclosure-during-modification-review-complaint, mortgage-payoff-statement-error-dispute,
+heloc-freeze-challenge-letter, force-placed-insurance-dispute,
+mortgage-closing-cost-dispute-respa, mortgage-successor-in-interest-claim
 
 WHEN NO TEMPLATE MATCHES:
 If the user's situation doesn't clearly fit any existing template, DO NOT force-fit them.
