@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -10,8 +11,14 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { templateCategories, getTotalTemplateCount } from '@/data/templateCategories';
-import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search, Scale, Calculator, DollarSign, GitBranch } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  FileText, BookOpen, Sparkles, MapPin, Clock, Newspaper,
+  Search, Scale, Calculator, DollarSign, GitBranch, ArrowRight,
+  GraduationCap, FileQuestion, Calendar,
+} from 'lucide-react';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
+import { format } from 'date-fns';
 
 const shortDescriptions: Record<string, string> = {
   'refunds': 'Product & service refunds',
@@ -29,24 +36,19 @@ const shortDescriptions: Record<string, string> = {
   'contractors': 'Workmanship & project issues',
 };
 
-const resources = [
-  { title: 'How It Works', description: 'Simple 3-step process', href: '/how-it-works', icon: HelpCircle },
-  { title: 'FAQ', description: 'Common questions', href: '/faq', icon: MessageCircle },
-  { title: 'Knowledge Center', description: 'Tips & expert articles', href: '/articles', icon: BookOpen },
-  { title: 'About Us', description: 'Our mission & team', href: '/about', icon: Users },
-  { title: 'Contact', description: 'Get in touch', href: '/contact', icon: Mail },
+const assessmentTools = [
+  { title: 'Do I Have a Case?', description: 'Free case assessment', href: '/do-i-have-a-case', icon: Scale },
+  { title: 'Analyze My Letter', description: 'AI draft scoring', href: '/analyze-letter', icon: Search },
+  { title: 'Deadlines Calculator', description: 'Time limits to act', href: '/deadlines', icon: Clock },
+  { title: 'Consumer News', description: 'FTC & CFPB alerts', href: '/consumer-news', icon: Newspaper },
 ];
 
-const freeTools = [
-  { title: 'Do I Have a Case?', description: 'Free case assessment', href: '/do-i-have-a-case', icon: Scale },
-  { title: 'Small Claims Guide', description: 'Filing limits & forms', href: '/small-claims', icon: Search },
+const courtTools = [
+  { title: 'Small Claims Guide', description: 'Filing limits & forms', href: '/small-claims', icon: FileQuestion },
   { title: 'Court Cost Calculator', description: 'Estimate filing fees', href: '/small-claims/cost-calculator', icon: Calculator },
   { title: 'Demand Letter Compare', description: 'DIY vs. lawyer costs', href: '/small-claims/demand-letter-cost', icon: DollarSign },
   { title: 'Escalation Flowchart', description: 'Best resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
   { title: 'State Rights Lookup', description: 'Laws for your state', href: '/state-rights', icon: MapPin },
-  { title: 'Deadlines Calculator', description: 'Time limits to act', href: '/deadlines', icon: Clock },
-  { title: 'Consumer News', description: 'FTC & CFPB alerts', href: '/consumer-news', icon: Newspaper },
-  { title: 'Analyze My Letter', description: 'AI draft scoring', href: '/analyze-letter', icon: Search },
 ];
 
 const notableStateLinks = [
@@ -147,11 +149,25 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
 const MegaMenu = () => {
   const [assistantOpen, setAssistantOpen] = useState(false);
 
+  const { data: latestPost } = useQuery({
+    queryKey: ['latest-post-nav'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('title, slug, featured_image_url, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(1);
+      return data?.[0] || null;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   return (
     <>
       <NavigationMenu>
         <NavigationMenuList>
-          {/* Letter Templates */}
+          {/* 1. Letter Templates */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent">Letter Templates</NavigationMenuTrigger>
             <NavigationMenuContent>
@@ -166,24 +182,24 @@ const MegaMenu = () => {
             </NavigationMenuContent>
           </NavigationMenuItem>
 
-          {/* Resources */}
+          {/* 2. Free Tools */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">Resources</NavigationMenuTrigger>
+            <NavigationMenuTrigger className="bg-transparent">Free Tools</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[980px]">
+              <div className="w-[700px]">
                 <div className="p-4 grid grid-cols-2 gap-x-2">
                   <div>
-                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">General</p>
+                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assessment & Analysis</p>
                     <ul className="space-y-0.5">
-                      {resources.map((r) => (
-                        <CompactMenuCard key={r.title} {...r} />
+                      {assessmentTools.map((t) => (
+                        <CompactMenuCard key={t.title} {...t} />
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Free Tools</p>
+                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Court & Legal</p>
                     <ul className="space-y-0.5">
-                      {freeTools.map((t) => (
+                      {courtTools.map((t) => (
                         <CompactMenuCard key={t.title} {...t} />
                       ))}
                     </ul>
@@ -209,7 +225,96 @@ const MegaMenu = () => {
             </NavigationMenuContent>
           </NavigationMenuItem>
 
-          {/* Pricing */}
+          {/* 3. Learn */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent">Learn</NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-[780px]">
+                <div className="p-4 grid grid-cols-2 gap-x-6">
+                  {/* Guides & Knowledge column */}
+                  <div>
+                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Guides & Knowledge</p>
+                    <ul className="space-y-0.5">
+                      <CompactMenuCard
+                        title="Consumer Rights Guides"
+                        description="Category-specific guides"
+                        icon={GraduationCap}
+                        href="/guides"
+                      />
+                      <CompactMenuCard
+                        title="All Articles"
+                        description="500+ expert articles"
+                        icon={BookOpen}
+                        href="/articles"
+                      />
+                      <CompactMenuCard
+                        title="Knowledge Center"
+                        description="Tips & how-tos"
+                        icon={FileText}
+                        href="/articles"
+                      />
+                    </ul>
+                  </div>
+
+                  {/* Latest Article column */}
+                  <div>
+                    <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Latest Article</p>
+                    {latestPost ? (
+                      <Link
+                        to={`/articles/${latestPost.slug}`}
+                        className="group block rounded-lg overflow-hidden border border-border hover:border-primary/30 transition-colors"
+                      >
+                        {latestPost.featured_image_url && (
+                          <div className="aspect-[16/9] overflow-hidden bg-muted">
+                            <img
+                              src={latestPost.featured_image_url}
+                              alt={latestPost.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <h4 className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                            {latestPost.title}
+                          </h4>
+                          {latestPost.published_at && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {format(new Date(latestPost.published_at), 'MMM d, yyyy')}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        <Link to="/articles" className="text-primary hover:underline">Browse all articles →</Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-muted/50 px-6 py-4 flex items-center justify-between">
+                  <Link to="/articles" className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
+                    <BookOpen className="size-4" />
+                    Browse all articles
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                  <button onClick={() => setAssistantOpen(true)} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    <Sparkles className="size-4" />
+                    Not sure? Get AI help
+                  </button>
+                </div>
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+
+          {/* 4. Get Started (direct link) */}
+          <NavigationMenuItem>
+            <Link to="/how-it-works">
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>Get Started</NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+
+          {/* 5. Pricing (direct link) */}
           <NavigationMenuItem>
             <Link to="/pricing">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>Pricing</NavigationMenuLink>
