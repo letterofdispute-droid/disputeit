@@ -1,130 +1,69 @@
 
 
-# Fourth-Pass Audit: Remaining Issues Found
+# Fifth-Pass Audit: CRITICAL -- Hundreds of Missing Slugs Across 10 Categories
 
-After verifying every slug in `siteContext.ts` against the actual template source files, I found significant gaps remaining in the E-commerce section and 3 missing Financial slugs.
+## The Problem
 
----
+Previous audits (passes 1-4) focused on Financial, E-commerce, Vehicle, and Mortgage categories. **Every other category was never audited against actual template files.** The result is devastating:
 
-## Finding 1: E-commerce Slug Whitelist -- 7 Wrong, 16 Missing
+The siteContext whitelist contains only ~150 slugs total, but the actual template library has **550+ templates**. Roughly **400 template slugs are missing** from the Dispute Assistant's whitelist, meaning it cannot recommend ~73% of the template library.
 
-The E-commerce section of `siteContext.ts` (lines 216-233) was never fully verified against the actual template files. Cross-referencing reveals:
+## Category-by-Category Damage Report
 
-### 7 Wrong/Hallucinated Slugs
+| Category | Slugs in siteContext | Actual templates (approx) | Missing |
+|---|---|---|---|
+| **Healthcare** | 6 | ~50 | ~44 |
+| **Refunds** | 15 | ~50 | ~35 |
+| **Housing** | 12 | ~50 | ~38 |
+| **Travel** | 6 | ~20 | ~14 |
+| **Damaged Goods** | 10 | ~50 | ~40 |
+| **Utilities** | 10 | ~50 | ~40 |
+| **Insurance** | 14 | ~50 | ~36 |
+| **Employment** | 14 | ~50 | ~36 |
+| **HOA** | 5 | ~50 | ~45 |
+| **Contractors** | 12 | ~61 | ~49 |
+| **Financial** | OK | 78 | 0 |
+| **E-commerce** | OK | 45 | 0 |
+| **Vehicle** | OK | 45 | 0 |
+| **Mortgage** | OK | 10 | 0 |
+| **TOTAL** | ~150 | ~559 | **~377** |
 
-| siteContext slug (WRONG) | Actual slug | Source file |
-|---|---|---|
-| `dark-pattern-complaint` | No template exists | Hallucinated |
-| `streaming-quality-complaint` | `streaming-service-complaint` | subscriptionTemplates |
-| `account-suspended-appeal` | No template exists | Hallucinated |
-| `data-deletion-request` | `account-deletion-request` | privacyDataTemplates |
-| `gdpr-data-access-request` | `gdpr-data-portability` | privacyDataTemplates |
-| `ccpa-data-deletion-request` | `ccpa-do-not-sell` | privacyDataTemplates |
-| `seller-non-delivery-complaint` | No template exists | Hallucinated (closest: `package-not-received`) |
+### What's Missing Per Category (examples)
 
-### 16 Missing Slugs (templates exist but not in whitelist)
+**Healthcare** (only 6 of ~50 whitelisted): Missing all insurance claim denial subtypes (medical-necessity, out-of-network, prior-authorization appeals), all medical billing subtypes (duplicate-charge, upcoding, unbundling, surprise-billing, No Surprises Act), all medical debt subtypes (validation, cease-communication, collection-agency), hospital complaints, HIPAA violations, and more.
 
-**Core (ecommerceTemplates.ts):**
-- `marketplace-seller-complaint`
-- `data-privacy-request`
+**Refunds** (only 15 of ~50): Missing core templates like `refund-general`, `refund-online-purchase`, `refund-subscription`, `refund-after-return`, `refund-service-not-rendered`, `refund-overcharge`, `refund-double-charge`, plus retail complaint subtypes (`price-match-dispute`, `wrong-item-sent`, `restocking-fee-dispute`), service refund templates, and special purchase templates.
 
-**Subscriptions (subscriptionTemplates.ts):**
-- `streaming-service-complaint`
-- `software-subscription-refund`
-- `membership-fee-dispute`
-- `gym-membership-cancellation`
+**Housing** (only 12 of ~50): Missing all repair/maintenance subtypes (`landlord-roof-leak-complaint`, `landlord-window-repair-request`, `landlord-flooring-repair-request`), letting agent templates, neighbor dispute templates, tenancy dispute templates, safety compliance templates.
 
-**Payment & Refund (paymentRefundTemplates.ts):**
-- `store-credit-cash-refund`
-- `double-charge-dispute`
+**Travel** (only 6 of ~20): Missing `airline-flight-cancellation-compensation`, `airline-damaged-baggage-claim`, `airline-denied-boarding-compensation`, `hotel-refund-request`, `car-rental-complaint`, `cruise-complaint-letter`, `train-delay-compensation`, `travel-agency-complaint`, OTA refund, travel chargeback, missed connection, bus/coach, ferry, airport lounge, travel insurance appeal.
 
-**Privacy & Data (privacyDataTemplates.ts):**
-- `gdpr-data-deletion`
-- `gdpr-data-portability`
-- `ccpa-do-not-sell`
-- `data-breach-notification-request`
-- `marketing-opt-out`
-- `cookie-consent-complaint`
-- `account-deletion-request`
-- `automated-decision-challenge`
+**Utilities** (only 10 of ~50): Missing entire telecom contract section (`early-termination-fee-dispute`, `cooling-off-cancellation`, `price-increase-exit`, `pac-code-request`), plus `premium-sms-dispute`, `international-call-dispute`, `direct-debit-error`, `credit-balance-refund`, `equipment-charge-dispute`, and many more.
 
----
+**Insurance** (only 14 of ~50): Missing core templates (`insurance-claim-denial-appeal`, `insurance-claim-underpayment`, `insurance-claim-delay`, `insurance-cancellation-refund`), auto subtypes (`auto-glass-claim-dispute`, `rental-car-coverage-denial`, `diminished-value-claim`, `uninsured-motorist-claim`), life subtypes, and more.
 
-## Finding 2: Financial Section -- 3 Missing Slugs from creditDisputeTemplates
+**Employment** (only 14 of ~50): Missing `notice-period-dispute`, `retaliation-complaint`, `reasonable-accommodation-request`, `working-hours-dispute`, `contract-change-objection`, `unpaid-bonus-demand`, `minimum-wage-violation`, `holiday-pay-dispute`, `sick-pay-dispute`, `expense-reimbursement-demand`, `reference-request`, `reference-dispute`, `maternity-paternity-rights`, and more.
 
-The `creditDisputeTemplates.ts` file contains 6 templates. Three of them are correctly listed in siteContext (`credit-score-correction-request`, `late-payment-removal-request`, `default-notice-dispute`), but three are completely absent:
+**HOA** (only 5 of ~50): Missing core templates (`hoa-complaint-letter`, `hoa-architectural-request`), violation subtypes (`hoa-violation-appeal`, `hoa-selective-enforcement-complaint`, `hoa-reasonable-accommodation-request`, `hoa-board-harassment-complaint`), neighbor subtypes (`neighbor-noise-complaint`, `neighbor-boundary-dispute`, `neighbor-tree-dispute`, `neighbor-parking-dispute`, `neighbor-pet-complaint`), and many more.
 
-| Missing slug | Template file |
-|---|---|
-| `credit-limit-reduction-dispute` | creditDisputeTemplates.ts |
-| `credit-application-denial-dispute` | creditDisputeTemplates.ts |
-| `balance-transfer-dispute` | creditDisputeTemplates.ts |
-
-These should appear under Credit Cards in siteContext since they map to the credit-cards subcategory.
-
----
-
-## Finding 3: E-commerce Template Count Off By 1
-
-Verified actual e-commerce template count:
-
-| Sub-file | Count |
-|---|---|
-| marketplaceTemplates | 8 |
-| subscriptionTemplates | 8 |
-| consumerProtectionTemplates | 4 |
-| deliveryShippingTemplates | 8 |
-| paymentRefundTemplates | 7 |
-| privacyDataTemplates | 8 |
-| Core (ecommerceTemplates.ts) | 2 |
-| **Total** | **45** |
-
-`templateCategories.ts` says 44. Should be **45**.
-
----
-
-## Finding 4: All Other Systems Verified Clean
-
-- **Subcategory mappings**: All Financial, Vehicle, Mortgage, and E-commerce templates route to correct subcategories. No pattern conflicts remaining.
-- **Mortgage in legalKnowledge.ts**: Present with RESPA, TILA, Dodd-Frank, HPA statutes.
-- **Mortgage in categoryKnowledge.ts**: Present with Payment Issues, Escrow, PMI subcategories.
-- **Form assistant**: Has `Real Estate & Mortgages` category expertise and subcategory-level expertise.
-- **Financial, Vehicle, Mortgage slug whitelist sections**: All verified correct.
-- **templateCategories.ts counts**: Financial (78), Vehicle (45), Mortgage (10) all correct.
-
----
+**Contractors** (only 12 of ~61): Missing all roofing subtypes, landscaping subtypes, kitchen/bath subtypes (`cabinet-installation-dispute`, `countertop-installation-dispute`, `tile-installation-failure`), specialty services (`pest-control-ineffective`, `pool-installation-dispute`, `fence-installation-dispute`), general contractor subtypes (`renovation-cost-overrun-dispute`, `contractor-delayed-completion`, `contractor-deposit-dispute`), and more.
 
 ## Implementation Plan
 
-### File 1: `supabase/functions/_shared/siteContext.ts`
+### File: `supabase/functions/_shared/siteContext.ts`
 
-**E-commerce section rewrite (lines 216-233)**:
-- Remove 7 wrong/hallucinated slugs
-- Add 16 missing slugs
-- Organize into the same sub-sections (Marketplace, Subscriptions, Account & Privacy, Consumer Protection, Delivery & Shipping, Payment & Refund)
+**Complete rewrite of the AVAILABLE TEMPLATE SLUGS section** for all 10 affected categories. Every slug must be extracted from the actual template source files. This is the same mechanical process done for Financial/E-commerce/Vehicle/Mortgage in previous passes, but applied to the remaining categories.
 
-**Financial section addition (around line 127)**:
-- Add `credit-limit-reduction-dispute`, `credit-application-denial-dispute`, `balance-transfer-dispute` under Credit Cards
+The rewrite will:
+1. Extract every `slug:` value from every template file in each category's directory + core file
+2. Replace the current whitelist section for each category
+3. Organize slugs with sub-section comments matching the source file structure
 
-### File 2: `src/data/templateCategories.ts`
+### Scope
+- 1 file: `supabase/functions/_shared/siteContext.ts`
+- ~377 slug additions across 10 categories
+- This is the single largest fix remaining and will bring the whitelist to full parity with the template library
 
-- Update E-commerce `templateCount` from 44 to **45**
-
-### File 3: `supabase/functions/_shared/siteContext.ts` (CATEGORIES array)
-
-- Update E-commerce count from 44 to **45** (line 23)
-
----
-
-## Summary
-
-| Issue | Count | Files |
-|---|---|---|
-| Wrong E-commerce slugs in siteContext | 7 | siteContext.ts |
-| Missing E-commerce slugs in siteContext | 16 | siteContext.ts |
-| Missing Financial slugs in siteContext | 3 | siteContext.ts |
-| E-commerce template count wrong | 1 | templateCategories.ts, siteContext.ts |
-| **Total fixes** | **27** | **2 files** |
-
-All other systems (subcategory mappings, knowledge bases, form assistant, legal letter generator) are verified clean.
+### Why This Was Missed
+Previous audits focused on the 62 "new" templates (Financial subtypes, Vehicle additions, Mortgage, E-commerce expansion). The original categories (Healthcare, Housing, Refunds, etc.) were also expanded with subdirectory template files, but those expansions were never cross-referenced against the siteContext whitelist.
 
