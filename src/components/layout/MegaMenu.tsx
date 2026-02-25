@@ -13,6 +13,22 @@ import { templateCategories, getTotalTemplateCount } from '@/data/templateCatego
 import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search, Scale, Calculator, DollarSign, GitBranch } from 'lucide-react';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
+const shortDescriptions: Record<string, string> = {
+  'refunds': 'Product & service refunds',
+  'housing': 'Repairs, deposits & tenancy',
+  'travel': 'Flights, hotels & bookings',
+  'damaged-goods': 'Broken or defective items',
+  'utilities': 'Billing & service disputes',
+  'financial': 'Banks, credit & debt',
+  'insurance': 'Claims & coverage issues',
+  'vehicle': 'Dealers, repairs & lemon law',
+  'healthcare': 'Medical bills & denials',
+  'employment': 'Wages & workplace issues',
+  'ecommerce': 'Online sellers & accounts',
+  'hoa': 'HOA fees & neighbor issues',
+  'contractors': 'Workmanship & project issues',
+};
+
 const resources = [
   { title: 'How It Works', description: 'Simple 3-step process', href: '/how-it-works', icon: HelpCircle },
   { title: 'FAQ', description: 'Common questions', href: '/faq', icon: MessageCircle },
@@ -80,9 +96,9 @@ const CompactMenuCard = ({ title, description, icon: Icon, href }: {
   </li>
 );
 
-const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIcon, showAiHelp, onAiHelp }: {
+const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIcon, footerUnit = 'templates', showAiHelp, onAiHelp }: {
   basePath: string; footerLink: string; footerLabel: string; footerIcon: React.ElementType;
-  showAiHelp?: boolean; onAiHelp?: () => void;
+  footerUnit?: string; showAiHelp?: boolean; onAiHelp?: () => void;
 }) => {
   const totalCount = getTotalTemplateCount();
   return (
@@ -90,7 +106,7 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
       <div className="p-4">
         <ul className="grid grid-cols-3 gap-1">
           {templateCategories.map((category) => {
-            const desc = category.description.split('.')[0].split(',')[0];
+            const desc = shortDescriptions[category.id] || category.description;
             return (
               <MenuCard
                 key={category.id}
@@ -107,7 +123,7 @@ const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIco
         <Link to={footerLink} className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
           <FooterIcon className="size-4" />
           {footerLabel}
-          <span className="text-xs font-normal text-muted-foreground">· {totalCount}+ templates</span>
+          <span className="text-xs font-normal text-muted-foreground">· {totalCount}+ {footerUnit}</span>
         </Link>
         {showAiHelp && onAiHelp && (
           <button onClick={onAiHelp} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -151,6 +167,7 @@ const MegaMenu = () => {
                 footerLink="/guides"
                 footerLabel="View all guides"
                 footerIcon={ArrowRight}
+                footerUnit="guides"
               />
             </NavigationMenuContent>
           </NavigationMenuItem>
