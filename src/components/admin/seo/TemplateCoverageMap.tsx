@@ -117,12 +117,27 @@ export default function TemplateCoverageMap() {
   const { data: missingPillarCount } = useQuery({
     queryKey: ['missing-pillar-count', templatePlans.length],
     queryFn: async () => {
-      const { count: pillarCount } = await supabase.
-      from('content_queue').
-      select('id', { count: 'exact', head: true }).
-      eq('article_type', 'pillar');
-      return Math.max(0, templatePlans.length - (pillarCount || 0));
-    }
+      if (templatePlans.length === 0) return 0;
+
+      const planIds = templatePlans.map(p => p.id);
+
+      // Fetch in batches of 500 to stay under row limits
+      const existingPillarPlanIds = new Set<string>();
+      for (let i = 0; i < planIds.length; i += 500) {
+        const batch = planIds.slice(i, i + 500);
+        const { data } = await supabase
+          .from('content_queue')
+          .select('plan_id')
+          .eq('article_type', 'pillar')
+          .in('plan_id', batch);
+        (data || []).forEach(r => {
+          if (r.plan_id) existingPillarPlanIds.add(r.plan_id);
+        });
+      }
+
+      return planIds.filter(id => !existingPillarPlanIds.has(id)).length;
+    },
+    enabled: templatePlans.length > 0,
   });
 
   // Bulk pillar creation mutation
