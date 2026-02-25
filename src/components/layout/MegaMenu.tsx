@@ -9,29 +9,31 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
-import { templateCategories } from '@/data/templateCategories';
+import { templateCategories, getTotalTemplateCount } from '@/data/templateCategories';
 import { FileText, BookOpen, HelpCircle, Users, Mail, Sparkles, MessageCircle, ArrowRight, MapPin, Clock, Newspaper, Search, Scale, Calculator, DollarSign, GitBranch } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import DisputeAssistantModal from '@/components/dispute-assistant/DisputeAssistantModal';
 
 const resources = [
   { title: 'How It Works', description: 'Learn our 3-step process', href: '/how-it-works', icon: HelpCircle },
   { title: 'FAQ', description: 'Common questions answered', href: '/faq', icon: MessageCircle },
-  { title: 'Knowledge Center', description: 'Tips, guides, and articles', href: '/articles', icon: BookOpen },
-  { title: 'About Us', description: 'Our mission to empower consumers', href: '/about', icon: Users },
-  { title: 'Contact', description: 'Get in touch with our team', href: '/contact', icon: Mail },
+  { title: 'Knowledge Center', description: 'Tips, guides & articles', href: '/articles', icon: BookOpen },
+  { title: 'About Us', description: 'Our mission', href: '/about', icon: Users },
+  { title: 'Contact', description: 'Get in touch', href: '/contact', icon: Mail },
 ];
 
-const freeTools = [
-  { title: 'Do I Have a Case?', description: 'Free 2-min case strength quiz', href: '/do-i-have-a-case', icon: Scale },
-  { title: 'Small Claims Court Guide', description: 'Filing limits, fees & forms by state', href: '/small-claims', icon: Search },
-  { title: 'Court Cost Calculator', description: 'Estimate filing fees for your claim', href: '/small-claims/cost-calculator', icon: Calculator },
-  { title: 'Demand Letter Cost Compare', description: 'DIY vs. lawyer vs. our templates', href: '/small-claims/demand-letter-cost', icon: DollarSign },
-  { title: 'Escalation Flowchart', description: 'Step-by-step complaint resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
-  { title: 'State Rights Lookup', description: 'Find laws for your state', href: '/state-rights', icon: MapPin },
-  { title: 'Deadlines Calculator', description: 'See how long you have to act', href: '/deadlines', icon: Clock },
-  { title: 'Consumer News', description: 'Latest FTC, CFPB & recall alerts', href: '/consumer-news', icon: Newspaper },
-  { title: 'Analyze My Letter', description: 'Free AI score on your draft', href: '/analyze-letter', icon: Search },
+const freeToolsCol1 = [
+  { title: 'Do I Have a Case?', description: 'Free 2-min case quiz', href: '/do-i-have-a-case', icon: Scale },
+  { title: 'Small Claims Guide', description: 'Filing limits & forms', href: '/small-claims', icon: Search },
+  { title: 'Court Cost Calculator', description: 'Estimate filing fees', href: '/small-claims/cost-calculator', icon: Calculator },
+  { title: 'Demand Letter Compare', description: 'DIY vs. lawyer costs', href: '/small-claims/demand-letter-cost', icon: DollarSign },
+  { title: 'Escalation Flowchart', description: 'Resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
+];
+
+const freeToolsCol2 = [
+  { title: 'State Rights Lookup', description: 'Laws for your state', href: '/state-rights', icon: MapPin },
+  { title: 'Deadlines Calculator', description: 'How long to act', href: '/deadlines', icon: Clock },
+  { title: 'Consumer News', description: 'FTC & CFPB alerts', href: '/consumer-news', icon: Newspaper },
+  { title: 'Analyze My Letter', description: 'Free AI draft score', href: '/analyze-letter', icon: Search },
 ];
 
 const notableStateLinks = [
@@ -41,38 +43,22 @@ const notableStateLinks = [
   { code: 'FL', name: 'Florida', slug: 'florida' },
 ];
 
-// Card-style item for Templates & Guides grids
-interface CardItemProps {
-  title: string;
-  description?: string;
-  icon?: React.ElementType;
-  href: string;
-  iconColor?: string;
-  iconBg?: string;
-}
-
-const CardItem = ({ title, description, icon: Icon, href, iconColor, iconBg }: CardItemProps) => (
+// Compact card with left-border accent
+const CategoryCard = ({ title, description, icon: Icon, href, color, index }: {
+  title: string; description?: string; icon?: React.ElementType; href: string; color: string; index: number;
+}) => (
   <li>
     <NavigationMenuLink asChild>
       <Link
         to={href}
-        className="flex items-start gap-3 select-none rounded-xl p-3 no-underline outline-none transition-all hover:bg-accent/8 hover:shadow-sm focus:bg-accent/8 group"
+        className="flex items-start gap-2.5 select-none rounded-lg p-2.5 no-underline outline-none transition-all duration-200 hover:translate-x-0.5 hover:bg-accent/50 focus:bg-accent/50 border-l-[3px]"
+        style={{ borderLeftColor: color, backgroundColor: index < 4 ? `${color}06` : undefined }}
       >
-        {Icon && (
-          <div
-            className="p-2 rounded-xl flex-shrink-0 mt-0.5"
-            style={{ backgroundColor: iconBg || 'hsl(var(--primary) / 0.08)' }}
-          >
-            <Icon
-              className="h-5 w-5"
-              style={{ color: iconColor || 'hsl(var(--primary))' }}
-            />
-          </div>
-        )}
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-sm font-semibold leading-tight text-foreground">{title}</span>
+        {Icon && <Icon className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color }} />}
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[13px] font-semibold leading-tight text-foreground">{title}</span>
           {description && (
-            <span className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{description}</span>
+            <span className="text-[11px] text-muted-foreground line-clamp-1 leading-snug">{description}</span>
           )}
         </div>
       </Link>
@@ -80,36 +66,82 @@ const CardItem = ({ title, description, icon: Icon, href, iconColor, iconBg }: C
   </li>
 );
 
-// Compact card item for Resources panel
-interface ResourceCardItemProps {
-  title: string;
-  description?: string;
-  icon?: React.ElementType;
-  href: string;
-}
-
-const ResourceCardItem = ({ title, description, icon: Icon, href }: ResourceCardItemProps) => (
+// Compact resource item
+const ResourceItem = ({ title, description, icon: Icon, href }: {
+  title: string; description?: string; icon?: React.ElementType; href: string;
+}) => (
   <li>
     <NavigationMenuLink asChild>
       <Link
         to={href}
-        className="flex items-start gap-3 select-none rounded-xl px-3 py-2.5 no-underline outline-none transition-all hover:bg-accent/8 hover:shadow-sm focus:bg-accent/8"
+        className="flex items-start gap-2.5 select-none rounded-lg px-2.5 py-2 no-underline outline-none transition-all duration-200 hover:translate-x-0.5 hover:bg-accent/50 focus:bg-accent/50"
       >
         {Icon && (
-          <div className="p-1.5 rounded-lg bg-primary/8 flex-shrink-0 mt-0.5">
-            <Icon className="h-4 w-4 text-primary" />
+          <div className="p-1.5 rounded-md bg-primary/8 flex-shrink-0 mt-px">
+            <Icon className="h-3.5 w-3.5 text-primary" />
           </div>
         )}
         <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-sm font-semibold leading-tight text-foreground">{title}</span>
+          <span className="text-[13px] font-semibold leading-tight text-foreground">{title}</span>
           {description && (
-            <span className="text-xs text-muted-foreground line-clamp-1 leading-snug">{description}</span>
+            <span className="text-[11px] text-muted-foreground line-clamp-1 leading-snug">{description}</span>
           )}
         </div>
       </Link>
     </NavigationMenuLink>
   </li>
 );
+
+const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-2.5 pb-1 border-b border-border/60">
+    {children}
+  </p>
+);
+
+const CategoryGrid = ({ basePath, footerLink, footerLabel, footerIcon: FooterIcon, showAiHelp, onAiHelp }: {
+  basePath: string; footerLink: string; footerLabel: string; footerIcon: React.ElementType;
+  showAiHelp?: boolean; onAiHelp?: () => void;
+}) => {
+  const totalCount = getTotalTemplateCount();
+  return (
+    <div className="w-[920px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+      <ul className="grid grid-cols-4 gap-2">
+        {templateCategories.map((category, i) => {
+          const desc = category.description.split('.')[0];
+          return (
+            <CategoryCard
+              key={category.id}
+              title={category.name}
+              description={desc}
+              href={`${basePath}/${category.id}`}
+              icon={category.icon}
+              color={category.color}
+              index={i}
+            />
+          );
+        })}
+        {/* Fill remaining cells in last row with promo */}
+        {Array.from({ length: (4 - (templateCategories.length % 4)) % 4 }).map((_, i) => (
+          <li key={`fill-${i}`} className="flex items-center justify-center rounded-lg bg-muted/30 p-2.5">
+            <span className="text-xs text-muted-foreground font-medium">{totalCount}+ professional templates</span>
+          </li>
+        ))}
+      </ul>
+      <div className="border-t border-border mt-3 pt-2.5 flex items-center justify-between px-1">
+        <Link to={footerLink} className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+          <FooterIcon className="h-4 w-4" />
+          {footerLabel}
+        </Link>
+        {showAiHelp && onAiHelp && (
+          <button onClick={onAiHelp} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Sparkles className="h-4 w-4" />
+            Not sure? Get AI help
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const MegaMenu = () => {
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -120,130 +152,65 @@ const MegaMenu = () => {
         <NavigationMenuList>
           {/* Letter Templates */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
-              Letter Templates
-            </NavigationMenuTrigger>
+            <NavigationMenuTrigger className="bg-transparent">Letter Templates</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[860px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                <ul className="grid grid-cols-3 gap-1">
-                  {templateCategories.map((category) => {
-                    const Icon = category.icon;
-                    const desc = category.description.split('.')[0];
-                    return (
-                      <CardItem
-                        key={category.id}
-                        title={category.name}
-                        description={desc}
-                        href={`/templates/${category.id}`}
-                        icon={Icon}
-                        iconColor={category.color}
-                        iconBg={`${category.color}18`}
-                      />
-                    );
-                  })}
-                </ul>
-
-                {/* Footer */}
-                <div className="border-t border-border mt-4 pt-3 flex items-center justify-between px-1">
-                  <Link
-                    to="/#letters"
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Browse all templates →
-                  </Link>
-                  <button
-                    onClick={() => setAssistantOpen(true)}
-                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Not sure? Get AI help
-                  </button>
-                </div>
-              </div>
+              <CategoryGrid
+                basePath="/templates"
+                footerLink="/#letters"
+                footerLabel="Browse all templates →"
+                footerIcon={FileText}
+                showAiHelp
+                onAiHelp={() => setAssistantOpen(true)}
+              />
             </NavigationMenuContent>
           </NavigationMenuItem>
 
           {/* Guides */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
-              Guides
-            </NavigationMenuTrigger>
+            <NavigationMenuTrigger className="bg-transparent">Guides</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[860px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                <ul className="grid grid-cols-3 gap-1">
-                  {templateCategories.map((category) => {
-                    const Icon = category.icon;
-                    const desc = category.description.split('.')[0];
-                    return (
-                      <CardItem
-                        key={category.id}
-                        title={category.name}
-                        description={desc}
-                        href={`/guides/${category.id}`}
-                        icon={Icon}
-                        iconColor={category.color}
-                        iconBg={`${category.color}18`}
-                      />
-                    );
-                  })}
-                </ul>
-
-                {/* Footer */}
-                <div className="border-t border-border mt-4 pt-3 px-1">
-                  <Link
-                    to="/guides"
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                    View all consumer rights guides →
-                  </Link>
-                </div>
-              </div>
+              <CategoryGrid
+                basePath="/guides"
+                footerLink="/guides"
+                footerLabel="View all consumer rights guides →"
+                footerIcon={ArrowRight}
+              />
             </NavigationMenuContent>
           </NavigationMenuItem>
 
           {/* Resources */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent">
-              Resources
-            </NavigationMenuTrigger>
+            <NavigationMenuTrigger className="bg-transparent">Resources</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="w-[540px] p-5 max-h-[calc(100vh-5rem)] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="w-[680px] p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-3">General</p>
+                    <SectionHeader>General</SectionHeader>
                     <ul className="space-y-0.5">
-                      {resources.map((resource) => (
-                        <ResourceCardItem
-                          key={resource.title}
-                          title={resource.title}
-                          description={resource.description}
-                          href={resource.href}
-                          icon={resource.icon}
-                        />
+                      {resources.map((r) => (
+                        <ResourceItem key={r.title} {...r} />
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-3">Free Tools</p>
+                    <SectionHeader>Free Tools</SectionHeader>
                     <ul className="space-y-0.5">
-                      {freeTools.map((tool) => (
-                        <ResourceCardItem
-                          key={tool.title}
-                          title={tool.title}
-                          description={tool.description}
-                          href={tool.href}
-                          icon={tool.icon}
-                        />
+                      {freeToolsCol1.map((t) => (
+                        <ResourceItem key={t.title} {...t} />
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <SectionHeader>Free Tools</SectionHeader>
+                    <ul className="space-y-0.5">
+                      {freeToolsCol2.map((t) => (
+                        <ResourceItem key={t.title} {...t} />
                       ))}
                     </ul>
                   </div>
                 </div>
-
-                {/* State laws footer strip */}
-                <div className="border-t border-border mt-4 pt-3 px-1">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Popular State Laws</p>
+                <div className="border-t border-border mt-3 pt-2.5 px-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Popular State Laws</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {notableStateLinks.map((s) => (
                       <Link
@@ -256,10 +223,7 @@ const MegaMenu = () => {
                         <span className="hidden sm:inline">{s.name}</span>
                       </Link>
                     ))}
-                    <Link
-                      to="/state-rights"
-                      className="text-xs text-primary font-medium hover:underline transition-colors ml-1"
-                    >
+                    <Link to="/state-rights" className="text-xs text-primary font-medium hover:underline transition-colors ml-1">
                       Browse all 50 →
                     </Link>
                   </div>
@@ -271,18 +235,13 @@ const MegaMenu = () => {
           {/* Pricing */}
           <NavigationMenuItem>
             <Link to="/pricing">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Pricing
-              </NavigationMenuLink>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>Pricing</NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
 
-      <DisputeAssistantModal
-        isOpen={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-      />
+      <DisputeAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </>
   );
 };
