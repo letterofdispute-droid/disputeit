@@ -24,43 +24,6 @@ import LegacyTemplateRedirect from "./components/LegacyTemplateRedirect";
 import LegacyCategoryRedirect from "./components/LegacyCategoryRedirect";
 import NotFound from "./pages/NotFound";
 
-// Lazily loaded - less critical pages
-const StateRightsPage = lazy(() => import("./pages/StateRightsPage"));
-const StateRightsStatePage = lazy(() => import("./pages/StateRightsStatePage"));
-const StateRightsCategoryPage = lazy(() => import("./pages/StateRightsCategoryPage"));
-const DeadlinesPage = lazy(() => import("./pages/DeadlinesPage"));
-const ConsumerNewsPage = lazy(() => import("./pages/ConsumerNewsPage"));
-const LetterAnalyzerPage = lazy(() => import("./pages/LetterAnalyzerPage"));
-const ArticlesPage = lazy(() => import("./pages/ArticlesPage"));
-const ArticleCategoryPage = lazy(() => import("./pages/ArticleCategoryPage"));
-const ArticlePage = lazy(() => import("./pages/ArticlePage"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const SignupPage = lazy(() => import("./pages/SignupPage"));
-const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const AboutPage = lazy(() => import("./pages/AboutPage"));
-const ContactPage = lazy(() => import("./pages/ContactPage"));
-const PricingPage = lazy(() => import("./pages/PricingPage"));
-const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
-const FAQPage = lazy(() => import("./pages/FAQPage"));
-const TermsPage = lazy(() => import("./pages/TermsPage"));
-const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
-const DisclaimerPage = lazy(() => import("./pages/DisclaimerPage"));
-const CookiePolicyPage = lazy(() => import("./pages/CookiePolicyPage"));
-const PurchaseSuccessPage = lazy(() => import("./pages/PurchaseSuccessPage"));
-const LetterEditorPage = lazy(() => import("./pages/LetterEditorPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const GuidesPage = lazy(() => import("./pages/GuidesPage"));
-const CategoryGuidePage = lazy(() => import("./pages/CategoryGuidePage"));
-const SmallClaimsPage = lazy(() => import("./pages/SmallClaimsPage"));
-const SmallClaimsStatePage = lazy(() => import("./pages/SmallClaimsStatePage"));
-const SmallClaimsGeneratorPage = lazy(() => import("./pages/SmallClaimsGeneratorPage"));
-const SmallClaimsCostCalculatorPage = lazy(() => import("./pages/SmallClaimsCostCalculatorPage"));
-const SmallClaimsDemandLetterPage = lazy(() => import("./pages/SmallClaimsDemandLetterPage"));
-const SmallClaimsEscalationPage = lazy(() => import("./pages/SmallClaimsEscalationPage"));
-const CaseQuizPage = lazy(() => import("./pages/CaseQuizPage"));
-
 // Helper to retry dynamic imports on chunk load failure (stale cache)
 const lazyRetry = (importFn: () => Promise<any>) =>
   lazy(() =>
@@ -71,21 +34,58 @@ const lazyRetry = (importFn: () => Promise<any>) =>
     })
   );
 
+// Lazily loaded - less critical pages
+const StateRightsPage = lazyRetry(() => import("./pages/StateRightsPage"));
+const StateRightsStatePage = lazyRetry(() => import("./pages/StateRightsStatePage"));
+const StateRightsCategoryPage = lazyRetry(() => import("./pages/StateRightsCategoryPage"));
+const DeadlinesPage = lazyRetry(() => import("./pages/DeadlinesPage"));
+const ConsumerNewsPage = lazyRetry(() => import("./pages/ConsumerNewsPage"));
+const LetterAnalyzerPage = lazyRetry(() => import("./pages/LetterAnalyzerPage"));
+const ArticlesPage = lazyRetry(() => import("./pages/ArticlesPage"));
+const ArticleCategoryPage = lazyRetry(() => import("./pages/ArticleCategoryPage"));
+const ArticlePage = lazyRetry(() => import("./pages/ArticlePage"));
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
+const LoginPage = lazyRetry(() => import("./pages/LoginPage"));
+const SignupPage = lazyRetry(() => import("./pages/SignupPage"));
+const ForgotPasswordPage = lazyRetry(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazyRetry(() => import("./pages/ResetPasswordPage"));
+const AboutPage = lazyRetry(() => import("./pages/AboutPage"));
+const ContactPage = lazyRetry(() => import("./pages/ContactPage"));
+const PricingPage = lazyRetry(() => import("./pages/PricingPage"));
+const HowItWorksPage = lazyRetry(() => import("./pages/HowItWorksPage"));
+const FAQPage = lazyRetry(() => import("./pages/FAQPage"));
+const TermsPage = lazyRetry(() => import("./pages/TermsPage"));
+const PrivacyPage = lazyRetry(() => import("./pages/PrivacyPage"));
+const DisclaimerPage = lazyRetry(() => import("./pages/DisclaimerPage"));
+const CookiePolicyPage = lazyRetry(() => import("./pages/CookiePolicyPage"));
+const PurchaseSuccessPage = lazyRetry(() => import("./pages/PurchaseSuccessPage"));
+const LetterEditorPage = lazyRetry(() => import("./pages/LetterEditorPage"));
+const SettingsPage = lazyRetry(() => import("./pages/SettingsPage"));
+const GuidesPage = lazyRetry(() => import("./pages/GuidesPage"));
+const CategoryGuidePage = lazyRetry(() => import("./pages/CategoryGuidePage"));
+const SmallClaimsPage = lazyRetry(() => import("./pages/SmallClaimsPage"));
+const SmallClaimsStatePage = lazyRetry(() => import("./pages/SmallClaimsStatePage"));
+const SmallClaimsGeneratorPage = lazyRetry(() => import("./pages/SmallClaimsGeneratorPage"));
+const SmallClaimsCostCalculatorPage = lazyRetry(() => import("./pages/SmallClaimsCostCalculatorPage"));
+const SmallClaimsDemandLetterPage = lazyRetry(() => import("./pages/SmallClaimsDemandLetterPage"));
+const SmallClaimsEscalationPage = lazyRetry(() => import("./pages/SmallClaimsEscalationPage"));
+const CaseQuizPage = lazyRetry(() => import("./pages/CaseQuizPage"));
+
 // Admin routes - lazy loaded
 const AdminLayout = lazyRetry(() => import("./components/admin/AdminLayout"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
-const SEODashboard = lazy(() => import("./pages/admin/SEODashboard"));
-const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
-const AdminBlogEditor = lazy(() => import("./pages/admin/AdminBlogEditor"));
-const AIBlogGenerator = lazy(() => import("./pages/admin/AIBlogGenerator"));
-const AdminPages = lazy(() => import("./pages/admin/AdminPages"));
-const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
-const AdminPageEditor = lazy(() => import("./pages/admin/AdminPageEditor"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminHealth = lazy(() => import("./pages/admin/AdminHealth"));
+const AdminDashboard = lazyRetry(() => import("./pages/admin/AdminDashboard"));
+const AdminOrders = lazyRetry(() => import("./pages/admin/AdminOrders"));
+const SEODashboard = lazyRetry(() => import("./pages/admin/SEODashboard"));
+const AdminBlog = lazyRetry(() => import("./pages/admin/AdminBlog"));
+const AdminBlogEditor = lazyRetry(() => import("./pages/admin/AdminBlogEditor"));
+const AIBlogGenerator = lazyRetry(() => import("./pages/admin/AIBlogGenerator"));
+const AdminPages = lazyRetry(() => import("./pages/admin/AdminPages"));
+const AdminTemplates = lazyRetry(() => import("./pages/admin/AdminTemplates"));
+const AdminPageEditor = lazyRetry(() => import("./pages/admin/AdminPageEditor"));
+const AdminUsers = lazyRetry(() => import("./pages/admin/AdminUsers"));
+const AdminAnalytics = lazyRetry(() => import("./pages/admin/AdminAnalytics"));
+const AdminSettings = lazyRetry(() => import("./pages/admin/AdminSettings"));
+const AdminHealth = lazyRetry(() => import("./pages/admin/AdminHealth"));
 
 // React Query client with optimized caching defaults
 const queryClient = new QueryClient({
