@@ -1,57 +1,61 @@
 
 
-# Backend & Dashboard Sync Audit Results
+# Fix: "Missing Pillars" Count Shows Wrong Number
 
-## Overall Status: One Real Gap Found
+## Problem
 
-After reviewing the admin dashboard, SEO metrics pipeline, link counting system, template coverage data, and frontend console/network logs, everything is aligned **except for one functional gap** you specifically called out.
+The `missingPillarCount` calculation (line 124) is wrong in two ways:
 
-## What's In Sync (Verified)
+1. **Naive math**: It does `templatePlans.length - totalPillarCount`. This counts ALL pillar articles in `content_queue`, including keyword-campaign pillars that aren't tied to template plans. So it over-subtracts and could even go negative (clamped to 0), but more importantly it doesn't check *which* plans actually have pillars.
 
-| System | Status |
-|---|---|
-| `templateCategories.ts` counts vs `siteContext.ts` CATEGORIES | MATCH (all 14 categories identical) |
-| `useSEOMetrics` hook via `get_seo_metrics` RPC | Working (200 responses, no errors) |
-| `get_template_progress` RPC | Working (returns accurate generated/total per template) |
-| Admin Dashboard stats (letters, users, views) | Working via direct queries |
-| Network requests | All 200s, no failures |
-| Console errors | One harmless React ref warning in AlertDialogContent (Radix library issue, cosmetic) |
+2. **Doesn't match the mutation logic**: The actual `createAllPillarsMutation` (lines 131-142) correctly checks by `plan_id` — it fetches all plans, fetches all pillar queue items, builds a Set of `plan_id`s, and filters to plans without a pillar. The count query should use the same logic.
 
-## The Gap: Link Counts Do NOT Auto-Update on Manual Edits
+## Fix
 
-You said you expect link counts to update each time you add a link in any page or post. **Currently, they don't.**
+**File: `src/components/admin/seo/TemplateCoverageMap.tsx`**, lines 116-126
 
-Here's how it works today:
+Replace the naive count query with one that mirrors the mutation logic:
 
-1. **Automated link insertion** (`apply-links-bulk` edge function): Calls `increment_link_counters` per link -- counts update correctly.
-2. **Manual editing** (AdminBlogEditor `handleSave`): Saves the post content directly to `blog_posts` table. **No link count reconciliation runs.** The `inbound_count` and `outbound_count` in `article_embeddings` go stale.
-3. **Manual fix**: You must go to the SEO dashboard Links tab and click "Sync Counters" (which calls `reconcile_link_counts` RPC) to re-sync.
+1. Fetch all `plan_id` values from `content_queue` where `article_type = 'pillar'` (using `head: false` but selecting only `plan_id`)
+2. Build a Set of plan IDs that already have pillars
+3. Count how many `templatePlans` are NOT in that Set
+4. Use pagination to avoid the 1000-row limit on the pillar query (fetch in batches, or use `count: exact` with a filter per plan)
 
-### The Fix
+Since the number of pillar rows could exceed 1000, the cleanest approach is:
+- Use `count: 'exact', head: true` to get the total pillar count
+- Then fetch plan_ids in pages of 1000 to build the complete Set
+- Or better: fetch the `plan_id` list from `content_queue` where `article_type = 'pillar'` AND `plan_id` is in the list of template plan IDs — this scopes it correctly
 
-Add an automatic call to `reconcile_link_counts` after every blog post save in `AdminBlogEditor.tsx`. When a post is saved (create or update), the system should fire a background reconciliation so link counts stay accurate without manual intervention.
+**Revised query logic:**
+```typescript
+const { data: missingPillarCount } = useQuery({
+  queryKey: ['missing-pillar-count', templatePlans.length],
+  queryFn: async () => {
+    if (templatePlans.length === 0) return 0;
+    
+    const planIds = templatePlans.map(p => p.id);
+    
+    // Fetch in batches of 500 to stay under limits
+    const existingPillarPlanIds = new Set<string>();
+    for (let i = 0; i < planIds.length; i += 500) {
+      const batch = planIds.slice(i, i + 500);
+      const { data } = await supabase
+        .from('content_queue')
+        .select('plan_id')
+        .eq('article_type', 'pillar')
+        .in('plan_id', batch);
+      (data || []).forEach(r => existingPillarPlanIds.add(r.plan_id));
+    }
+    
+    return planIds.filter(id => !existingPillarPlanIds.has(id)).length;
+  },
+  enabled: templatePlans.length > 0,
+});
+```
 
-**File: `src/pages/admin/AdminBlogEditor.tsx`**
-- After the successful `.update()` or `.insert()` call, fire `supabase.rpc('reconcile_link_counts')` as a fire-and-forget background call
-- This runs the full HTML regex scan across all published posts and updates `article_embeddings.inbound_count` and `outbound_count`
-- No UI blocking needed -- it runs silently in the background
+This mirrors the mutation's logic exactly, so the button count will match what the mutation would actually queue.
 
-### Performance Note
-
-The `reconcile_link_counts` function has a 120-second timeout and scans all published posts. For the current content volume this is fine. If the blog grows to thousands of posts, a targeted single-post reconciliation function would be more efficient, but that's a future optimization.
-
-## Summary
-
-| Item | Status | Action |
-|---|---|---|
-| Template counts (UI vs AI context) | In sync | None |
-| SEO metrics RPC | Working | None |
-| Dashboard stats | Working | None |
-| Link counts auto-update on manual edit | **BROKEN** | Add auto-reconcile after blog post save |
-| Console errors | 1 cosmetic Radix warning | None (library issue) |
-| Network errors | None | None |
-
-### Scope
-- 1 file changed: `src/pages/admin/AdminBlogEditor.tsx`
-- Add ~5 lines after the save success block
+## Scope
+- **1 file changed**: `src/components/admin/seo/TemplateCoverageMap.tsx`
+- **~15 lines** replaced in the `missingPillarCount` query
 
