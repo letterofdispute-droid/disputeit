@@ -129,9 +129,7 @@ retail-store-complaint, price-match-dispute, refund-refused-return,
 wrong-item-sent, missing-items-order, restocking-fee-dispute, voucher-instead-of-refund,
 -- Special Purchases --
 auction-purchase-refund, secondhand-purchase-refund, layaway-cancellation-refund,
-extended-warranty-refund, bundle-partial-refund, flash-sale-refund,
--- Special Purchases (continued) --
-flash-sale-refund
+extended-warranty-refund, bundle-partial-refund, flash-sale-refund
 
 financial (category-id: financial):
 -- Banking --
