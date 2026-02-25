@@ -1,69 +1,92 @@
 
 
-# Missing Employment Templates: Mobbing, Harassment Variants, and Related Workplace Issues
+# Scheduled Publishing Cadence for Content Queue
 
 ## Current State
 
-The Employment category has ~30 templates. There is one generic "Workplace Harassment Complaint" and one "Workplace Bullying Complaint," but several high-demand, legally distinct scenarios are missing.
+- 80 articles sit in the queue as "queued" status
+- `blog_posts.scheduled_at` column already exists (timestamptz, nullable)
+- The `daily-auto-publish` edge function publishes N oldest "generated" items daily — no date awareness
+- The Calendar tab shows posts by created/scheduled date but is read-only
+- No way to bulk-assign publication dates with a cadence
 
-## Missing Templates to Add
+## What You Need
 
-### New file: `src/data/templates/employment/workplaceAbuse Templates.ts`
+A workflow to say: "Take these 80 articles, generate them, and publish 5 every 2 days starting March 1st" — spreading them across dates automatically.
 
-**~12 new templates covering gaps:**
+## Solution
 
-| Template | Why it's distinct from existing |
-|----------|-------------------------------|
-| **Workplace Mobbing Complaint** | Group-based systematic harassment (distinct from individual harassment/bullying) |
-| **Sexual Harassment Complaint** | Specific legal framework (Title VII/Title IX), quid pro quo vs hostile environment |
-| **Retaliation Complaint** | Filing complaint after protected activity (distinct from general harassment) |
-| **Hostile Work Environment Complaint** | Pattern-based, pervasive conduct — different legal test than single-incident harassment |
-| **Racial Harassment Complaint** | Race-specific hostile conduct, Title VII specific |
-| **Age Discrimination Complaint** | ADEA-specific, distinct legal thresholds (40+) |
-| **Disability Harassment Complaint** | ADA-specific, failure to accommodate + harassment combined |
-| **Religious Discrimination Complaint** | Accommodation refusal + harassment for religious practice |
-| **Gender Identity / LGBTQ+ Discrimination Complaint** | Bostock v. Clayton County framework |
-| **Pregnancy Discrimination Complaint** | PDA + ADA pregnancy accommodation |
-| **Equal Pay Complaint** | EPA-specific, pay gap documentation |
-| **FMLA Interference / Retaliation Complaint** | Medical leave denial or punishment for taking leave |
+### 1. Add `scheduled_at` column to `content_queue` table
 
-### File changes
+A migration to add `scheduled_at TIMESTAMPTZ` to `content_queue`. When articles are generated into `blog_posts`, the `bulk-generate-articles` function copies this date to `blog_posts.scheduled_at`.
+
+### 2. New "Schedule" dialog on the Queue page
+
+A dialog triggered by a new "Schedule" button in `QueueActions`. It contains:
+
+```text
+┌─────────────────────────────────────────┐
+│  Schedule Publishing                    │
+│                                         │
+│  Start date:    [March 1, 2026    ▼]    │
+│  Articles per batch:  [5          ]     │
+│  Every N days:        [2          ]     │
+│                                         │
+│  Preview:                               │
+│  Mar 1  → 5 articles                    │
+│  Mar 3  → 5 articles                    │
+│  Mar 5  → 5 articles                    │
+│  ...                                    │
+│  Mar 31 → 5 articles                    │
+│  Total: 80 articles over 32 days        │
+│                                         │
+│  [Cancel]              [Schedule All]   │
+└─────────────────────────────────────────┘
+```
+
+- Operates on selected items, or all queued items if none selected
+- Assigns `scheduled_at` timestamps spread across the cadence
+- Items get dates assigned in their current queue order (priority desc, created_at desc)
+
+### 3. Modify `daily-auto-publish` to be schedule-aware
+
+Instead of "grab N oldest generated items", the logic becomes:
+- Find blog posts where `scheduled_at <= now()` AND `status = 'draft'` → publish those
+- Fall back to existing behavior (oldest N generated) if no scheduled items exist
+- This means the cron job that runs daily at 09:00 UTC will automatically publish articles whose scheduled date has arrived
+
+### 4. Copy `scheduled_at` during article generation
+
+In `bulk-generate-articles`, when creating a blog_post from a queue item, copy `content_queue.scheduled_at` → `blog_posts.scheduled_at` and set the blog post status to `draft` (already the case).
+
+### 5. Show scheduled dates in the Queue table
+
+Add a "Scheduled" column to `QueueTable` showing the assigned date, so you can see the spread at a glance.
+
+### 6. Calendar integration (already works)
+
+The existing `ContentCalendar` already queries `blog_posts.scheduled_at` and displays scheduled posts — so once articles are generated with dates, they'll appear on the calendar automatically.
+
+## File Changes
 
 | File | Change |
 |------|--------|
-| `src/data/templates/employment/workplaceAbuseTemplates.ts` | New file with ~12 templates |
-| `src/data/templates/employmentTemplates.ts` | Import and spread `workplaceAbuseTemplates` |
-| `src/data/subcategoryMappings.ts` | Add patterns for new slugs (mobbing, sexual-harassment, retaliation, etc.) to route to correct subcategories |
+| **Migration** | Add `scheduled_at TIMESTAMPTZ` to `content_queue` |
+| `src/components/admin/seo/queue/ScheduleDialog.tsx` | New — cadence picker dialog with preview |
+| `src/components/admin/seo/queue/QueueActions.tsx` | Add "Schedule" button that opens the dialog |
+| `src/components/admin/seo/queue/QueueTable.tsx` | Add "Scheduled" column showing date |
+| `src/hooks/useContentQueue.ts` | Add `scheduleItems` mutation (bulk update `scheduled_at`) |
+| `supabase/functions/bulk-generate-articles/index.ts` | Copy `scheduled_at` from queue item to blog_post |
+| `supabase/functions/daily-auto-publish/index.ts` | Check `scheduled_at <= now()` on blog_posts first, then fall back to count-based |
 
-### Template structure
+## Workflow
 
-Each template follows the existing pattern with:
-- US-focused legal references (Title VII, ADA, ADEA, EPA, PDA, FMLA) as primary jurisdiction
-- UK (Equality Act 2010), EU, and INTL as secondary jurisdictions  
-- AI-enhanced fields with evidence hints
-- Impact levels on all fields
-- 3 tones (neutral, firm, final)
-- Specific fields relevant to each scenario (e.g., sexual harassment gets "quid pro quo or hostile environment" selector, mobbing gets "number of perpetrators" and "duration of campaign")
+1. Go to Queue tab with 80 queued articles
+2. Click "Schedule" → pick start date March 1, 5 articles every 2 days
+3. System assigns dates: items 1-5 get Mar 1, items 6-10 get Mar 3, etc.
+4. Click "Generate All 80" → articles generate as drafts with `scheduled_at` preserved
+5. The daily cron at 09:00 UTC checks: any drafts with `scheduled_at <= now()`? Publish them.
+6. Calendar tab shows the planned spread visually
 
-### Why these are legally distinct (not duplicates)
-
-The existing generic "harassment complaint" template has a dropdown for harassment type but uses the same letter structure regardless. These new templates have:
-- **Different legal citations** (Title VII sexual harassment vs ADEA age discrimination vs ADA disability)
-- **Different evidentiary requirements** (equal pay needs pay comparator data, mobbing needs timeline of escalating group behavior)
-- **Different relief/remedy options** (FMLA: reinstatement + back pay, Equal Pay: wage adjustment + back pay)
-- **Different filing deadlines** mentioned in the letter (EEOC 180/300 days, EPA 2-year statute)
-
-### SEO value
-
-These are high-search-volume terms: "sexual harassment complaint letter template," "workplace mobbing letter," "equal pay complaint letter," "FMLA retaliation letter" — currently not served by any template.
-
-## Technical Details
-
-- No database changes
-- No edge function changes  
-- No new dependencies
-- Templates auto-register via the `allTemplates` aggregation in `allTemplates.ts`
-- SSG routes auto-generate from `routes.ts` which reads `allTemplates`
-- Subcategory mapping patterns already partially cover these (discrimination pattern catches harassment/hostile/retaliation) but new patterns may be needed for clean routing
-- Total template count will increase from ~550 to ~562
+No new dependencies. Uses existing `scheduled_at` column on `blog_posts` and the existing cron infrastructure.
 
