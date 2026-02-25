@@ -48,7 +48,6 @@ const courtTools = [
   { title: 'Court Cost Calculator', description: 'Estimate filing fees', href: '/small-claims/cost-calculator', icon: Calculator },
   { title: 'Demand Letter Compare', description: 'DIY vs. lawyer costs', href: '/small-claims/demand-letter-cost', icon: DollarSign },
   { title: 'Escalation Flowchart', description: 'Best resolution path', href: '/small-claims/escalation-guide', icon: GitBranch },
-  { title: 'State Rights Lookup', description: 'Laws for your state', href: '/state-rights', icon: MapPin },
 ];
 
 const getStartedItems = [
@@ -212,22 +211,6 @@ const MegaMenu = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="bg-muted/50 px-6 py-4 flex items-center gap-3 flex-wrap">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-1">Popular State Laws</span>
-                  {notableStateLinks.map((s) => (
-                    <Link
-                      key={s.code}
-                      to={`/state-rights/${s.slug}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background text-xs font-medium text-muted-foreground hover:text-foreground hover:shadow-sm transition-all ring-1 ring-border/50"
-                    >
-                      <span className="font-mono font-semibold">{s.code}</span>
-                      <span>{s.name}</span>
-                    </Link>
-                  ))}
-                  <Link to="/state-rights" className="text-xs text-primary font-semibold hover:underline ml-auto">
-                    Browse all 50 →
-                  </Link>
-                </div>
               </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
@@ -255,10 +238,10 @@ const MegaMenu = () => {
                         href="/articles"
                       />
                       <MenuCard
-                        title="Knowledge Center"
-                        description="Tips & how-tos"
-                        icon={FileText}
-                        href="/articles"
+                        title="State Rights Lookup"
+                        description="Laws for your state"
+                        icon={MapPin}
+                        href="/state-rights"
                       />
                     </ul>
                   </div>
@@ -299,16 +282,34 @@ const MegaMenu = () => {
                     )}
                   </div>
                 </div>
-                <div className="bg-muted/50 px-6 py-4 flex items-center justify-between">
-                  <Link to="/articles" className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
-                    <BookOpen className="size-4" />
-                    Browse all articles
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                  <button onClick={() => setAssistantOpen(true)} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                    <Sparkles className="size-4" />
-                    Not sure? Get AI help
-                  </button>
+                <div className="bg-muted/50 px-6 py-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Link to="/articles" className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
+                      <BookOpen className="size-4" />
+                      Browse all articles
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                    <button onClick={() => setAssistantOpen(true)} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      <Sparkles className="size-4" />
+                      Not sure? Get AI help
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-1">Popular State Laws</span>
+                    {notableStateLinks.map((s) => (
+                      <Link
+                        key={s.code}
+                        to={`/state-rights/${s.slug}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background text-xs font-medium text-muted-foreground hover:text-foreground hover:shadow-sm transition-all ring-1 ring-border/50"
+                      >
+                        <span className="font-mono font-semibold">{s.code}</span>
+                        <span>{s.name}</span>
+                      </Link>
+                    ))}
+                    <Link to="/state-rights" className="text-xs text-primary font-semibold hover:underline ml-auto">
+                      Browse all 50 →
+                    </Link>
+                  </div>
                 </div>
               </div>
             </NavigationMenuContent>
