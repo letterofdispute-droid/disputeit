@@ -110,10 +110,28 @@ If no slug fits perfectly, pick the closest match from the list or use [CUSTOM_L
 AVAILABLE TEMPLATE SLUGS BY CATEGORY:
 
 refunds (category-id: refunds):
-unauthorized-charge-dispute, hidden-fee-dispute, recurring-charge-cancellation, refund-delay-complaint,
-partial-refund-dispute, chargeback-warning, professional-service-refund, cleaning-service-refund,
-software-refund, app-store-refund, streaming-service-refund, subscription-cancellation-refund,
-auction-purchase-refund, extended-warranty-refund, retail-store-complaint
+-- Core Refunds --
+refund-general, refund-online-purchase, refund-subscription, refund-after-return,
+refund-service-not-rendered, refund-overcharge, refund-double-charge, refund-gym-membership,
+refund-event-cancelled, refund-course-training, refund-deposit, refund-cooling-off,
+refund-gift-card, refund-pre-order, refund-trial-conversion,
+-- Billing Disputes --
+unauthorized-charge-dispute, hidden-fee-dispute, recurring-charge-cancellation,
+refund-delay-complaint, partial-refund-dispute, chargeback-warning,
+-- Service Refunds --
+professional-service-refund, cleaning-service-refund, beauty-salon-refund,
+photography-refund, catering-refund, tutoring-refund,
+-- Digital Purchases --
+software-refund, app-store-refund, digital-download-refund, game-refund-request,
+streaming-service-refund, crowdfunding-refund, nft-digital-asset-refund,
+-- Retail Complaints --
+retail-store-complaint, price-match-dispute, refund-refused-return,
+wrong-item-sent, missing-items-order, restocking-fee-dispute, voucher-instead-of-refund,
+-- Special Purchases --
+auction-purchase-refund, secondhand-purchase-refund, layaway-cancellation-refund,
+extended-warranty-refund, bundle-partial-refund, flash-sale-refund,
+-- Subscription --
+subscription-cancellation-refund
 
 financial (category-id: financial):
 -- Banking --
@@ -157,32 +175,108 @@ government-impersonation-scam-complaint, tech-support-scam-refund-claim,
 romance-pig-butchering-scam-bank-claim, recovery-room-scam-complaint
 
 housing (category-id: housing):
+-- Tenancy Disputes --
 tenancy-renewal-request, early-termination-request, subletting-permission-request,
-rent-reduction-request, service-charge-dispute, unauthorized-entry-complaint,
-epc-certificate-request, smoke-alarm-request, fire-safety-complaint,
-deposit-deduction-dispute, repair-request-letter, mould-damp-complaint
+tenant-reference-request, joint-tenancy-removal-request, rent-reduction-request,
+service-charge-dispute, unauthorized-entry-complaint,
+-- Repair & Maintenance --
+landlord-roof-leak-complaint, landlord-window-repair-request, landlord-flooring-repair-request,
+landlord-structural-damage-complaint, landlord-garden-maintenance-request,
+landlord-gutter-repair-request, landlord-external-repair-request, landlord-door-repair-request,
+deposit-deduction-dispute, repair-request-letter, mould-damp-complaint,
+-- Safety & Compliance --
+epc-certificate-request, electrical-safety-certificate-request, smoke-alarm-request,
+fire-safety-complaint, hmo-licensing-complaint, asbestos-concern-letter,
+how-to-rent-guide-request, legionella-risk-assessment-request,
+-- Letting Agent --
+letting-agent-complaint, letting-agent-fees-dispute, redress-scheme-escalation,
+property-misrepresentation-complaint, inventory-dispute-letter, right-to-rent-complaint,
+-- Neighbor Disputes --
+noise-complaint-to-landlord, antisocial-behavior-report,
+shared-facilities-complaint, parking-dispute-to-landlord
 
 travel (category-id: travel):
-flight-delay-compensation, lost-baggage-claim, hotel-complaint-letter,
-car-rental-dispute, package-holiday-complaint, airline-refund-request
+airline-flight-delay-compensation, airline-flight-cancellation-compensation,
+airline-lost-baggage-claim, airline-damaged-baggage-claim, airline-denied-boarding-compensation,
+hotel-complaint-letter, hotel-refund-request, car-rental-complaint,
+cruise-complaint-letter, train-delay-compensation, travel-agency-complaint,
+package-holiday-complaint, airline-delayed-baggage-claim, ota-refund-dispute-letter,
+travel-chargeback-request-letter, airline-missed-connection-compensation,
+bus-coach-delay-complaint-letter, ferry-delay-cancellation-compensation,
+airport-lounge-complaint-letter, travel-insurance-claim-appeal-letter
 
 damaged-goods (category-id: damaged-goods):
+-- Core --
+damaged-goods-delivery, defective-product-complaint,
+-- Delivery Damage --
 courier-damage-claim, concealed-damage-claim, fragile-item-damage-complaint,
+temperature-sensitive-damage, water-damaged-delivery, crushed-package-complaint,
+international-shipping-damage, delivery-left-unsafe-location,
+-- Defective Products --
 manufacturing-defect-complaint, appliance-failure-complaint, clothing-quality-complaint,
-furniture-defect-complaint, electronics-malfunction-complaint,
-warranty-claim-denial-appeal, extended-warranty-dispute
+furniture-defect-complaint, toy-safety-defect-complaint, cosmetics-adverse-reaction,
+food-contamination-complaint, electronics-malfunction-complaint,
+-- Warranty & Repair --
+warranty-claim-denial-appeal, extended-warranty-dispute, repair-not-completed-complaint,
+replacement-demand-letter, repair-delay-complaint, repair-caused-damage,
+statutory-rights-refund-demand,
+-- Returns & Refunds --
+return-refused-complaint, refund-not-received, partial-refund-dispute,
+restocking-fee-dispute, store-credit-refund-dispute, chargeback-support-letter,
+gift-card-refund-demand, cooling-off-period-refund,
+-- Misrepresentation --
+misleading-product-description, fake-reviews-complaint, size-measurement-discrepancy,
+material-misrepresentation, country-origin-misrepresentation, organic-certification-fraud,
+secondhand-sold-as-new, photo-product-mismatch
 
 utilities (category-id: utilities):
-roaming-charge-dispute, data-overage-dispute, bill-shock-complaint, double-billing-complaint,
-incorrect-tariff-dispute, water-billing-dispute, water-quality-complaint,
-energy-billing-dispute, broadband-speed-complaint, mobile-network-complaint
+-- Telecom Billing --
+roaming-charge-dispute, data-overage-dispute, premium-sms-dispute, international-call-dispute,
+bill-shock-complaint, double-billing-complaint, direct-debit-error, credit-balance-refund,
+incorrect-tariff-dispute, equipment-charge-dispute,
+-- Telecom Service --
+broadband-speed-complaint, service-outage-compensation, installation-delay-complaint,
+missed-engineer-appointment, mobile-signal-complaint, network-congestion-complaint,
+voip-quality-complaint, digital-switchover-complaint, traffic-management-complaint,
+wifi-equipment-complaint,
+-- Telecom Contracts --
+early-termination-fee-dispute, cooling-off-cancellation, price-increase-exit,
+auto-renewal-cancellation, switching-obstruction-complaint, pac-code-request,
+unauthorized-contract-change, contract-misrepresentation, deceased-account-closure,
+hardship-payment-plan,
+-- Energy Billing --
+smart-meter-dispute, back-billing-dispute, standing-charge-dispute,
+energy-price-cap-complaint, prepayment-meter-complaint, energy-direct-debit-increase,
+energy-credit-refund, energy-switching-error, meter-exchange-complaint,
+warm-home-discount-dispute,
+-- Water --
+water-billing-dispute, water-quality-complaint, water-leak-complaint,
+sewerage-complaint, water-meter-installation, hosepipe-ban-exemption,
+surface-water-drainage-rebate, supply-interruption-compensation
 
 insurance (category-id: insurance):
+-- Health Insurance --
 prior-auth-denial-appeal, out-of-network-denial-appeal, prescription-coverage-denial,
-ambulance-charge-dispute, balance-billing-dispute,
+mental-health-parity-complaint, ambulance-charge-dispute, balance-billing-dispute,
+-- Home Insurance --
 water-damage-claim-denial, fire-damage-claim-dispute, theft-claim-denial, storm-damage-claim,
-auto-total-loss-dispute, gap-insurance-claim, insurance-premium-dispute, insurance-bad-faith-complaint,
-life-insurance-claim-denial
+roof-damage-dispute, contents-coverage-dispute, subsidence-claim-dispute,
+-- Auto Insurance --
+auto-total-loss-dispute, gap-insurance-claim, auto-glass-claim-dispute,
+rental-car-coverage-denial, diminished-value-claim, uninsured-motorist-claim,
+auto-repair-quality-dispute,
+-- Life Insurance --
+life-insurance-claim-denial, life-insurance-beneficiary-dispute,
+life-contestability-dispute, accidental-death-benefit-denial, suicide-clause-dispute,
+-- Travel/Pet/Business Insurance --
+travel-trip-cancellation-claim, travel-medical-emergency-claim, travel-trip-interruption-claim,
+travel-delay-insurance-claim, missed-connection-insurance-claim,
+pet-insurance-claim-denial, pet-preexisting-condition-dispute,
+pet-hereditary-condition-claim, pet-dental-coverage-dispute,
+business-interruption-claim, professional-indemnity-claim, public-liability-claim,
+-- Additional --
+insurance-premium-dispute, insurance-policy-dispute, third-party-insurance-claim,
+insurance-bad-faith-complaint
 
 vehicle (category-id: vehicle):
 -- Garage & Repair --
@@ -209,10 +303,30 @@ electronic-kill-switch-complaint, gap-insurance-refund-demand,
 dealer-interest-rate-markup-complaint
 
 employment (category-id: employment):
-constructive-dismissal-claim, unfair-dismissal-appeal, severance-negotiation, redundancy-dispute,
-harassment-complaint, bullying-complaint, safety-concern-report, grievance-letter,
-unpaid-overtime-demand, unpaid-commission-demand, wage-deduction-dispute,
-pension-contribution-dispute, non-compete-dispute, flexible-working-request
+-- Termination --
+constructive-dismissal-claim, unfair-dismissal-appeal, severance-negotiation,
+redundancy-dispute, notice-period-dispute, retaliation-complaint,
+-- Workplace Conditions --
+harassment-complaint, bullying-complaint, safety-concern-report,
+reasonable-accommodation-request, flexible-working-request, working-hours-dispute,
+contract-change-objection, grievance-letter,
+-- Wages & Pay --
+unpaid-overtime-demand, unpaid-commission-demand, unpaid-bonus-demand,
+wage-deduction-dispute, minimum-wage-violation, holiday-pay-dispute,
+sick-pay-dispute, expense-reimbursement-demand,
+-- Workplace Abuse & Discrimination --
+workplace-mobbing-complaint, sexual-harassment-complaint, workplace-retaliation-complaint,
+hostile-work-environment-complaint, racial-harassment-complaint, age-discrimination-complaint,
+disability-harassment-complaint, religious-discrimination-complaint,
+lgbtq-discrimination-complaint, pregnancy-discrimination-complaint,
+equal-pay-complaint, fmla-interference-complaint,
+-- Benefits & Documentation --
+pension-contribution-dispute, reference-request, reference-dispute,
+p45-p60-request, maternity-paternity-rights, employment-contract-request,
+personnel-file-access, non-compete-dispute,
+-- Additional --
+whistleblower-protection, promotion-denial-dispute, demotion-dispute,
+performance-review-dispute, suspension-challenge, training-cost-repayment-dispute
 
 ecommerce (category-id: ecommerce):
 -- Core --
@@ -238,18 +352,100 @@ paypal-dispute-escalation, credit-card-chargeback-support, klarna-afterpay-dispu
 refund-delay-complaint, gift-card-scam, store-credit-cash-refund, double-charge-dispute
 
 hoa (category-id: hoa):
-hoa-fee-dispute, hoa-rule-violation-appeal, hoa-maintenance-request,
-hoa-neighbor-noise-complaint, hoa-governance-complaint
+-- Fee Disputes --
+hoa-fee-dispute, hoa-special-assessment-dispute, hoa-late-fee-waiver-request,
+hoa-payment-plan-request, hoa-billing-error-dispute, hoa-reserve-fund-inquiry,
+hoa-budget-objection,
+-- Violations --
+hoa-rule-violation-appeal, hoa-violation-appeal, hoa-selective-enforcement-complaint,
+hoa-reasonable-accommodation-request, hoa-board-harassment-complaint,
+hoa-rental-restriction-dispute, hoa-cease-desist-to-neighbor, hoa-mediation-request,
+-- Governance --
+hoa-meeting-request, hoa-records-request, hoa-rule-change-proposal,
+hoa-board-recall-petition, hoa-voting-dispute, hoa-conflict-of-interest-complaint,
+hoa-vendor-contract-objection, hoa-management-company-complaint, hoa-governance-complaint,
+-- Maintenance --
+hoa-maintenance-request, hoa-common-area-repair-request, hoa-pest-control-request,
+hoa-landscaping-complaint, hoa-pool-spa-complaint, hoa-security-concern,
+hoa-parking-lot-repair-request, hoa-elevator-complaint, hoa-trash-recycling-complaint,
+-- Neighbor Disputes --
+hoa-neighbor-noise-complaint, neighbor-noise-complaint, neighbor-boundary-dispute,
+neighbor-tree-dispute, neighbor-parking-dispute, neighbor-pet-complaint,
+neighbor-property-damage-claim, neighbor-harassment-complaint, neighbor-light-pollution-complaint
 
 contractors (category-id: contractors):
+-- General Contractor --
 poor-workmanship-complaint, contractor-no-show-abandonment, solar-panel-installation-dispute,
-kitchen-remodel-dispute, bathroom-remodel-dispute, flooring-installation-defect,
-painter-poor-quality, hvac-installation-failure-complaint, hvac-overcharge-complaint,
-electrician-faulty-wiring-complaint, electrician-overcharge-dispute, roofing-dispute
+renovation-cost-overrun-dispute, contractor-delayed-completion, contractor-deposit-dispute,
+unlicensed-contractor-complaint, contractor-warranty-claim, contractor-failed-to-obtain-permits,
+subcontractor-damage-complaint, contractor-site-cleanup-failure, contractor-communication-failure,
+contractor-insurance-bonding-claim, contractor-material-substitution,
+-- Kitchen & Bath --
+kitchen-remodel-dispute, bathroom-remodel-dispute, cabinet-installation-dispute,
+countertop-installation-dispute, tile-installation-failure,
+-- Flooring & Painting --
+flooring-installation-defect, flooring-moisture-damage, painter-poor-quality,
+paint-color-mismatch, wallpaper-installation-failure,
+-- HVAC --
+hvac-installation-failure-complaint, hvac-repair-ineffective-complaint,
+hvac-overcharge-complaint, hvac-warranty-claim-denial-dispute,
+hvac-maintenance-contract-dispute, wrongly-sized-hvac-unit-dispute,
+-- Electrical --
+electrician-faulty-wiring-complaint, electrician-overcharge-dispute,
+electrical-code-violation-complaint, electrical-panel-upgrade-dispute,
+lighting-installation-dispute, ev-charger-installation-dispute,
+-- Plumbing --
+plumber-leak-repair-failure, plumber-overcharge-complaint,
+plumbing-code-violation-complaint, water-heater-installation-dispute,
+drain-sewer-repair-dispute, emergency-plumber-callout-dispute,
+-- Roofing --
+roofing-dispute, roof-leak-after-repair-complaint, roofing-material-quality-dispute,
+incomplete-roofing-work-complaint, storm-damage-roof-repair-dispute,
+gutter-installation-complaint,
+-- Landscaping --
+landscaping-poor-workmanship-complaint, landscaping-drainage-dispute,
+hardscape-installation-failure-complaint, irrigation-system-problem-complaint,
+tree-service-property-damage-complaint,
+-- Windows & Doors --
+window-installation-dispute, door-installation-dispute, conservatory-sunroom-dispute,
+garage-door-installation-dispute, skylight-installation-dispute,
+-- Specialty Services --
+pest-control-ineffective, pool-installation-dispute, pool-maintenance-dispute,
+fence-installation-dispute
 
 healthcare (category-id: healthcare):
-medical-billing-dispute, insurance-claim-denial-appeal, hospital-complaint-letter,
-prescription-error-complaint, medical-debt-dispute, hipaa-violation-complaint
+-- Insurance Claim Disputes --
+insurance-claim-denial-medical-necessity-appeal, insurance-claim-denial-out-of-network-appeal,
+insurance-claim-denial-prior-authorization-appeal, insurance-partial-payment-underpaid-claim-dispute,
+insurance-coverage-exclusion-policy-dispute, insurance-emergency-care-coverage-dispute,
+insurance-retroactive-denial-reversal-appeal, insurance-prescription-drug-denial-appeal,
+insurance-diagnostic-test-denial-appeal, insurance-surgery-procedure-denial-appeal,
+-- Medical Billing --
+medical-billing-incorrect-amount-dispute, medical-billing-duplicate-charge-dispute,
+medical-billing-services-not-received-dispute, medical-billing-upcoding-dispute,
+medical-billing-unbundling-dispute, medical-billing-balance-billing-dispute,
+medical-billing-surprise-billing-no-surprises-act, medical-billing-out-of-network-hospital-provider,
+medical-billing-incorrect-patient-information, medical-billing-post-insurance-payment-dispute,
+-- Medical Debt --
+medical-debt-validation-request-letter, medical-debt-collection-agency-dispute,
+medical-debt-cease-communication-request, medical-debt-credit-report-dispute,
+medical-debt-paid-removal-credit-report, medical-debt-incorrect-balance-dispute,
+medical-debt-statute-of-limitations-dispute, medical-debt-insurance-pending-dispute,
+-- Provider & Hospital --
+hospital-negligent-care-complaint-letter, medical-record-inaccuracy-error-dispute,
+medical-record-diagnosis-correction-request, medical-record-amendment-hipaa-request,
+hospital-premature-discharge-dispute, hospital-informed-consent-complaint-letter,
+hospital-staff-misconduct-complaint,
+-- Prescription & Pharmacy --
+prescription-coverage-denial-appeal-letter, prescription-step-therapy-exception-request,
+prescription-prior-authorization-denial-appeal, prescription-generic-substitution-dispute-letter,
+pharmacy-incorrect-charge-dispute, prescription-not-covered-exception-request,
+-- Specialized --
+patient-medical-necessity-statement-letter, insurance-experimental-investigational-treatment-appeal,
+insurance-second-level-internal-appeal, insurance-external-independent-review-request,
+insurance-employer-plan-erisa-dispute, medicaid-denial-fair-hearing-appeal,
+medicare-claim-denial-appeal, workers-compensation-medical-treatment-dispute,
+long-term-care-insurance-coverage-dispute
 
 mortgage (category-id: mortgage):
 mortgage-payment-misapplication-dispute, mortgage-escrow-account-error-dispute,
