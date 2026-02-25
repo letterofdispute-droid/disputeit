@@ -1,92 +1,81 @@
 
 
-# Scheduled Publishing Cadence for Content Queue
+# Mega Menu Visual Redesign
 
-## Current State
+## Problem
 
-- 80 articles sit in the queue as "queued" status
-- `blog_posts.scheduled_at` column already exists (timestamptz, nullable)
-- The `daily-auto-publish` edge function publishes N oldest "generated" items daily — no date awareness
-- The Calendar tab shows posts by created/scheduled date but is read-only
-- No way to bulk-assign publication dates with a cadence
+The current mega menus are visually flat, dense, and stacked. All 13 categories appear in a uniform 3-column grid with identical styling, making it hard to scan. The Resources panel has lopsided columns (5 vs 9 items). Everything blends together with no visual hierarchy.
 
-## What You Need
+## Design Approach
 
-A workflow to say: "Take these 80 articles, generate them, and publish 5 every 2 days starting March 1st" — spreading them across dates automatically.
+### Letter Templates Panel
 
-## Solution
+**Layout**: 4-column compact grid with category-colored left border accents instead of large icon tiles. This reduces vertical height significantly (4 rows instead of 5) and feels more organized.
 
-### 1. Add `scheduled_at` column to `content_queue` table
-
-A migration to add `scheduled_at TIMESTAMPTZ` to `content_queue`. When articles are generated into `blog_posts`, the `bulk-generate-articles` function copies this date to `blog_posts.scheduled_at`.
-
-### 2. New "Schedule" dialog on the Queue page
-
-A dialog triggered by a new "Schedule" button in `QueueActions`. It contains:
+- Each card: thin left border in category color, icon inline with title (smaller, 16px), description below in muted text
+- Add a subtle "Featured" highlight on the first 4 popular categories (slight background tint)
+- Footer stays: "Browse all" + "AI Help"
 
 ```text
-┌─────────────────────────────────────────┐
-│  Schedule Publishing                    │
-│                                         │
-│  Start date:    [March 1, 2026    ▼]    │
-│  Articles per batch:  [5          ]     │
-│  Every N days:        [2          ]     │
-│                                         │
-│  Preview:                               │
-│  Mar 1  → 5 articles                    │
-│  Mar 3  → 5 articles                    │
-│  Mar 5  → 5 articles                    │
-│  ...                                    │
-│  Mar 31 → 5 articles                    │
-│  Total: 80 articles over 32 days        │
-│                                         │
-│  [Cancel]              [Schedule All]   │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐  │
+│  │▎🧾 Refunds  │ │▎🏠 Housing  │ │▎✈️ Travel   │ │▎📦 Damaged  │  │
+│  │  Get money…  │ │  Repairs…    │ │  Flight…     │ │  Broken…     │  │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘  │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐  │
+│  │▎📶 Utilities│ │▎💳 Financial│ │▎🛡 Insurance│ │▎🚗 Vehicle  │  │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘  │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐  │
+│  │▎🩺 Health   │ │▎💼 Employ   │ │▎🛒 Ecommerce│ │▎🏘 HOA      │  │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘  │
+│  ┌─────────────┐                                                   │
+│  │▎🔨 Contract │     550+ professional letter templates            │
+│  └─────────────┘                                                   │
+│  ───────────────────────────────────────────────────────────────── │
+│  📄 Browse all templates →                    ✨ Not sure? AI help │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-- Operates on selected items, or all queued items if none selected
-- Assigns `scheduled_at` timestamps spread across the cadence
-- Items get dates assigned in their current queue order (priority desc, created_at desc)
+### Guides Panel
 
-### 3. Modify `daily-auto-publish` to be schedule-aware
+Same 4-column layout as Templates for consistency.
 
-Instead of "grab N oldest generated items", the logic becomes:
-- Find blog posts where `scheduled_at <= now()` AND `status = 'draft'` → publish those
-- Fall back to existing behavior (oldest N generated) if no scheduled items exist
-- This means the cron job that runs daily at 09:00 UTC will automatically publish articles whose scheduled date has arrived
+### Resources Panel
 
-### 4. Copy `scheduled_at` during article generation
+**Redesign**: 3-column layout with visual grouping using section headers and a "featured tool" highlight.
 
-In `bulk-generate-articles`, when creating a blog_post from a queue item, copy `content_queue.scheduled_at` → `blog_posts.scheduled_at` and set the blog post status to `draft` (already the case).
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│  GENERAL              FREE TOOLS               FREE TOOLS (cont.)   │
+│  ────────             ──────────               ──────────────────    │
+│  How It Works         Do I Have a Case?        State Rights Lookup   │
+│  FAQ                  Small Claims Guide       Deadlines Calculator  │
+│  Knowledge Center     Court Cost Calculator    Consumer News         │
+│  About Us             Demand Letter Compare    Analyze My Letter     │
+│  Contact              Escalation Flowchart                           │
+│  ─────────────────────────────────────────────────────────────────── │
+│  Popular State Laws: [CA] [TX] [NY] [FL]  Browse all 50 →           │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-### 5. Show scheduled dates in the Queue table
+- Split free tools across 2 columns (5 + 4) to balance with the 5 general items
+- Larger icon tiles on the free tools to visually distinguish them as "products"
+- Section headers get a subtle underline accent
 
-Add a "Scheduled" column to `QueueTable` showing the assigned date, so you can see the spread at a glance.
+## Specific Visual Improvements
 
-### 6. Calendar integration (already works)
-
-The existing `ContentCalendar` already queries `blog_posts.scheduled_at` and displays scheduled posts — so once articles are generated with dates, they'll appear on the calendar automatically.
+1. **Cards**: Replace rounded-xl icon containers with a **left border accent** (3px solid, category color) on each card. More refined, less bulky.
+2. **Hover**: Add a gentle `translate-x-1` on hover for a polished interaction feel.
+3. **Spacing**: Tighter padding (p-2.5 instead of p-3), gap-2 instead of gap-1 in the grid for consistent whitespace.
+4. **Section headers**: Uppercase, letter-spaced, with a thin accent underline.
+5. **Width**: Templates/Guides panel goes from 860px to 920px for the 4-col layout. Resources from 540px to 680px for 3 columns.
+6. **Last row fill**: When 13 items don't fill the 4-col grid evenly (3 rows of 4 + 1), the last card spans or sits neatly with a promotional banner ("550+ templates") filling the remaining space.
 
 ## File Changes
 
 | File | Change |
 |------|--------|
-| **Migration** | Add `scheduled_at TIMESTAMPTZ` to `content_queue` |
-| `src/components/admin/seo/queue/ScheduleDialog.tsx` | New — cadence picker dialog with preview |
-| `src/components/admin/seo/queue/QueueActions.tsx` | Add "Schedule" button that opens the dialog |
-| `src/components/admin/seo/queue/QueueTable.tsx` | Add "Scheduled" column showing date |
-| `src/hooks/useContentQueue.ts` | Add `scheduleItems` mutation (bulk update `scheduled_at`) |
-| `supabase/functions/bulk-generate-articles/index.ts` | Copy `scheduled_at` from queue item to blog_post |
-| `supabase/functions/daily-auto-publish/index.ts` | Check `scheduled_at <= now()` on blog_posts first, then fall back to count-based |
+| `src/components/layout/MegaMenu.tsx` | Rewrite CardItem styling (left-border accent, compact layout, 4-col grid), restructure Resources into 3 balanced columns, adjust panel widths, add section header styling, add hover transitions |
 
-## Workflow
-
-1. Go to Queue tab with 80 queued articles
-2. Click "Schedule" → pick start date March 1, 5 articles every 2 days
-3. System assigns dates: items 1-5 get Mar 1, items 6-10 get Mar 3, etc.
-4. Click "Generate All 80" → articles generate as drafts with `scheduled_at` preserved
-5. The daily cron at 09:00 UTC checks: any drafts with `scheduled_at <= now()`? Publish them.
-6. Calendar tab shows the planned spread visually
-
-No new dependencies. Uses existing `scheduled_at` column on `blog_posts` and the existing cron infrastructure.
+No new files or dependencies needed.
 
