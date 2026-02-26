@@ -1,43 +1,48 @@
 
-Issue confirmed: deep-fix is matching/replacing normalized hrefs while stored HTML keeps query/trailing-slash/punctuation variants, so the same 10 anchors never get rewritten or stripped.
 
-Implementation steps
-1. Harden broken-link parsing in `supabase/functions/fix-broken-links/index.ts`
-- Capture both `rawHref` (exact href attribute value) and `normalizedPath` (for validation).
-- Expand internal-origin matcher to include `www.letterofdispute.com` and both quote styles (`"` and `'`).
+# Audit: Non-Blog Page Interlinking
 
-2. Make deep-fix replacements operate on raw hrefs
-- Replace all `href="...cleanPath..."` rewrites with a helper that rewrites by exact `rawHref`.
-- Update strip logic to match `<a ... href=...>...</a>` with `[\s\S]*?` so multiline anchors are stripped reliably.
+## Build Blocker (must fix first)
 
-3. Add noisy-slug normalization before fuzzy matching
-- For unknown links, slugify last segment (remove punctuation/apostrophes, collapse spaces to `-`) before exact/fuzzy lookup.
-- Add explicit legacy `/blog/*` normalization path so title-like `/blog/...` links can resolve or be stripped deterministically.
+The build is failing because `siteContext.ts` has 622 template slugs but template source files have 624. The 2 extra slugs come from `src/data/letterTemplates.ts` which contains 3 legacy templates with slugs `refund`, `landlord-repairs`, and `damaged-goods` that are not listed in the siteContext whitelist (one may overlap with another file's slug, explaining the 2-not-3 gap).
 
-4. Enforce destructive fallback for unresolved internals
-- If rewrite/fuzzy/template recovery fails, always strip anchor and keep text (no unresolved internal href survives deep-fix).
+**Fix**: Add the 2-3 missing legacy slugs to `siteContext.ts` under their respective categories, OR exclude `letterTemplates.ts` from the validator since those templates are overridden by deduplication in `allTemplates.ts`.
 
-5. Close manual-content reintroduction paths
-- Strengthen `sanitizeContentLinks` in `src/pages/admin/AdminBlogEditor.tsx` to strip/normalize `/blog/*`, malformed bare slugs, and invalid internal paths.
-- Apply the same sanitizer logic in `src/hooks/useCreateDraftFromGenerated.ts` so AI-created drafts cannot save dead internal links.
+## Interlinking Audit Results
 
-6. Run remediation and lock verification
-- Execute targeted deep-fix on the 7 affected posts, then a full deep-fix pass.
-- Re-scan twice; require stable `0` recurring links between scans.
-- Add a regression test file for `fix-broken-links` covering the 10 exact failing href patterns.
+### Correctly Linked (no issues found)
 
-Technical details
-- Primary file: `supabase/functions/fix-broken-links/index.ts`
-  - `validateInternalLinks`: preserve raw href + canonical path.
-  - `applyDeepFix`: raw-href rewrite helper + robust strip helper + slugify/fuzzy path handling.
-- Editor ingress: `src/pages/admin/AdminBlogEditor.tsx`, `src/hooks/useCreateDraftFromGenerated.ts`
-  - Shared strict internal-link sanitization behavior (strip unresolved internal anchors).
-- Regression coverage: `supabase/functions/fix-broken-links/index_test.ts` with fixtures for:
-  - trailing slash variants (`/hoa-neighbor-disputes/`)
-  - query-suffixed links (`/blog/...?...`)
-  - punctuation/apostrophe slugs (`...homeowner's...`, `...: Which is Better?`)
+| Page/Component | Links To | Status |
+|---|---|---|
+| **LetterPage.tsx** breadcrumbs | `/templates/{categoryId}`, `/templates/{categoryId}/{subcategorySlug}` | Correct - uses resolved IDs |
+| **SubcategoryPage.tsx** breadcrumbs | `/templates/{category.id}` | Correct - uses `category.id` |
+| **StateRightsCategoryPage.tsx** template links | `/templates/{categorySlug}/{subSlug}/{slug}` | Correct - uses canonical `CATEGORY_TEMPLATE_MAP` |
+| **StateRightsPage.tsx** | `/state-rights/{getStateSlug(code)}`, `/templates/{selectedCategory}` | Correct - uses canonical IDs |
+| **StateRightsStatePage.tsx** breadcrumbs | `/state-rights` | Correct |
+| **StateRightsCategoryPage.tsx** breadcrumbs | `/state-rights/{stateSlug}` | Correct |
+| **SmallClaimsPage.tsx** tool links | `/small-claims/cost-calculator`, `/small-claims/demand-letter-cost`, etc. | Correct |
+| **SmallClaimsStatePage.tsx** | `/state-rights/{stateData.slug}` | Correct |
+| **SmallClaimsEscalationPage.tsx** cross-links | `/small-claims/cost-calculator`, `/do-i-have-a-case` | Correct |
+| **SmallClaimsDemandLetterPage.tsx** cross-links | `/small-claims/cost-calculator`, `/small-claims/escalation-guide` | Correct |
+| **SmallClaimsCostCalculatorPage.tsx** | `/state-rights` | Correct |
+| **DeadlinesPage.tsx** dynamic links | `/templates/{selectedCategory}`, `/state-rights?state=...` | Correct - categories use canonical IDs from `CATEGORY_LABELS` keys |
+| **LetterAnalyzerPage.tsx** | `/templates/{category}`, `/state-rights`, `/deadlines`, `/consumer-news` | Correct - category comes from analysis result |
+| **ConsumerNewsPage.tsx** sidebar | `/state-rights`, `/deadlines`, `/analyze-letter` | Correct - static paths |
+| **GuidesPage.tsx** / **CategoryGuidePage.tsx** | `/guides`, `/guides/{id}` | Correct |
+| **CaseQuizPage.tsx** / **QuizResult** | `/templates/{category.categoryId}`, `/small-claims` | Correct |
+| **MegaMenu** / **Header** | `/guides`, `/templates`, `/articles` | Correct |
 
-Acceptance checks
-- Broken Link Scanner reports `0` on consecutive scans after deep-fix.
-- The same 10 links do not reappear after refresh + rescan.
-- Manual save and AI-draft save both remove unresolved `/blog/*` and malformed internal anchors.
+### No Issues Found
+
+All non-blog page interlinking uses correct canonical category IDs, proper hierarchical template URLs, and valid static routes. The `CATEGORY_TEMPLATE_MAP`, `CATEGORY_LABELS`, and `getStateSlug()` utilities all produce correct URL segments.
+
+## Implementation Plan
+
+**Single fix**: Resolve the siteContext slug drift to unblock the build.
+
+1. Open `supabase/functions/_shared/siteContext.ts`
+2. Add the missing legacy slugs (`refund`, `landlord-repairs`, `damaged-goods`) to their respective category sections (refunds, housing, damaged-goods)
+3. This will make the count match (624 = 624) and unblock the build
+
+No interlinking fixes are needed for non-blog pages.
+
