@@ -67,6 +67,11 @@ export interface QueueStats {
   processed: number;
 }
 
+function pickCurrentSemanticJob(jobs: SemanticScanJob[]): SemanticScanJob | null {
+  if (!jobs.length) return null;
+  return jobs.find((job) => job.status === 'processing') ?? jobs[0];
+}
+
 export function useSemanticLinkScan() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -92,20 +97,22 @@ export function useSemanticLinkScan() {
     },
   });
 
-  // Fetch active discovery scan job (exclude apply jobs)
+  // Fetch active discovery scan job (exclude apply + rescue jobs, include null category scans)
   const { data: activeScanJob } = useQuery({
     queryKey: ['semantic-scan-job-active'],
     queryFn: async (): Promise<SemanticScanJob | null> => {
       const { data, error } = await supabase
         .from('semantic_scan_jobs')
         .select('*')
-        .neq('category_filter', '__apply_links__')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(30);
 
       if (error) throw error;
-      return data as SemanticScanJob | null;
+
+      const jobs = ((data || []) as SemanticScanJob[]).filter(
+        (job) => job.category_filter !== '__apply_links__' && job.category_filter !== '__rescue_orphans__'
+      );
+      return pickCurrentSemanticJob(jobs);
     },
     refetchInterval: (query) => {
       const job = query.state.data as SemanticScanJob | null;
@@ -122,15 +129,15 @@ export function useSemanticLinkScan() {
         .select('*')
         .eq('category_filter', '__apply_links__')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
       if (error) throw error;
-      // Treat overflowed jobs as completed
-      if (data && data.status === 'processing' && data.processed_items > data.total_items) {
-        return { ...data, status: 'completed' } as SemanticScanJob;
+
+      const job = pickCurrentSemanticJob((data || []) as SemanticScanJob[]);
+      if (job && job.status === 'processing' && job.processed_items > job.total_items) {
+        return { ...job, status: 'completed' } as SemanticScanJob;
       }
-      return data as SemanticScanJob | null;
+      return job;
     },
     refetchInterval: (query) => {
       const job = query.state.data as SemanticScanJob | null;
@@ -614,11 +621,10 @@ export function useSemanticLinkScan() {
         .select('*')
         .eq('category_filter', '__rescue_orphans__')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
       if (error) throw error;
-      return data as SemanticScanJob | null;
+      return pickCurrentSemanticJob((data || []) as SemanticScanJob[]);
     },
     refetchInterval: (query) => {
       const job = query.state.data as SemanticScanJob | null;
