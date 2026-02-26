@@ -82,6 +82,11 @@ const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
 const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
 const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
 
+interface TemplateRouteInfo {
+  categoryId: string;
+  subcategorySlug: string | null;
+}
+
 /**
  * Load ALL published article slugs using paginated queries.
  */
@@ -112,10 +117,10 @@ async function loadAllSlugs(supabase: any): Promise<Map<string, string>> {
 }
 
 /**
- * Load all template slugs from content_plans.
+ * Load all template slugs from content_plans with routing info.
  */
-async function loadTemplateSlugs(supabase: any): Promise<Set<string>> {
-  const slugs = new Set<string>();
+async function loadTemplateSlugs(supabase: any): Promise<Map<string, TemplateRouteInfo>> {
+  const slugMap = new Map<string, TemplateRouteInfo>();
   let from = 0;
   const PAGE = 1000;
 
@@ -129,21 +134,24 @@ async function loadTemplateSlugs(supabase: any): Promise<Set<string>> {
     if (!data || data.length === 0) break;
 
     for (const t of data) {
-      slugs.add(t.template_slug);
+      slugMap.set(t.template_slug, {
+        categoryId: t.category_id,
+        subcategorySlug: t.subcategory_slug,
+      });
     }
 
     if (data.length < PAGE) break;
     from += PAGE;
   }
 
-  return slugs;
+  return slugMap;
 }
 
 /**
- * Load all article_embeddings slugs for comprehensive route validation.
+ * Load all article_embeddings slugs with routing info.
  */
-async function loadEmbeddingSlugs(supabase: any): Promise<Set<string>> {
-  const slugs = new Set<string>();
+async function loadEmbeddingSlugs(supabase: any): Promise<Map<string, TemplateRouteInfo>> {
+  const slugMap = new Map<string, TemplateRouteInfo>();
   let from = 0;
   const PAGE = 1000;
 
@@ -157,14 +165,22 @@ async function loadEmbeddingSlugs(supabase: any): Promise<Set<string>> {
     if (!data || data.length === 0) break;
 
     for (const e of data) {
-      slugs.add(e.slug);
+      slugMap.set(e.slug, {
+        categoryId: e.category_id,
+        subcategorySlug: e.subcategory_slug,
+      });
     }
 
     if (data.length < PAGE) break;
     from += PAGE;
   }
 
-  return slugs;
+  return slugMap;
+}
+
+// Helper to create a Set view of template/embedding maps for backward compat
+function mapKeys(map: Map<string, any>): Set<string> {
+  return new Set(map.keys());
 }
 
 interface BrokenLink {
@@ -286,6 +302,39 @@ function findTruncatedMatch(
     }
   }
   return null;
+}
+
+/**
+ * Fuzzy match a broken slug against all known article slugs using Jaccard similarity.
+ */
+function findFuzzyMatch(
+  brokenSlug: string,
+  slugToCategory: Map<string, string>,
+  minSimilarity = 0.55,
+): { slug: string; cat: string; similarity: number } | null {
+  const brokenTokens = new Set(brokenSlug.split('-').filter(t => t.length > 0));
+  if (brokenTokens.size < 3) return null; // Too short for reliable fuzzy matching
+
+  let bestMatch: { slug: string; cat: string; similarity: number } | null = null;
+
+  for (const [slug, cat] of slugToCategory) {
+    const slugTokens = new Set(slug.split('-').filter(t => t.length > 0));
+    if (slugTokens.size < 3) continue;
+
+    // Jaccard similarity
+    let intersection = 0;
+    for (const t of brokenTokens) {
+      if (slugTokens.has(t)) intersection++;
+    }
+    const union = new Set([...brokenTokens, ...slugTokens]).size;
+    const similarity = intersection / union;
+
+    if (similarity >= minSimilarity && (!bestMatch || similarity > bestMatch.similarity)) {
+      bestMatch = { slug, cat, similarity };
+    }
+  }
+
+  return bestMatch;
 }
 
 /**
@@ -415,7 +464,6 @@ function applyRewrites(
   );
 
   // ── Pattern 10: Fix relative bare slugs → /articles/{cat}/{slug} ──
-  // Matches href="/some-slug" where some-slug is a known article
   content = content.replace(
     /href="\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
     (_match: string, slug: string) => {
@@ -463,6 +511,167 @@ function applyRewrites(
   return { content, fixCount };
 }
 
+/**
+ * Deep fix: resolve remaining broken links using fuzzy matching, template lookup, and stripping.
+ */
+function applyDeepFix(
+  content: string,
+  brokenLinks: BrokenLink[],
+  slugToCategory: Map<string, string>,
+  templateSlugMap: Map<string, TemplateRouteInfo>,
+  embeddingSlugMap: Map<string, TemplateRouteInfo>,
+): { content: string; fuzzyFixed: number; stripped: number } {
+  let fuzzyFixed = 0;
+  let stripped = 0;
+
+  for (const bl of brokenLinks) {
+    const escapedHref = bl.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    if (bl.linkType === 'unknown') {
+      // Extract the bare slug from /{slug}
+      const bareMatch = bl.href.match(/^\/([a-z0-9][a-z0-9-]+)$/);
+      if (bareMatch) {
+        const brokenSlug = bareMatch[1];
+
+        // Try exact match in embeddings (might be a template slug used as bare path)
+        const templateInfo = templateSlugMap.get(brokenSlug);
+        if (templateInfo) {
+          const newHref = templateInfo.subcategorySlug
+            ? `/templates/${templateInfo.categoryId}/${templateInfo.subcategorySlug}/${brokenSlug}`
+            : `/templates/${templateInfo.categoryId}/${brokenSlug}`;
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="${newHref}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+
+        // Try fuzzy match against articles
+        const fuzzy = findFuzzyMatch(brokenSlug, slugToCategory);
+        if (fuzzy) {
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+      }
+
+      // Multi-segment unknown - try to extract slug from last segment
+      const multiMatch = bl.href.match(/\/([a-z0-9][a-z0-9-]+)$/);
+      if (multiMatch && !bareMatch) {
+        const lastSlug = multiMatch[1];
+        const cat = slugToCategory.get(lastSlug);
+        if (cat) {
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="/articles/${cat}/${lastSlug}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+      }
+    }
+
+    if (bl.linkType === 'template') {
+      // /templates/{badCat}/... where badCat is actually a template slug
+      const templatePathMatch = bl.href.match(/^\/templates\/([^/]+)(\/.*)?$/);
+      if (templatePathMatch) {
+        const firstSegment = templatePathMatch[1];
+        const restPath = templatePathMatch[2] || '';
+
+        // Check if firstSegment is actually a template slug being used as category
+        const info = templateSlugMap.get(firstSegment);
+        if (info) {
+          const newHref = info.subcategorySlug
+            ? `/templates/${info.categoryId}/${info.subcategorySlug}/${firstSegment}`
+            : `/templates/${info.categoryId}/${firstSegment}`;
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="${newHref}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+
+        // Check if last segment of rest is a valid template slug
+        if (restPath) {
+          const segments = restPath.split('/').filter(Boolean);
+          const lastSeg = segments[segments.length - 1];
+          const lastInfo = templateSlugMap.get(lastSeg);
+          if (lastInfo) {
+            const newHref = lastInfo.subcategorySlug
+              ? `/templates/${lastInfo.categoryId}/${lastInfo.subcategorySlug}/${lastSeg}`
+              : `/templates/${lastInfo.categoryId}/${lastSeg}`;
+            content = content.replace(
+              new RegExp(`href="${escapedHref}"`, 'g'),
+              `href="${newHref}"`
+            );
+            fuzzyFixed++;
+            continue;
+          }
+        }
+
+        // If firstSegment is not a valid category, check if it's a known article slug
+        if (!VALID_TEMPLATE_CATEGORIES.has(firstSegment)) {
+          const articleCat = slugToCategory.get(firstSegment);
+          if (articleCat) {
+            content = content.replace(
+              new RegExp(`href="${escapedHref}"`, 'g'),
+              `href="/articles/${articleCat}/${firstSegment}"`
+            );
+            fuzzyFixed++;
+            continue;
+          }
+        }
+      }
+    }
+
+    if (bl.linkType === 'article') {
+      // /articles/{wrong-cat}/{slug} - fix to correct category
+      const artMatch = bl.href.match(/^\/articles\/([^/]+)\/([^/]+)$/);
+      if (artMatch) {
+        const slug = artMatch[2];
+        const correctCat = slugToCategory.get(slug);
+        if (correctCat) {
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="/articles/${correctCat}/${slug}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+        // Try fuzzy
+        const fuzzy = findFuzzyMatch(slug, slugToCategory);
+        if (fuzzy) {
+          content = content.replace(
+            new RegExp(`href="${escapedHref}"`, 'g'),
+            `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`
+          );
+          fuzzyFixed++;
+          continue;
+        }
+      }
+    }
+
+    // No match found → strip <a> tag, keep inner text
+    // Match <a ... href="broken-href" ...>inner text</a>
+    const stripRegex = new RegExp(
+      `<a\\s[^>]*href="${escapedHref}"[^>]*>(.*?)<\\/a>`,
+      'gi'
+    );
+    const before = content;
+    content = content.replace(stripRegex, '$1');
+    if (content !== before) {
+      stripped++;
+    }
+  }
+
+  return { content, fuzzyFixed, stripped };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -476,14 +685,18 @@ serve(async (req) => {
     const { mode = 'scan', limit = 50, offset = 0, postId } = await req.json().catch(() => ({}));
 
     // Load all valid targets in parallel
-    const [slugToCategory, templateSlugs, embeddingSlugs] = await Promise.all([
+    const [slugToCategory, templateSlugMap, embeddingSlugMap] = await Promise.all([
       loadAllSlugs(supabase),
       loadTemplateSlugs(supabase),
       loadEmbeddingSlugs(supabase),
     ]);
 
-    const totalTargets = slugToCategory.size + templateSlugs.size + embeddingSlugs.size;
-    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} articles, ${templateSlugs.size} templates, ${embeddingSlugs.size} embeddings = ${totalTargets} total targets`);
+    // Create Set views for backward compatibility with validateInternalLinks
+    const templateSlugsSet = mapKeys(templateSlugMap);
+    const embeddingSlugsSet = mapKeys(embeddingSlugMap);
+
+    const totalTargets = slugToCategory.size + templateSlugMap.size + embeddingSlugMap.size;
+    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} articles, ${templateSlugMap.size} templates, ${embeddingSlugMap.size} embeddings = ${totalTargets} total targets`);
 
     // Fetch posts to process
     let query = supabase
@@ -507,11 +720,15 @@ serve(async (req) => {
       fixed: number;
       brokenLinks: BrokenLink[];
       saved?: boolean;
+      fuzzyFixed?: number;
+      stripped?: number;
     }> = [];
 
     let totalFixed = 0;
     let totalBroken = 0;
     let totalSaved = 0;
+    let totalFuzzyFixed = 0;
+    let totalStripped = 0;
 
     for (const post of posts || []) {
       const originalContent = post.content;
@@ -520,16 +737,39 @@ serve(async (req) => {
       const { content: rewrittenContent, fixCount } = applyRewrites(post.content, slugToCategory);
 
       // Validate remaining internal links
-      const brokenLinks = validateInternalLinks(rewrittenContent, slugToCategory, templateSlugs, embeddingSlugs);
+      let brokenLinks = validateInternalLinks(rewrittenContent, slugToCategory, templateSlugsSet, embeddingSlugsSet);
 
-      const hasRewrites = rewrittenContent !== originalContent && fixCount > 0;
+      let finalContent = rewrittenContent;
+      let postFuzzyFixed = 0;
+      let postStripped = 0;
+
+      // In deep-fix mode, apply fuzzy matching and stripping to remaining broken links
+      if (mode === 'deep-fix' && brokenLinks.length > 0) {
+        const deepResult = applyDeepFix(
+          rewrittenContent,
+          brokenLinks,
+          slugToCategory,
+          templateSlugMap,
+          embeddingSlugMap,
+        );
+        finalContent = deepResult.content;
+        postFuzzyFixed = deepResult.fuzzyFixed;
+        postStripped = deepResult.stripped;
+        totalFuzzyFixed += postFuzzyFixed;
+        totalStripped += postStripped;
+
+        // Re-validate after deep fix to get accurate remaining broken count
+        brokenLinks = validateInternalLinks(finalContent, slugToCategory, templateSlugsSet, embeddingSlugsSet);
+      }
+
+      const hasChanges = finalContent !== originalContent;
       const hasBrokenLinks = brokenLinks.length > 0;
 
-      // In fix mode, save the rewritten content back to DB
-      if (mode === 'fix' && hasRewrites) {
+      // In fix or deep-fix mode, save changed content back to DB
+      if ((mode === 'fix' || mode === 'deep-fix') && hasChanges) {
         const { error: updateErr } = await supabase
           .from('blog_posts')
-          .update({ content: rewrittenContent, updated_at: new Date().toISOString() })
+          .update({ content: finalContent, updated_at: new Date().toISOString() })
           .eq('id', post.id);
 
         if (updateErr) {
@@ -539,7 +779,7 @@ serve(async (req) => {
         }
       }
 
-      if (hasRewrites || hasBrokenLinks) {
+      if (hasChanges || hasBrokenLinks || fixCount > 0) {
         totalBroken += brokenLinks.length;
         totalFixed += fixCount;
 
@@ -548,7 +788,8 @@ serve(async (req) => {
           broken: brokenLinks.length,
           fixed: fixCount,
           brokenLinks,
-          saved: mode === 'fix' && hasRewrites,
+          saved: (mode === 'fix' || mode === 'deep-fix') && hasChanges,
+          ...(mode === 'deep-fix' ? { fuzzyFixed: postFuzzyFixed, stripped: postStripped } : {}),
         });
       }
     }
@@ -569,7 +810,8 @@ serve(async (req) => {
         postsWithIssues: results.length,
         totalBrokenLinks: totalBroken,
         totalFixed,
-        ...(mode === 'fix' ? { totalSaved } : {}),
+        ...((mode === 'fix' || mode === 'deep-fix') ? { totalSaved } : {}),
+        ...(mode === 'deep-fix' ? { totalFuzzyFixed, totalStripped } : {}),
       },
       results,
     }), {
