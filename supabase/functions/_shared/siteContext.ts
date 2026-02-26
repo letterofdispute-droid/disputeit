@@ -184,7 +184,7 @@ service-charge-dispute, unauthorized-entry-complaint,
 landlord-roof-leak-complaint, landlord-window-repair-request, landlord-flooring-repair-request,
 landlord-structural-damage-complaint, landlord-garden-maintenance-request,
 landlord-gutter-repair-request, landlord-external-repair-request, landlord-door-repair-request,
-repair-request-letter, mould-damp-complaint,
+
 -- Safety & Compliance --
 epc-certificate-request, electrical-safety-certificate-request, smoke-alarm-request,
 fire-safety-complaint, hmo-licensing-complaint, asbestos-concern-letter,

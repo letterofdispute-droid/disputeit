@@ -96,14 +96,12 @@ let hasErrors = false;
 
 if (inContextNotInTemplates.length > 0) {
   hasErrors = true;
-  console.error(`\n❌ ${inContextNotInTemplates.length} slugs in siteContext.ts but NOT in template files (stale/hallucinated):`);
-  inContextNotInTemplates.forEach(s => console.error(`   - ${s}`));
+  console.error(`\n❌ STALE SLUGS (in siteContext but NOT in templates): ${inContextNotInTemplates.join(', ')}`);
 }
 
 if (inTemplatesNotInContext.length > 0) {
   hasErrors = true;
-  console.error(`\n⚠️  ${inTemplatesNotInContext.length} slugs in template files but NOT in siteContext.ts (missing from whitelist):`);
-  inTemplatesNotInContext.forEach(s => console.error(`   - ${s}`));
+  console.error(`\n⚠️  MISSING SLUGS (in templates but NOT in siteContext): ${inTemplatesNotInContext.join(', ')}`);
 }
 
 if (hasErrors) {
