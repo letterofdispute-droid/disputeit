@@ -373,11 +373,15 @@ export function useSemanticLinkScan() {
         supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'failed'),
       ]);
 
-      const total = totalRes.count || 0;
       const completed = completedRes.count || 0;
       const failed = failedRes.count || 0;
+      // Fall back to completed+failed if blog_posts count fails/times out
+      let total = totalRes.count || 0;
+      if (total === 0 && completed > 0) {
+        total = completed + failed;
+      }
 
-      return { total, completed, pending: total - completed - failed, failed };
+      return { total, completed, pending: Math.max(total - completed - failed, 0), failed };
     } catch (error) {
       console.error('Failed to fetch embedding stats:', error);
       return { total: 0, completed: 0, pending: 0, failed: 0 };
