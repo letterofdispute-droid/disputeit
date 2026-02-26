@@ -1,49 +1,48 @@
 
 
-# Add Faded Background Images to Free Tool Hero Sections
+# Fix Embedding Processing UX: Live Progress + Better Feedback
 
-## Current State
-The tool pages use three different hero styles:
-- **SmallClaimsPage** (`/small-claims`): Already has a background image (`/images/hero-bg.jpg`) with a `bg-primary/90` overlay — this is the look we want to replicate.
-- **Sub-tool pages** (Cost Calculator, Demand Letter, Escalation, Generator): Use `var(--gradient-hero)` — flat gradient, no image.
-- **StateRightsPage, DeadlinesPage, ConsumerNewsPage**: Use plain `bg-primary` — flat solid color, no image.
+## Problem Analysis
+
+Two issues are frustrating the user:
+
+1. **Misleading toast**: When clicking "Process Now", the frontend invokes `process-embedding-queue` which processes 2 items per batch, then self-chains in the background. But the `onSuccess` callback fires after the first batch returns, showing "Queue processed - Processed 2 items, created 0 link suggestions" — making it seem like it stopped after 2 items.
+
+2. **Stale progress bar**: The embedding stats (5780/6538) are fetched once on mount via `fetchEmbeddingStats()` and only re-fetched when `activeJob?.status` changes. The self-chaining queue processor doesn't use `embedding_jobs`, so the progress bar never auto-refreshes during processing.
 
 ## Plan
-Copy the uploaded stars flag image (`tookapic-stars-932873_1920.jpg`) to `public/images/tools-hero-bg.jpg` as the background for all tool pages. Then update 7 page hero sections to use the same pattern as SmallClaimsPage: a full-bleed background image with a dark blue overlay (`bg-primary/90`) for readability.
 
-### Image Choice
-The close-up stars image works best — it's subtle, textured, dark-toned, and won't compete with text. The eagle/flag image is too busy.
+### 1. Add auto-polling for embedding stats while queue is processing
 
-### Files to Update (7 pages)
+In `SemanticScanPanel.tsx`, after the user clicks "Process Now", start a polling interval that re-fetches embedding stats every 5 seconds. Stop polling when `queueStats.pending` reaches 0.
 
-Each hero `<section>` gets the same treatment:
+- Add a `isQueueActive` state that becomes true when processQueue is called
+- Add a `useEffect` that polls `fetchEmbeddingStats` + `refetchQueueStats` every 5s while active
+- Also add `refetchInterval` to the `embedding-queue-stats` query when queue has pending items
 
-```
-Before (flat):
-<section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
-  <div className="container-wide">
+### 2. Change the toast to indicate background processing
 
-After (image + overlay):
-<section className="relative overflow-hidden text-primary-foreground py-16 md:py-20">
-  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
-  <div className="absolute inset-0 bg-primary/90" />
-  <div className="container-wide relative z-10">
-```
+In `useSemanticLinkScan.ts`, update the `processQueueMutation.onSuccess` handler:
+- Instead of "Queue processed - Processed 2 items", show "Embedding processing started — 693 articles queued. Progress updates automatically."
+- Use the `remaining` field from the response to show how many are left
 
-1. `src/pages/SmallClaimsCostCalculatorPage.tsx` — line 30
-2. `src/pages/SmallClaimsDemandLetterPage.tsx` — line 29
-3. `src/pages/SmallClaimsEscalationPage.tsx` — line 29
-4. `src/pages/SmallClaimsGeneratorPage.tsx` — line 97
-5. `src/pages/StateRightsPage.tsx` — line 157
-6. `src/pages/DeadlinesPage.tsx` — line 262
-7. `src/pages/ConsumerNewsPage.tsx` — line 179
+### 3. Auto-refresh queue stats with refetchInterval
 
-### What Changes Visually
-- The solid blue becomes a rich, textured dark blue with a subtle stars pattern bleeding through at 10% opacity
-- Text contrast remains identical (white on dark blue)
-- Creates a cohesive, premium "government authority" feel across all tools
-- Matches the existing SmallClaimsPage hero pattern
+Add a `refetchInterval` to the `embedding-queue-stats` query that polls every 5s when there are pending items, similar to how `embedding-job-active` polls during processing.
 
-### Assets
-- Copy `user-uploads://tookapic-stars-932873_1920.jpg` → `public/images/tools-hero-bg.jpg`
+## Files to Change
+
+### `src/hooks/useSemanticLinkScan.ts`
+- **Queue stats query** (line 153): Add `refetchInterval` that returns 5000 when `pending > 0`, false otherwise
+- **processQueueMutation onSuccess** (line 423): Change toast message to indicate background processing is continuing, using the `remaining` count from the response. Update the return type to include `remaining`.
+
+### `src/components/admin/seo/links/SemanticScanPanel.tsx`
+- **Embedding stats refresh** (line 124): Add `queueStats?.pending` as a dependency so stats re-fetch each time queueStats updates (which now polls every 5s)
+- This creates a cascade: queue stats poll every 5s → pending count changes → embedding stats re-fetch → progress bar updates
+
+## What Changes Visually
+- Clicking "Process Now" shows: "Processing started — 693 articles queued. Progress bar will update automatically."
+- The progress bar (5780/6538) auto-increments every ~5 seconds as embeddings complete
+- The "693 new articles ready to process" banner count decreases in real-time
+- When all items finish, polling stops automatically
 
