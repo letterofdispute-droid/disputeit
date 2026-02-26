@@ -755,6 +755,117 @@ CRITICAL REQUIREMENTS:
 }
 
 // ============================================
+// URL REGISTRY - builds validated linkable URLs for AI prompt
+// ============================================
+
+interface LinkableUrl {
+  url: string;
+  title: string;
+  type: 'article' | 'template' | 'guide';
+}
+
+async function buildUrlRegistry(
+  supabaseAdmin: SupabaseClient,
+  categoryId: string,
+  blogCategorySlug: string
+): Promise<LinkableUrl[]> {
+  const urls: LinkableUrl[] = [];
+
+  // 1. Fetch published articles in the same category (limit 25 for prompt size)
+  const { data: articles } = await supabaseAdmin
+    .from('blog_posts')
+    .select('slug, title, category_slug')
+    .eq('status', 'published')
+    .eq('category_slug', blogCategorySlug)
+    .order('published_at', { ascending: false })
+    .limit(25);
+
+  if (articles) {
+    for (const a of articles) {
+      urls.push({
+        url: `/articles/${a.category_slug}/${a.slug}`,
+        title: a.title,
+        type: 'article',
+      });
+    }
+  }
+
+  // 2. Fetch a few articles from related categories for cross-linking
+  const { data: crossArticles } = await supabaseAdmin
+    .from('blog_posts')
+    .select('slug, title, category_slug')
+    .eq('status', 'published')
+    .neq('category_slug', blogCategorySlug)
+    .order('published_at', { ascending: false })
+    .limit(10);
+
+  if (crossArticles) {
+    for (const a of crossArticles) {
+      urls.push({
+        url: `/articles/${a.category_slug}/${a.slug}`,
+        title: a.title,
+        type: 'article',
+      });
+    }
+  }
+
+  // 3. Fetch templates in the same category with full routing info
+  const { data: templates } = await supabaseAdmin
+    .from('content_plans')
+    .select('template_slug, template_name, category_id, subcategory_slug')
+    .eq('category_id', categoryId)
+    .limit(15);
+
+  if (templates) {
+    for (const t of templates) {
+      const subcat = t.subcategory_slug || 'general';
+      urls.push({
+        url: `/templates/${t.category_id}/${subcat}/${t.template_slug}`,
+        title: t.template_name,
+        type: 'template',
+      });
+    }
+  }
+
+  return urls;
+}
+
+function formatUrlRegistryForPrompt(urls: LinkableUrl[]): string {
+  if (urls.length === 0) return '';
+
+  const articleUrls = urls.filter(u => u.type === 'article');
+  const templateUrls = urls.filter(u => u.type === 'template');
+
+  let result = `\nINTERNAL LINKING REGISTRY (USE THESE EXACT URLs):
+CRITICAL: When linking to internal pages, you MUST use ONLY the exact URLs listed below. Do NOT invent or guess URLs.
+Include 2-4 internal links naturally within the article content using <a href="...">anchor text</a>.
+
+`;
+
+  if (articleUrls.length > 0) {
+    result += `RELATED ARTICLES:\n`;
+    for (const u of articleUrls.slice(0, 20)) {
+      result += `- "${u.title}" → ${u.url}\n`;
+    }
+  }
+
+  if (templateUrls.length > 0) {
+    result += `\nRELATED TEMPLATES:\n`;
+    for (const u of templateUrls) {
+      result += `- "${u.title}" → ${u.url}\n`;
+    }
+  }
+
+  result += `\nURL FORMAT RULES:
+- Articles: /articles/{category-slug}/{article-slug}
+- Templates: /templates/{category-id}/{subcategory-slug}/{template-slug}
+- NEVER use bare slugs like href="/some-slug" — always use the full path
+- NEVER invent URLs not listed above — if unsure, don't link`;
+
+  return result;
+}
+
+// ============================================
 // SINGLE ARTICLE GENERATION (extracted for reuse)
 // ============================================
 
@@ -799,6 +910,11 @@ async function generateSingleArticle(
     
     const stateRightsContext = buildStateRightsLinkingContext(plan.category_id);
 
+    // Build validated URL registry for internal linking
+    const urlRegistry = await buildUrlRegistry(supabaseAdmin, plan.category_id, blogCategory.slug);
+    const urlRegistryPrompt = formatUrlRegistryForPrompt(urlRegistry);
+    console.log(`[URL_REGISTRY] Built ${urlRegistry.length} linkable URLs for category ${plan.category_id}`);
+
     const systemPrompt = `You are an expert SEO content writer for Letter Of Dispute (${SITE_CONFIG.url}), 
 a US platform specializing in consumer rights, dispute resolution, and complaint letters.
 
@@ -809,6 +925,7 @@ We provide ${SITE_CONFIG.templateCount} professionally written dispute letter te
 ${CATEGORY_CONTEXT}
 
 ${stateRightsContext}
+${urlRegistryPrompt}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. Output ONLY valid JSON - no markdown, no code blocks
@@ -1159,53 +1276,102 @@ Respond with ONLY this JSON:
 }
 
 // ============================================
-// LINK SANITIZER - rewrites bare slug links to /articles/category/slug
+// LINK SANITIZER - rewrites bare slug links and malformed template links
 // ============================================
 
 async function sanitizeBareSlugLinks(supabaseAdmin: any, content: string): Promise<string> {
-  // Match href="/some-slug" that are NOT already /articles/, /templates/, /guides/, /admin/, etc.
+  let result = content;
+  let totalFixed = 0;
+
+  // === Pass 1: Fix bare slug links (/some-slug → /articles/category/slug) ===
   const bareSlugPattern = /href="\/([a-z0-9][a-z0-9-]{8,})"/gi;
-  const knownPrefixes = ['articles/', 'templates/', 'guides/', 'admin/', 'auth/', 'dashboard/', 'login/', 'signup/', 'pricing/', 'about/', 'contact/', 'faq/', 'privacy/', 'terms/', 'disclaimer/', 'cookie-policy/', 'how-it-works/', 'settings/'];
+  const knownPrefixes = ['articles/', 'templates/', 'guides/', 'admin/', 'auth/', 'dashboard/', 'login/', 'signup/', 'pricing/', 'about/', 'contact/', 'faq/', 'privacy/', 'terms/', 'disclaimer/', 'cookie-policy/', 'how-it-works/', 'settings/', 'state-rights/', 'small-claims/', 'deadlines/', 'consumer-news/', 'analyze-letter/', 'do-i-have-a-case/'];
   
-  const matches: { full: string; slug: string }[] = [];
+  const bareMatches: { slug: string }[] = [];
   let match;
   while ((match = bareSlugPattern.exec(content)) !== null) {
     const path = match[1];
     if (!knownPrefixes.some(p => path.startsWith(p))) {
-      matches.push({ full: match[0], slug: path });
+      bareMatches.push({ slug: path });
     }
   }
 
-  if (matches.length === 0) return content;
+  if (bareMatches.length > 0) {
+    const slugs = [...new Set(bareMatches.map(m => m.slug))];
+    
+    // Check article_embeddings first, then blog_posts as fallback
+    const { data: embeddings } = await supabaseAdmin
+      .from('article_embeddings')
+      .select('slug, category_id')
+      .in('slug', slugs);
 
-  // Look up all matched slugs in article_embeddings
-  const slugs = [...new Set(matches.map(m => m.slug))];
-  const { data: embeddings } = await supabaseAdmin
-    .from('article_embeddings')
-    .select('slug, category_id')
-    .in('slug', slugs);
+    const slugToCategory = new Map<string, string>();
+    if (embeddings) {
+      for (const e of embeddings) slugToCategory.set(e.slug, e.category_id);
+    }
 
-  if (!embeddings || embeddings.length === 0) return content;
+    // Fallback: check blog_posts for slugs not found in embeddings
+    const missingSlugs = slugs.filter(s => !slugToCategory.has(s));
+    if (missingSlugs.length > 0) {
+      const { data: posts } = await supabaseAdmin
+        .from('blog_posts')
+        .select('slug, category_slug')
+        .in('slug', missingSlugs)
+        .eq('status', 'published');
+      if (posts) {
+        for (const p of posts) slugToCategory.set(p.slug, p.category_slug);
+      }
+    }
 
-  const slugToCategory = new Map<string, string>();
-  for (const e of embeddings) {
-    slugToCategory.set(e.slug, e.category_id);
-  }
-
-  let result = content;
-  for (const m of matches) {
-    const category = slugToCategory.get(m.slug);
-    if (category) {
-      result = result.replaceAll(
-        `href="/${m.slug}"`,
-        `href="/articles/${category}/${m.slug}"`
-      );
+    for (const m of bareMatches) {
+      const category = slugToCategory.get(m.slug);
+      if (category) {
+        result = result.replaceAll(`href="/${m.slug}"`, `href="/articles/${category}/${m.slug}"`);
+        totalFixed++;
+      }
     }
   }
 
-  const fixed = matches.filter(m => slugToCategory.has(m.slug)).length;
-  if (fixed > 0) {
-    console.log(`[SANITIZER] Rewrote ${fixed} bare slug links to /articles/category/slug format`);
+  // === Pass 2: Fix malformed template links (/templates/slug or /templates/slug/...) ===
+  const templatePattern = /href="\/templates\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?(?:\/([a-z0-9-]+))?"/gi;
+  const templateMatches: { full: string; parts: string[] }[] = [];
+  while ((match = templatePattern.exec(result)) !== null) {
+    templateMatches.push({ full: match[0], parts: [match[1], match[2], match[3]].filter(Boolean) });
+  }
+
+  if (templateMatches.length > 0) {
+    // Collect all slug-like parts to check against content_plans
+    const allSlugs = [...new Set(templateMatches.flatMap(m => m.parts))];
+    const { data: plans } = await supabaseAdmin
+      .from('content_plans')
+      .select('template_slug, category_id, subcategory_slug')
+      .in('template_slug', allSlugs);
+
+    if (plans && plans.length > 0) {
+      const planMap = new Map<string, { categoryId: string; subcategorySlug: string }>();
+      for (const p of plans) {
+        planMap.set(p.template_slug, { categoryId: p.category_id, subcategorySlug: p.subcategory_slug || 'general' });
+      }
+
+      for (const tm of templateMatches) {
+        // Check if any part is actually a template_slug used as a category
+        for (const part of tm.parts) {
+          const planInfo = planMap.get(part);
+          if (planInfo) {
+            const correctUrl = `/templates/${planInfo.categoryId}/${planInfo.subcategorySlug}/${part}`;
+            if (!tm.full.includes(correctUrl)) {
+              result = result.replaceAll(tm.full, `href="${correctUrl}"`);
+              totalFixed++;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (totalFixed > 0) {
+    console.log(`[SANITIZER] Fixed ${totalFixed} links (bare slugs + malformed templates)`);
   }
 
   return result;
