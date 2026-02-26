@@ -52,10 +52,15 @@ export const useRecaptcha = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Only load reCAPTCHA on production domain — the site key is registered for letterofdispute.com only
+    const hostname = window.location.hostname;
+    if (hostname !== 'letterofdispute.com' && hostname !== 'www.letterofdispute.com') {
+      return;
+    }
+
     // Only load reCAPTCHA if analytics consent has been granted
     const consent = getConsentSync();
     if (consent && !consent.analytics) {
-      // User explicitly rejected analytics cookies – skip reCAPTCHA
       setIsReady(false);
       return;
     }
