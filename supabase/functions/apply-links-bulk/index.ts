@@ -672,7 +672,19 @@ serve(async (req) => {
             .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .eq('id', jobId);
           
-          console.log(`[APPLY] Job ${jobId} completed`);
+          console.log(`[APPLY] Job ${jobId} completed — reconciling link counts...`);
+          
+          // Critical: reconcile inbound/outbound counts so orphan detection is accurate
+          try {
+            const { data: reconcileResult, error: reconcileError } = await supabaseAdmin.rpc('reconcile_link_counts');
+            if (reconcileError) {
+              console.error(`[APPLY] Reconcile failed:`, reconcileError.message);
+            } else {
+              console.log(`[APPLY] Reconcile complete:`, reconcileResult);
+            }
+          } catch (e) {
+            console.error(`[APPLY] Reconcile threw:`, e);
+          }
         }
       } finally {
         // Check if there's more work

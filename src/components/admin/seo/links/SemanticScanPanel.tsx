@@ -35,6 +35,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
   const [forceRescan, setForceRescan] = useState(false);
   const [justStartedRescue, setJustStartedRescue] = useState(false);
   const prevRescueStatusRef = useRef<string | null>(null);
+  const prevApplyStatusRef = useRef<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -77,6 +78,7 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     activeRescueJob,
     isRescueRunning,
     rescueJobProgress,
+    activeApplyJob,
   } = useSemanticLinkScan();
 
   // Detect rescue job completion
@@ -106,6 +108,21 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
 
     prevRescueStatusRef.current = currentStatus;
   }, [activeRescueJob?.status]);
+
+  // Detect apply job completion → refresh orphan counts (reconcile_link_counts ran server-side)
+  useEffect(() => {
+    const currentStatus = activeApplyJob?.status ?? null;
+    const prev = prevApplyStatusRef.current;
+
+    if (prev === 'processing' && currentStatus === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['orphan-articles'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['link-suggestions-stats'] });
+      refetchOrphans();
+    }
+
+    prevApplyStatusRef.current = currentStatus;
+  }, [activeApplyJob?.status]);
 
   // Clear justStartedRescue once polling picks up the job
   useEffect(() => {
