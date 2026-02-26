@@ -1,48 +1,53 @@
 
 
-# Fix Embedding Processing UX: Live Progress + Better Feedback
+# Fix "6537 / 0" Display in Semantic Link Intelligence
 
-## Problem Analysis
+## Root Cause
 
-Two issues are frustrating the user:
+The `fetchEmbeddingStats` function queries `blog_posts` table with `count: 'exact'` and `status = 'published'` to get the total. This query is timing out (the database is under load — confirmed by connection timeout errors). When it fails, the catch block returns `total: 0`, while the `article_embeddings` count succeeds and returns 6537. Result: "6537 / 0".
 
-1. **Misleading toast**: When clicking "Process Now", the frontend invokes `process-embedding-queue` which processes 2 items per batch, then self-chains in the background. But the `onSuccess` callback fires after the first batch returns, showing "Queue processed - Processed 2 items, created 0 link suggestions" — making it seem like it stopped after 2 items.
+## Fix
 
-2. **Stale progress bar**: The embedding stats (5780/6538) are fetched once on mount via `fetchEmbeddingStats()` and only re-fetched when `activeJob?.status` changes. The self-chaining queue processor doesn't use `embedding_jobs`, so the progress bar never auto-refreshes during processing.
+Make the total count resilient by using `article_embeddings` as the primary source for total count, falling back gracefully.
 
-## Plan
+### `src/hooks/useSemanticLinkScan.ts` — `fetchEmbeddingStats` (lines 368-385)
 
-### 1. Add auto-polling for embedding stats while queue is processing
+Replace the 3-way `Promise.all` with a 2-query approach:
+1. Count `article_embeddings` where `embedding_status = 'completed'` (already works)
+2. Count `article_embeddings` total (all rows, regardless of status) — this is fast and gives us the denominator
 
-In `SemanticScanPanel.tsx`, after the user clicks "Process Now", start a polling interval that re-fetches embedding stats every 5 seconds. Stop polling when `queueStats.pending` reaches 0.
+For the "total published" count (used for the "X new articles ready to process" banner), derive it from `queueStats.pending + completed + failed` instead of a separate blog_posts query. This avoids the slow blog_posts count entirely.
 
-- Add a `isQueueActive` state that becomes true when processQueue is called
-- Add a `useEffect` that polls `fetchEmbeddingStats` + `refetchQueueStats` every 5s while active
-- Also add `refetchInterval` to the `embedding-queue-stats` query when queue has pending items
+**Concrete change:**
+- Query 1: `article_embeddings` count where `embedding_status = 'completed'` → `completed`
+- Query 2: `article_embeddings` count where `embedding_status = 'failed'` → `failed`  
+- Query 3: `blog_posts` count where `status = 'published'` → `total` (keep but with error tolerance)
+- If `total` returns 0 but `completed > 0`, fall back to `completed + failed + queueStats.pending` as the total
 
-### 2. Change the toast to indicate background processing
+Actually, simpler: just handle the case where `totalRes` errors or returns 0 when completed > 0. Fall back to `completed + failed` as minimum total.
 
-In `useSemanticLinkScan.ts`, update the `processQueueMutation.onSuccess` handler:
-- Instead of "Queue processed - Processed 2 items", show "Embedding processing started — 693 articles queued. Progress updates automatically."
-- Use the `remaining` field from the response to show how many are left
+**Lines 370-380:**
+```typescript
+const [totalRes, completedRes, failedRes] = await Promise.all([
+  supabase.from('blog_posts').select('*', { count: 'exact', head: true }).eq('status', 'published'),
+  supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'completed'),
+  supabase.from('article_embeddings').select('*', { count: 'exact', head: true }).eq('embedding_status', 'failed'),
+]);
 
-### 3. Auto-refresh queue stats with refetchInterval
+const completed = completedRes.count || 0;
+const failed = failedRes.count || 0;
+// Fall back to completed+failed if blog_posts count fails/times out
+let total = totalRes.count || 0;
+if (total === 0 && completed > 0) {
+  total = completed + failed;
+}
 
-Add a `refetchInterval` to the `embedding-queue-stats` query that polls every 5s when there are pending items, similar to how `embedding-job-active` polls during processing.
+return { total, completed, pending: Math.max(total - completed - failed, 0), failed };
+```
+
+This ensures the display never shows "6537 / 0" — worst case it shows "6537 / 6537" (100%) which is accurate when the queue is empty.
 
 ## Files to Change
 
-### `src/hooks/useSemanticLinkScan.ts`
-- **Queue stats query** (line 153): Add `refetchInterval` that returns 5000 when `pending > 0`, false otherwise
-- **processQueueMutation onSuccess** (line 423): Change toast message to indicate background processing is continuing, using the `remaining` count from the response. Update the return type to include `remaining`.
-
-### `src/components/admin/seo/links/SemanticScanPanel.tsx`
-- **Embedding stats refresh** (line 124): Add `queueStats?.pending` as a dependency so stats re-fetch each time queueStats updates (which now polls every 5s)
-- This creates a cascade: queue stats poll every 5s → pending count changes → embedding stats re-fetch → progress bar updates
-
-## What Changes Visually
-- Clicking "Process Now" shows: "Processing started — 693 articles queued. Progress bar will update automatically."
-- The progress bar (5780/6538) auto-increments every ~5 seconds as embeddings complete
-- The "693 new articles ready to process" banner count decreases in real-time
-- When all items finish, polling stops automatically
+1. **`src/hooks/useSemanticLinkScan.ts`** — Add fallback logic in `fetchEmbeddingStats` (lines 376-380)
 
