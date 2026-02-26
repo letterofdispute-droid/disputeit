@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, Wrench, Square, Info } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, Wrench, Square, Info, Zap } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,6 +20,8 @@ interface BrokenLinkResult {
   fixed: number;
   brokenLinks?: BrokenLink[];
   saved?: boolean;
+  fuzzyFixed?: number;
+  stripped?: number;
 }
 
 interface ScanSummary {
@@ -28,6 +30,8 @@ interface ScanSummary {
   totalBrokenLinks: number;
   totalFixed: number;
   totalSaved?: number;
+  totalFuzzyFixed?: number;
+  totalStripped?: number;
 }
 
 interface HealthCheckResult {
@@ -48,6 +52,7 @@ const LINK_TYPE_COLORS: Record<string, string> = {
 export default function BrokenLinkScanner() {
   const [isRunning, setIsRunning] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+  const [isDeepFixing, setIsDeepFixing] = useState(false);
   const [results, setResults] = useState<BrokenLinkResult[]>([]);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [progress, setProgress] = useState({ offset: 0, total: 0 });
@@ -60,9 +65,12 @@ export default function BrokenLinkScanner() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isReconciling, setIsReconciling] = useState(false);
 
-  const runBatch = async (mode: 'scan' | 'fix') => {
+  const runBatch = async (mode: 'scan' | 'fix' | 'deep-fix') => {
     const isFix = mode === 'fix';
-    if (isFix) setIsFixing(true); else setIsRunning(true);
+    const isDeepFix = mode === 'deep-fix';
+    if (isDeepFix) setIsDeepFixing(true);
+    else if (isFix) setIsFixing(true);
+    else setIsRunning(true);
     setResults([]);
     setSummary(null);
     setTargetsLoaded(0);
@@ -73,6 +81,7 @@ export default function BrokenLinkScanner() {
     let totalSummary: ScanSummary = {
       postsScanned: 0, postsWithIssues: 0,
       totalBrokenLinks: 0, totalFixed: 0, totalSaved: 0,
+      totalFuzzyFixed: 0, totalStripped: 0,
     };
     let totalPosts = 1;
     const batchSize = 200;
@@ -96,8 +105,10 @@ export default function BrokenLinkScanner() {
         totalSummary.totalBrokenLinks += data.summary.totalBrokenLinks;
         totalSummary.totalFixed += data.summary.totalFixed;
         if (data.summary.totalSaved) totalSummary.totalSaved! += data.summary.totalSaved;
+        if (data.summary.totalFuzzyFixed) totalSummary.totalFuzzyFixed! += data.summary.totalFuzzyFixed;
+        if (data.summary.totalStripped) totalSummary.totalStripped! += data.summary.totalStripped;
 
-        const issueResults = data.results.filter((r: BrokenLinkResult) => r.broken > 0 || r.fixed > 0);
+        const issueResults = data.results.filter((r: BrokenLinkResult) => r.broken > 0 || r.fixed > 0 || (r.fuzzyFixed || 0) > 0 || (r.stripped || 0) > 0);
         allResults = [...allResults, ...issueResults];
         setResults([...allResults]);
         setSummary({ ...totalSummary });
@@ -106,7 +117,9 @@ export default function BrokenLinkScanner() {
       }
 
       if (stopRef.current) {
-        toast.info(`${isFix ? 'Fix' : 'Scan'} stopped. Processed ${totalSummary.postsScanned} of ~${totalPosts} posts.`);
+        toast.info(`${isDeepFix ? 'Deep Fix' : isFix ? 'Fix' : 'Scan'} stopped. Processed ${totalSummary.postsScanned} of ~${totalPosts} posts.`);
+      } else if (isDeepFix) {
+        toast.success(`Deep Fix complete! Fuzzy-matched ${totalSummary.totalFuzzyFixed} links, stripped ${totalSummary.totalStripped} dead links. ${totalSummary.totalBrokenLinks} remain.`);
       } else if (isFix) {
         toast.success(`Fixed ${totalSummary.totalFixed} links across ${totalSummary.totalSaved} articles. ${totalSummary.totalBrokenLinks} unfixable links remain.`);
       } else if (totalSummary.totalBrokenLinks === 0 && totalSummary.totalFixed === 0) {
@@ -117,7 +130,9 @@ export default function BrokenLinkScanner() {
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
     } finally {
-      if (isFix) setIsFixing(false); else setIsRunning(false);
+      if (isDeepFix) setIsDeepFixing(false);
+      else if (isFix) setIsFixing(false);
+      else setIsRunning(false);
     }
   };
 
@@ -217,9 +232,12 @@ export default function BrokenLinkScanner() {
 
   const totalBrokenValidation = Object.values(brokenByType).reduce((a, b) => a + b, 0);
 
-  const isBusy = isRunning || isFixing;
+  const isBusy = isRunning || isFixing || isDeepFixing;
   const progressPercent = progress.total > 0 ? Math.min(100, Math.round((progress.offset / progress.total) * 100)) : 0;
   const healthPercent = healthProgress.total > 0 ? Math.min(100, Math.round((healthProgress.checked / healthProgress.total) * 100)) : 0;
+
+  // Show deep fix button when scan/fix completed with remaining broken links
+  const showDeepFix = !isBusy && summary && totalBrokenValidation > 0;
 
   return (
     <Card>
@@ -269,13 +287,15 @@ export default function BrokenLinkScanner() {
         {isBusy && (
           <div className="space-y-1">
             <Progress value={progressPercent} className="h-2" />
-            <p className="text-xs text-muted-foreground">{progress.offset} of ~{progress.total} articles scanned{isFixing && ' (fixing)'}</p>
+            <p className="text-xs text-muted-foreground">
+              {progress.offset} of ~{progress.total} articles {isDeepFixing ? 'deep-fixing' : isFixing ? 'fixing' : 'scanned'}
+            </p>
           </div>
         )}
 
         {summary && (
           <>
-            <div className="grid grid-cols-4 gap-2">
+            <div className={`grid gap-2 ${(summary.totalFuzzyFixed || 0) > 0 || (summary.totalStripped || 0) > 0 ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-4'}`}>
               <div className="bg-muted/50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold">{summary.postsScanned}</p>
                 <p className="text-[10px] text-muted-foreground">Scanned</p>
@@ -292,6 +312,18 @@ export default function BrokenLinkScanner() {
                 <p className="text-lg font-bold text-green-500">{summary.totalFixed}</p>
                 <p className="text-[10px] text-muted-foreground">{summary.totalSaved ? `${summary.totalSaved} Saved` : 'Fixable'}</p>
               </div>
+              {((summary.totalFuzzyFixed || 0) > 0 || (summary.totalStripped || 0) > 0) && (
+                <>
+                  <div className="bg-muted/50 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-blue-500">{summary.totalFuzzyFixed}</p>
+                    <p className="text-[10px] text-muted-foreground">Fuzzy Matched</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-orange-500">{summary.totalStripped}</p>
+                    <p className="text-[10px] text-muted-foreground">Stripped</p>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Fix button — appears when there are fixable rewrites */}
@@ -302,6 +334,20 @@ export default function BrokenLinkScanner() {
               </Button>
             )}
           </>
+        )}
+
+        {/* Deep Fix button and warning */}
+        {showDeepFix && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+              <span><strong>Deep Fix</strong> uses fuzzy matching to resolve unknown slugs, resolves template routing, and <strong>strips</strong> truly dead links (removes &lt;a&gt; tags, keeps text). This is destructive.</span>
+            </div>
+            <Button onClick={() => runBatch('deep-fix')} size="sm" className="w-full" variant="secondary">
+              <Zap className="h-4 w-4 mr-2" />
+              Deep Fix {totalBrokenValidation} Remaining Broken Links
+            </Button>
+          </div>
         )}
 
         {/* Broken links by type */}
@@ -330,6 +376,16 @@ export default function BrokenLinkScanner() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium truncate max-w-[60%]">{r.postSlug}</span>
                   <div className="flex gap-1">
+                    {(r.fuzzyFixed || 0) > 0 && (
+                      <Badge variant="default" className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px] px-1.5 py-0">
+                        <Zap className="h-2.5 w-2.5 mr-0.5" /> {r.fuzzyFixed} fuzzy
+                      </Badge>
+                    )}
+                    {(r.stripped || 0) > 0 && (
+                      <Badge variant="default" className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] px-1.5 py-0">
+                        {r.stripped} stripped
+                      </Badge>
+                    )}
                     {r.fixed > 0 && (
                       <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1.5 py-0">
                         <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed} {r.saved ? 'saved' : 'fixable'}
