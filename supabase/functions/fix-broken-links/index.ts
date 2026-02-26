@@ -129,8 +129,6 @@ async function loadTemplateSlugs(supabase: any): Promise<Set<string>> {
     if (!data || data.length === 0) break;
 
     for (const t of data) {
-      // The template page route: /templates/{categoryId}/{subcategorySlug}/{templateSlug}
-      // But also simpler patterns: /templates/{categoryId}/{templateSlug}
       slugs.add(t.template_slug);
     }
 
@@ -185,19 +183,15 @@ function validateInternalLinks(
   embeddingSlugs: Set<string>,
 ): BrokenLink[] {
   const broken: BrokenLink[] = [];
-  // Match all href values starting with / or the domain
   const hrefRegex = /href="(?:https?:\/\/(?:letterofdispute\.com|disputeit\.lovable\.app))?(\/[^"]*?)"/gi;
   let match;
 
   while ((match = hrefRegex.exec(content)) !== null) {
     const path = match[1].replace(/\/$/, '') || '/';
 
-    // Skip anchors and external
     if (path.startsWith('/#') || path === '#') continue;
-    // Remove query/hash
     const cleanPath = path.split('?')[0].split('#')[0];
 
-    // Check static routes
     if (VALID_STATIC_ROUTES.has(cleanPath)) continue;
 
     // /articles/{cat}/{slug}
@@ -209,7 +203,7 @@ function validateInternalLinks(
       continue;
     }
 
-    // /articles/{cat} (category listing — always valid if known cat)
+    // /articles/{cat}
     const articlesCatMatch = cleanPath.match(/^\/articles\/([^/]+)$/);
     if (articlesCatMatch) {
       const cat = articlesCatMatch[1];
@@ -218,7 +212,7 @@ function validateInternalLinks(
       continue;
     }
 
-    // /templates/{catId} 
+    // /templates/{catId}
     const templateCatMatch = cleanPath.match(/^\/templates\/([^/]+)$/);
     if (templateCatMatch) {
       if (VALID_TEMPLATE_CATEGORIES.has(templateCatMatch[1])) continue;
@@ -234,15 +228,12 @@ function validateInternalLinks(
         broken.push({ href: cleanPath, linkType: 'template', reason: `Template category "${catId}" not found` });
         continue;
       }
-      // Extract the final slug segment
       const segments = templateMatch[2].split('/');
       const lastSegment = segments[segments.length - 1];
-      // If it's a deep template path, check if template slug exists
       if (segments.length >= 2) {
         if (templateSlugs.has(lastSegment)) continue;
         broken.push({ href: cleanPath, linkType: 'template', reason: `Template slug "${lastSegment}" not found` });
       }
-      // subcategory-level path — assume valid (hard to validate without full subcategory list)
       continue;
     }
 
@@ -254,17 +245,13 @@ function validateInternalLinks(
       continue;
     }
 
-    // /state-rights/...
-    if (cleanPath.startsWith('/state-rights')) continue; // All state rights routes are valid (generated from static data)
+    if (cleanPath.startsWith('/state-rights')) continue;
+    if (cleanPath.startsWith('/small-claims')) continue;
 
-    // /small-claims/...
-    if (cleanPath.startsWith('/small-claims')) continue; // Generated from smallClaimsData
-
-    // Known reserved top-level paths
     const topLevel = cleanPath.split('/')[1];
     if (topLevel && RESERVED_PATHS.has(topLevel)) continue;
 
-    // Bare slug — might be an article
+    // Bare slug
     const bareSlugMatch = cleanPath.match(/^\/([a-z0-9][a-z0-9-]+)$/);
     if (bareSlugMatch) {
       const slug = bareSlugMatch[1];
@@ -275,7 +262,6 @@ function validateInternalLinks(
 
     // Multi-segment unknown path
     if (!cleanPath.startsWith('/articles') && !cleanPath.startsWith('/templates') && !cleanPath.startsWith('/guides')) {
-      // Check if it's a category/slug pattern
       const parts = cleanPath.split('/').filter(Boolean);
       if (parts.length === 2) {
         const [catPath, slug] = parts;
@@ -302,6 +288,181 @@ function findTruncatedMatch(
   return null;
 }
 
+/**
+ * Apply all rewrite patterns to content. Returns updated content and fix count.
+ */
+function applyRewrites(
+  content: string,
+  slugToCategory: Map<string, string>,
+): { content: string; fixCount: number } {
+  let fixCount = 0;
+
+  // ── Pattern 1: /blog/slug → find real article ──
+  const blogRegex = new RegExp(`href="${ORIGIN}\\/blog\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
+  content = content.replace(blogRegex, (_match: string, slug: string) => {
+    const cat = slugToCategory.get(slug);
+    if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
+    const fuzzy = findTruncatedMatch(slug, slugToCategory);
+    if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
+    return _match;
+  });
+
+  // ── Pattern 2: /category/ and /categories/ prefixed URLs ──
+  const categoryPrefixRegex = new RegExp(`href="${ORIGIN}\\/(?:category|categories)\\/([^"]+)"`, 'gi');
+  content = content.replace(categoryPrefixRegex, (_match: string, path: string) => {
+    const cleanPath = path.replace(/\/$/, '');
+    const slug = cleanPath.split('/')[0].toLowerCase();
+    const templateCat = CAT_TO_TEMPLATE[slug] || slug;
+    fixCount++;
+    return `href="/templates/${templateCat}"`;
+  });
+
+  // ── Pattern 3: Category-only links ──
+  const catOnlyRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/?\"`, 'gi');
+  content = content.replace(catOnlyRegex, (_match: string, categoryPath: string) => {
+    const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
+    fixCount++;
+    return `href="/articles/${blogCat}"`;
+  });
+
+  // ── Pattern 4: Category-path + article slug ──
+  const catSlugRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/([a-z0-9][a-z0-9_-]+)\\/?\"`, 'gi');
+  content = content.replace(catSlugRegex, (_match: string, categoryPath: string, slug: string) => {
+    const normalizedSlug = slug.replace(/_/g, '-');
+    const articleCat = slugToCategory.get(normalizedSlug) || slugToCategory.get(slug);
+    if (articleCat) {
+      fixCount++;
+      return `href="/articles/${articleCat}/${normalizedSlug}"`;
+    }
+    const fuzzy = findTruncatedMatch(normalizedSlug, slugToCategory);
+    if (fuzzy) {
+      fixCount++;
+      return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
+    }
+    const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
+    fixCount++;
+    return `href="/articles/${blogCat}"`;
+  });
+
+  // ── Pattern 5: /mistakes/ path pattern ──
+  const mistakesRegex = new RegExp(`href="${ORIGIN}\\/mistakes\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
+  content = content.replace(mistakesRegex, (_match: string, slug: string) => {
+    const cat = slugToCategory.get(slug);
+    if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
+    const fuzzy = findTruncatedMatch(slug, slugToCategory);
+    if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
+    for (const [fullSlug, c] of slugToCategory) {
+      if (fullSlug.includes(slug) || slug.includes(fullSlug.split('-').slice(0, 3).join('-'))) {
+        fixCount++;
+        return `href="/articles/${c}/${fullSlug}"`;
+      }
+    }
+    return _match;
+  });
+
+  // ── Pattern 6: Bare slugs (absolute only) ──
+  content = content.replace(
+    /href="https?:\/\/letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
+    (_match: string, slug: string) => {
+      if (RESERVED_PATHS.has(slug)) return _match;
+      if (slug.startsWith('articles/') || slug.startsWith('templates/') || slug.startsWith('guides/')) return _match;
+      if (CATEGORY_PATH_TO_SLUG[slug]) return _match;
+
+      const cat = slugToCategory.get(slug);
+      if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
+      const fuzzy = findTruncatedMatch(slug, slugToCategory);
+      if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
+      fixCount++;
+      return `href="/${slug}"`;
+    }
+  );
+
+  // ── Pattern 7: Convert absolute /articles/ URLs to relative ──
+  content = content.replace(
+    /href="https?:\/\/letterofdispute\.com\/(articles\/[^"]+)"/gi,
+    (_match: string, path: string) => {
+      fixCount++;
+      return `href="/${path.replace(/\/$/, '')}"`;
+    }
+  );
+
+  // ── Pattern 8: Convert absolute /templates/ URLs to relative ──
+  content = content.replace(
+    /href="https?:\/\/letterofdispute\.com\/(templates\/[^"]+)"/gi,
+    (_match: string, path: string) => {
+      fixCount++;
+      return `href="/${path.replace(/\/$/, '')}"`;
+    }
+  );
+
+  // ── Pattern 9: Catch-all for remaining absolute URLs ──
+  content = content.replace(
+    /href="https?:\/\/letterofdispute\.com\/([^"]+)"/gi,
+    (_match: string, path: string) => {
+      const cleanPath = path.replace(/\/$/, '');
+      if (RESERVED_PATHS.has(cleanPath)) {
+        fixCount++;
+        return `href="/${cleanPath}"`;
+      }
+      const cat = slugToCategory.get(cleanPath);
+      if (cat) {
+        fixCount++;
+        return `href="/articles/${cat}/${cleanPath}"`;
+      }
+      fixCount++;
+      return `href="/${cleanPath}"`;
+    }
+  );
+
+  // ── Pattern 10: Fix relative bare slugs → /articles/{cat}/{slug} ──
+  // Matches href="/some-slug" where some-slug is a known article
+  content = content.replace(
+    /href="\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
+    (_match: string, slug: string) => {
+      if (RESERVED_PATHS.has(slug)) return _match;
+      if (CATEGORY_PATH_TO_SLUG[slug]) return _match;
+      if (VALID_TEMPLATE_CATEGORIES.has(slug)) return _match;
+
+      const cat = slugToCategory.get(slug);
+      if (cat) {
+        fixCount++;
+        return `href="/articles/${cat}/${slug}"`;
+      }
+      const fuzzy = findTruncatedMatch(slug, slugToCategory);
+      if (fuzzy) {
+        fixCount++;
+        return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
+      }
+      return _match;
+    }
+  );
+
+  // ── Pattern 11: Fix /template/ (singular) → /templates/ ──
+  content = content.replace(
+    /href="\/template\/(.*?)"/gi,
+    (_match: string, rest: string) => {
+      fixCount++;
+      return `href="/templates/${rest}"`;
+    }
+  );
+
+  // ── Pattern 12: Fix /templates/{bad-cat}/... → remap via CAT_TO_TEMPLATE ──
+  content = content.replace(
+    /href="\/templates\/([^/"]+)(\/[^"]*)?"/gi,
+    (_match: string, catId: string, rest: string = '') => {
+      if (VALID_TEMPLATE_CATEGORIES.has(catId)) return _match;
+      const mapped = CAT_TO_TEMPLATE[catId];
+      if (mapped) {
+        fixCount++;
+        return `href="/templates/${mapped}${rest}"`;
+      }
+      return _match;
+    }
+  );
+
+  return { content, fixCount };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -314,14 +475,6 @@ serve(async (req) => {
 
     const { mode = 'scan', limit = 50, offset = 0, postId } = await req.json().catch(() => ({}));
 
-    // SAFETY: Fix mode is permanently disabled.
-    if (mode === 'fix') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Fix mode has been permanently disabled. Use the semantic linking pipeline to manage internal links.',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
-    }
-
     // Load all valid targets in parallel
     const [slugToCategory, templateSlugs, embeddingSlugs] = await Promise.all([
       loadAllSlugs(supabase),
@@ -329,7 +482,8 @@ serve(async (req) => {
       loadEmbeddingSlugs(supabase),
     ]);
 
-    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} articles, ${templateSlugs.size} templates, ${embeddingSlugs.size} embeddings`);
+    const totalTargets = slugToCategory.size + templateSlugs.size + embeddingSlugs.size;
+    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} articles, ${templateSlugs.size} templates, ${embeddingSlugs.size} embeddings = ${totalTargets} total targets`);
 
     // Fetch posts to process
     let query = supabase
@@ -352,148 +506,49 @@ serve(async (req) => {
       broken: number;
       fixed: number;
       brokenLinks: BrokenLink[];
+      saved?: boolean;
     }> = [];
 
     let totalFixed = 0;
     let totalBroken = 0;
+    let totalSaved = 0;
 
     for (const post of posts || []) {
-      let content = post.content;
-      let fixCount = 0;
-      const originalContent = content;
+      const originalContent = post.content;
 
-      // ── Pattern 1: /blog/slug → find real article ──
-      const blogRegex = new RegExp(`href="${ORIGIN}\\/blog\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
-      content = content.replace(blogRegex, (_match: string, slug: string) => {
-        const cat = slugToCategory.get(slug);
-        if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
-        const fuzzy = findTruncatedMatch(slug, slugToCategory);
-        if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        return _match;
-      });
+      // Apply all rewrite patterns
+      const { content: rewrittenContent, fixCount } = applyRewrites(post.content, slugToCategory);
 
-      // ── Pattern 2: /category/ and /categories/ prefixed URLs ──
-      const categoryPrefixRegex = new RegExp(`href="${ORIGIN}\\/(?:category|categories)\\/([^"]+)"`, 'gi');
-      content = content.replace(categoryPrefixRegex, (_match: string, path: string) => {
-        const cleanPath = path.replace(/\/$/, '');
-        const slug = cleanPath.split('/')[0].toLowerCase();
-        const templateCat = CAT_TO_TEMPLATE[slug] || slug;
-        fixCount++;
-        return `href="/templates/${templateCat}"`;
-      });
+      // Validate remaining internal links
+      const brokenLinks = validateInternalLinks(rewrittenContent, slugToCategory, templateSlugs, embeddingSlugs);
 
-      // ── Pattern 3: Category-only links ──
-      const catOnlyRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/?\"`, 'gi');
-      content = content.replace(catOnlyRegex, (_match: string, categoryPath: string) => {
-        const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
-        fixCount++;
-        return `href="/articles/${blogCat}"`;
-      });
-
-      // ── Pattern 4: Category-path + article slug ──
-      const catSlugRegex = new RegExp(`href="${ORIGIN}\\/(${CATEGORY_PATHS_PATTERN})\\/([a-z0-9][a-z0-9_-]+)\\/?\"`, 'gi');
-      content = content.replace(catSlugRegex, (_match: string, categoryPath: string, slug: string) => {
-        const normalizedSlug = slug.replace(/_/g, '-');
-        const articleCat = slugToCategory.get(normalizedSlug) || slugToCategory.get(slug);
-        if (articleCat) {
-          fixCount++;
-          return `href="/articles/${articleCat}/${normalizedSlug}"`;
-        }
-        const fuzzy = findTruncatedMatch(normalizedSlug, slugToCategory);
-        if (fuzzy) {
-          fixCount++;
-          return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`;
-        }
-        const blogCat = CATEGORY_PATH_TO_SLUG[categoryPath.toLowerCase()] || categoryPath;
-        fixCount++;
-        return `href="/articles/${blogCat}"`;
-      });
-
-      // ── Pattern 5: /mistakes/ path pattern ──
-      const mistakesRegex = new RegExp(`href="${ORIGIN}\\/mistakes\\/([a-z0-9][a-z0-9-]+)\\/?\"`, 'gi');
-      content = content.replace(mistakesRegex, (_match: string, slug: string) => {
-        const cat = slugToCategory.get(slug);
-        if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
-        const fuzzy = findTruncatedMatch(slug, slugToCategory);
-        if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        for (const [fullSlug, c] of slugToCategory) {
-          if (fullSlug.includes(slug) || slug.includes(fullSlug.split('-').slice(0, 3).join('-'))) {
-            fixCount++;
-            return `href="/articles/${c}/${fullSlug}"`;
-          }
-        }
-        return _match;
-      });
-
-      // ── Pattern 6: Bare slugs (absolute only) ──
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
-        (_match: string, slug: string) => {
-          if (RESERVED_PATHS.has(slug)) return _match;
-          if (slug.startsWith('articles/') || slug.startsWith('templates/') || slug.startsWith('guides/')) return _match;
-          if (CATEGORY_PATH_TO_SLUG[slug]) return _match;
-
-          const cat = slugToCategory.get(slug);
-          if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
-          const fuzzy = findTruncatedMatch(slug, slugToCategory);
-          if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-          fixCount++;
-          return `href="/${slug}"`;
-        }
-      );
-
-      // ── Pattern 7: Convert absolute /articles/ URLs to relative ──
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/(articles\/[^"]+)"/gi,
-        (_match: string, path: string) => {
-          fixCount++;
-          return `href="/${path.replace(/\/$/, '')}"`;
-        }
-      );
-
-      // ── Pattern 8: Convert absolute /templates/ URLs to relative ──
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/(templates\/[^"]+)"/gi,
-        (_match: string, path: string) => {
-          fixCount++;
-          return `href="/${path.replace(/\/$/, '')}"`;
-        }
-      );
-
-      // ── Pattern 9: Catch-all for remaining absolute URLs ──
-      content = content.replace(
-        /href="https?:\/\/letterofdispute\.com\/([^"]+)"/gi,
-        (_match: string, path: string) => {
-          const cleanPath = path.replace(/\/$/, '');
-          if (RESERVED_PATHS.has(cleanPath)) {
-            fixCount++;
-            return `href="/${cleanPath}"`;
-          }
-          const cat = slugToCategory.get(cleanPath);
-          if (cat) {
-            fixCount++;
-            return `href="/articles/${cat}/${cleanPath}"`;
-          }
-          fixCount++;
-          return `href="/${cleanPath}"`;
-        }
-      );
-
-      // ── Validation pass: check ALL internal links ──
-      const brokenLinks = validateInternalLinks(content, slugToCategory, templateSlugs, embeddingSlugs);
-
-      const hasFixes = content !== originalContent && fixCount > 0;
+      const hasRewrites = rewrittenContent !== originalContent && fixCount > 0;
       const hasBrokenLinks = brokenLinks.length > 0;
 
-      if (hasFixes || hasBrokenLinks) {
-        totalBroken += fixCount + brokenLinks.length;
+      // In fix mode, save the rewritten content back to DB
+      if (mode === 'fix' && hasRewrites) {
+        const { error: updateErr } = await supabase
+          .from('blog_posts')
+          .update({ content: rewrittenContent, updated_at: new Date().toISOString() })
+          .eq('id', post.id);
+
+        if (updateErr) {
+          console.error(`[fix-broken-links] Failed to save ${post.slug}:`, updateErr.message);
+        } else {
+          totalSaved++;
+        }
+      }
+
+      if (hasRewrites || hasBrokenLinks) {
+        totalBroken += brokenLinks.length;
         totalFixed += fixCount;
 
         results.push({
           postSlug: post.slug,
-          broken: fixCount + brokenLinks.length,
+          broken: brokenLinks.length,
           fixed: fixCount,
           brokenLinks,
+          saved: mode === 'fix' && hasRewrites,
         });
       }
     }
@@ -506,15 +561,15 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      mode: 'scan',
-      slugsLoaded: slugToCategory.size,
-      templateSlugsLoaded: templateSlugs.size,
+      mode,
+      slugsLoaded: totalTargets,
       pagination: { offset, limit, totalPosts },
       summary: {
         postsScanned: posts?.length || 0,
         postsWithIssues: results.length,
         totalBrokenLinks: totalBroken,
         totalFixed,
+        ...(mode === 'fix' ? { totalSaved } : {}),
       },
       results,
     }), {

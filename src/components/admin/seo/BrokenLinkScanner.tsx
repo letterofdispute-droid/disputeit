@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, ExternalLink } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, Wrench, Square } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -18,6 +18,7 @@ interface BrokenLinkResult {
   broken: number;
   fixed: number;
   brokenLinks?: BrokenLink[];
+  saved?: boolean;
 }
 
 interface ScanSummary {
@@ -25,6 +26,7 @@ interface ScanSummary {
   postsWithIssues: number;
   totalBrokenLinks: number;
   totalFixed: number;
+  totalSaved?: number;
 }
 
 interface HealthCheckResult {
@@ -44,10 +46,12 @@ const LINK_TYPE_COLORS: Record<string, string> = {
 
 export default function BrokenLinkScanner() {
   const [isRunning, setIsRunning] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
   const [results, setResults] = useState<BrokenLinkResult[]>([]);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [progress, setProgress] = useState({ offset: 0, total: 0 });
-  const [slugsLoaded, setSlugsLoaded] = useState(0);
+  const [targetsLoaded, setTargetsLoaded] = useState(0);
+  const stopRef = useRef(false);
 
   const [isChecking, setIsChecking] = useState(false);
   const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
@@ -55,41 +59,44 @@ export default function BrokenLinkScanner() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isReconciling, setIsReconciling] = useState(false);
 
-  const runScan = async () => {
-    setIsRunning(true);
+  const runBatch = async (mode: 'scan' | 'fix') => {
+    const isFix = mode === 'fix';
+    if (isFix) setIsFixing(true); else setIsRunning(true);
     setResults([]);
     setSummary(null);
-    setSlugsLoaded(0);
+    setTargetsLoaded(0);
+    stopRef.current = false;
 
     let offset = 0;
     let allResults: BrokenLinkResult[] = [];
     let totalSummary: ScanSummary = {
       postsScanned: 0, postsWithIssues: 0,
-      totalBrokenLinks: 0, totalFixed: 0,
+      totalBrokenLinks: 0, totalFixed: 0, totalSaved: 0,
     };
     let totalPosts = 1;
     const batchSize = 200;
 
     try {
-      while (offset < totalPosts) {
+      while (offset < totalPosts && !stopRef.current) {
         setProgress({ offset, total: totalPosts });
 
         const { data, error } = await supabase.functions.invoke('fix-broken-links', {
-          body: { mode: 'scan', limit: batchSize, offset },
+          body: { mode, limit: batchSize, offset },
         });
 
         if (error) throw error;
         if (!data?.success) throw new Error(data?.error || 'Unknown error');
 
         totalPosts = data.pagination.totalPosts;
-        if (data.slugsLoaded) setSlugsLoaded(data.slugsLoaded);
+        if (data.slugsLoaded) setTargetsLoaded(data.slugsLoaded);
 
         totalSummary.postsScanned += data.summary.postsScanned;
         totalSummary.postsWithIssues += data.summary.postsWithIssues;
         totalSummary.totalBrokenLinks += data.summary.totalBrokenLinks;
         totalSummary.totalFixed += data.summary.totalFixed;
+        if (data.summary.totalSaved) totalSummary.totalSaved! += data.summary.totalSaved;
 
-        const issueResults = data.results.filter((r: BrokenLinkResult) => r.broken > 0);
+        const issueResults = data.results.filter((r: BrokenLinkResult) => r.broken > 0 || r.fixed > 0);
         allResults = [...allResults, ...issueResults];
         setResults([...allResults]);
         setSummary({ ...totalSummary });
@@ -97,16 +104,24 @@ export default function BrokenLinkScanner() {
         offset += batchSize;
       }
 
-      if (totalSummary.totalBrokenLinks === 0) {
+      if (stopRef.current) {
+        toast.info(`${isFix ? 'Fix' : 'Scan'} stopped. Processed ${totalSummary.postsScanned} of ~${totalPosts} posts.`);
+      } else if (isFix) {
+        toast.success(`Fixed ${totalSummary.totalFixed} links across ${totalSummary.totalSaved} articles. ${totalSummary.totalBrokenLinks} unfixable links remain.`);
+      } else if (totalSummary.totalBrokenLinks === 0 && totalSummary.totalFixed === 0) {
         toast.success('No broken links found!');
       } else {
-        toast.info(`Found ${totalSummary.totalBrokenLinks} broken links across ${totalSummary.postsWithIssues} articles.`);
+        toast.info(`Found ${totalSummary.totalBrokenLinks} broken + ${totalSummary.totalFixed} fixable links across ${totalSummary.postsWithIssues} articles.`);
       }
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
     } finally {
-      setIsRunning(false);
+      if (isFix) setIsFixing(false); else setIsRunning(false);
     }
+  };
+
+  const handleStop = () => {
+    stopRef.current = true;
   };
 
   const runHealthCheck = async () => {
@@ -201,6 +216,7 @@ export default function BrokenLinkScanner() {
 
   const totalBrokenValidation = Object.values(brokenByType).reduce((a, b) => a + b, 0);
 
+  const isBusy = isRunning || isFixing;
   const progressPercent = progress.total > 0 ? Math.min(100, Math.round((progress.offset / progress.total) * 100)) : 0;
   const healthPercent = healthProgress.total > 0 ? Math.min(100, Math.round((healthProgress.checked / healthProgress.total) * 100)) : 0;
 
@@ -215,47 +231,64 @@ export default function BrokenLinkScanner() {
             </CardTitle>
             <CardDescription className="text-xs mt-1">
               Scans all internal links (articles, templates, guides, state rights, static pages).
-              {slugsLoaded > 0 && <span className="text-foreground font-medium"> · {slugsLoaded.toLocaleString()} slugs loaded</span>}
+              {targetsLoaded > 0 && <span className="text-foreground font-medium"> · {targetsLoaded.toLocaleString()} targets loaded</span>}
             </CardDescription>
           </div>
-          <Button onClick={runScan} disabled={isRunning} size="sm" variant="outline">
-            {isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            {isRunning ? `Scanning... ${progressPercent}%` : 'Scan All Links'}
-          </Button>
+          <div className="flex gap-2">
+            {isBusy && (
+              <Button onClick={handleStop} size="sm" variant="destructive">
+                <Square className="h-4 w-4 mr-1" /> Stop
+              </Button>
+            )}
+            <Button onClick={() => runBatch('scan')} disabled={isBusy} size="sm" variant="outline">
+              {isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+              {isRunning ? `Scanning... ${progressPercent}%` : 'Scan All Links'}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
           <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>Scanner is <strong>read-only</strong>. No content is modified. Validates articles, templates, guides & static pages.</span>
+          <span>Scanner validates articles, templates, guides & static pages. Use <strong>Fix</strong> to auto-rewrite fixable links.</span>
         </div>
 
-        {isRunning && (
+        {isBusy && (
           <div className="space-y-1">
             <Progress value={progressPercent} className="h-2" />
-            <p className="text-xs text-muted-foreground">{progress.offset} of ~{progress.total} posts processed</p>
+            <p className="text-xs text-muted-foreground">{progress.offset} of ~{progress.total} posts processed{isFixing && ' (fixing)'}</p>
           </div>
         )}
 
         {summary && (
-          <div className="grid grid-cols-4 gap-2">
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold">{summary.postsScanned}</p>
-              <p className="text-[10px] text-muted-foreground">Scanned</p>
+          <>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold">{summary.postsScanned}</p>
+                <p className="text-[10px] text-muted-foreground">Scanned</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-destructive">{summary.postsWithIssues}</p>
+                <p className="text-[10px] text-muted-foreground">With Issues</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-amber-500">{totalBrokenValidation}</p>
+                <p className="text-[10px] text-muted-foreground">Broken Links</p>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-green-500">{summary.totalFixed}</p>
+                <p className="text-[10px] text-muted-foreground">{summary.totalSaved ? `${summary.totalSaved} Saved` : 'Fixable'}</p>
+              </div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold text-destructive">{summary.postsWithIssues}</p>
-              <p className="text-[10px] text-muted-foreground">With Issues</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold text-amber-500">{totalBrokenValidation}</p>
-              <p className="text-[10px] text-muted-foreground">Broken Links</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-lg font-bold text-green-500">{summary.totalFixed}</p>
-              <p className="text-[10px] text-muted-foreground">URL Rewrites</p>
-            </div>
-          </div>
+
+            {/* Fix button — appears when there are fixable rewrites */}
+            {!isBusy && summary.totalFixed > 0 && !summary.totalSaved && (
+              <Button onClick={() => runBatch('fix')} size="sm" className="w-full" variant="default">
+                <Wrench className="h-4 w-4 mr-2" />
+                Fix {summary.totalFixed} Broken Links
+              </Button>
+            )}
+          </>
         )}
 
         {/* Broken links by type */}
@@ -269,7 +302,7 @@ export default function BrokenLinkScanner() {
           </div>
         )}
 
-        {summary && summary.totalBrokenLinks === 0 && (
+        {summary && summary.totalBrokenLinks === 0 && summary.totalFixed === 0 && (
           <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
             <CheckCircle2 className="h-4 w-4" />
             All internal links are valid. No issues found.
@@ -286,7 +319,7 @@ export default function BrokenLinkScanner() {
                   <div className="flex gap-1">
                     {r.fixed > 0 && (
                       <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1.5 py-0">
-                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed} rewrites
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed} {r.saved ? 'saved' : 'fixable'}
                       </Badge>
                     )}
                     {(r.brokenLinks?.length || 0) > 0 && (
