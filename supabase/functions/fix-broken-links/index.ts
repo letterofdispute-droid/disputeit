@@ -80,7 +80,7 @@ const VALID_STATIC_ROUTES = new Set([
 
 const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
 const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
-const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
+const ORIGIN = `(?:https?:\\/\\/(?:www\\.)?(?:letterofdispute\\.com|disputeit\\.lovable\\.app))?`;
 
 interface TemplateRouteInfo {
   categoryId: string;
@@ -184,7 +184,8 @@ function mapKeys(map: Map<string, any>): Set<string> {
 }
 
 interface BrokenLink {
-  href: string;
+  href: string;      // normalized/cleaned path (for validation logic)
+  rawHref: string;   // exact href attribute value from HTML (for replacements)
   linkType: 'article' | 'template' | 'guide' | 'state-rights' | 'static' | 'unknown';
   reason: string;
 }
@@ -199,11 +200,13 @@ function validateInternalLinks(
   embeddingSlugs: Set<string>,
 ): BrokenLink[] {
   const broken: BrokenLink[] = [];
-  const hrefRegex = /href="(?:https?:\/\/(?:letterofdispute\.com|disputeit\.lovable\.app))?(\/[^"]*?)"/gi;
+  // Match both quote styles and www. variant
+  const hrefRegex = /href=["'](?:https?:\/\/(?:www\.)?(?:letterofdispute\.com|disputeit\.lovable\.app))?(\/[^"']*?)["']/gi;
   let match;
 
   while ((match = hrefRegex.exec(content)) !== null) {
-    const path = match[1].replace(/\/$/, '') || '/';
+    const rawHref = match[1]; // exact value from HTML
+    const path = rawHref.replace(/\/$/, '') || '/';
 
     if (path.startsWith('/#') || path === '#') continue;
     const cleanPath = path.split('?')[0].split('#')[0];
@@ -215,7 +218,7 @@ function validateInternalLinks(
     if (articlesMatch) {
       const [, , slug] = articlesMatch;
       if (articleSlugs.has(slug) || embeddingSlugs.has(slug)) continue;
-      broken.push({ href: cleanPath, linkType: 'article', reason: `Article slug "${slug}" not found` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'article', reason: `Article slug "${slug}" not found` });
       continue;
     }
 
@@ -224,7 +227,7 @@ function validateInternalLinks(
     if (articlesCatMatch) {
       const cat = articlesCatMatch[1];
       if (CATEGORY_PATH_TO_SLUG[cat] || VALID_TEMPLATE_CATEGORIES.has(cat)) continue;
-      broken.push({ href: cleanPath, linkType: 'article', reason: `Article category "${cat}" not found` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'article', reason: `Article category "${cat}" not found` });
       continue;
     }
 
@@ -232,7 +235,7 @@ function validateInternalLinks(
     const templateCatMatch = cleanPath.match(/^\/templates\/([^/]+)$/);
     if (templateCatMatch) {
       if (VALID_TEMPLATE_CATEGORIES.has(templateCatMatch[1])) continue;
-      broken.push({ href: cleanPath, linkType: 'template', reason: `Template category "${templateCatMatch[1]}" not found` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'template', reason: `Template category "${templateCatMatch[1]}" not found` });
       continue;
     }
 
@@ -241,14 +244,14 @@ function validateInternalLinks(
     if (templateMatch) {
       const catId = templateMatch[1];
       if (!VALID_TEMPLATE_CATEGORIES.has(catId)) {
-        broken.push({ href: cleanPath, linkType: 'template', reason: `Template category "${catId}" not found` });
+        broken.push({ href: cleanPath, rawHref, linkType: 'template', reason: `Template category "${catId}" not found` });
         continue;
       }
       const segments = templateMatch[2].split('/');
       const lastSegment = segments[segments.length - 1];
       if (segments.length >= 2) {
         if (templateSlugs.has(lastSegment)) continue;
-        broken.push({ href: cleanPath, linkType: 'template', reason: `Template slug "${lastSegment}" not found` });
+        broken.push({ href: cleanPath, rawHref, linkType: 'template', reason: `Template slug "${lastSegment}" not found` });
       }
       continue;
     }
@@ -257,12 +260,18 @@ function validateInternalLinks(
     const guidesMatch = cleanPath.match(/^\/guides\/([^/]+)$/);
     if (guidesMatch) {
       if (VALID_TEMPLATE_CATEGORIES.has(guidesMatch[1])) continue;
-      broken.push({ href: cleanPath, linkType: 'guide', reason: `Guide category "${guidesMatch[1]}" not found` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'guide', reason: `Guide category "${guidesMatch[1]}" not found` });
       continue;
     }
 
     if (cleanPath.startsWith('/state-rights')) continue;
     if (cleanPath.startsWith('/small-claims')) continue;
+
+    // /blog/* paths are always broken (legacy)
+    if (cleanPath.startsWith('/blog/')) {
+      broken.push({ href: cleanPath, rawHref, linkType: 'unknown', reason: `Legacy /blog/ path` });
+      continue;
+    }
 
     const topLevel = cleanPath.split('/')[1];
     if (topLevel && RESERVED_PATHS.has(topLevel)) continue;
@@ -272,7 +281,7 @@ function validateInternalLinks(
     if (bareSlugMatch) {
       const slug = bareSlugMatch[1];
       if (articleSlugs.has(slug) || CATEGORY_PATH_TO_SLUG[slug] || VALID_TEMPLATE_CATEGORIES.has(slug)) continue;
-      broken.push({ href: cleanPath, linkType: 'unknown', reason: `Path "/${slug}" doesn't match any known route` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'unknown', reason: `Path "/${slug}" doesn't match any known route` });
       continue;
     }
 
@@ -283,7 +292,7 @@ function validateInternalLinks(
         const [catPath, slug] = parts;
         if (CATEGORY_PATH_TO_SLUG[catPath] && articleSlugs.has(slug)) continue;
       }
-      broken.push({ href: cleanPath, linkType: 'unknown', reason: `Unknown internal path` });
+      broken.push({ href: cleanPath, rawHref, linkType: 'unknown', reason: `Unknown internal path` });
     }
   }
 
@@ -411,7 +420,7 @@ function applyRewrites(
 
   // ── Pattern 6: Bare slugs (absolute only) ──
   content = content.replace(
-    /href="https?:\/\/letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
+    /href="https?:\/\/(?:www\.)?letterofdispute\.com\/([a-z0-9][a-z0-9-]{5,})\/?"/gi,
     (_match: string, slug: string) => {
       if (RESERVED_PATHS.has(slug)) return _match;
       if (slug.startsWith('articles/') || slug.startsWith('templates/') || slug.startsWith('guides/')) return _match;
@@ -428,7 +437,7 @@ function applyRewrites(
 
   // ── Pattern 7: Convert absolute /articles/ URLs to relative ──
   content = content.replace(
-    /href="https?:\/\/letterofdispute\.com\/(articles\/[^"]+)"/gi,
+    /href="https?:\/\/(?:www\.)?letterofdispute\.com\/(articles\/[^"]+)"/gi,
     (_match: string, path: string) => {
       fixCount++;
       return `href="/${path.replace(/\/$/, '')}"`;
@@ -437,7 +446,7 @@ function applyRewrites(
 
   // ── Pattern 8: Convert absolute /templates/ URLs to relative ──
   content = content.replace(
-    /href="https?:\/\/letterofdispute\.com\/(templates\/[^"]+)"/gi,
+    /href="https?:\/\/(?:www\.)?letterofdispute\.com\/(templates\/[^"]+)"/gi,
     (_match: string, path: string) => {
       fixCount++;
       return `href="/${path.replace(/\/$/, '')}"`;
@@ -446,7 +455,7 @@ function applyRewrites(
 
   // ── Pattern 9: Catch-all for remaining absolute URLs ──
   content = content.replace(
-    /href="https?:\/\/letterofdispute\.com\/([^"]+)"/gi,
+    /href="https?:\/\/(?:www\.)?letterofdispute\.com\/([^"]+)"/gi,
     (_match: string, path: string) => {
       const cleanPath = path.replace(/\/$/, '');
       if (RESERVED_PATHS.has(cleanPath)) {
@@ -523,7 +532,41 @@ function applyRewrites(
 }
 
 /**
+ * Slugify a noisy string (handles punctuation, apostrophes, colons, spaces).
+ */
+function slugifyNoisy(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/['']/g, '')           // remove apostrophes
+    .replace(/[^a-z0-9]+/g, '-')    // non-alphanum → hyphen
+    .replace(/-+/g, '-')            // collapse hyphens
+    .replace(/^-|-$/g, '');         // trim leading/trailing
+}
+
+/**
+ * Build a regex that matches <a ...href="rawHref"...>innerText</a>
+ * using the exact rawHref from the HTML. Handles multiline anchors.
+ */
+function buildAnchorStripRegex(rawHref: string): RegExp {
+  const escaped = rawHref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Match both quote styles, multiline inner content
+  return new RegExp(
+    `<a\\s[^>]*href=["']${escaped}["'][^>]*>([\\s\\S]*?)<\\/a>`,
+    'gi'
+  );
+}
+
+/**
+ * Build a regex that matches href="rawHref" for rewriting.
+ */
+function buildHrefReplaceRegex(rawHref: string): RegExp {
+  const escaped = rawHref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`href=["']${escaped}["']`, 'g');
+}
+
+/**
  * Deep fix: resolve remaining broken links using fuzzy matching, template lookup, and stripping.
+ * Uses rawHref (exact HTML attribute value) for all replacements.
  */
 function applyDeepFix(
   content: string,
@@ -536,35 +579,63 @@ function applyDeepFix(
   let stripped = 0;
 
   for (const bl of brokenLinks) {
-    const escapedHref = bl.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const hrefRegex = buildHrefReplaceRegex(bl.rawHref);
+
+    // ── Legacy /blog/* paths ──
+    if (bl.href.startsWith('/blog/')) {
+      const blogSlugRaw = bl.href.replace(/^\/blog\//, '');
+      const blogSlug = slugifyNoisy(blogSlugRaw);
+      const cat = slugToCategory.get(blogSlug);
+      if (cat) {
+        content = content.replace(hrefRegex, `href="/articles/${cat}/${blogSlug}"`);
+        fuzzyFixed++;
+        continue;
+      }
+      const fuzzy = findFuzzyMatch(blogSlug, slugToCategory);
+      if (fuzzy) {
+        content = content.replace(hrefRegex, `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`);
+        fuzzyFixed++;
+        continue;
+      }
+      // Strip unresolvable /blog/ links
+      const before = content;
+      content = content.replace(buildAnchorStripRegex(bl.rawHref), '$1');
+      if (content !== before) { stripped++; }
+      continue;
+    }
 
     if (bl.linkType === 'unknown') {
-      // Extract the bare slug from /{slug}
+      // Extract the bare slug from /{slug} (use normalized href)
       const bareMatch = bl.href.match(/^\/([a-z0-9][a-z0-9-]+)$/);
       if (bareMatch) {
         const brokenSlug = bareMatch[1];
+        // Also try slugified version for punctuation variants
+        const normalizedSlug = slugifyNoisy(brokenSlug);
 
-        // Try exact match in embeddings (might be a template slug used as bare path)
-        const templateInfo = templateSlugMap.get(brokenSlug);
+        // Try exact match in templates
+        const templateInfo = templateSlugMap.get(brokenSlug) || templateSlugMap.get(normalizedSlug);
         if (templateInfo) {
           const newHref = templateInfo.subcategorySlug
             ? `/templates/${templateInfo.categoryId}/${templateInfo.subcategorySlug}/${brokenSlug}`
             : `/templates/${templateInfo.categoryId}/${brokenSlug}`;
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="${newHref}"`
-          );
+          content = content.replace(hrefRegex, `href="${newHref}"`);
+          fuzzyFixed++;
+          continue;
+        }
+
+        // Try exact article match (also try normalized)
+        const exactCat = slugToCategory.get(brokenSlug) || slugToCategory.get(normalizedSlug);
+        if (exactCat) {
+          const resolvedSlug = slugToCategory.has(brokenSlug) ? brokenSlug : normalizedSlug;
+          content = content.replace(hrefRegex, `href="/articles/${exactCat}/${resolvedSlug}"`);
           fuzzyFixed++;
           continue;
         }
 
         // Try fuzzy match against articles
-        const fuzzy = findFuzzyMatch(brokenSlug, slugToCategory);
+        const fuzzy = findFuzzyMatch(normalizedSlug, slugToCategory) || findFuzzyMatch(brokenSlug, slugToCategory);
         if (fuzzy) {
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`
-          );
+          content = content.replace(hrefRegex, `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`);
           fuzzyFixed++;
           continue;
         }
@@ -574,12 +645,11 @@ function applyDeepFix(
       const multiMatch = bl.href.match(/\/([a-z0-9][a-z0-9-]+)$/);
       if (multiMatch && !bareMatch) {
         const lastSlug = multiMatch[1];
-        const cat = slugToCategory.get(lastSlug);
+        const normalizedLast = slugifyNoisy(lastSlug);
+        const cat = slugToCategory.get(lastSlug) || slugToCategory.get(normalizedLast);
         if (cat) {
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="/articles/${cat}/${lastSlug}"`
-          );
+          const resolvedSlug = slugToCategory.has(lastSlug) ? lastSlug : normalizedLast;
+          content = content.replace(hrefRegex, `href="/articles/${cat}/${resolvedSlug}"`);
           fuzzyFixed++;
           continue;
         }
@@ -587,27 +657,21 @@ function applyDeepFix(
     }
 
     if (bl.linkType === 'template') {
-      // /templates/{badCat}/... where badCat is actually a template slug
       const templatePathMatch = bl.href.match(/^\/templates\/([^/]+)(\/.*)?$/);
       if (templatePathMatch) {
         const firstSegment = templatePathMatch[1];
         const restPath = templatePathMatch[2] || '';
 
-        // Check if firstSegment is actually a template slug being used as category
         const info = templateSlugMap.get(firstSegment);
         if (info) {
           const newHref = info.subcategorySlug
             ? `/templates/${info.categoryId}/${info.subcategorySlug}/${firstSegment}`
             : `/templates/${info.categoryId}/${firstSegment}`;
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="${newHref}"`
-          );
+          content = content.replace(hrefRegex, `href="${newHref}"`);
           fuzzyFixed++;
           continue;
         }
 
-        // Check if last segment of rest is a valid template slug
         if (restPath) {
           const segments = restPath.split('/').filter(Boolean);
           const lastSeg = segments[segments.length - 1];
@@ -616,23 +680,16 @@ function applyDeepFix(
             const newHref = lastInfo.subcategorySlug
               ? `/templates/${lastInfo.categoryId}/${lastInfo.subcategorySlug}/${lastSeg}`
               : `/templates/${lastInfo.categoryId}/${lastSeg}`;
-            content = content.replace(
-              new RegExp(`href="${escapedHref}"`, 'g'),
-              `href="${newHref}"`
-            );
+            content = content.replace(hrefRegex, `href="${newHref}"`);
             fuzzyFixed++;
             continue;
           }
         }
 
-        // If firstSegment is not a valid category, check if it's a known article slug
         if (!VALID_TEMPLATE_CATEGORIES.has(firstSegment)) {
           const articleCat = slugToCategory.get(firstSegment);
           if (articleCat) {
-            content = content.replace(
-              new RegExp(`href="${escapedHref}"`, 'g'),
-              `href="/articles/${articleCat}/${firstSegment}"`
-            );
+            content = content.replace(hrefRegex, `href="/articles/${articleCat}/${firstSegment}"`);
             fuzzyFixed++;
             continue;
           }
@@ -641,42 +698,36 @@ function applyDeepFix(
     }
 
     if (bl.linkType === 'article') {
-      // /articles/{wrong-cat}/{slug} - fix to correct category
       const artMatch = bl.href.match(/^\/articles\/([^/]+)\/([^/]+)$/);
       if (artMatch) {
         const slug = artMatch[2];
-        const correctCat = slugToCategory.get(slug);
+        const normalizedSlug = slugifyNoisy(slug);
+        const correctCat = slugToCategory.get(slug) || slugToCategory.get(normalizedSlug);
         if (correctCat) {
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="/articles/${correctCat}/${slug}"`
-          );
+          const resolvedSlug = slugToCategory.has(slug) ? slug : normalizedSlug;
+          content = content.replace(hrefRegex, `href="/articles/${correctCat}/${resolvedSlug}"`);
           fuzzyFixed++;
           continue;
         }
-        // Try fuzzy
-        const fuzzy = findFuzzyMatch(slug, slugToCategory);
+        const fuzzy = findFuzzyMatch(normalizedSlug, slugToCategory) || findFuzzyMatch(slug, slugToCategory);
         if (fuzzy) {
-          content = content.replace(
-            new RegExp(`href="${escapedHref}"`, 'g'),
-            `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`
-          );
+          content = content.replace(hrefRegex, `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`);
           fuzzyFixed++;
           continue;
         }
       }
     }
 
-    // No match found → strip <a> tag, keep inner text
-    // Match <a ... href="broken-href" ...>inner text</a>
-    const stripRegex = new RegExp(
-      `<a\\s[^>]*href="${escapedHref}"[^>]*>(.*?)<\\/a>`,
-      'gi'
-    );
+    // ── DESTRUCTIVE FALLBACK: strip <a> tag, keep inner text ──
+    // No match found → no unresolved internal href survives deep-fix
+    const stripRegex = buildAnchorStripRegex(bl.rawHref);
     const before = content;
     content = content.replace(stripRegex, '$1');
     if (content !== before) {
       stripped++;
+    } else {
+      // If anchor strip didn't match (e.g. unusual HTML), try removing just the href to deactivate
+      console.log(`[deep-fix] Could not strip anchor for rawHref: ${bl.rawHref}`);
     }
   }
 

@@ -155,10 +155,27 @@ const AdminBlogEditor = () => {
       'contractors','mortgage',
     ]);
 
+    let result = html;
+
+    // Strip /blog/* links (legacy path, always broken)
+    result = result.replace(
+      /<a\s+[^>]*href=["']\/blog\/[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi,
+      '$1'
+    );
+
+    // Normalize trailing slashes and query strings on internal hrefs
+    result = result.replace(
+      /href="(\/[^"]*?)(\?[^"]*)?"/gi,
+      (_full: string, path: string, _query: string) => {
+        const clean = path.replace(/\/$/, '') || '/';
+        return `href="${clean}"`;
+      }
+    );
+
     // Strip template links with invalid categories
-    let result = html.replace(
+    result = result.replace(
       /<a\s+([^>]*?)href="\/templates\/([^/"]+)(\/[^"]*?)"([^>]*?)>([\s\S]*?)<\/a>/gi,
-      (full, pre, catId, rest, post, inner) => {
+      (full: string, pre: string, catId: string, rest: string, post: string, inner: string) => {
         if (VALID_TEMPLATE_CATS.has(catId)) return full;
         // Try normalizing
         const normalized = catId.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
