@@ -1,56 +1,43 @@
 
-Goal: make internal-link integrity “waterproof” so scans do not bounce back after refresh, and ensure templates/tools/guides stay clean.
+Issue confirmed: deep-fix is matching/replacing normalized hrefs while stored HTML keeps query/trailing-slash/punctuation variants, so the same 10 anchors never get rewritten or stripped.
 
-Current status from audit:
-- Template/tools/guides frontend routing is mostly correct.
-- Recurrence root cause is backend data + backend link writers:
-  1) `content_plans.category_id` contains many legacy/noncanonical values (e.g. `Contractors`, `Damaged Goods`, `HOA & Property`) instead of canonical IDs.
-  2) Deep Fix rewrites using those bad values, so links can become invalid again.
-  3) `apply-links-bulk` currently writes template links as `/templates/{templateSlug}` (missing required category/subcategory path), which reintroduces broken links.
+Implementation steps
+1. Harden broken-link parsing in `supabase/functions/fix-broken-links/index.ts`
+- Capture both `rawHref` (exact href attribute value) and `normalizedPath` (for validation).
+- Expand internal-origin matcher to include `www.letterofdispute.com` and both quote styles (`"` and `'`).
 
-Implementation plan:
+2. Make deep-fix replacements operate on raw hrefs
+- Replace all `href="...cleanPath..."` rewrites with a helper that rewrites by exact `rawHref`.
+- Update strip logic to match `<a ... href=...>...</a>` with `[\s\S]*?` so multiline anchors are stripped reliably.
 
-1) Canonicalize template category IDs at the source (database hardening)
-- Add one-time migration to normalize all legacy `content_plans.category_id` values to canonical IDs.
-- Backfill `subcategory_slug` to `'general'` where null.
-- Add a DB normalization/validation trigger on `content_plans` insert/update so bad category formats cannot be saved again.
+3. Add noisy-slug normalization before fuzzy matching
+- For unknown links, slugify last segment (remove punctuation/apostrophes, collapse spaces to `-`) before exact/fuzzy lookup.
+- Add explicit legacy `/blog/*` normalization path so title-like `/blog/...` links can resolve or be stripped deterministically.
 
-2) Fix the link writer that keeps reintroducing bad links
-- Update `supabase/functions/apply-links-bulk/index.ts`:
-  - `buildTargetUrl()` for template suggestions must resolve full hierarchical URL from `content_plans` (`/templates/{categoryId}/{subcategorySlug}/{templateSlug}`), not `/templates/{templateSlug}`.
-  - Fix pillar CTA template URL generation with the same full path logic.
-  - Add strict fallback behavior (no malformed template URL writes).
+4. Enforce destructive fallback for unresolved internals
+- If rewrite/fuzzy/template recovery fails, always strip anchor and keep text (no unresolved internal href survives deep-fix).
 
-3) Make Deep Fix deterministic and persistent
-- Update `supabase/functions/fix-broken-links/index.ts`:
-  - Normalize template category IDs before constructing repaired URLs.
-  - Add explicit rewrite coverage for legacy display-name categories (spaces, ampersands, title case).
-  - Ensure deep-fix save path always persists transformed content consistently.
-- Then run a full-batch repair pass over all published posts (offset pagination) until remaining broken links = 0.
+5. Close manual-content reintroduction paths
+- Strengthen `sanitizeContentLinks` in `src/pages/admin/AdminBlogEditor.tsx` to strip/normalize `/blog/*`, malformed bare slugs, and invalid internal paths.
+- Apply the same sanitizer logic in `src/hooks/useCreateDraftFromGenerated.ts` so AI-created drafts cannot save dead internal links.
 
-4) Tighten generation-time and post-generation validation
-- Update `supabase/functions/bulk-generate-articles/index.ts`:
-  - Normalize `content_plans` categories when building URL registry and sanitizer rewrites.
-  - Strengthen `validateAndStripBadLinks()` so template links are only kept if they resolve to canonical category + valid template slug path.
-  - Keep destructive strip behavior for dead/unverifiable internal links.
+6. Run remediation and lock verification
+- Execute targeted deep-fix on the 7 affected posts, then a full deep-fix pass.
+- Re-scan twice; require stable `0` recurring links between scans.
+- Add a regression test file for `fix-broken-links` covering the 10 exact failing href patterns.
 
-5) Protect manual/admin-created content too
-- Add validation pass on admin save/publish flow (`src/pages/admin/AdminBlogEditor.tsx` and generated-draft flow) so manually edited content is sanitized/validated before final write.
-- This closes the gap where non-AI content could still introduce broken internal links.
+Technical details
+- Primary file: `supabase/functions/fix-broken-links/index.ts`
+  - `validateInternalLinks`: preserve raw href + canonical path.
+  - `applyDeepFix`: raw-href rewrite helper + robust strip helper + slugify/fuzzy path handling.
+- Editor ingress: `src/pages/admin/AdminBlogEditor.tsx`, `src/hooks/useCreateDraftFromGenerated.ts`
+  - Shared strict internal-link sanitization behavior (strip unresolved internal anchors).
+- Regression coverage: `supabase/functions/fix-broken-links/index_test.ts` with fixtures for:
+  - trailing slash variants (`/hoa-neighbor-disputes/`)
+  - query-suffixed links (`/blog/...?...`)
+  - punctuation/apostrophe slugs (`...homeowner's...`, `...: Which is Better?`)
 
-6) Verification checklist (must pass before closing)
-- Run full scanner across all offsets and confirm:
-  - `totalBrokenLinks = 0`
-  - no recurring jump back after refresh/re-scan
-- Spot-check template/tools/guides routes and cross-links:
-  - `/templates/:category/:subcategory/:slug`
-  - `/guides/:category`
-  - small-claims tool routes
-- Confirm logs show stable post-fix behavior with no reintroduced malformed template links.
-
-Technical details (target files/components):
-- `supabase/functions/apply-links-bulk/index.ts` (primary regression source)
-- `supabase/functions/fix-broken-links/index.ts` (deep-fix persistence + normalization)
-- `supabase/functions/bulk-generate-articles/index.ts` (registry + validator hardening)
-- `src/pages/admin/AdminBlogEditor.tsx` (+ generated draft save path)
-- DB migration on `content_plans` for canonical category enforcement
+Acceptance checks
+- Broken Link Scanner reports `0` on consecutive scans after deep-fix.
+- The same 10 links do not reappear after refresh + rescan.
+- Manual save and AI-draft save both remove unresolved `/blog/*` and malformed internal anchors.
