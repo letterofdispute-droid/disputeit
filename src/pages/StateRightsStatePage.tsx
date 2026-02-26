@@ -98,8 +98,10 @@ export default function StateRightsStatePage() {
       </div>
 
       {/* Hero */}
-      <section className="bg-primary py-12 md:py-16">
-        <div className="container-wide">
+      <section className="relative overflow-hidden bg-primary py-12 md:py-16">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-primary/45" />
+        <div className="container-wide relative z-10">
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 bg-primary-foreground/10 rounded-full px-4 py-1.5 mb-5">
               <MapPin className="h-4 w-4 text-primary-foreground/80" />
