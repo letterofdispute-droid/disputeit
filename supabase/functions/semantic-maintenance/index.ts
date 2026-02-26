@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface MaintenanceRequest {
-  tasks?: ('process_queue' | 'rescan_stale' | 'detect_orphans')[];
+  tasks?: ('process_queue' | 'rescan_stale' | 'reconcile_counts' | 'detect_orphans')[];
   categoryFilter?: string;
   dryRun?: boolean;
 }
@@ -32,7 +32,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
     const body: MaintenanceRequest = await req.json().catch(() => ({}));
-    const tasks = body.tasks || ['process_queue', 'rescan_stale', 'detect_orphans'];
+    const tasks = body.tasks || ['process_queue', 'rescan_stale', 'reconcile_counts', 'detect_orphans'];
     const dryRun = body.dryRun || false;
 
     console.log(`[MAINTENANCE] Starting tasks: ${tasks.join(', ')}${dryRun ? ' (DRY RUN)' : ''}`);
@@ -128,22 +128,30 @@ serve(async (req) => {
       }
     }
 
-    // Task 3: Detect orphan articles (0 inbound links)
-    if (tasks.includes('detect_orphans')) {
+    // Task 3: Reconcile link counters + detect orphan articles (0 inbound links)
+    if (tasks.includes('reconcile_counts') || tasks.includes('detect_orphans')) {
       try {
-        const { data: orphans, error } = await supabase.rpc('get_orphan_articles', {
-          category_filter: body.categoryFilter || null,
-        });
+        if (!dryRun && tasks.includes('reconcile_counts')) {
+          const { data: reconcileResult, error: reconcileError } = await supabase.rpc('reconcile_link_counts');
+          if (reconcileError) throw reconcileError;
+          console.log('[MAINTENANCE] Reconciled link counters:', reconcileResult);
+        }
 
-        if (error) throw error;
+        if (tasks.includes('detect_orphans')) {
+          const { data: orphans, error } = await supabase.rpc('get_orphan_articles', {
+            category_filter: body.categoryFilter || null,
+          });
 
-        if (orphans) {
-          result.orphansDetected = orphans.length;
-          console.log(`[MAINTENANCE] Detected ${orphans.length} orphan articles`);
-          
-          // Log the orphans for visibility
-          if (orphans.length > 0 && orphans.length <= 20) {
-            console.log('[MAINTENANCE] Orphan articles:', orphans.map((o: any) => o.slug).join(', '));
+          if (error) throw error;
+
+          if (orphans) {
+            result.orphansDetected = orphans.length;
+            console.log(`[MAINTENANCE] Detected ${orphans.length} orphan articles`);
+            
+            // Log the orphans for visibility
+            if (orphans.length > 0 && orphans.length <= 20) {
+              console.log('[MAINTENANCE] Orphan articles:', orphans.map((o: any) => o.slug).join(', '));
+            }
           }
         }
       } catch (error) {
