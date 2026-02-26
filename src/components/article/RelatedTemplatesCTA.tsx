@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { getTemplateBySlug } from '@/data/allTemplates';
+import { getTemplateBySlug, getCategoryIdFromName } from '@/data/allTemplates';
 import { getCategoryById } from '@/data/templateCategories';
 import { inferSubcategory } from '@/data/subcategoryMappings';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,10 +39,11 @@ export function RelatedTemplatesCTA({
       <div className="space-y-3">
         {templates.map(template => {
         if (!template) return null;
-        const category = getCategoryById(template.category);
+        const categoryId = getCategoryIdFromName(template.category);
+        const category = getCategoryById(categoryId);
         const subcategoryInfo = inferSubcategory(template.id, template.category);
         const subcategorySlug = subcategoryInfo?.slug || 'general';
-        const templateUrl = `/templates/${template.category}/${subcategorySlug}/${template.slug}`;
+        const templateUrl = `/templates/${categoryId}/${subcategorySlug}/${template.slug}`;
         return <Card key={template.slug} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-background">
               <CardContent className="p-4">
                 <Link to={templateUrl} className="flex items-center gap-4">
@@ -68,7 +69,7 @@ export function RelatedTemplatesCTA({
 
       {templates.length === 1 && <div className="mt-4">
           <Button variant="default" size="lg" className="w-full" asChild>
-            <Link to={`/templates/${templates[0]!.category}/${inferSubcategory(templates[0]!.id, templates[0]!.category)?.slug || 'general'}/${templates[0]!.slug}`}>
+            <Link to={`/templates/${getCategoryIdFromName(templates[0]!.category)}/${inferSubcategory(templates[0]!.id, templates[0]!.category)?.slug || 'general'}/${templates[0]!.slug}`}>
               Create Your Letter Now <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>
