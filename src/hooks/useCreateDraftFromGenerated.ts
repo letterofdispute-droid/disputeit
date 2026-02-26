@@ -107,6 +107,21 @@ export function useCreateDraftFromGenerated() {
       let cleanedContent = content.content
         .replace(/{{MIDDLE_IMAGE}}/g, '<p class="middle-image-placeholder">{{MIDDLE_IMAGE}}</p>');
 
+      // Strip legacy /blog/* links
+      cleanedContent = cleanedContent.replace(
+        /<a\s+[^>]*href=["']\/blog\/[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi,
+        '$1'
+      );
+
+      // Normalize trailing slashes and query strings on internal hrefs
+      cleanedContent = cleanedContent.replace(
+        /href="(\/[^"]*?)(\?[^"]*)?"/gi,
+        (_full: string, path: string, _query: string) => {
+          const clean = path.replace(/\/$/, '') || '/';
+          return `href="${clean}"`;
+        }
+      );
+
       // Sanitize template links with invalid categories
       const VALID_TEMPLATE_CATS = new Set([
         'refunds','housing','travel','damaged-goods','utilities','financial',
