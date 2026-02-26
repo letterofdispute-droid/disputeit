@@ -1312,8 +1312,15 @@ function validateAndStripBadLinks(content: string, urlRegistry: LinkableUrl[]): 
       if (validPaths.has(href)) return fullMatch;
       // For /articles/ links, trust the sanitizer already validated them
       if (href.startsWith('/articles/') && href.split('/').length === 4) return fullMatch;
-      // For /templates/ with correct 4-segment structure, trust it
-      if (href.startsWith('/templates/') && href.split('/').length === 5) return fullMatch;
+      // For /templates/ with correct 4-segment structure AND valid category, trust it
+      if (href.startsWith('/templates/') && href.split('/').length === 5) {
+        const templateCat = href.split('/')[2];
+        const VALID_CATS = new Set(['refunds','housing','travel','damaged-goods','utilities','financial','insurance','vehicle','healthcare','employment','ecommerce','hoa','contractors','mortgage']);
+        if (VALID_CATS.has(templateCat)) return fullMatch;
+        // Bad category in template link — strip it
+        stripped++;
+        return innerText;
+      }
       // For /guides/ and /state-rights/ with sub-paths, allow
       if ((href.startsWith('/guides/') || href.startsWith('/state-rights/')) && href.split('/').length >= 3) return fullMatch;
     }
