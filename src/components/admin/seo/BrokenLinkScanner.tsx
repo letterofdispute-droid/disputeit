@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, Wrench, Square } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, Wrench, Square, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -231,7 +232,19 @@ export default function BrokenLinkScanner() {
             </CardTitle>
             <CardDescription className="text-xs mt-1">
               Scans all internal links (articles, templates, guides, state rights, static pages).
-              {targetsLoaded > 0 && <span className="text-foreground font-medium"> · {targetsLoaded.toLocaleString()} targets loaded</span>}
+              {targetsLoaded > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-foreground font-medium cursor-help inline-flex items-center gap-0.5"> · {targetsLoaded.toLocaleString()} targets loaded <Info className="h-3 w-3 text-muted-foreground" /></span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      <p><strong>Targets loaded</strong> = total valid link destinations (articles + templates + guides) used to verify links.</p>
+                      <p className="mt-1"><strong>Articles scanned</strong> = number of published articles whose content is checked for broken links.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -256,7 +269,7 @@ export default function BrokenLinkScanner() {
         {isBusy && (
           <div className="space-y-1">
             <Progress value={progressPercent} className="h-2" />
-            <p className="text-xs text-muted-foreground">{progress.offset} of ~{progress.total} posts processed{isFixing && ' (fixing)'}</p>
+            <p className="text-xs text-muted-foreground">{progress.offset} of ~{progress.total} articles scanned{isFixing && ' (fixing)'}</p>
           </div>
         )}
 
