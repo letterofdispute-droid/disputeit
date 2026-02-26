@@ -147,6 +147,45 @@ const AdminBlogEditor = () => {
     }
   };
 
+  // Sanitize internal links in content before saving
+  const sanitizeContentLinks = (html: string): string => {
+    const VALID_TEMPLATE_CATS = new Set([
+      'refunds','housing','travel','damaged-goods','utilities','financial',
+      'insurance','vehicle','healthcare','employment','ecommerce','hoa',
+      'contractors','mortgage',
+    ]);
+
+    // Strip template links with invalid categories
+    let result = html.replace(
+      /<a\s+([^>]*?)href="\/templates\/([^/"]+)(\/[^"]*?)"([^>]*?)>([\s\S]*?)<\/a>/gi,
+      (full, pre, catId, rest, post, inner) => {
+        if (VALID_TEMPLATE_CATS.has(catId)) return full;
+        // Try normalizing
+        const normalized = catId.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        if (VALID_TEMPLATE_CATS.has(normalized)) {
+          return `<a ${pre}href="/templates/${normalized}${rest}"${post}>${inner}</a>`;
+        }
+        // Strip the broken link, keep text
+        return inner;
+      }
+    );
+
+    // Fix bare slug links: /some-slug → strip if can't resolve
+    result = result.replace(
+      /<a\s+([^>]*?)href="\/([a-z0-9][a-z0-9-]{5,})"([^>]*?)>([\s\S]*?)<\/a>/gi,
+      (full, _pre, slug, _post, inner) => {
+        const knownPrefixes = ['articles/', 'templates/', 'guides/', 'admin/', 'state-rights/', 'small-claims/'];
+        if (knownPrefixes.some(p => slug.startsWith(p))) return full;
+        const staticRoutes = new Set(['how-it-works', 'pricing', 'about', 'contact', 'faq', 'privacy', 'terms', 'disclaimer', 'consumer-news', 'deadlines', 'analyze-letter', 'do-i-have-a-case']);
+        if (staticRoutes.has(slug)) return full;
+        // Bare slug — can't verify, keep as-is (admin content is trusted)
+        return full;
+      }
+    );
+
+    return result;
+  };
+
   const handleSave = async (publishStatus?: string) => {
     if (!title.trim()) {
       toast({ title: 'Title required', description: 'Please enter a title.', variant: 'destructive' });
@@ -155,13 +194,16 @@ const AdminBlogEditor = () => {
 
     setIsSaving(true);
     try {
+      // Sanitize content before saving
+      const sanitizedContent = sanitizeContentLinks(content);
+
       const categoryName = availableCategories.find(c => c.slug === category)?.name || category;
       // Auto-pick author if none selected
       const authorName = selectedAuthor || getAuthorForCategory(category).name;
       const postData = {
         title,
         slug,
-        content,
+        content: sanitizedContent,
         excerpt,
         category: categoryName,
         category_slug: category,

@@ -495,14 +495,25 @@ function applyRewrites(
   );
 
   // ── Pattern 12: Fix /templates/{bad-cat}/... → remap via CAT_TO_TEMPLATE ──
+  // Also handles legacy display-name categories with spaces/ampersands/title-case
   content = content.replace(
     /href="\/templates\/([^/"]+)(\/[^"]*)?"/gi,
     (_match: string, catId: string, rest: string = '') => {
       if (VALID_TEMPLATE_CATEGORIES.has(catId)) return _match;
-      const mapped = CAT_TO_TEMPLATE[catId];
+      // Normalize: lowercase, replace spaces/& with hyphens, collapse
+      const normalized = catId.toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const mapped = CAT_TO_TEMPLATE[normalized] || CAT_TO_TEMPLATE[catId];
       if (mapped) {
         fixCount++;
         return `href="/templates/${mapped}${rest}"`;
+      }
+      // Check if the normalized form is itself a valid category
+      if (VALID_TEMPLATE_CATEGORIES.has(normalized)) {
+        fixCount++;
+        return `href="/templates/${normalized}${rest}"`;
       }
       return _match;
     }

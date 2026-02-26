@@ -107,6 +107,24 @@ export function useCreateDraftFromGenerated() {
       let cleanedContent = content.content
         .replace(/{{MIDDLE_IMAGE}}/g, '<p class="middle-image-placeholder">{{MIDDLE_IMAGE}}</p>');
 
+      // Sanitize template links with invalid categories
+      const VALID_TEMPLATE_CATS = new Set([
+        'refunds','housing','travel','damaged-goods','utilities','financial',
+        'insurance','vehicle','healthcare','employment','ecommerce','hoa',
+        'contractors','mortgage',
+      ]);
+      cleanedContent = cleanedContent.replace(
+        /<a\s+([^>]*?)href="\/templates\/([^/"]+)(\/[^"]*?)"([^>]*?)>([\s\S]*?)<\/a>/gi,
+        (full: string, pre: string, catId: string, rest: string, post: string, inner: string) => {
+          if (VALID_TEMPLATE_CATS.has(catId)) return full;
+          const normalized = catId.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+          if (VALID_TEMPLATE_CATS.has(normalized)) {
+            return `<a ${pre}href="/templates/${normalized}${rest}"${post}>${inner}</a>`;
+          }
+          return inner; // Strip broken link
+        }
+      );
+
       // Create the blog post
       const { data: post, error: postError } = await supabase
         .from('blog_posts')

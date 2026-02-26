@@ -403,10 +403,36 @@ async function insertLinkContextually(
   return null;
 }
 
-function buildTargetUrl(suggestion: { target_type: string; target_slug: string }, categorySlug?: string): string {
+async function buildTargetUrl(
+  suggestion: { target_type: string; target_slug: string },
+  categorySlug: string | undefined,
+  supabaseAdmin: any,
+): Promise<string> {
   switch (suggestion.target_type) {
-    case 'template':
-      return `/templates/${suggestion.target_slug}`;
+    case 'template': {
+      // Look up full routing info from content_plans
+      const { data: plan } = await supabaseAdmin
+        .from('content_plans')
+        .select('category_id, subcategory_slug')
+        .eq('template_slug', suggestion.target_slug)
+        .single();
+      if (plan) {
+        return `/templates/${plan.category_id}/${plan.subcategory_slug || 'general'}/${suggestion.target_slug}`;
+      }
+      // Fallback: try article_embeddings
+      const { data: embed } = await supabaseAdmin
+        .from('article_embeddings')
+        .select('category_id, subcategory_slug')
+        .eq('slug', suggestion.target_slug)
+        .eq('content_type', 'template')
+        .single();
+      if (embed) {
+        return `/templates/${embed.category_id}/${embed.subcategory_slug || 'general'}/${suggestion.target_slug}`;
+      }
+      // Cannot resolve — return empty to signal skip
+      console.warn(`[buildTargetUrl] Cannot resolve template slug: ${suggestion.target_slug}`);
+      return '';
+    }
     case 'article':
       return `/articles/${categorySlug || 'general'}/${suggestion.target_slug}`;
     case 'guide':
@@ -511,7 +537,15 @@ async function processBatch(
         try {
           const targetEmbed = (suggestion as any).article_embeddings;
           const targetCategorySlug = targetEmbed?.category_id || suggestion.blog_posts?.category_slug || 'general';
-          const targetUrl = buildTargetUrl(suggestion, targetCategorySlug);
+          const targetUrl = await buildTargetUrl(suggestion, targetCategorySlug, supabaseAdmin);
+          if (!targetUrl) {
+            await supabaseAdmin
+              .from('link_suggestions')
+              .update({ status: 'rejected', hierarchy_violation: 'Cannot resolve template URL' })
+              .eq('id', suggestion.id);
+            failedCount++;
+            continue;
+          }
           const targetPrimaryKeyword = targetEmbed?.primary_keyword || null;
           const targetSecondaryKeywords = targetEmbed?.secondary_keywords || null;
 
@@ -573,12 +607,12 @@ async function processBatch(
       if (post.article_type === 'pillar' && post.content_plan_id) {
         const { data: plan } = await supabaseAdmin
           .from('content_plans')
-          .select('template_slug, template_name')
+          .select('template_slug, template_name, category_id, subcategory_slug')
           .eq('id', post.content_plan_id)
           .single();
 
         if (plan) {
-          const templateUrl = `/templates/${plan.template_slug}`;
+          const templateUrl = `/templates/${plan.category_id}/${plan.subcategory_slug || 'general'}/${plan.template_slug}`;
           const templateLinkHtml = `<p class="cta-link"><strong>Ready to take action?</strong> Use our <a href="${templateUrl}" title="${plan.template_name}">${plan.template_name}</a> template to create your dispute letter now.</p>`;
           
           if (!updatedContent.includes(templateUrl)) {
