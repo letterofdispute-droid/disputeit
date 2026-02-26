@@ -1189,6 +1189,9 @@ Respond with ONLY this JSON:
     // Sanitize any bare slug links created by AI into proper /articles/category/slug format
     parsedContent.content = await sanitizeBareSlugLinks(supabaseAdmin, parsedContent.content);
 
+    // Post-generation link validation: strip any internal links not in the URL registry
+    parsedContent.content = validateAndStripBadLinks(parsedContent.content, urlRegistry);
+
     // Compute keyword occurrence counts
     const keywordCountsData = countKeywords(parsedContent.content, allKeywords);
 
@@ -1273,6 +1276,58 @@ Respond with ONLY this JSON:
 
     return { success: false, error: errorMsg };
   }
+}
+
+// ============================================
+// POST-GENERATION LINK VALIDATOR - strips internal links not in registry
+// ============================================
+
+const STATIC_VALID_PATHS = new Set([
+  '/', '/templates', '/how-it-works', '/pricing', '/faq', '/about', '/contact',
+  '/terms', '/privacy', '/disclaimer', '/guides', '/state-rights', '/deadlines',
+  '/consumer-news', '/analyze-letter', '/small-claims', '/do-i-have-a-case',
+]);
+
+function validateAndStripBadLinks(content: string, urlRegistry: LinkableUrl[]): string {
+  // Build a set of all valid internal paths from the registry
+  const validPaths = new Set<string>(STATIC_VALID_PATHS);
+  for (const u of urlRegistry) {
+    validPaths.add(u.url);
+  }
+
+  // Match all internal href links (starting with /)
+  const internalLinkPattern = /<a\s+([^>]*?)href="(\/[^"]+)"([^>]*?)>([\s\S]*?)<\/a>/gi;
+  let stripped = 0;
+
+  const result = content.replace(internalLinkPattern, (fullMatch, pre, href, post, innerText) => {
+    // Allow known path prefixes that have dynamic sub-routes
+    const dynamicPrefixes = ['/articles/', '/templates/', '/guides/', '/state-rights/', '/small-claims/'];
+    const isStatic = validPaths.has(href);
+    const isDynamic = dynamicPrefixes.some(p => href.startsWith(p));
+
+    if (isStatic) return fullMatch;
+
+    // For dynamic paths, check if the exact URL is in registry
+    if (isDynamic) {
+      if (validPaths.has(href)) return fullMatch;
+      // For /articles/ links, trust the sanitizer already validated them
+      if (href.startsWith('/articles/') && href.split('/').length === 4) return fullMatch;
+      // For /templates/ with correct 4-segment structure, trust it
+      if (href.startsWith('/templates/') && href.split('/').length === 5) return fullMatch;
+      // For /guides/ and /state-rights/ with sub-paths, allow
+      if ((href.startsWith('/guides/') || href.startsWith('/state-rights/')) && href.split('/').length >= 3) return fullMatch;
+    }
+
+    // Strip the link but keep the anchor text
+    stripped++;
+    return innerText;
+  });
+
+  if (stripped > 0) {
+    console.log(`[LINK_VALIDATOR] Stripped ${stripped} unverified internal links from generated content`);
+  }
+
+  return result;
 }
 
 // ============================================
