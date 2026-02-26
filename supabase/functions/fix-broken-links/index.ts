@@ -33,6 +33,7 @@ const CATEGORY_PATH_TO_SLUG: Record<string, string> = {
   'travel-transportation': 'travel',
   'damaged-goods': 'damaged-goods',
   'refunds': 'refunds',
+  'mortgage': 'mortgage',
 };
 
 // Map category paths to template category IDs
@@ -48,7 +49,7 @@ const CAT_TO_TEMPLATE: Record<string, string> = {
   'travel-transportation': 'travel', 'travel': 'travel',
   'neighbor-hoa-disputes': 'hoa', 'hoa': 'hoa',
   'housing': 'housing', 'employment': 'employment',
-  'financial': 'financial',
+  'financial': 'financial', 'mortgage': 'mortgage',
 };
 
 // Reserved paths that are NOT article slugs
@@ -57,7 +58,24 @@ const RESERVED_PATHS = new Set([
   'login', 'signup', 'pricing', 'about', 'contact', 'faq', 'privacy',
   'terms', 'disclaimer', 'cookie-policy', 'how-it-works', 'settings',
   'state-rights', 'deadlines', 'consumer-news', 'analyze-letter',
-  'sitemap.xml', 'robots.txt',
+  'sitemap.xml', 'robots.txt', 'small-claims', 'do-i-have-a-case',
+]);
+
+// Valid template category IDs
+const VALID_TEMPLATE_CATEGORIES = new Set([
+  'refunds', 'housing', 'travel', 'damaged-goods', 'utilities',
+  'financial', 'insurance', 'vehicle', 'healthcare', 'employment',
+  'ecommerce', 'hoa', 'contractors', 'mortgage',
+]);
+
+// Valid static routes
+const VALID_STATIC_ROUTES = new Set([
+  '/', '/templates', '/how-it-works', '/pricing', '/faq', '/about',
+  '/contact', '/terms', '/privacy', '/disclaimer', '/guides',
+  '/state-rights', '/deadlines', '/consumer-news', '/analyze-letter',
+  '/small-claims', '/small-claims/cost-calculator', '/small-claims/demand-letter-cost',
+  '/small-claims/escalation-guide', '/small-claims/statement-generator',
+  '/do-i-have-a-case',
 ]);
 
 const ALL_CATEGORY_PATHS = Object.keys(CATEGORY_PATH_TO_SLUG);
@@ -65,7 +83,7 @@ const CATEGORY_PATHS_PATTERN = ALL_CATEGORY_PATHS.join('|');
 const ORIGIN = `(?:https?:\\/\\/letterofdispute\\.com)?`;
 
 /**
- * Load ALL published article slugs using paginated queries to avoid the 1000-row limit.
+ * Load ALL published article slugs using paginated queries.
  */
 async function loadAllSlugs(supabase: any): Promise<Map<string, string>> {
   const slugToCategory = new Map<string, string>();
@@ -93,6 +111,183 @@ async function loadAllSlugs(supabase: any): Promise<Map<string, string>> {
   return slugToCategory;
 }
 
+/**
+ * Load all template slugs from content_plans.
+ */
+async function loadTemplateSlugs(supabase: any): Promise<Set<string>> {
+  const slugs = new Set<string>();
+  let from = 0;
+  const PAGE = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('content_plans')
+      .select('template_slug, category_id, subcategory_slug')
+      .range(from, from + PAGE - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    for (const t of data) {
+      // The template page route: /templates/{categoryId}/{subcategorySlug}/{templateSlug}
+      // But also simpler patterns: /templates/{categoryId}/{templateSlug}
+      slugs.add(t.template_slug);
+    }
+
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  return slugs;
+}
+
+/**
+ * Load all article_embeddings slugs for comprehensive route validation.
+ */
+async function loadEmbeddingSlugs(supabase: any): Promise<Set<string>> {
+  const slugs = new Set<string>();
+  let from = 0;
+  const PAGE = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('article_embeddings')
+      .select('slug, category_id, subcategory_slug')
+      .range(from, from + PAGE - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    for (const e of data) {
+      slugs.add(e.slug);
+    }
+
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  return slugs;
+}
+
+interface BrokenLink {
+  href: string;
+  linkType: 'article' | 'template' | 'guide' | 'state-rights' | 'static' | 'unknown';
+  reason: string;
+}
+
+/**
+ * Validate ALL internal links in a post's HTML content.
+ */
+function validateInternalLinks(
+  content: string,
+  articleSlugs: Map<string, string>,
+  templateSlugs: Set<string>,
+  embeddingSlugs: Set<string>,
+): BrokenLink[] {
+  const broken: BrokenLink[] = [];
+  // Match all href values starting with / or the domain
+  const hrefRegex = /href="(?:https?:\/\/(?:letterofdispute\.com|disputeit\.lovable\.app))?(\/[^"]*?)"/gi;
+  let match;
+
+  while ((match = hrefRegex.exec(content)) !== null) {
+    const path = match[1].replace(/\/$/, '') || '/';
+
+    // Skip anchors and external
+    if (path.startsWith('/#') || path === '#') continue;
+    // Remove query/hash
+    const cleanPath = path.split('?')[0].split('#')[0];
+
+    // Check static routes
+    if (VALID_STATIC_ROUTES.has(cleanPath)) continue;
+
+    // /articles/{cat}/{slug}
+    const articlesMatch = cleanPath.match(/^\/articles\/([^/]+)\/([^/]+)$/);
+    if (articlesMatch) {
+      const [, , slug] = articlesMatch;
+      if (articleSlugs.has(slug) || embeddingSlugs.has(slug)) continue;
+      broken.push({ href: cleanPath, linkType: 'article', reason: `Article slug "${slug}" not found` });
+      continue;
+    }
+
+    // /articles/{cat} (category listing — always valid if known cat)
+    const articlesCatMatch = cleanPath.match(/^\/articles\/([^/]+)$/);
+    if (articlesCatMatch) {
+      const cat = articlesCatMatch[1];
+      if (CATEGORY_PATH_TO_SLUG[cat] || VALID_TEMPLATE_CATEGORIES.has(cat)) continue;
+      broken.push({ href: cleanPath, linkType: 'article', reason: `Article category "${cat}" not found` });
+      continue;
+    }
+
+    // /templates/{catId} 
+    const templateCatMatch = cleanPath.match(/^\/templates\/([^/]+)$/);
+    if (templateCatMatch) {
+      if (VALID_TEMPLATE_CATEGORIES.has(templateCatMatch[1])) continue;
+      broken.push({ href: cleanPath, linkType: 'template', reason: `Template category "${templateCatMatch[1]}" not found` });
+      continue;
+    }
+
+    // /templates/{catId}/{subcatOrSlug} or /templates/{catId}/{subcat}/{slug}
+    const templateMatch = cleanPath.match(/^\/templates\/([^/]+)\/(.+)$/);
+    if (templateMatch) {
+      const catId = templateMatch[1];
+      if (!VALID_TEMPLATE_CATEGORIES.has(catId)) {
+        broken.push({ href: cleanPath, linkType: 'template', reason: `Template category "${catId}" not found` });
+        continue;
+      }
+      // Extract the final slug segment
+      const segments = templateMatch[2].split('/');
+      const lastSegment = segments[segments.length - 1];
+      // If it's a deep template path, check if template slug exists
+      if (segments.length >= 2) {
+        if (templateSlugs.has(lastSegment)) continue;
+        broken.push({ href: cleanPath, linkType: 'template', reason: `Template slug "${lastSegment}" not found` });
+      }
+      // subcategory-level path — assume valid (hard to validate without full subcategory list)
+      continue;
+    }
+
+    // /guides/{catId}
+    const guidesMatch = cleanPath.match(/^\/guides\/([^/]+)$/);
+    if (guidesMatch) {
+      if (VALID_TEMPLATE_CATEGORIES.has(guidesMatch[1])) continue;
+      broken.push({ href: cleanPath, linkType: 'guide', reason: `Guide category "${guidesMatch[1]}" not found` });
+      continue;
+    }
+
+    // /state-rights/...
+    if (cleanPath.startsWith('/state-rights')) continue; // All state rights routes are valid (generated from static data)
+
+    // /small-claims/...
+    if (cleanPath.startsWith('/small-claims')) continue; // Generated from smallClaimsData
+
+    // Known reserved top-level paths
+    const topLevel = cleanPath.split('/')[1];
+    if (topLevel && RESERVED_PATHS.has(topLevel)) continue;
+
+    // Bare slug — might be an article
+    const bareSlugMatch = cleanPath.match(/^\/([a-z0-9][a-z0-9-]+)$/);
+    if (bareSlugMatch) {
+      const slug = bareSlugMatch[1];
+      if (articleSlugs.has(slug) || CATEGORY_PATH_TO_SLUG[slug] || VALID_TEMPLATE_CATEGORIES.has(slug)) continue;
+      broken.push({ href: cleanPath, linkType: 'unknown', reason: `Path "/${slug}" doesn't match any known route` });
+      continue;
+    }
+
+    // Multi-segment unknown path
+    if (!cleanPath.startsWith('/articles') && !cleanPath.startsWith('/templates') && !cleanPath.startsWith('/guides')) {
+      // Check if it's a category/slug pattern
+      const parts = cleanPath.split('/').filter(Boolean);
+      if (parts.length === 2) {
+        const [catPath, slug] = parts;
+        if (CATEGORY_PATH_TO_SLUG[catPath] && articleSlugs.has(slug)) continue;
+      }
+      broken.push({ href: cleanPath, linkType: 'unknown', reason: `Unknown internal path` });
+    }
+  }
+
+  return broken;
+}
+
 function findTruncatedMatch(
   partialSlug: string,
   slugMap: Map<string, string>
@@ -107,15 +302,6 @@ function findTruncatedMatch(
   return null;
 }
 
-/**
- * SCAN-ONLY broken link scanner.
- * 
- * This function ONLY rewrites URL patterns (e.g. /blog/slug → /articles/cat/slug).
- * It NEVER strips or removes <a> tags. It NEVER deletes content.
- * 
- * Pattern 10 (orphan stripping) has been permanently removed.
- * The stripAnchorTag function has been permanently removed.
- */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -128,19 +314,22 @@ serve(async (req) => {
 
     const { mode = 'scan', limit = 50, offset = 0, postId } = await req.json().catch(() => ({}));
 
-    // SAFETY: Fix mode is permanently disabled. Only scan (read-only preview) is allowed.
+    // SAFETY: Fix mode is permanently disabled.
     if (mode === 'fix') {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Fix mode has been permanently disabled for safety. Use the semantic linking pipeline (scan-for-semantic-links + apply-links-bulk) to manage internal links.',
+        error: 'Fix mode has been permanently disabled. Use the semantic linking pipeline to manage internal links.',
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
     }
 
-    // Load ALL published slugs (paginated to avoid 1000-row limit)
-    const slugToCategory = await loadAllSlugs(supabase);
-    const validSlugs = new Set(slugToCategory.keys());
+    // Load all valid targets in parallel
+    const [slugToCategory, templateSlugs, embeddingSlugs] = await Promise.all([
+      loadAllSlugs(supabase),
+      loadTemplateSlugs(supabase),
+      loadEmbeddingSlugs(supabase),
+    ]);
 
-    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} published article slugs`);
+    console.log(`[fix-broken-links] Loaded ${slugToCategory.size} articles, ${templateSlugs.size} templates, ${embeddingSlugs.size} embeddings`);
 
     // Fetch posts to process
     let query = supabase
@@ -162,6 +351,7 @@ serve(async (req) => {
       postSlug: string;
       broken: number;
       fixed: number;
+      brokenLinks: BrokenLink[];
     }> = [];
 
     let totalFixed = 0;
@@ -179,7 +369,6 @@ serve(async (req) => {
         if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
         const fuzzy = findTruncatedMatch(slug, slugToCategory);
         if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-        // No match — leave as-is (NEVER strip)
         return _match;
       });
 
@@ -233,7 +422,6 @@ serve(async (req) => {
             return `href="/articles/${c}/${fullSlug}"`;
           }
         }
-        // No match — leave as-is (NEVER strip)
         return _match;
       });
 
@@ -249,7 +437,6 @@ serve(async (req) => {
           if (cat) { fixCount++; return `href="/articles/${cat}/${slug}"`; }
           const fuzzy = findTruncatedMatch(slug, slugToCategory);
           if (fuzzy) { fixCount++; return `href="/articles/${fuzzy.cat}/${fuzzy.slug}"`; }
-          // Convert absolute to relative but don't strip
           fixCount++;
           return `href="/${slug}"`;
         }
@@ -292,16 +479,21 @@ serve(async (req) => {
         }
       );
 
-      // ── NO Pattern 10 — orphan detection/stripping has been PERMANENTLY REMOVED ──
+      // ── Validation pass: check ALL internal links ──
+      const brokenLinks = validateInternalLinks(content, slugToCategory, templateSlugs, embeddingSlugs);
 
-      if (content !== originalContent && fixCount > 0) {
-        totalBroken += fixCount;
+      const hasFixes = content !== originalContent && fixCount > 0;
+      const hasBrokenLinks = brokenLinks.length > 0;
+
+      if (hasFixes || hasBrokenLinks) {
+        totalBroken += fixCount + brokenLinks.length;
         totalFixed += fixCount;
 
         results.push({
           postSlug: post.slug,
-          broken: fixCount,
+          broken: fixCount + brokenLinks.length,
           fixed: fixCount,
+          brokenLinks,
         });
       }
     }
@@ -316,6 +508,7 @@ serve(async (req) => {
       success: true,
       mode: 'scan',
       slugsLoaded: slugToCategory.size,
+      templateSlugsLoaded: templateSlugs.size,
       pagination: { offset, limit, totalPosts },
       summary: {
         postsScanned: posts?.length || 0,

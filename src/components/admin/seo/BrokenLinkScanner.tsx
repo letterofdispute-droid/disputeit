@@ -3,14 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, Search, RefreshCw, ShieldAlert, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface BrokenLink {
+  href: string;
+  linkType: 'article' | 'template' | 'guide' | 'state-rights' | 'static' | 'unknown';
+  reason: string;
+}
 
 interface BrokenLinkResult {
   postSlug: string;
   broken: number;
   fixed: number;
+  brokenLinks?: BrokenLink[];
 }
 
 interface ScanSummary {
@@ -26,6 +33,15 @@ interface HealthCheckResult {
   healthy: number;
 }
 
+const LINK_TYPE_COLORS: Record<string, string> = {
+  article: 'bg-destructive/10 text-destructive border-destructive/20',
+  template: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  guide: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  'state-rights': 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  static: 'bg-muted text-muted-foreground border-border',
+  unknown: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+};
+
 export default function BrokenLinkScanner() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<BrokenLinkResult[]>([]);
@@ -33,12 +49,9 @@ export default function BrokenLinkScanner() {
   const [progress, setProgress] = useState({ offset: 0, total: 0 });
   const [slugsLoaded, setSlugsLoaded] = useState(0);
 
-  // Health check state
   const [isChecking, setIsChecking] = useState(false);
   const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
   const [healthProgress, setHealthProgress] = useState({ checked: 0, total: 0 });
-
-  // Restore state
   const [isRestoring, setIsRestoring] = useState(false);
   const [isReconciling, setIsReconciling] = useState(false);
 
@@ -84,10 +97,10 @@ export default function BrokenLinkScanner() {
         offset += batchSize;
       }
 
-      if (totalSummary.totalFixed === 0) {
-        toast.success('No broken URL patterns found!');
+      if (totalSummary.totalBrokenLinks === 0) {
+        toast.success('No broken links found!');
       } else {
-        toast.info(`Found ${totalSummary.totalFixed} URL patterns to rewrite across ${totalSummary.postsWithIssues} articles.`);
+        toast.info(`Found ${totalSummary.totalBrokenLinks} broken links across ${totalSummary.postsWithIssues} articles.`);
       }
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
@@ -126,11 +139,7 @@ export default function BrokenLinkScanner() {
       }
 
       setHealthProgress({ checked: totalPosts, total: totalPosts });
-      setHealthResult({
-        totalPosts,
-        needsRestore: totalNeedsRestore,
-        healthy: totalHealthy,
-      });
+      setHealthResult({ totalPosts, needsRestore: totalNeedsRestore, healthy: totalHealthy });
 
       if (totalNeedsRestore === 0) {
         toast.success('All articles have healthy link density!');
@@ -157,8 +166,6 @@ export default function BrokenLinkScanner() {
         `Done! ${data.affectedPosts} posts flagged for re-scanning. Now go to the Links panel and run "Scan All" to restore links.`,
         { duration: 10000 }
       );
-
-      // Refresh health check
       setHealthResult(null);
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
@@ -184,6 +191,16 @@ export default function BrokenLinkScanner() {
     }
   };
 
+  // Count broken links by type across all results
+  const brokenByType = results.reduce((acc, r) => {
+    for (const bl of r.brokenLinks || []) {
+      acc[bl.linkType] = (acc[bl.linkType] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalBrokenValidation = Object.values(brokenByType).reduce((a, b) => a + b, 0);
+
   const progressPercent = progress.total > 0 ? Math.min(100, Math.round((progress.offset / progress.total) * 100)) : 0;
   const healthPercent = healthProgress.total > 0 ? Math.min(100, Math.round((healthProgress.checked / healthProgress.total) * 100)) : 0;
 
@@ -197,20 +214,20 @@ export default function BrokenLinkScanner() {
               Link Scanner & Restoration
             </CardTitle>
             <CardDescription className="text-xs mt-1">
-              Detect broken URL patterns (read-only scan). Use semantic pipeline to restore/add links.
+              Scans all internal links (articles, templates, guides, state rights, static pages).
               {slugsLoaded > 0 && <span className="text-foreground font-medium"> · {slugsLoaded.toLocaleString()} slugs loaded</span>}
             </CardDescription>
           </div>
           <Button onClick={runScan} disabled={isRunning} size="sm" variant="outline">
             {isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            {isRunning ? `Scanning... ${progressPercent}%` : 'Scan URLs'}
+            {isRunning ? `Scanning... ${progressPercent}%` : 'Scan All Links'}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
           <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>Scanner is <strong>read-only</strong>. No content is modified. Links are managed via the semantic linking pipeline.</span>
+          <span>Scanner is <strong>read-only</strong>. No content is modified. Validates articles, templates, guides & static pages.</span>
         </div>
 
         {isRunning && (
@@ -221,7 +238,7 @@ export default function BrokenLinkScanner() {
         )}
 
         {summary && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <div className="bg-muted/50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold">{summary.postsScanned}</p>
               <p className="text-[10px] text-muted-foreground">Scanned</p>
@@ -231,28 +248,67 @@ export default function BrokenLinkScanner() {
               <p className="text-[10px] text-muted-foreground">With Issues</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-amber-500">{totalBrokenValidation}</p>
+              <p className="text-[10px] text-muted-foreground">Broken Links</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold text-green-500">{summary.totalFixed}</p>
               <p className="text-[10px] text-muted-foreground">URL Rewrites</p>
             </div>
           </div>
         )}
 
-        {summary && summary.totalFixed === 0 && (
+        {/* Broken links by type */}
+        {totalBrokenValidation > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(brokenByType).map(([type, count]) => (
+              <Badge key={type} variant="outline" className={`text-[10px] px-1.5 py-0 ${LINK_TYPE_COLORS[type] || ''}`}>
+                {type}: {count}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {summary && summary.totalBrokenLinks === 0 && (
           <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
             <CheckCircle2 className="h-4 w-4" />
-            All URL patterns are valid. No rewrites needed.
+            All internal links are valid. No issues found.
           </div>
         )}
 
         {results.length > 0 && (
-          <div className="space-y-1.5 max-h-48 overflow-y-auto">
-            <h4 className="text-xs font-semibold text-muted-foreground">Articles with URL issues ({results.length})</h4>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            <h4 className="text-xs font-semibold text-muted-foreground">Articles with link issues ({results.length})</h4>
             {results.map((r, i) => (
-              <div key={i} className="border rounded p-2 flex items-center justify-between">
-                <span className="text-xs font-medium truncate max-w-[60%]">{r.postSlug}</span>
-                <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1.5 py-0">
-                  <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed} rewrites
-                </Badge>
+              <div key={i} className="border rounded p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium truncate max-w-[60%]">{r.postSlug}</span>
+                  <div className="flex gap-1">
+                    {r.fixed > 0 && (
+                      <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1.5 py-0">
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {r.fixed} rewrites
+                      </Badge>
+                    )}
+                    {(r.brokenLinks?.length || 0) > 0 && (
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> {r.brokenLinks!.length} broken
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {r.brokenLinks && r.brokenLinks.length > 0 && (
+                  <div className="space-y-0.5 pl-2 border-l-2 border-destructive/20">
+                    {r.brokenLinks.map((bl, j) => (
+                      <div key={j} className="flex items-start gap-1.5 text-[10px]">
+                        <Badge variant="outline" className={`text-[9px] px-1 py-0 shrink-0 ${LINK_TYPE_COLORS[bl.linkType] || ''}`}>
+                          {bl.linkType}
+                        </Badge>
+                        <code className="text-destructive truncate max-w-[200px]">{bl.href}</code>
+                        <span className="text-muted-foreground truncate">{bl.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
