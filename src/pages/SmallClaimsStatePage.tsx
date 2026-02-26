@@ -82,8 +82,10 @@ const SmallClaimsStatePage = () => {
       />
 
       {/* Hero */}
-      <section style={{ background: 'var(--gradient-hero)' }} className="text-primary-foreground py-16 md:py-20">
-        <div className="container-wide">
+      <section className="relative overflow-hidden text-primary-foreground py-16 md:py-20">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-primary/45" />
+        <div className="container-wide relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-4 text-sm">
               <Gavel className="h-4 w-4" /> {stateData.code} Small Claims Guide
