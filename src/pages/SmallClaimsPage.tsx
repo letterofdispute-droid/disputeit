@@ -41,9 +41,9 @@ const SmallClaimsPage = () => {
         {/* Background image + dark blue overlay */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
+          style={{ backgroundImage: "url('/images/tools-hero-bg.jpg')" }}
         />
-        <div className="absolute inset-0 bg-primary/90" />
+        <div className="absolute inset-0 bg-primary/45" />
 
         <div className="container-wide relative z-10">
           <div className="max-w-3xl mx-auto text-center">
