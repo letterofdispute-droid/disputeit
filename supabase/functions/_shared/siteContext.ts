@@ -308,6 +308,8 @@ electronic-kill-switch-complaint, gap-insurance-refund-demand,
 dealer-interest-rate-markup-complaint
 
 employment (category-id: employment):
+-- Core Employment --
+final-paycheck-demand, wrongful-termination-complaint, employment-discrimination-complaint,
 -- Termination --
 constructive-dismissal-claim, unfair-dismissal-appeal, severance-negotiation,
 redundancy-dispute, notice-period-dispute, retaliation-complaint,
