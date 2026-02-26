@@ -111,7 +111,7 @@ AVAILABLE TEMPLATE SLUGS BY CATEGORY:
 
 refunds (category-id: refunds):
 -- Core Refunds --
-refund-general, refund-online-purchase, refund-subscription, refund-after-return,
+refund, refund-general, refund-online-purchase, refund-subscription, refund-after-return,
 refund-service-not-rendered, refund-overcharge, refund-double-charge, refund-gym-membership,
 refund-event-cancelled, refund-course-training, refund-deposit, refund-cooling-off,
 refund-gift-card, refund-pre-order, refund-trial-conversion,
@@ -174,7 +174,7 @@ romance-pig-butchering-scam-bank-claim, recovery-room-scam-complaint
 
 housing (category-id: housing):
 -- Core Housing --
-landlord-repairs-general, landlord-heating-complaint, deposit-return-request,
+landlord-repairs, landlord-repairs-general, landlord-heating-complaint, deposit-return-request,
 deposit-deduction-dispute, rent-increase-dispute, landlord-harassment-complaint,
 -- Tenancy Disputes --
 tenancy-renewal-request, early-termination-request, subletting-permission-request,
@@ -208,7 +208,7 @@ airport-lounge-complaint-letter, travel-insurance-claim-appeal-letter
 
 damaged-goods (category-id: damaged-goods):
 -- Core --
-damaged-goods-delivery, defective-product-complaint,
+damaged-goods, damaged-goods-delivery, defective-product-complaint,
 -- Delivery Damage --
 courier-damage-claim, concealed-damage-claim, fragile-item-damage-complaint,
 temperature-sensitive-damage, water-damaged-delivery, crushed-package-complaint,
