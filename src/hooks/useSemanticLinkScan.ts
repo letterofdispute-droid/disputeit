@@ -149,7 +149,7 @@ export function useSemanticLinkScan() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch embedding queue stats
+  // Fetch embedding queue stats (auto-polls every 5s when items are pending)
   const { data: queueStats, refetch: refetchQueueStats } = useQuery({
     queryKey: ['embedding-queue-stats'],
     queryFn: async (): Promise<QueueStats> => {
@@ -165,7 +165,11 @@ export function useSemanticLinkScan() {
 
       return { pending: pending || 0, processed: processed || 0 };
     },
-    staleTime: 30 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: (query) => {
+      const stats = query.state.data as QueueStats | undefined;
+      return stats && stats.pending > 0 ? 5000 : false;
+    },
   });
 
   // Semantic scan mutation - now fires the background job
@@ -418,16 +422,24 @@ export function useSemanticLinkScan() {
 
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Queue processing failed');
-      return data as { success: boolean; processed: number; linksCreated: number };
+      return data as { success: boolean; processed: number; linksCreated: number; remaining?: number };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['embedding-queue-stats'] });
       queryClient.invalidateQueries({ queryKey: ['embedding-stats'] });
       queryClient.invalidateQueries({ queryKey: ['link-suggestions'] });
-      toast({
-        title: 'Queue processed',
-        description: `Processed ${data.processed} items, created ${data.linksCreated} link suggestions`,
-      });
+      const remaining = data.remaining ?? 0;
+      if (remaining > 0) {
+        toast({
+          title: 'Embedding processing started',
+          description: `${remaining} articles queued — progress bar will update automatically.`,
+        });
+      } else {
+        toast({
+          title: 'Queue processed',
+          description: `Processed ${data.processed} items, created ${data.linksCreated} link suggestions`,
+        });
+      }
     },
     onError: (error) => {
       toast({

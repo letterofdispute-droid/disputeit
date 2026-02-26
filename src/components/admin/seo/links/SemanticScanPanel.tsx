@@ -121,9 +121,10 @@ export default function SemanticScanPanel({ categoryFilter }: SemanticScanPanelP
     return () => clearTimeout(timer);
   }, [justStartedRescue]);
 
+  // Re-fetch embedding stats when job status changes OR when queue stats update (polling cascade)
   useEffect(() => {
     fetchEmbeddingStats().then(setEmbeddingStats);
-  }, [fetchEmbeddingStats, activeJob?.status]);
+  }, [fetchEmbeddingStats, activeJob?.status, queueStats?.pending]);
 
   // Fetch blog categories from dedicated table
   useEffect(() => {
