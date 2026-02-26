@@ -1,31 +1,60 @@
-# Fix Broken Links: Add Auto-Fix Mode
 
-## Problem
 
-1. **Scanner is read-only** -- it already computes rewrites (422 URL rewrites found) but never saves them. The `mode: 'fix'` is permanently disabled.
-2. **1061 "unknown" broken links** are mostly bare slug paths like `/contractor-no-show-...` that should be `/articles/contractors/contractor-no-show-...`. The existing rewrite patterns only catch absolute URLs (`https://letterofdispute.com/slug`), not relative bare slugs (`/slug`).
-3. **963 "template" broken links** include paths like `/template/...` (singular instead of `/templates/`), or template categories/slugs that don't exist.
-4. **"Slugs loaded" shows 6538** -- this only shows `slugToCategory.size` (articles). Should show total valid targets (articles + templates + embeddings).
+# Deep Fix Mode: Fuzzy Match + Template Slug Resolution + Strip Dead Links
+
+## The Data We Already Have
+
+The database contains everything needed to resolve these links:
+
+- **`blog_posts`**: 6,538 articles with `slug` and `category_slug` -- already loaded as `slugToCategory` map
+- **`content_plans`**: Every template with `template_slug`, `category_id`, and `subcategory_slug` -- currently loaded but only as a flat `Set<string>`, losing the routing info
+- **`article_embeddings`**: All content slugs with `category_id` and `subcategory_slug` -- also loaded as flat set
+
+The problem: we load template and embedding data but throw away the category/subcategory routing info. With that info, we can resolve nearly everything.
 
 ## Plan (2 files)
 
-### 1. `supabase/functions/fix-broken-links/index.ts`
+### 1. Edge Function: `supabase/functions/fix-broken-links/index.ts`
 
-**Re-enable fix mode** with these changes:
+**Enhance data loading** to preserve routing info:
 
-- Accept `mode: 'fix'` -- runs all existing rewrite patterns (1-9) AND new fix patterns, then saves updated content back to `blog_posts`
-- **New Pattern 10: Fix relative bare slugs** -- `/slug` where slug matches an article → rewrite to `/articles/{cat}/{slug}`
-- **New Pattern 11: Fix `/template/` (singular)** → rewrite to `/templates/`
-- **New Pattern 12: Fix bare category slugs** -- `/contractors-home-improvement` → `/articles/contractors`
-- **New Pattern 13: Fix bad template category** -- `/templates/bad-cat/...` → try mapping via `CAT_TO_TEMPLATE`
-- After all patterns, save updated content to `blog_posts` only if changed
-- Update `slugsLoaded` in response to show total targets (articles + templates + embeddings)
-- User needs a stop button
+- Change `loadTemplateSlugs` to return `Map<string, {categoryId, subcategorySlug}>` instead of `Set<string>` -- maps each template_slug to its full route
+- Change `loadEmbeddingSlugs` to return `Map<string, {categoryId, subcategorySlug}>` instead of `Set<string>` -- same for embeddings
 
-### 2. `src/components/admin/seo/BrokenLinkScanner.tsx`
+**Add `findFuzzyMatch` function**:
+- Splits broken slug and all article slugs into word tokens (split on `-`)
+- Computes Jaccard similarity: `|intersection| / |union|`
+- Returns best match if similarity >= 0.55 (allows partial matches like `contractor-no-show-what-do` vs `contractor-no-show-what-to-do`)
+- Skips slugs shorter than 3 tokens to avoid false positives
 
-- Add **"Fix Broken Links"** button that appears after scan completes with broken links found
-- Button calls `fix-broken-links` with `mode: 'fix'`, processes all posts in batches
-- Shows progress bar and final count of fixes applied
-- Update "slugs loaded" display to say "targets" instead of "slugs"
-- After fix completes, auto-runs scan again to show remaining (unfixable) links
+**Add `mode: 'deep-fix'`** processing:
+- First runs all existing rewrite patterns (1-12)
+- Then runs `validateInternalLinks` to find remaining broken links
+- For each broken link found in the HTML:
+  - **Unknown bare slugs** (`/some-slug`): Try fuzzy match against all article slugs. If match found → rewrite href to `/articles/{cat}/{matched-slug}`
+  - **Template with slug-as-category** (`/templates/some-template-slug/...`): Look up `some-template-slug` in the template slug map → rewrite to `/templates/{real-cat}/{subcat}/{template-slug}`
+  - **Article with wrong category** (`/articles/bad-cat/slug`): If slug exists in articles, rewrite to correct category
+  - **No match found**: Strip the `<a>` tag, keep inner text only (e.g., `<a href="/dead">Click here</a>` → `Click here`)
+- Save updated content to DB
+- Track: `totalFuzzyFixed`, `totalStripped`
+
+**Response additions**:
+- `summary.totalFuzzyFixed` -- links rewritten via fuzzy/lookup match
+- `summary.totalStripped` -- dead links converted to plain text
+
+### 2. UI: `src/components/admin/seo/BrokenLinkScanner.tsx`
+
+- Add **"Deep Fix"** button after scan/fix completes with remaining broken links
+- Warning banner: "Deep Fix uses fuzzy matching and strips unfixable links. This is destructive."
+- Calls `fix-broken-links` with `mode: 'deep-fix'`, uses same batch loop and stop button
+- Shows results: "Fuzzy-matched X links, stripped Y dead links"
+- Summary grid gets 2 extra cells for fuzzy-fixed and stripped counts
+- `ScanSummary` interface updated with `totalFuzzyFixed` and `totalStripped` fields
+
+```text
+Workflow:
+  Scan → shows broken links
+  Fix  → rewrites exact-match patterns (patterns 1-12)
+  Deep Fix → fuzzy matches remaining unknowns + resolves template slugs + strips truly dead links
+```
+
