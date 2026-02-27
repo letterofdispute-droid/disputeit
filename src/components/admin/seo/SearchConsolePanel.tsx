@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, Search, Zap, Target, AlertTriangle, TrendingDown } from 'lucide-react';
+import { RefreshCw, Search, Zap, Target, AlertTriangle, TrendingDown, Trash2 } from 'lucide-react';
 import { PositionBadge, CtrIndicator } from './gsc/GscBadges';
 import type { GscRow, Recommendation } from './gsc/types';
 import OpportunitiesTab from './gsc/OpportunitiesTab';
@@ -31,6 +31,19 @@ export default function SearchConsolePanel() {
     },
   });
 
+  const { data: cachedRecs } = useQuery({
+    queryKey: ['gsc-recommendations-cache'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gsc_recommendations_cache' as any)
+        .select('recommendations, updated_at')
+        .eq('id', 'singleton')
+        .maybeSingle() as { data: any; error: any };
+      if (error) throw error;
+      return data ? { recommendations: data.recommendations as Recommendation, updated_at: data.updated_at as string } : null;
+    },
+  });
+
   const fetchMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('fetch-gsc-data');
@@ -52,12 +65,18 @@ export default function SearchConsolePanel() {
       if (!data.success) throw new Error(data.error);
       return data.recommendations as Recommendation;
     },
-    onSuccess: (recs) => {
+    onSuccess: async (recsData) => {
+      // Persist to cache
+      await supabase
+        .from('gsc_recommendations_cache' as any)
+        .upsert({ id: 'singleton', recommendations: recsData as any, updated_at: new Date().toISOString() } as any);
+      queryClient.invalidateQueries({ queryKey: ['gsc-recommendations-cache'] });
+
       const counts = [
-        recs.uncoveredQueries?.length && `${recs.uncoveredQueries.length} uncovered queries`,
-        recs.quickWins?.length && `${recs.quickWins.length} quick wins`,
-        recs.positionOpportunities?.length && `${recs.positionOpportunities.length} position opportunities`,
-        recs.cannibalization?.length && `${recs.cannibalization.length} cannibalization warnings`,
+        recsData.uncoveredQueries?.length && `${recsData.uncoveredQueries.length} uncovered queries`,
+        recsData.quickWins?.length && `${recsData.quickWins.length} quick wins`,
+        recsData.positionOpportunities?.length && `${recsData.positionOpportunities.length} position opportunities`,
+        recsData.cannibalization?.length && `${recsData.cannibalization.length} cannibalization warnings`,
       ].filter(Boolean);
       toast({
         title: 'AI Analysis Complete',
@@ -68,19 +87,36 @@ export default function SearchConsolePanel() {
     onError: (err: any) => toast({ title: 'Analysis Failed', description: err.message, variant: 'destructive' }),
   });
 
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('gsc_recommendations_cache' as any)
+        .delete()
+        .eq('id', 'singleton');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gsc-recommendations-cache'] });
+      setActiveSubTab('overview');
+      toast({ title: 'Analysis Cleared', description: 'Ready for a fresh scan.' });
+    },
+    onError: (err: any) => toast({ title: 'Clear Failed', description: err.message, variant: 'destructive' }),
+  });
+
   const lastFetched = gscData?.[0]?.fetched_at ? new Date(gscData[0].fetched_at).toLocaleDateString() : 'Never';
   const totalClicks = gscData?.reduce((s, r) => s + r.clicks, 0) ?? 0;
   const totalImpressions = gscData?.reduce((s, r) => s + r.impressions, 0) ?? 0;
   const avgPosition = gscData?.length ? (gscData.reduce((s, r) => s + r.position, 0) / gscData.length) : 0;
   const avgCtr = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
-  const recs = recommendationsMutation.data;
+  const recs = cachedRecs?.recommendations ?? undefined;
+  const analysisDate = cachedRecs?.updated_at ? new Date(cachedRecs.updated_at).toLocaleDateString() : null;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Google Search Console</h2>
-          <p className="text-sm text-muted-foreground">Last synced: {lastFetched}</p>
+          <p className="text-sm text-muted-foreground">Last synced: {lastFetched}{analysisDate && ` · Analysis: ${analysisDate}`}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => fetchMutation.mutate()} disabled={fetchMutation.isPending} variant="outline">
@@ -91,6 +127,12 @@ export default function SearchConsolePanel() {
             <Zap className={`h-4 w-4 mr-2 ${recommendationsMutation.isPending ? 'animate-pulse' : ''}`} />
             {recommendationsMutation.isPending ? 'Analyzing...' : 'AI Analysis'}
           </Button>
+          {recs && (
+            <Button onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending} variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-2" />
+              {clearMutation.isPending ? 'Clearing...' : 'Clear Analysis'}
+            </Button>
+          )}
         </div>
       </div>
 
