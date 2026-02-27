@@ -128,10 +128,15 @@ export default function SearchConsolePanel() {
             {recommendationsMutation.isPending ? 'Analyzing...' : 'AI Analysis'}
           </Button>
           {recs && (
-            <Button onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending} variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10">
-              <Trash2 className="h-4 w-4 mr-2" />
-              {clearMutation.isPending ? 'Clearing...' : 'Clear Analysis'}
-            </Button>
+            <>
+              <span className="text-xs text-muted-foreground self-center hidden sm:inline">
+                Analyzed {analysisDate}
+              </span>
+              <Button onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending} variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {clearMutation.isPending ? 'Clearing...' : 'Clear Analysis'}
+              </Button>
+            </>
           )}
         </div>
       </div>
