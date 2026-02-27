@@ -927,6 +927,27 @@ export type Database = {
         }
         Relationships: []
       }
+      gsc_recommendations_cache: {
+        Row: {
+          created_at: string
+          id: string
+          recommendations: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recommendations?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recommendations?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       image_optimization_jobs: {
         Row: {
           completed_at: string | null
