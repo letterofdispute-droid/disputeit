@@ -74,15 +74,35 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // 1. Get latest GSC data (top 200 by impressions)
-    const { data: gscData, error: gscErr } = await supabase
+    // 1. Get latest GSC data (top 200 by impressions, deduplicated)
+    const { data: rawGscData, error: gscErr } = await supabase
       .from('gsc_performance_cache')
       .select('query, page, clicks, impressions, ctr, position')
       .order('impressions', { ascending: false })
-      .limit(200);
+      .limit(500);
+
+    // Aggregate by query+page to prevent false cannibalization from any remaining duplicates
+    const aggregated = new Map<string, { query: string; page: string; clicks: number; impressions: number; ctr: number; position: number; count: number }>();
+    for (const row of (rawGscData || [])) {
+      const key = `${row.query}|||${row.page}`;
+      const existing = aggregated.get(key);
+      if (existing) {
+        existing.clicks += row.clicks;
+        existing.impressions += row.impressions;
+        existing.ctr = (existing.ctr * existing.count + row.ctr) / (existing.count + 1);
+        existing.position = (existing.position * existing.count + row.position) / (existing.count + 1);
+        existing.count++;
+      } else {
+        aggregated.set(key, { ...row, count: 1 });
+      }
+    }
+    const gscData = Array.from(aggregated.values())
+      .map(({ count, ...rest }) => rest)
+      .sort((a, b) => b.impressions - a.impressions)
+      .slice(0, 200);
 
     if (gscErr) throw gscErr;
-    if (!gscData || gscData.length === 0) {
+    if (!rawGscData || rawGscData.length === 0) {
       return new Response(JSON.stringify({
         success: true,
         recommendations: [],

@@ -176,7 +176,7 @@ serve(async (req) => {
         country: 'US',
       }));
 
-      const { error } = await supabase.from('gsc_performance_cache').insert(batch);
+      const { error } = await supabase.from('gsc_performance_cache').upsert(batch, { onConflict: 'query,page,date_range_start,date_range_end' });
       if (error) {
         console.error('Insert batch error:', error);
       } else {
