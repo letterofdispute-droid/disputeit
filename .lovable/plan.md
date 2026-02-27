@@ -1,27 +1,28 @@
 
 
-## Smart Coverage Detection for Opportunities Tab
+## Persist AI Analysis Recommendations + Clear Button
 
-### Current State
-The `OpportunitiesTab` already fetches published `blog_posts` and does single-post matching per query. But it only finds one match and shows a "Link to existing" button. It doesn't count total topic coverage or adjust the primary action accordingly.
+### Problem
+Recommendations live only in `recommendationsMutation.data` (React state). Lost on refresh.
 
-### Changes
+### Approach
+Create a `gsc_recommendations_cache` table to store the JSON blob, then load it via `useQuery` on mount.
 
-**File: `src/components/admin/seo/gsc/OpportunitiesTab.tsx`**
+### Implementation
 
-1. Expand the `pillarMatches` logic to also compute a **coverage count** per query — count all posts whose title/keyword overlap with the query (not just find the first match). Store as `Record<number, { count: number; bestMatch: ExistingPost }>`.
+**1. Create DB table** (`gsc_recommendations_cache`)
+- Columns: `id` (uuid, pk), `recommendations` (jsonb), `created_at` (timestamptz), `updated_at` (timestamptz)
+- Single-row pattern: always upsert on `id = 'singleton'` (or use text PK)
+- RLS: allow read/write for authenticated users
 
-2. Add a **smart recommendation badge** above the action buttons when coverage is detected:
-   - If count >= 5: Show info banner: `"You already have {count} articles covering this topic — consider adding as cluster to existing pillar"` with the "Link to Existing" button promoted to primary.
-   - If count 1-4: Show subtle note: `"{count} related articles exist"` with both Campaign and Link buttons equally weighted.
-   - If count 0: Show "Create Campaign" as primary (current behavior).
+**2. Edit `SearchConsolePanel.tsx`**
+- Add `useQuery(['gsc-recommendations-cache'])` that reads the cached row on mount
+- In `recommendationsMutation.onSuccess`: upsert the result into the cache table
+- Derive `recs` from the cache query data (not mutation data), so it survives refresh
+- Add a **"Clear Analysis"** button (with `Trash2` icon, destructive outline variant) next to the AI Analysis button
+- Clear button: deletes the cache row, resets the query, switches tab back to overview
 
-3. **Reorder buttons** based on coverage:
-   - High coverage (5+): `Link to Existing` (primary) → `Add Single` (outline) → `Keyword` (ghost). Hide "Create Campaign" or demote to ghost.
-   - Low/no coverage: Keep current order with `Create Campaign` primary.
-
-### Technical Details
-- The coverage count uses the same `existingPosts` data already fetched. The `useMemo` just changes from `find` (first match) to `filter` (all matches), storing both count and best match.
-- Badge uses existing `Badge` component with `bg-blue-500/10 text-blue-700 border-blue-200` styling for the info banner.
-- No new database queries or mutations needed.
+**3. Files changed**
+- New migration: create `gsc_recommendations_cache` table + RLS
+- Edit: `src/components/admin/seo/SearchConsolePanel.tsx` — add cache query, upsert on success, clear button
 
