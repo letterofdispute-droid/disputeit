@@ -1,39 +1,27 @@
 
 
-## Smarter "Add to Queue" → Campaign-Aware Actions
+## Smart Coverage Detection for Opportunities Tab
 
-Currently each uncovered query only offers "Add single article." Instead, upgrade to three action tiers:
+### Current State
+The `OpportunitiesTab` already fetches published `blog_posts` and does single-post matching per query. But it only finds one match and shows a "Link to existing" button. It doesn't count total topic coverage or adjust the primary action accordingly.
 
-### New Action Buttons per Uncovered Query Card
+### Changes
 
-1. **"Add Single Article"** (existing, keep as-is) — for low-volume queries not worth a full campaign.
+**File: `src/components/admin/seo/gsc/OpportunitiesTab.tsx`**
 
-2. **"Create Campaign"** (new) — opens a pre-filled version of `CustomCampaignDialog` with:
-   - Campaign name = query text
-   - Vertical = `suggestedVertical` from AI
-   - Pillar title = `suggestedTitle`
-   - 3 empty cluster rows for the user to fill (or AI-suggested clusters — see step 3)
+1. Expand the `pillarMatches` logic to also compute a **coverage count** per query — count all posts whose title/keyword overlap with the query (not just find the first match). Store as `Record<number, { count: number; bestMatch: ExistingPost }>`.
 
-3. **"Link to Existing Pillar"** (new, conditional) — before rendering, query `blog_posts` for published articles matching the same vertical/keyword. If matches exist, show a dropdown/button that lets the user pick an existing article as the pillar and creates cluster articles linked via `parent_queue_id`.
+2. Add a **smart recommendation badge** above the action buttons when coverage is detected:
+   - If count >= 5: Show info banner: `"You already have {count} articles covering this topic — consider adding as cluster to existing pillar"` with the "Link to Existing" button promoted to primary.
+   - If count 1-4: Show subtle note: `"{count} related articles exist"` with both Campaign and Link buttons equally weighted.
+   - If count 0: Show "Create Campaign" as primary (current behavior).
 
-### Implementation Steps
+3. **Reorder buttons** based on coverage:
+   - High coverage (5+): `Link to Existing` (primary) → `Add Single` (outline) → `Keyword` (ghost). Hide "Create Campaign" or demote to ghost.
+   - Low/no coverage: Keep current order with `Create Campaign` primary.
 
-1. **Add `suggestClusters` to `gsc-recommendations` edge function** — for each uncovered query, also return `suggestedClusters: Array<{title, articleType, keyword}>` (3-5 cluster ideas). This uses the same AI call, just expand the prompt schema.
-
-2. **Create `CampaignFromQueryDialog.tsx`** — a lightweight dialog (reuses patterns from `CustomCampaignDialog`) that opens pre-filled with the pillar title, vertical, and AI-suggested clusters. User can edit/add/remove before submitting. On submit: creates `content_plan` + pillar queue item (priority 100) + cluster queue items with `parent_queue_id`.
-
-3. **Add existing-pillar detection** — in `OpportunitiesTab`, run a single query on mount: `supabase.from('blog_posts').select('id, title, slug, category_id').eq('status', 'published')` filtered by relevant verticals. For each uncovered query, check if any published article's title/keywords overlap. If a match exists, show "Attach to existing: [Article Title]" as a third button that creates cluster items linked to that article.
-
-4. **Update `OpportunitiesTab.tsx`** button layout — replace current two-button row with three options:
-   - `+ Add Single` (outline, secondary)
-   - `🚀 Create Campaign` (primary, prominent)
-   - `🔗 Link to "[Existing Article]"` (conditional, shown only when match found)
-
-### Files to Create/Edit
-
-- **Create** `src/components/admin/seo/gsc/CampaignFromQueryDialog.tsx` — pre-filled campaign dialog
-- **Edit** `src/components/admin/seo/gsc/OpportunitiesTab.tsx` — add campaign button, existing-pillar matching, new dialog trigger
-- **Edit** `src/components/admin/seo/gsc/types.ts` — add `suggestedClusters` to uncovered query type
-- **Edit** `supabase/functions/gsc-recommendations/index.ts` — expand AI prompt to include cluster suggestions per uncovered query
-- **Edit** `src/components/admin/seo/gsc/useGscActions.ts` — add `createCampaign` mutation (plan + pillar + clusters insert)
+### Technical Details
+- The coverage count uses the same `existingPosts` data already fetched. The `useMemo` just changes from `find` (first match) to `filter` (all matches), storing both count and best match.
+- Badge uses existing `Badge` component with `bg-blue-500/10 text-blue-700 border-blue-200` styling for the info banner.
+- No new database queries or mutations needed.
 
