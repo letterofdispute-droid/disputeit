@@ -194,6 +194,7 @@ const LetterEditorPage = () => {
           title="Loading... | Letter of Dispute"
           description="Loading your letter editor"
           canonicalPath={`/letters/${purchaseId}/edit`}
+          noIndex={true}
         />
         <div className="min-h-[60vh] flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -209,6 +210,7 @@ const LetterEditorPage = () => {
           title="Letter Not Found | Letter of Dispute"
           description="The requested letter could not be found"
           canonicalPath={`/letters/${purchaseId}/edit`}
+          noIndex={true}
         />
         <div className="min-h-[60vh] py-16 md:py-24 bg-background">
           <div className="container-wide max-w-2xl">
@@ -234,6 +236,7 @@ const LetterEditorPage = () => {
         title={`Edit: ${purchase.template_name} | Letter of Dispute`}
         description="Edit your dispute letter"
         canonicalPath={`/letters/${purchaseId}/edit`}
+        noIndex={true}
       />
 
       <div className="min-h-[60vh] py-8 md:py-12 bg-background">

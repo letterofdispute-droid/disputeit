@@ -28,11 +28,10 @@ async function verifyAdmin(req: Request): Promise<boolean> {
     Deno.env.get('SUPABASE_ANON_KEY')!,
     { global: { headers: { Authorization: authHeader } } }
   )
-  const token = authHeader.replace('Bearer ', '')
-  const { data: claims, error } = await anonClient.auth.getClaims(token)
-  if (error || !claims?.claims?.sub) return false
+  const { data: { user }, error } = await anonClient.auth.getUser()
+  if (error || !user?.id) return false
   const supabase = getSupabase()
-  const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: claims.claims.sub as string })
+  const { data: isAdmin } = await supabase.rpc('is_admin', { check_user_id: user.id })
   return !!isAdmin
 }
 
