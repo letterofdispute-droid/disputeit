@@ -1,44 +1,39 @@
 
 
-## Fix: AI Analysis UX + Actionable Recommendations
+## Smarter "Add to Queue" → Campaign-Aware Actions
 
-### Problem 1: No feedback after AI Analysis completes
-The mutation has an `onError` handler but **no `onSuccess`** handler. User clicks the button, it finishes silently, and stays on whatever tab they're on. They never know it worked.
+Currently each uncovered query only offers "Add single article." Instead, upgrade to three action tiers:
 
-### Problem 2: Results are read-only — no directed actions
-Each recommendation card shows text but has no buttons to act on it. Users have to manually figure out what to do next.
+### New Action Buttons per Uncovered Query Card
 
-### Implementation
+1. **"Add Single Article"** (existing, keep as-is) — for low-volume queries not worth a full campaign.
 
-**File: `src/components/admin/seo/SearchConsolePanel.tsx`**
+2. **"Create Campaign"** (new) — opens a pre-filled version of `CustomCampaignDialog` with:
+   - Campaign name = query text
+   - Vertical = `suggestedVertical` from AI
+   - Pillar title = `suggestedTitle`
+   - 3 empty cluster rows for the user to fill (or AI-suggested clusters — see step 3)
 
-1. **Add `onSuccess` to `recommendationsMutation`**:
-   - Show a success toast summarizing findings count (e.g., "Found 5 uncovered queries, 3 quick wins, 2 warnings")
-   - Auto-switch to the "opportunities" sub-tab so users immediately see results
+3. **"Link to Existing Pillar"** (new, conditional) — before rendering, query `blog_posts` for published articles matching the same vertical/keyword. If matches exist, show a dropdown/button that lets the user pick an existing article as the pillar and creates cluster articles linked via `parent_queue_id`.
 
-2. **Add action buttons to Uncovered Queries cards**:
-   - "Add to Queue" button — creates a content queue item with the suggested title, vertical, and article type pre-filled
-   - "Add as Keyword" button — adds the query to the `keyword_targets` table
+### Implementation Steps
 
-3. **Add action buttons to Quick Wins cards**:
-   - "Apply Meta Tags" button — looks up the blog post by page URL/slug and updates `meta_title` and `seo_description` directly in the `blog_posts` table
-   - Keep existing copy buttons as secondary actions
+1. **Add `suggestClusters` to `gsc-recommendations` edge function** — for each uncovered query, also return `suggestedClusters: Array<{title, articleType, keyword}>` (3-5 cluster ideas). This uses the same AI call, just expand the prompt schema.
 
-4. **Add action buttons to Position Opportunities cards**:
-   - "Add to Queue" button — creates a content queue item targeting this query
-   - "View Page" button — opens the existing page in a new tab
+2. **Create `CampaignFromQueryDialog.tsx`** — a lightweight dialog (reuses patterns from `CustomCampaignDialog`) that opens pre-filled with the pillar title, vertical, and AI-suggested clusters. User can edit/add/remove before submitting. On submit: creates `content_plan` + pillar queue item (priority 100) + cluster queue items with `parent_queue_id`.
 
-5. **Add action buttons to Cannibalization Warning cards**:
-   - "View Pages" links — open each competing page in new tabs for manual review
+3. **Add existing-pillar detection** — in `OpportunitiesTab`, run a single query on mount: `supabase.from('blog_posts').select('id, title, slug, category_id').eq('status', 'published')` filtered by relevant verticals. For each uncovered query, check if any published article's title/keywords overlap. If a match exists, show "Attach to existing: [Article Title]" as a third button that creates cluster items linked to that article.
 
-6. **Add action buttons to Declining Queries cards**:
-   - "Add to Queue" button — to create refresh/update content targeting the declining query
+4. **Update `OpportunitiesTab.tsx`** button layout — replace current two-button row with three options:
+   - `+ Add Single` (outline, secondary)
+   - `🚀 Create Campaign` (primary, prominent)
+   - `🔗 Link to "[Existing Article]"` (conditional, shown only when match found)
 
-### Technical Details
+### Files to Create/Edit
 
-- Action mutations use `supabase.from('seo_content_queue').insert(...)` and `supabase.from('keyword_targets').insert(...)` with appropriate conflict handling (`onConflict: 'keyword'`)
-- Quick Win "Apply Meta Tags" extracts the slug from the page URL and updates via `supabase.from('blog_posts').update({ meta_title, seo_description }).eq('slug', extractedSlug)`
-- Each action button shows a loading spinner while executing and a success toast on completion
-- Buttons are disabled after successful action to prevent duplicates (track applied state locally via `useState<Set<number>>`)
-- Query cache invalidation after mutations: `['seo-content-queue']`, `['keyword-targets']`, `['seo-metrics']`
+- **Create** `src/components/admin/seo/gsc/CampaignFromQueryDialog.tsx` — pre-filled campaign dialog
+- **Edit** `src/components/admin/seo/gsc/OpportunitiesTab.tsx` — add campaign button, existing-pillar matching, new dialog trigger
+- **Edit** `src/components/admin/seo/gsc/types.ts` — add `suggestedClusters` to uncovered query type
+- **Edit** `supabase/functions/gsc-recommendations/index.ts` — expand AI prompt to include cluster suggestions per uncovered query
+- **Edit** `src/components/admin/seo/gsc/useGscActions.ts` — add `createCampaign` mutation (plan + pillar + clusters insert)
 
