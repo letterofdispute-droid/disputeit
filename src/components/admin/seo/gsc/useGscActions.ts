@@ -80,10 +80,93 @@ export function useGscActions() {
     onError: (err: any) => toast({ title: 'Failed', description: err.message, variant: 'destructive' }),
   });
 
+  const createCampaignMutation = useMutation({
+    mutationFn: async ({ pillarTitle, pillarType, pillarKeyword, vertical, clusters, actionKey }: {
+      pillarTitle: string; pillarType: string; pillarKeyword: string; vertical: string;
+      clusters: Array<{ title: string; articleType: string; keyword: string }>;
+      actionKey: string;
+    }) => {
+      // 1. Create content plan
+      const planSlug = `gsc-campaign-${vertical}-${Date.now()}`;
+      const { data: plan, error: planErr } = await supabase.from('content_plans').insert({
+        template_slug: planSlug,
+        template_name: `GSC: ${pillarTitle.substring(0, 60)}`,
+        category_id: vertical,
+        target_article_count: 1 + clusters.length,
+        value_tier: 'high',
+      }).select('id').single();
+      if (planErr) throw planErr;
+
+      // 2. Create pillar queue item (priority 100)
+      const { data: pillar, error: pillarErr } = await supabase.from('content_queue').insert({
+        plan_id: plan.id,
+        suggested_title: pillarTitle,
+        article_type: normalizeArticleType(pillarType),
+        primary_keyword: pillarKeyword,
+        priority: 100,
+        status: 'queued',
+      }).select('id').single();
+      if (pillarErr) throw pillarErr;
+
+      // 3. Create cluster queue items linked to pillar
+      if (clusters.length > 0) {
+        const clusterRows = clusters.map(c => ({
+          plan_id: plan.id,
+          parent_queue_id: pillar.id,
+          suggested_title: c.title,
+          article_type: normalizeArticleType(c.articleType),
+          primary_keyword: c.keyword,
+          priority: 50,
+          status: 'queued',
+        }));
+        const { error: clusterErr } = await supabase.from('content_queue').insert(clusterRows);
+        if (clusterErr) throw clusterErr;
+      }
+    },
+    onSuccess: (_, vars) => {
+      markApplied(vars.actionKey);
+      toast({ title: 'Campaign Created', description: `Pillar + ${vars.clusters.length} clusters queued.` });
+      queryClient.invalidateQueries({ queryKey: ['seo-content-queue'] });
+    },
+    onError: (err: any) => toast({ title: 'Failed', description: err.message, variant: 'destructive' }),
+  });
+
+  const attachToExistingMutation = useMutation({
+    mutationFn: async ({ existingPostId, clusters, actionKey }: {
+      existingPostId: string; clusters: Array<{ title: string; articleType: string; keyword: string }>;
+      actionKey: string;
+    }) => {
+      // Find the queue item for existing post (if any) to use as parent
+      const { data: existingQueue } = await supabase.from('content_queue')
+        .select('id').eq('blog_post_id', existingPostId).limit(1).single();
+
+      const parentId = existingQueue?.id ?? null;
+
+      const clusterRows = clusters.map(c => ({
+        parent_queue_id: parentId,
+        suggested_title: c.title,
+        article_type: normalizeArticleType(c.articleType),
+        primary_keyword: c.keyword,
+        priority: 50,
+        status: 'queued',
+      }));
+      const { error } = await supabase.from('content_queue').insert(clusterRows);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      markApplied(vars.actionKey);
+      toast({ title: 'Clusters Queued', description: `${vars.clusters.length} cluster articles linked to existing pillar.` });
+      queryClient.invalidateQueries({ queryKey: ['seo-content-queue'] });
+    },
+    onError: (err: any) => toast({ title: 'Failed', description: err.message, variant: 'destructive' }),
+  });
+
   return {
     appliedActions,
     addToQueue: addToQueueMutation,
     addKeyword: addKeywordMutation,
     applyMetaTags: applyMetaTagsMutation,
+    createCampaign: createCampaignMutation,
+    attachToExisting: attachToExistingMutation,
   };
 }

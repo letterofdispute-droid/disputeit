@@ -131,7 +131,12 @@ TASK: Analyze and return a JSON object with exactly these 4 arrays:
       "suggestedVertical": "housing",
       "suggestedArticleType": "how-to",
       "suggestedTitle": "Article title targeting this query",
-      "rationale": "Why this is an opportunity"
+      "rationale": "Why this is an opportunity",
+      "suggestedClusters": [
+        {"title": "Cluster article title 1", "articleType": "faq", "keyword": "related keyword 1"},
+        {"title": "Cluster article title 2", "articleType": "mistakes", "keyword": "related keyword 2"},
+        {"title": "Cluster article title 3", "articleType": "checklist", "keyword": "related keyword 3"}
+      ]
     }
   ],
   "quickWins": [
@@ -168,7 +173,7 @@ TASK: Analyze and return a JSON object with exactly these 4 arrays:
 }
 
 Rules:
-- uncoveredQueries: queries with impressions but NO matching blog post (by slug or keyword)
+- uncoveredQueries: queries with impressions but NO matching blog post (by slug or keyword). Include 3-5 suggestedClusters per query (supporting articles that would link to the pillar)
 - quickWins: queries with high impressions (>500) but CTR < 0.03 and position < 20
 - positionOpportunities: queries with position 8-20 that could reach page 1
 - cannibalization: same query appearing for multiple pages

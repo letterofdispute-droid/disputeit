@@ -8,10 +8,17 @@ export interface GscRow {
   fetched_at: string;
 }
 
+export interface SuggestedCluster {
+  title: string;
+  articleType: string;
+  keyword: string;
+}
+
 export interface Recommendation {
   uncoveredQueries?: Array<{
     query: string; impressions: number; clicks: number; position: number;
     suggestedVertical: string; suggestedArticleType: string; suggestedTitle: string; rationale: string;
+    suggestedClusters?: SuggestedCluster[];
   }>;
   quickWins?: Array<{
     query: string; page: string; impressions: number; clicks: number; ctr: number; position: number;
