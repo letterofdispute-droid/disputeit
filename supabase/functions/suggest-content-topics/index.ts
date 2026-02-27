@@ -10,28 +10,46 @@ function extractJson(raw: string): unknown {
   let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
   const start = cleaned.search(/[\[{]/);
   if (start === -1) throw new Error('No JSON found in AI response');
-  const bracket = cleaned[start];
-  const close = bracket === '[' ? ']' : '}';
-  let end = cleaned.lastIndexOf(close);
+  cleaned = cleaned.substring(start);
 
-  // If closing bracket missing (truncated), try to repair
-  if (end <= start) {
-    // Trim trailing incomplete string/object and force-close
-    cleaned = cleaned.substring(start).replace(/,\s*\{[^}]*$/, '').replace(/,\s*"[^"]*$/, '') + close;
-  } else {
-    cleaned = cleaned.substring(start, end + 1);
+  try { return JSON.parse(cleaned); } catch { /* continue */ }
+
+  const lastBrace = cleaned.lastIndexOf('}');
+  const lastBracket = cleaned.lastIndexOf(']');
+  const lastClose = Math.max(lastBrace, lastBracket);
+  if (lastClose > 0) {
+    const trimmed = cleaned.substring(0, lastClose + 1);
+    try { return JSON.parse(trimmed); } catch { /* continue */ }
   }
 
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    // Fix trailing commas and control chars
-    cleaned = cleaned
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/[\x00-\x1F\x7F]/g, '');
-    return JSON.parse(cleaned);
+  let inString = false;
+  let escaped = false;
+  let validEnd = 0;
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inString) { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; validEnd = i + 1; continue; }
+    if (inString) continue;
+    if ('{[}]:,'.includes(ch)) validEnd = i + 1;
   }
+
+  let repaired = cleaned.substring(0, validEnd);
+  repaired = repaired.replace(/,\s*(\{[^}]*)?$/, '').replace(/,\s*"[^"]*$/, '').replace(/,\s*$/, '');
+  const remaining: string[] = [];
+  let s2 = false, e2 = false;
+  for (let i = 0; i < repaired.length; i++) {
+    const c = repaired[i];
+    if (e2) { e2 = false; continue; }
+    if (c === '\\' && s2) { e2 = true; continue; }
+    if (c === '"') { s2 = !s2; continue; }
+    if (s2) continue;
+    if (c === '{' || c === '[') remaining.push(c === '{' ? '}' : ']');
+    else if (c === '}' || c === ']') remaining.pop();
+  }
+  repaired += remaining.reverse().join('');
+  repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/[\x00-\x1F\x7F]/g, '');
+  return JSON.parse(repaired);
 }
 
 serve(async (req) => {

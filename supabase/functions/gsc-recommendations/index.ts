@@ -10,20 +10,57 @@ function extractJson(raw: string): unknown {
   let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
   const start = cleaned.search(/[\[{]/);
   if (start === -1) throw new Error('No JSON found in AI response');
-  const bracket = cleaned[start];
-  const close = bracket === '[' ? ']' : '}';
-  let end = cleaned.lastIndexOf(close);
-  if (end <= start) {
-    cleaned = cleaned.substring(start).replace(/,\s*\{[^}]*$/, '').replace(/,\s*"[^"]*$/, '') + close;
-  } else {
-    cleaned = cleaned.substring(start, end + 1);
+  cleaned = cleaned.substring(start);
+
+  // Try parsing as-is first
+  try { return JSON.parse(cleaned); } catch { /* continue */ }
+
+  // Strip after last valid closing bracket
+  const lastBrace = cleaned.lastIndexOf('}');
+  const lastBracket = cleaned.lastIndexOf(']');
+  const lastClose = Math.max(lastBrace, lastBracket);
+  if (lastClose > 0) {
+    const trimmed = cleaned.substring(0, lastClose + 1);
+    try { return JSON.parse(trimmed); } catch { /* continue */ }
   }
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    cleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/[\x00-\x1F\x7F]/g, '');
-    return JSON.parse(cleaned);
+
+  // Stack-based repair: walk char by char tracking nesting
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+  let validEnd = 0;
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inString) { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; validEnd = i + 1; continue; }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') { stack.push(ch === '{' ? '}' : ']'); validEnd = i + 1; }
+    else if (ch === '}' || ch === ']') { stack.pop(); validEnd = i + 1; }
+    else if (ch === ':' || ch === ',') { validEnd = i + 1; }
   }
+
+  // Truncate to last valid position, strip trailing incomplete elements
+  let repaired = cleaned.substring(0, validEnd);
+  // Remove trailing comma + partial object/string
+  repaired = repaired.replace(/,\s*(\{[^}]*)?$/, '').replace(/,\s*"[^"]*$/, '').replace(/,\s*$/, '');
+  // Close all open brackets
+  const remaining: string[] = [];
+  let s2 = false, e2 = false;
+  for (let i = 0; i < repaired.length; i++) {
+    const c = repaired[i];
+    if (e2) { e2 = false; continue; }
+    if (c === '\\' && s2) { e2 = true; continue; }
+    if (c === '"') { s2 = !s2; continue; }
+    if (s2) continue;
+    if (c === '{' || c === '[') remaining.push(c === '{' ? '}' : ']');
+    else if (c === '}' || c === ']') remaining.pop();
+  }
+  repaired += remaining.reverse().join('');
+  // Final cleanup
+  repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/[\x00-\x1F\x7F]/g, '');
+  return JSON.parse(repaired);
 }
 
 serve(async (req) => {
@@ -151,7 +188,7 @@ Rules:
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.5,
-        max_tokens: 4000,
+        max_tokens: 8000,
       }),
     });
 
@@ -172,6 +209,7 @@ Rules:
 
     const aiData = await aiResponse.json();
     const rawContent = aiData.choices?.[0]?.message?.content ?? '{}';
+    console.log('AI response length:', rawContent.length);
     const recommendations = extractJson(rawContent);
 
     return new Response(JSON.stringify({ success: true, recommendations, queryCount: gscData.length }), {
