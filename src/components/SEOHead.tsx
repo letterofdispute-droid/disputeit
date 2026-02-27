@@ -56,7 +56,7 @@ const SEOHead = ({
   const canonicalUrl = `${siteUrl}${normalizedPath}`;
   // Use AI-generated OG image from database, falling back to logo
   const aiOgImage = useOgImage(canonicalPath);
-  const defaultOgImage = `${siteUrl}/ld-logo.svg`;
+  const defaultOgImage = `${siteUrl}/ld-og-default.png`;
   const resolvedOgImage = ogImage || aiOgImage || defaultOgImage;
   
   // FAQPage schema when faqItems are provided

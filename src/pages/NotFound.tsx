@@ -1,6 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
+import SEOHead from "@/components/SEOHead";
 import { motion } from "framer-motion";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -100,11 +100,12 @@ const NotFound = () => {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Page Not Found | Dispute Letters</title>
-        <meta name="robots" content="noindex, nofollow" />
-        <meta name="description" content="The page you're looking for doesn't exist or has been moved. Find what you need using our search or browse our template categories." />
-      </Helmet>
+      <SEOHead
+        title="Page Not Found | Dispute Letters"
+        description="The page you're looking for doesn't exist or has been moved. Find what you need using our search or browse our template categories."
+        canonicalPath="/404"
+        noIndex={true}
+      />
 
       <div className="min-h-[80vh] flex items-center justify-center py-16 px-4 bg-gradient-to-b from-background to-muted/30">
         <div className="max-w-2xl w-full text-center">
