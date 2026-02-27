@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Target, Plus, Tag, ExternalLink, Loader2, Rocket, Link2 } from 'lucide-react';
+import { TrendingUp, Target, Plus, Tag, ExternalLink, Loader2, Rocket, Link2, Info } from 'lucide-react';
 import { PositionBadge } from './GscBadges';
 import type { Recommendation } from './types';
 import { useGscActions } from './useGscActions';
@@ -26,21 +26,21 @@ export default function OpportunitiesTab({ recs }: { recs: Recommendation | unde
       .then(({ data }) => { if (data) setExistingPosts(data); });
   }, [recs?.uncoveredQueries]);
 
-  // Match existing posts to queries
-  const pillarMatches = useMemo(() => {
+  // Match existing posts to queries with coverage counting
+  const coverageData = useMemo(() => {
     if (!recs?.uncoveredQueries?.length) return {};
-    const matches: Record<number, ExistingPost> = {};
+    const data: Record<number, { count: number; bestMatch: ExistingPost | null }> = {};
     recs.uncoveredQueries.forEach((q, i) => {
       const queryWords = q.query.toLowerCase().split(/\s+/);
-      const match = existingPosts.find(p => {
+      const matches = existingPosts.filter(p => {
         const titleWords = p.title.toLowerCase();
         const kwMatch = p.primary_keyword?.toLowerCase().includes(q.query.toLowerCase());
         const wordOverlap = queryWords.filter(w => w.length > 3 && titleWords.includes(w)).length;
         return kwMatch || wordOverlap >= 2;
       });
-      if (match) matches[i] = match;
+      data[i] = { count: matches.length, bestMatch: matches[0] ?? null };
     });
-    return matches;
+    return data;
   }, [recs?.uncoveredQueries, existingPosts]);
 
   if (!recs) {
@@ -67,7 +67,10 @@ export default function OpportunitiesTab({ recs }: { recs: Recommendation | unde
               const kwKey = `uncovered-kw-${i}`;
               const campaignKey = `uncovered-campaign-${i}`;
               const attachKey = `uncovered-attach-${i}`;
-              const matchedPillar = pillarMatches[i];
+              const coverage = coverageData[i];
+              const matchedPillar = coverage?.bestMatch;
+              const count = coverage?.count ?? 0;
+              const highCoverage = count >= 5;
 
               return (
                 <div key={i} className="border rounded-lg p-4 space-y-2">
@@ -84,48 +87,97 @@ export default function OpportunitiesTab({ recs }: { recs: Recommendation | unde
                   ) : null}
                   <p className="text-sm text-muted-foreground">{q.rationale}</p>
 
+                  {/* Smart coverage badge */}
+                  {highCoverage && (
+                    <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-500/10 px-3 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-500/20 dark:text-blue-300">
+                      <Info className="h-4 w-4 shrink-0" />
+                      You already have {count} articles covering this topic — consider adding as cluster to existing pillar
+                    </div>
+                  )}
+                  {count >= 1 && count < 5 && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3" />{count} related article{count > 1 ? 's' : ''} exist{count === 1 ? 's' : ''}
+                    </p>
+                  )}
+
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {/* Primary: Create Campaign */}
-                    <Button
-                      size="sm"
-                      disabled={appliedActions.has(campaignKey)}
-                      onClick={() => setCampaignDialog({ open: true, idx: i })}
-                    >
-                      <Rocket className="h-3 w-3 mr-1" />
-                      {appliedActions.has(campaignKey) ? 'Campaign Created ✓' : 'Create Campaign'}
-                    </Button>
-
-                    {/* Conditional: Link to Existing */}
-                    {matchedPillar && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={appliedActions.has(attachKey) || attachToExisting.isPending}
-                        onClick={() => attachToExisting.mutate({
-                          existingPostId: matchedPillar.id,
-                          clusters: q.suggestedClusters?.length
-                            ? q.suggestedClusters
-                            : [{ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query }],
-                          actionKey: attachKey,
-                        })}
-                      >
-                        {attachToExisting.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link2 className="h-3 w-3 mr-1" />}
-                        {appliedActions.has(attachKey) ? 'Attached ✓' : `Link to "${matchedPillar.title.substring(0, 30)}…"`}
-                      </Button>
+                    {highCoverage ? (
+                      <>
+                        {/* High coverage: Link to Existing is primary */}
+                        {matchedPillar && (
+                          <Button
+                            size="sm"
+                            disabled={appliedActions.has(attachKey) || attachToExisting.isPending}
+                            onClick={() => attachToExisting.mutate({
+                              existingPostId: matchedPillar.id,
+                              clusters: q.suggestedClusters?.length
+                                ? q.suggestedClusters
+                                : [{ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query }],
+                              actionKey: attachKey,
+                            })}
+                          >
+                            {attachToExisting.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link2 className="h-3 w-3 mr-1" />}
+                            {appliedActions.has(attachKey) ? 'Attached ✓' : `Link to "${matchedPillar.title.substring(0, 30)}…"`}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={appliedActions.has(queueKey) || addToQueue.isPending}
+                          onClick={() => addToQueue.mutate({ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query, actionKey: queueKey })}
+                        >
+                          {addToQueue.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                          {appliedActions.has(queueKey) ? 'Queued ✓' : 'Add Single'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={appliedActions.has(campaignKey)}
+                          onClick={() => setCampaignDialog({ open: true, idx: i })}
+                        >
+                          <Rocket className="h-3 w-3 mr-1" />
+                          {appliedActions.has(campaignKey) ? 'Campaign Created ✓' : 'Create Campaign'}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Low/no coverage: Campaign is primary */}
+                        <Button
+                          size="sm"
+                          disabled={appliedActions.has(campaignKey)}
+                          onClick={() => setCampaignDialog({ open: true, idx: i })}
+                        >
+                          <Rocket className="h-3 w-3 mr-1" />
+                          {appliedActions.has(campaignKey) ? 'Campaign Created ✓' : 'Create Campaign'}
+                        </Button>
+                        {matchedPillar && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={appliedActions.has(attachKey) || attachToExisting.isPending}
+                            onClick={() => attachToExisting.mutate({
+                              existingPostId: matchedPillar.id,
+                              clusters: q.suggestedClusters?.length
+                                ? q.suggestedClusters
+                                : [{ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query }],
+                              actionKey: attachKey,
+                            })}
+                          >
+                            {attachToExisting.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link2 className="h-3 w-3 mr-1" />}
+                            {appliedActions.has(attachKey) ? 'Attached ✓' : `Link to "${matchedPillar.title.substring(0, 30)}…"`}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={appliedActions.has(queueKey) || addToQueue.isPending}
+                          onClick={() => addToQueue.mutate({ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query, actionKey: queueKey })}
+                        >
+                          {addToQueue.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                          {appliedActions.has(queueKey) ? 'Queued ✓' : 'Add Single'}
+                        </Button>
+                      </>
                     )}
-
-                    {/* Secondary: Add Single */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={appliedActions.has(queueKey) || addToQueue.isPending}
-                      onClick={() => addToQueue.mutate({ title: q.suggestedTitle, articleType: q.suggestedArticleType, keyword: q.query, actionKey: queueKey })}
-                    >
-                      {addToQueue.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
-                      {appliedActions.has(queueKey) ? 'Queued ✓' : 'Add Single'}
-                    </Button>
-
-                    {/* Keyword */}
                     <Button
                       size="sm"
                       variant="ghost"
