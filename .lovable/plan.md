@@ -1,26 +1,61 @@
 
 
-## Root Cause: Duplicate GSC Data
+## Goal
+Add an "Indexed Pages" metric to the GSC panel by calling the Google Search Console Sitemaps API, which returns submitted vs indexed URL counts per sitemap.
 
-The `gsc_performance_cache` table has **274 rows but only 98 unique query+page pairs** — nearly 3x duplication. The fetch function deletes by date range before inserting, but if it's been run multiple times with overlapping or identical date ranges that don't match exactly, old rows persist and accumulate.
+## Approach
 
-The AI then sees the same page URL listed multiple times for the same query and incorrectly flags it as "cannibalization" (multiple pages competing). These are **false positives** — it's the same page appearing as duplicate rows.
+### 1. Extend `fetch-gsc-data` edge function
+- After fetching search analytics, also call the Sitemaps API:  
+  `GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/sitemaps`
+- The existing OAuth scope (`webmasters.readonly`) already covers this endpoint — no changes needed there.
+- Extract `submitted` and `indexed` counts from the sitemap response's `contents` array.
+- Return these counts alongside the existing search analytics response.
 
-## Fix (2 parts)
+### 2. Store index coverage data
+- Add a new table `gsc_index_status` (or reuse `site_settings`) to cache the indexed/submitted counts so the UI doesn't need a fresh API call every page load.
+- Fields: `id`, `submitted_count`, `indexed_count`, `sitemaps` (jsonb for per-sitemap breakdown), `fetched_at`.
+- Singleton pattern (single row, upserted on each sync).
 
-### 1. Deduplicate existing data + add unique constraint
-SQL migration to:
-- Delete duplicate rows, keeping only the one with the latest `fetched_at`
-- Add a unique constraint on `(query, page, date_range_start, date_range_end)` to prevent future duplicates
+### 3. Update the UI
+- In `SearchConsolePanel.tsx`, query `gsc_index_status` and display two new stat cards in the existing 4-card grid (making it 6 cards or replacing the grid layout):
+  - **Indexed Pages**: e.g. "142"
+  - **Index Coverage**: e.g. "92%" (indexed / submitted)
+- Show these alongside Total Clicks, Impressions, CTR, and Position.
 
-### 2. Update `fetch-gsc-data` edge function
-- Replace `.insert(batch)` with `.upsert(batch, { onConflict: 'query,page,date_range_start,date_range_end' })` so re-fetches update existing rows instead of creating duplicates
+### Technical details
 
-### 3. Also update `gsc-recommendations` edge function  
-- Add a `GROUP BY query, page` aggregation (summing clicks/impressions, averaging position/ctr) when reading from `gsc_performance_cache` as a safety net, so even if duplicates somehow remain, the AI won't see them as separate entries
+**Sitemaps API response shape:**
+```json
+{
+  "sitemap": [
+    {
+      "path": "https://example.com/sitemap.xml",
+      "contents": [
+        { "type": "web", "submitted": "154", "indexed": "142" }
+      ]
+    }
+  ]
+}
+```
 
-### Files changed
-- New SQL migration: deduplicate + unique constraint
-- `supabase/functions/fetch-gsc-data/index.ts`: use `upsert` instead of `insert`
-- `supabase/functions/gsc-recommendations/index.ts`: aggregate query before sending to AI
+**New migration:**
+```sql
+CREATE TABLE public.gsc_index_status (
+  id text PRIMARY KEY DEFAULT 'singleton',
+  submitted_count integer NOT NULL DEFAULT 0,
+  indexed_count integer NOT NULL DEFAULT 0,
+  sitemaps jsonb DEFAULT '[]',
+  fetched_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: admin + service_role
+```
+
+**Edge function addition** (in `fetch-gsc-data`):
+- Call sitemaps endpoint, sum all `contents[].submitted` and `contents[].indexed` across all sitemaps.
+- Upsert into `gsc_index_status`.
+
+**Frontend addition:**
+- New query for `gsc_index_status` singleton.
+- Two new cards: "Indexed Pages" and "Coverage %".
 
