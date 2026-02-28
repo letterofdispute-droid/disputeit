@@ -31,18 +31,6 @@ export default function SearchConsolePanel() {
     },
   });
 
-  const { data: indexStatus } = useQuery({
-    queryKey: ['gsc-index-status'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('gsc_index_status' as any)
-        .select('*')
-        .eq('id', 'singleton')
-        .maybeSingle() as { data: any; error: any };
-      if (error) throw error;
-      return data as { submitted_count: number; indexed_count: number; fetched_at: string } | null;
-    },
-  });
 
   const { data: cachedRecs } = useQuery({
     queryKey: ['gsc-recommendations-cache'],
@@ -67,7 +55,7 @@ export default function SearchConsolePanel() {
     onSuccess: (data) => {
       toast({ title: 'GSC Data Fetched', description: `${data.totalRows} queries imported (${data.dateRange.start} to ${data.dateRange.end})` });
       queryClient.invalidateQueries({ queryKey: ['gsc-data'] });
-      queryClient.invalidateQueries({ queryKey: ['gsc-index-status'] });
+      
     },
     onError: (err: any) => toast({ title: 'Fetch Failed', description: err.message, variant: 'destructive' }),
   });
@@ -155,7 +143,7 @@ export default function SearchConsolePanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-4">
           <p className="text-sm text-muted-foreground">Total Clicks</p>
           <p className="text-2xl font-bold">{totalClicks.toLocaleString()}</p>
@@ -171,18 +159,6 @@ export default function SearchConsolePanel() {
         <Card><CardContent className="pt-4">
           <p className="text-sm text-muted-foreground">Avg. Position</p>
           <p className="text-2xl font-bold">{avgPosition.toFixed(1)}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground">Indexed Pages</p>
-          <p className="text-2xl font-bold">{indexStatus?.indexed_count?.toLocaleString() ?? '—'}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground">Index Coverage</p>
-          <p className="text-2xl font-bold">
-            {indexStatus && indexStatus.submitted_count > 0
-              ? `${((indexStatus.indexed_count / indexStatus.submitted_count) * 100).toFixed(1)}%`
-              : '—'}
-          </p>
         </CardContent></Card>
       </div>
 
