@@ -192,8 +192,10 @@ serve(async (req) => {
         `https://www.googleapis.com/webmasters/v3/sites/${encodedSiteUrl}/sitemaps`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
+      console.log('Sitemaps API status:', sitemapRes.status);
       if (sitemapRes.ok) {
         const sitemapData = await sitemapRes.json();
+        console.log('Sitemaps API response:', JSON.stringify(sitemapData));
         const sitemapList = sitemapData.sitemap || [];
         for (const sm of sitemapList) {
           const smEntry: any = { path: sm.path, submitted: 0, indexed: 0 };
@@ -207,19 +209,27 @@ serve(async (req) => {
           }
           indexData.sitemaps.push(smEntry);
         }
-        // Upsert into gsc_index_status
-        await supabase.from('gsc_index_status').upsert({
-          id: 'singleton',
-          submitted_count: indexData.submitted,
-          indexed_count: indexData.indexed,
-          sitemaps: indexData.sitemaps,
-          fetched_at: new Date().toISOString(),
-        });
       } else {
-        console.error('Sitemaps API error:', sitemapRes.status, await sitemapRes.text());
+        const errBody = await sitemapRes.text();
+        console.error('Sitemaps API error:', sitemapRes.status, errBody);
       }
     } catch (smErr: any) {
       console.error('Sitemaps fetch error:', smErr.message);
+    }
+
+    // Always upsert index status (even if 0) so UI shows values instead of "—"
+    console.log('Index data to upsert:', JSON.stringify(indexData));
+    const { error: indexUpsertError } = await supabase.from('gsc_index_status').upsert({
+      id: 'singleton',
+      submitted_count: indexData.submitted,
+      indexed_count: indexData.indexed,
+      sitemaps: indexData.sitemaps,
+      fetched_at: new Date().toISOString(),
+    });
+    if (indexUpsertError) {
+      console.error('gsc_index_status upsert error:', indexUpsertError);
+    } else {
+      console.log('gsc_index_status upserted successfully');
     }
 
     return new Response(JSON.stringify({
