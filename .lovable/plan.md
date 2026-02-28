@@ -1,61 +1,26 @@
 
 
-## Goal
-Add an "Indexed Pages" metric to the GSC panel by calling the Google Search Console Sitemaps API, which returns submitted vs indexed URL counts per sitemap.
+## Investigation
 
-## Approach
+The `gsc_index_status` table is empty — the sitemaps upsert never succeeded. No error logs were captured, which means either:
+1. The Sitemaps API returned a non-200 and the error log was flushed before capture
+2. The API returned 200 but with an empty sitemap list (no sitemaps submitted to GSC)
+3. The upsert silently failed
 
-### 1. Extend `fetch-gsc-data` edge function
-- After fetching search analytics, also call the Sitemaps API:  
-  `GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/sitemaps`
-- The existing OAuth scope (`webmasters.readonly`) already covers this endpoint — no changes needed there.
-- Extract `submitted` and `indexed` counts from the sitemap response's `contents` array.
-- Return these counts alongside the existing search analytics response.
+## Plan
 
-### 2. Store index coverage data
-- Add a new table `gsc_index_status` (or reuse `site_settings`) to cache the indexed/submitted counts so the UI doesn't need a fresh API call every page load.
-- Fields: `id`, `submitted_count`, `indexed_count`, `sitemaps` (jsonb for per-sitemap breakdown), `fetched_at`.
-- Singleton pattern (single row, upserted on each sync).
+### 1. Add diagnostic logging to `fetch-gsc-data`
+- Log the sitemaps API response status and body regardless of success/failure
+- Log the upsert result (success or error) for `gsc_index_status`
+- Log `indexData` totals before returning
 
-### 3. Update the UI
-- In `SearchConsolePanel.tsx`, query `gsc_index_status` and display two new stat cards in the existing 4-card grid (making it 6 cards or replacing the grid layout):
-  - **Indexed Pages**: e.g. "142"
-  - **Index Coverage**: e.g. "92%" (indexed / submitted)
-- Show these alongside Total Clicks, Impressions, CTR, and Position.
+### 2. Handle empty sitemaps gracefully
+- If no sitemaps are registered in GSC, fall back to counting published `blog_posts` as the "indexed" proxy, or show a helpful message in the UI instead of "—"
+- Still upsert `gsc_index_status` even when counts are 0 so the UI shows "0" instead of "—"
 
-### Technical details
+### 3. Fix silent upsert failure
+- The upsert on line 211 doesn't check for errors — add error handling so failures are logged
 
-**Sitemaps API response shape:**
-```json
-{
-  "sitemap": [
-    {
-      "path": "https://example.com/sitemap.xml",
-      "contents": [
-        { "type": "web", "submitted": "154", "indexed": "142" }
-      ]
-    }
-  ]
-}
-```
-
-**New migration:**
-```sql
-CREATE TABLE public.gsc_index_status (
-  id text PRIMARY KEY DEFAULT 'singleton',
-  submitted_count integer NOT NULL DEFAULT 0,
-  indexed_count integer NOT NULL DEFAULT 0,
-  sitemaps jsonb DEFAULT '[]',
-  fetched_at timestamptz NOT NULL DEFAULT now()
-);
--- RLS: admin + service_role
-```
-
-**Edge function addition** (in `fetch-gsc-data`):
-- Call sitemaps endpoint, sum all `contents[].submitted` and `contents[].indexed` across all sitemaps.
-- Upsert into `gsc_index_status`.
-
-**Frontend addition:**
-- New query for `gsc_index_status` singleton.
-- Two new cards: "Indexed Pages" and "Coverage %".
+### Files changed
+- `supabase/functions/fetch-gsc-data/index.ts`: Add logging, error handling on upsert, upsert even when sitemaps are empty
 
