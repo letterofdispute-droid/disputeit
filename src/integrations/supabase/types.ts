@@ -885,6 +885,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gsc_index_status: {
+        Row: {
+          fetched_at: string
+          id: string
+          indexed_count: number
+          sitemaps: Json | null
+          submitted_count: number
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          indexed_count?: number
+          sitemaps?: Json | null
+          submitted_count?: number
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          indexed_count?: number
+          sitemaps?: Json | null
+          submitted_count?: number
+        }
+        Relationships: []
+      }
       gsc_performance_cache: {
         Row: {
           clicks: number

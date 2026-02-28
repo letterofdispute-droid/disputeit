@@ -184,11 +184,50 @@ serve(async (req) => {
       }
     }
 
+    // Fetch sitemap index coverage data
+    let indexData = { submitted: 0, indexed: 0, sitemaps: [] as any[] };
+    try {
+      const encodedSiteUrl = encodeURIComponent(siteUrl);
+      const sitemapRes = await fetch(
+        `https://www.googleapis.com/webmasters/v3/sites/${encodedSiteUrl}/sitemaps`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (sitemapRes.ok) {
+        const sitemapData = await sitemapRes.json();
+        const sitemapList = sitemapData.sitemap || [];
+        for (const sm of sitemapList) {
+          const smEntry: any = { path: sm.path, submitted: 0, indexed: 0 };
+          for (const c of (sm.contents || [])) {
+            const sub = parseInt(c.submitted || '0', 10);
+            const idx = parseInt(c.indexed || '0', 10);
+            smEntry.submitted += sub;
+            smEntry.indexed += idx;
+            indexData.submitted += sub;
+            indexData.indexed += idx;
+          }
+          indexData.sitemaps.push(smEntry);
+        }
+        // Upsert into gsc_index_status
+        await supabase.from('gsc_index_status').upsert({
+          id: 'singleton',
+          submitted_count: indexData.submitted,
+          indexed_count: indexData.indexed,
+          sitemaps: indexData.sitemaps,
+          fetched_at: new Date().toISOString(),
+        });
+      } else {
+        console.error('Sitemaps API error:', sitemapRes.status, await sitemapRes.text());
+      }
+    } catch (smErr: any) {
+      console.error('Sitemaps fetch error:', smErr.message);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       totalRows: allRows.length,
       inserted,
       dateRange: { start: startStr, end: endStr },
+      indexStatus: { submitted: indexData.submitted, indexed: indexData.indexed },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
