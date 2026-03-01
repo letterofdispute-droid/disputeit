@@ -1,20 +1,24 @@
 
 
-# Fix `related_templates` on Indiana Lemon Law Articles
+# Add "Seed Lemon Law Campaigns" Button to SEO Dashboard
 
-This is a simple data UPDATE on the `blog_posts` table. Since I'm in read-only mode, I need to switch to implementation mode to execute this.
+The `seed-state-lemon-campaigns` edge function is deployed but has no UI trigger. I'll add a button to invoke it from the Coverage tab (where other bulk-plan operations live).
 
-### What will be done
-Run a single SQL UPDATE to fix the `related_templates` field on all articles currently pointing to the incorrect GSC campaign slug:
+## What I'll do
 
-```sql
-UPDATE blog_posts 
-SET related_templates = ARRAY['lemon-law-rejection'] 
-WHERE related_templates @> ARRAY['gsc-campaign-vehicle-1772403274272'];
-```
+Add a "Seed State Campaigns" button to `TemplateCoverageMap.tsx` that:
+1. Calls `supabase.functions.invoke('seed-state-lemon-campaigns')`
+2. Shows a loading spinner while running
+3. Displays a toast with the result (e.g., "49 states seeded, 294 articles queued")
+4. After success, the queued articles will appear in the Queue tab, ready to be generated via the existing "Generate All" bulk workflow
 
-This will update all 6 Indiana lemon law articles so their "Related Templates" CTA correctly links to the Lemon Law Rejection Letter template.
+## How it works end-to-end
 
-### No code changes needed
-This is a database data fix only.
+1. You click **"Seed State Campaigns"** in the Coverage tab
+2. The function creates 49 `content_plans` + 294 `content_queue` items (1 pillar + 5 clusters per state)
+3. You go to the **Queue tab**, where those 294 items appear with status "queued"
+4. You click **"Generate All"** in the Queue tab to start bulk article generation via the existing `bulk-generate-articles` pipeline
+
+## Files changed
+- `src/components/admin/seo/TemplateCoverageMap.tsx` — add seed button + invoke logic
 
