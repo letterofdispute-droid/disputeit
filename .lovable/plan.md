@@ -1,26 +1,56 @@
 
 
-## Investigation
+# Plan: Generate Lemon Law Article Campaigns for All 50 States
 
-The `gsc_index_status` table is empty — the sitemaps upsert never succeeded. No error logs were captured, which means either:
-1. The Sitemaps API returned a non-200 and the error log was flushed before capture
-2. The API returned 200 but with an empty sitemap list (no sitemaps submitted to GSC)
-3. The upsert silently failed
+## Current State
+- **Indiana**: Already has 5 published articles (pillar + 4 cluster). This is the template pattern.
+- **California**: 1 general lemon law article
+- **Florida**: 1 general lemon law article
+- **35+ general** lemon law articles exist (not state-specific)
 
-## Plan
+## Approach
 
-### 1. Add diagnostic logging to `fetch-gsc-data`
-- Log the sitemaps API response status and body regardless of success/failure
-- Log the upsert result (success or error) for `gsc_index_status`
-- Log `indexData` totals before returning
+Create a new edge function `seed-state-lemon-campaigns` that programmatically generates content_plan + content_queue entries for 49 states (all except Indiana). Each state gets **1 pillar + 5 cluster articles** with state-specific titles, keywords, and article types.
 
-### 2. Handle empty sitemaps gracefully
-- If no sitemaps are registered in GSC, fall back to counting published `blog_posts` as the "indexed" proxy, or show a helpful message in the UI instead of "—"
-- Still upsert `gsc_index_status` even when counts are 0 so the UI shows "0" instead of "—"
+### Key Design Decisions
 
-### 3. Fix silent upsert failure
-- The upsert on line 211 doesn't check for errors — add error handling so failures are logged
+**Avoiding repetition**: Each state's cluster will draw from a pool of ~12 article angle templates, randomly selecting 5 per state. This ensures neighboring states don't have identical article structures. Examples of angle templates:
 
-### Files changed
-- `supabase/functions/fetch-gsc-data/index.ts`: Add logging, error handling on upsert, upsert even when sitemaps are empty
+- How to file a claim (how-to)
+- Common mistakes when filing (mistakes)
+- Used cars / private sales coverage (faq)
+- Statute key provisions (rights)
+- Manufacturer vs dealer obligations (comparison)
+- Timeline and deadlines (checklist)
+- Arbitration process (how-to)
+- Lemon law attorney selection (how-to)
+- Documentation and evidence gathering (checklist)
+- Buyback vs replacement options (comparison)
+- Federal vs state protections (comparison)
+- Recent case studies and outcomes (case-study)
+
+**State-specific content**: Titles and keywords reference each state's actual lemon law statute name (e.g., "Song-Beverly Act" for CA, "Motor Vehicle Warranty Enforcement Act" for FL). The AI generation pipeline will handle the actual state-specific legal content.
+
+### Implementation
+
+1. **Create edge function** `seed-state-lemon-campaigns/index.ts`
+   - Defines all 50 states with their lemon law statute names
+   - Skips Indiana (already published)
+   - For each state: creates a `content_plan` and 6 `content_queue` items (1 pillar at priority 100 + 5 clusters)
+   - Uses deterministic shuffling so each state gets a different mix of 5 cluster angles from the 12-angle pool
+   - Sets `related_templates` context so generated articles link to `lemon-law-rejection`
+   - Category: `vehicle`
+
+2. **Run the function once** to seed 49 states x 6 articles = 294 queue items
+
+3. The existing `bulk-generate-articles` pipeline handles actual content generation with state-specific prompts
+
+### Files Changed
+- **New**: `supabase/functions/seed-state-lemon-campaigns/index.ts` - one-time seeding function
+- **Update**: `supabase/config.toml` entry (auto-managed)
+
+### Scale
+- 49 states x 6 articles = **294 articles** queued
+- Generation happens via existing bulk pipeline (1 article per invocation, self-chaining)
+- Estimated generation time: several hours via the existing batch system
 
