@@ -429,6 +429,28 @@ export default function TemplateCoverageMap() {
     }
   });
 
+  // Seed state lemon law campaigns mutation
+  const seedStateCampaignsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('seed-state-lemon-campaigns');
+      if (error) throw error;
+      return data as { success: boolean; seeded: number; totalArticles: number; errors: number; errorDetails?: Array<{ state: string; error: string }> };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['content-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['content-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['template-progress'] });
+      toast({
+        title: `${data.seeded} states seeded`,
+        description: `${data.totalArticles} articles queued.${data.errors > 0 ? ` ${data.errors} errors.` : ''} Go to Queue tab → Generate All.`,
+      });
+    },
+    onError: (error) => {
+      toast({ title: 'Seed failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    },
+  });
+
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -632,6 +654,16 @@ export default function TemplateCoverageMap() {
             }
             </Button>
           }
+          <Button
+            onClick={() => seedStateCampaignsMutation.mutate()}
+            disabled={seedStateCampaignsMutation.isPending}
+            size="sm"
+            variant="outline">
+              {seedStateCampaignsMutation.isPending ?
+            <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Seeding...</> :
+            <><Plus className="h-4 w-4 mr-1.5" /> Seed State Campaigns</>
+              }
+          </Button>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by category" />
