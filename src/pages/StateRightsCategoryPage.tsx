@@ -1,6 +1,7 @@
 import { useParams, Link, Navigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -109,8 +110,17 @@ export default function StateRightsCategoryPage() {
   const primaryStatute = statutes[0];
   const federalContext = FEDERAL_CONTEXT[categorySlug!];
 
-  const title = `${stateName} ${categoryLabel} Rights — ${primaryStatute.citation} | Letter of Dispute`;
-  const description = `${stateName} ${categoryLabel.toLowerCase()} consumer protection under ${primaryStatute.citation}. Find your rights, filing deadlines, and how to dispute with the ${stateData.agOffice}.`;
+  const fallbackTitle = `${stateName} ${categoryLabel} Rights — ${primaryStatute.citation} | Letter of Dispute`;
+  const fallbackDesc = `${stateName} ${categoryLabel.toLowerCase()} consumer protection under ${primaryStatute.citation}. Find your rights, filing deadlines, and how to dispute with the ${stateData.agOffice}.`;
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `state-rights/${stateSlug || ''}/${categorySlug || ''}`,
+    fallbackTitle,
+    fallbackDescription: fallbackDesc,
+  });
+
+  const title = seoTitle;
+  const description = seoDescription;
 
   const breadcrumbs = [
     { name: 'Home', url: 'https://letterofdispute.com/' },

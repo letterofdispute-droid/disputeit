@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import CostCalculator from '@/components/small-claims/CostCalculator';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,17 @@ import { ArrowRight, FileText, MapPin, ArrowLeft, Calculator } from 'lucide-reac
 const SmallClaimsCostCalculatorPage = () => {
   const siteUrl = 'https://letterofdispute.com';
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'small-claims/cost-calculator',
+    fallbackTitle: "Small Claims Court Cost Calculator - Estimate Filing Fees by State",
+    fallbackDescription: "Calculate your total small claims court costs including filing fees, service fees, and ROI. Free interactive tool with state-specific data for all 50 states.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Small Claims Court Cost Calculator - Estimate Filing Fees by State"
-        description="Calculate your total small claims court costs including filing fees, service fees, and ROI. Free interactive tool with state-specific data for all 50 states."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/small-claims/cost-calculator"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },

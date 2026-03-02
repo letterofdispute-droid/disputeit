@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -194,11 +195,17 @@ const PricingPage = () => {
   const { pdfOnlyPrice, pdfEditablePrice, editUnlockPrice, formatPrice } = useSiteSettings();
   const options = getOptions(pdfOnlyPrice, pdfEditablePrice, formatPrice);
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'pricing',
+    fallbackTitle: "Pricing - Simple Per-Letter Pricing | Letter of Dispute",
+    fallbackDescription: "Create professional dispute letters from $9.99. No hidden fees. Per-letter pricing with optional in-app editing.",
+  });
+
   return (
     <Layout>
       <SEOHead 
-        title="Pricing - Simple Per-Letter Pricing | Letter of Dispute"
-        description="Create professional dispute letters from $9.99. No hidden fees. Per-letter pricing with optional in-app editing."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/pricing"
       />
       <Helmet>

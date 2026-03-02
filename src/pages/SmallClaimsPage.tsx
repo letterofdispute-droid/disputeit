@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import USMap from '@/components/small-claims/USMap';
 import StateLookup from '@/components/small-claims/StateLookup';
 import FilingSteps from '@/components/small-claims/FilingSteps';
@@ -23,11 +24,17 @@ const faqItems = [
 const SmallClaimsPage = () => {
   const siteUrl = 'https://letterofdispute.com';
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'small-claims',
+    fallbackTitle: "Small Claims Court: The Complete Guide (2026) - Filing Limits, Fees & Forms",
+    fallbackDescription: "Everything you need to know about small claims court: state-by-state filing limits, fees, forms, and step-by-step instructions. Free interactive tools to help you file and win.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Small Claims Court: The Complete Guide (2026) - Filing Limits, Fees & Forms"
-        description="Everything you need to know about small claims court: state-by-state filing limits, fees, forms, and step-by-step instructions. Free interactive tools to help you file and win."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/small-claims"
         faqItems={faqItems}
         breadcrumbs={[

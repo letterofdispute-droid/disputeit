@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import StateRightsMap from '@/components/small-claims/StateRightsMap';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -130,11 +131,17 @@ const StateRightsPage = () => {
     { question: 'Can I sue under both state and federal consumer protection laws?', answer: 'Yes. Federal laws like the FTC Act, FCBA, and FDCPA set minimum standards, but state laws can provide stronger protections and additional remedies like treble damages or attorney fees.' },
   ];
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'state-rights',
+    fallbackTitle: "State Consumer Rights Lookup | Find Your State's Laws | Letter of Dispute",
+    fallbackDescription: "Find consumer protection laws, statutes, and Attorney General contacts for all 50 US states. Free interactive tool for refund rights, lemon laws, tenant rights, and more.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="State Consumer Rights Lookup | Find Your State's Laws | Letter of Dispute"
-        description="Find consumer protection laws, statutes, and Attorney General contacts for all 50 US states. Free interactive tool for refund rights, lemon laws, tenant rights, and more."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/state-rights"
         faqItems={faqItems}
         breadcrumbs={breadcrumbs}

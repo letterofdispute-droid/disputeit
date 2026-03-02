@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -205,11 +206,17 @@ export default function LetterAnalyzerPage() {
     { name: 'Free Letter Analyzer', url: 'https://letterofdispute.com/analyze-letter' },
   ];
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'analyze-letter',
+    fallbackTitle: "Free AI Dispute Letter Analyzer | Score Your Letter | Letter of Dispute",
+    fallbackDescription: "Paste your draft dispute letter and get a free AI score across 5 key dimensions: legal citations, deadlines, evidence, tone, and clarity. No signup required.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Free AI Dispute Letter Analyzer | Score Your Letter | Letter of Dispute"
-        description="Paste your draft dispute letter and get a free AI score across 5 key dimensions: legal citations, deadlines, evidence, tone, and clarity. No signup required."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/analyze-letter"
         breadcrumbs={breadcrumbs}
       />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -235,11 +236,17 @@ const DeadlinesPage = () => {
     { question: 'What is the discovery rule?', answer: 'The discovery rule tolls the statute of limitations from the date you discovered—or reasonably should have discovered—the harm, rather than when it occurred.' },
   ];
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'deadlines',
+    fallbackTitle: "Statute of Limitations & Dispute Deadlines Calculator | Letter of Dispute",
+    fallbackDescription: "Find out how long you have to dispute charges, file complaints, or take legal action. Free interactive tool showing real federal deadlines by dispute type and state.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Statute of Limitations & Dispute Deadlines Calculator | Letter of Dispute"
-        description="Find out how long you have to dispute charges, file complaints, or take legal action. Free interactive tool showing real federal deadlines by dispute type and state."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/deadlines"
         faqItems={faqSchema}
         breadcrumbs={breadcrumbs}

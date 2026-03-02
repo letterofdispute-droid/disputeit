@@ -1,6 +1,7 @@
 import { useParams, Link, Navigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,16 +30,25 @@ export default function StateRightsStatePage() {
   const { stateSlug } = useParams<{ stateSlug: string }>();
   const stateCode = stateSlug ? getStateFromSlug(stateSlug) : null;
 
-  if (!stateCode || !stateSpecificLaws[stateCode]) {
+  const stateData = stateCode ? stateSpecificLaws[stateCode] : null;
+  const stateName = stateCode ? (US_STATES.find(s => s.code === stateCode)?.name || stateCode) : '';
+  const primaryStatute = stateData?.consumerProtection;
+
+  const fallbackTitle = stateData ? `${stateName} Consumer Rights Laws | All Statutes & AG Contact | Letter of Dispute` : '';
+  const fallbackDesc = (stateData && primaryStatute) ? `Find ${stateName}'s consumer protection law (${primaryStatute.citation}), lemon law, tenant rights, and more. Includes ${stateData.agOffice} contact details.` : '';
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `state-rights/${stateSlug || ''}`,
+    fallbackTitle,
+    fallbackDescription: fallbackDesc,
+  });
+
+  if (!stateCode || !stateData) {
     return <Navigate to="/state-rights" replace />;
   }
 
-  const stateData = stateSpecificLaws[stateCode];
-  const stateName = US_STATES.find(s => s.code === stateCode)?.name || stateCode;
-  const primaryStatute = stateData.consumerProtection;
-
-  const title = `${stateName} Consumer Rights Laws | All Statutes & AG Contact | Letter of Dispute`;
-  const description = `Find ${stateName}'s consumer protection law (${primaryStatute.citation}), lemon law, tenant rights, and more. Includes ${stateData.agOffice} contact details.`;
+  const title = seoTitle;
+  const description = seoDescription;
 
   const breadcrumbs = [
     { name: 'Home', url: 'https://letterofdispute.com/' },

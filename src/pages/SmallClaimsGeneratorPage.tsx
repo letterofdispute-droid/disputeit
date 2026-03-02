@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,11 +82,17 @@ const SmallClaimsGeneratorPage = () => {
 
   const siteUrl = 'https://letterofdispute.com';
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'small-claims/statement-generator',
+    fallbackTitle: "Free Small Claims Statement Generator — Create Your Court Filing",
+    fallbackDescription: "Generate a professional small claims court statement of claim for free. State-specific court headers, legal citations, and proper formatting.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Free Small Claims Statement Generator — Create Your Court Filing"
-        description="Generate a professional small claims court statement of claim for free. State-specific court headers, legal citations, and proper formatting."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/small-claims/statement-generator"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },

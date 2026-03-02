@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -153,11 +154,17 @@ export default function ConsumerNewsPage() {
     { name: 'Consumer News Hub', url: 'https://letterofdispute.com/consumer-news' },
   ];
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'consumer-news',
+    fallbackTitle: "Consumer News Hub | FTC & CFPB Alerts | Letter of Dispute",
+    fallbackDescription: "Stay current with the latest FTC enforcement actions, CFPB consumer alerts, and NHTSA vehicle recalls. Official government news that affects your consumer rights.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Consumer News Hub | FTC &amp; CFPB Alerts | Letter of Dispute"
-        description="Stay current with the latest FTC enforcement actions, CFPB consumer alerts, and NHTSA vehicle recalls. Official government news that affects your consumer rights."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/consumer-news"
         breadcrumbs={breadcrumbs}
       />
