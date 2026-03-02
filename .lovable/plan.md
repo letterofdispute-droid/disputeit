@@ -1,59 +1,38 @@
 
-Root cause identified: this is a timeout failure, not auth.
 
-- Backend analytics show `OPTIONS 200` and `POST 504` for `backfill-page-seo`, with execution time ~150s (platform timeout).
-- That matches your UI symptom: each batch of 5 is marked failed, and browser reports `Failed to fetch`.
+# Replace Pixabay with AI-Generated Images in SEO Backfill
 
-Implementation plan
+## Problem
+The `backfill-page-seo` edge function currently uses Pixabay stock photos for featured images. You want unique, AI-generated images that realistically represent each page's topic.
 
-1) Make each backend request finish well under timeout
-- Update `supabase/functions/backfill-page-seo/index.ts`:
-  - Reduce max accepted `page_ids` from `1-5` to `1-2`.
-  - Add explicit per-call timeouts using `AbortController`:
-    - AI request timeout (e.g. 20–25s)
-    - Pixabay request timeout (e.g. 8–10s)
-  - Keep per-page try/catch, but classify errors clearly (`ai_timeout`, `ai_429`, `pixabay_timeout`, `db_error`, etc.).
-  - Return structured response:
-    - `succeeded`, `failed`, `errors` (with page id + reason), and optional `duration_ms`.
+## Approach
+Use the existing `googleImageGen.ts` shared helper (which calls Google Gemini image generation directly using the already-configured `GOOGLE_GEMINI_API_KEY` secret) to generate a unique image per page, then upload it to the existing public `blog-images` storage bucket.
 
-2) Align frontend batching with timeout-safe backend behavior
-- Update `src/hooks/usePageSeoBackfill.ts`:
-  - Change `BATCH_SIZE` from `5` to `1` (safest) or `2` (balanced).
-  - Keep sequential processing to avoid rate-limit bursts.
-  - Increase inter-batch delay slightly (e.g. 1200–1500ms).
-  - Capture invoke errors explicitly (instead of silent catch) and attach error text to state.
-  - Expand page selection criteria to include missing any required SEO asset:
-    - `meta_title IS NULL OR meta_description IS NULL OR featured_image_url IS NULL`
-  - Keep existing pagination loop with `.range(...)` (already good for high-volume data).
+## Changes
 
-3) Improve admin observability so failures are actionable
-- Update `src/pages/admin/AdminPages.tsx`:
-  - In progress panel, show last error reason and count by type (timeout/rate-limit/other).
-  - Final toast should include a short failure summary (not just failed count), so you can see why.
-  - Keep cancel behavior unchanged.
+### 1. `supabase/functions/backfill-page-seo/index.ts`
+- Remove all Pixabay logic (lines 209-238, the `PIXABAY_API_KEY` reference on line 81)
+- Import `generateImageWithGoogle`, `imageResultToRawBuffer`, `shouldBailOut` from `../_shared/googleImageGen.ts`
+- When `needsImage`:
+  1. Build a prompt: "Create a realistic, professional 16:9 photograph representing [page title]. The image should be suitable as a blog featured image. No text overlay."
+  2. Call `generateImageWithGoogle(prompt, GOOGLE_GEMINI_API_KEY)`
+  3. Convert result to buffer via `imageResultToRawBuffer`
+  4. Upload to `blog-images` bucket at path `pages/{page.slug}.{ext}` using service role client
+  5. Get public URL, store as `featured_image_url`
+- Handle `shouldBailOut` errors (rate limit / credit exhaustion) to set `bailReason` and stop the batch
+- Add a 30s `AbortController` timeout wrapper around the image generation call
+- Change `image_keywords` in the AI tool call to `image_prompt` — a descriptive visual scene prompt instead of search keywords
 
-4) Preserve content quality while filling only missing fields
-- In function logic:
-  - Generate unique AI meta only when title/description missing.
-  - If only image is missing, skip full SEO generation and fetch a realistic topical image based on page topic.
-  - Avoid overwriting existing non-null metadata unless explicitly requested.
+### 2. Reduce batch size to 1
+Since image generation is slower than Pixabay lookup, keep `page_ids` max at 1 to stay well under the edge function timeout. Update validation from `> 2` to `> 1`.
 
-Technical details
+### 3. `src/hooks/usePageSeoBackfill.ts`
+- Change `BATCH_SIZE` from 2 to 1
+- Increase `INTER_BATCH_DELAY` to 2000ms (image gen is heavier, helps avoid rate limits)
 
-- Files to update:
-  - `supabase/functions/backfill-page-seo/index.ts`
-  - `src/hooks/usePageSeoBackfill.ts`
-  - `src/pages/admin/AdminPages.tsx`
-- No schema or policy changes required.
-- Secrets already present for required providers, so no secret setup blocker.
-- This directly addresses the current failure loop (`504 -> Failed to fetch`) and makes runs stable for all 889+ pages.
+### Technical note
+- `GOOGLE_GEMINI_API_KEY` is already configured as a secret
+- The `blog-images` bucket is public, so the public URL works directly as `featured_image_url`
+- The shared helper already handles error categorization (rate limit, credit exhaustion, AI error)
+- Image generation adds ~5-15s per page, so processing 889 pages at 1/batch with 2s delay will take ~2-4 hours total
 
-Validation plan
-
-1. Run `Guides` first (14 pages).
-   - Expected: no `Failed to fetch`, no batch-wide hard failures from timeout.
-2. Confirm with database check:
-   - Missing count for guide pages should drop to zero for `meta_title`, `meta_description`, `featured_image_url`.
-3. Then run larger groups in order:
-   - `auth -> template -> small-claims -> state-rights`.
-4. Spot-check generated results for uniqueness and topical image realism on random samples per group.
