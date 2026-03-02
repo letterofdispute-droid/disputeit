@@ -126,6 +126,8 @@ Rules:
 - meta_description: Max 155 characters. Compelling, action-oriented, specific to the page's actual subject matter. Make someone want to click.
 - Do NOT use templates or patterns. Each one should read like a human copywriter wrote it specifically for this page.
 - Focus on the specific consumer rights topic, state, or category this page covers.
+- BANNED WORDS (never use these): navigating, navigate, elevate, elevating, delve, leverage, seamless, robust, comprehensive, cutting-edge, empower, unlock, unleash, streamline, optimize, foster, facilitate, paramount, pivotal, groundbreaking, revolutionary, game-changer, vital, crucial, essential, landscape, realm, enhance, enhancing, spearhead, holistic, synergy, paradigm, effortlessly, utilize, dive into, deep dive.
+- Write like a direct, no-nonsense human copywriter. Use plain, concrete language only.
 - image_prompt: A vivid, descriptive scene for generating a realistic photograph that visually represents this page's topic. Focus on concrete visual subjects (e.g. "a person reviewing documents at a desk with a laptop" or "a courthouse entrance with marble columns"). 2-3 sentences max.
 
 Return using the provided tool.`;
