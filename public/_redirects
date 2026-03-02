@@ -1,2 +1,5 @@
 # Strip trailing slashes (301 permanent redirect)
 /*/  /:splat  301
+
+# SPA fallback — serve per-route index.html if it exists, otherwise root
+/* /index.html 200
