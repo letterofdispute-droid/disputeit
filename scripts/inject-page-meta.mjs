@@ -137,8 +137,54 @@ function escapeAttr(str) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function validateGeneratedFiles() {
-  console.log('\n🔍 Validating key route HTML files...');
+function generateRedirectsFile(pages) {
+  console.log('\n🔀 Generating _redirects with per-route rewrite rules...');
+
+  // Read base template from public/_redirects
+  const baseRedirectsPath = path.join(__dirname, '..', 'public', '_redirects');
+  let baseContent = '';
+  if (fs.existsSync(baseRedirectsPath)) {
+    baseContent = fs.readFileSync(baseRedirectsPath, 'utf-8');
+  }
+
+  // Remove existing SPA fallback from base (we'll add it at the end)
+  const baseLines = baseContent.split('\n').filter(line => {
+    const trimmed = line.trim();
+    // Remove the catch-all SPA fallback — we re-add it last
+    if (trimmed === '/* /index.html 200') return false;
+    return true;
+  });
+
+  // Build per-slug rewrite rules
+  const routeRules = [];
+  for (const page of pages) {
+    if (!page.meta_title || !page.slug) continue;
+    const slug = page.slug.replace(/^\/+|\/+$/g, '');
+    if (!slug) continue;
+    routeRules.push(`/${slug}  /${slug}.html  200`);
+  }
+
+  // Assemble final _redirects
+  const finalContent = [
+    ...baseLines.filter(l => l.trim() !== ''),
+    '',
+    '# Auto-generated per-route rewrites (build-time)',
+    ...routeRules,
+    '',
+    '# SPA fallback — must be last',
+    '/* /index.html 200',
+    '',
+  ].join('\n');
+
+  const redirectsPath = path.join(distDir, '_redirects');
+  fs.writeFileSync(redirectsPath, finalContent);
+  console.log(`✅ Wrote ${routeRules.length} route rewrite rules to dist/_redirects`);
+
+  return routeRules;
+}
+
+function validateGeneratedFiles(routeRules) {
+  console.log('\n🔍 Validating key route HTML files and redirects...');
   const errors = [];
 
   for (const slug of VALIDATION_SLUGS) {
@@ -165,6 +211,12 @@ function validateGeneratedFiles() {
     const expectedCanonical = `${SITE_URL}/${slug}`;
     if (!html.includes(expectedCanonical)) {
       errors.push(`❌ slug "${slug}" canonical does not contain "${expectedCanonical}"`);
+    }
+
+    // Check _redirects contains rewrite for this slug
+    const expectedRule = `/${slug}  /${slug}.html  200`;
+    if (!routeRules.includes(expectedRule)) {
+      errors.push(`❌ slug "${slug}" missing rewrite rule in _redirects`);
     }
   }
 
@@ -223,8 +275,11 @@ async function main() {
 
   console.log(`✅ Generated ${created} static HTML files (×2 each) with unique meta tags (${skipped} skipped)`);
 
-  // Validate key slugs
-  validateGeneratedFiles();
+  // Generate _redirects with per-route rewrite rules
+  const routeRules = generateRedirectsFile(pages);
+
+  // Validate key slugs and redirect entries
+  validateGeneratedFiles(routeRules);
 }
 
 main().catch((err) => {
