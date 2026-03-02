@@ -19,6 +19,7 @@ import SubcategoryFilter from '@/components/category/SubcategoryFilter';
 import TemplateCard from '@/components/category/TemplateCard';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
 import { trackCategoryView } from '@/hooks/useGTM';
+import { usePageSeo } from '@/hooks/usePageSeo';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -100,14 +101,20 @@ const CategoryPage = () => {
     });
   }, [templatesWithSubcategory, searchQuery, activeSubcategory]);
 
+  // Fetch AI-generated SEO from database (must be before early return)
+  const fallbackTitle = category ? `${category.name} Letter Templates - Free Professional Complaint Letters | Dispute Letters` : '';
+  const fallbackDescription = category ? `Browse ${templates.length} professional ${category.name.toLowerCase()} letter templates. ${category.description} Generate legally-referenced complaint letters in minutes.` : '';
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `templates/${categoryId || ''}`,
+    fallbackTitle,
+    fallbackDescription,
+  });
+
   // Early return after all hooks
   if (!category) {
     return <Navigate to="/404" replace />;
   }
-
-  // Generate smart SEO metadata
-  const seoTitle = `${category.name} Letter Templates - Free Professional Complaint Letters | Dispute Letters`;
-  const seoDescription = `Browse ${templates.length} professional ${category.name.toLowerCase()} letter templates. ${category.description} Generate legally-referenced complaint letters in minutes.`;
 
   // BreadcrumbList schema for SEO
   const breadcrumbSchema = {
