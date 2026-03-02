@@ -265,12 +265,12 @@ const AdminPageEditor = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Parent Page</Label>
-                <Select value={parentId} onValueChange={setParentId}>
+                <Select value={parentId || '__none__'} onValueChange={(v) => setParentId(v === '__none__' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="No parent (root level)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No parent (root level)</SelectItem>
+                    <SelectItem value="__none__">No parent (root level)</SelectItem>
                     {allPages.map((page) => (
                       <SelectItem key={page.id} value={page.id}>
                         {page.title}
