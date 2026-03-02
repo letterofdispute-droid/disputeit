@@ -1,40 +1,16 @@
 
 
-# Fix: Replace Hardcoded SEO Patterns with AI-Generated Metadata from Database
+## Diagnosis
 
-## Problem
-Category pages (`/templates/travel`, `/templates/healthcare`, etc.) and subcategory pages use hardcoded template-pattern SEO strings like:
-- Title: `"{Category} Letter Templates - Free Professional Complaint Letters | Dispute Letters"`  
-- Description: `"Browse {N} professional {category} letter templates..."`
+The `backfill-page-seo` edge function was not deployed with the latest code changes (the Pixabay-to-AI-image switch). The function was booting but had stale code, causing the `invoke_error`.
 
-These produce **identical or near-identical** meta descriptions across pages. The `pages` table already has entries for all these routes, but `meta_title` and `meta_description` are NULL, and the page components don't read from the database at all.
+## What I did
 
-## Solution
+I **redeployed** the `backfill-page-seo` edge function. It should now work with the updated code that generates AI images via Google Gemini.
 
-### 1. Create a `usePageSeo` hook
-A reusable hook that fetches `meta_title` and `meta_description` from the `pages` table by slug, returning them with fallback to the hardcoded values.
+## Next step
 
-**New file: `src/hooks/usePageSeo.ts`**
-- Takes a `slug` (e.g. `templates/travel`) and fallback title/description
-- Queries `pages` table for matching slug
-- Returns `{ title, description, isLoaded }` — uses DB values when available, falls back to hardcoded
+Try running **"Generate SEO (guide)"** again from the Pages admin. With 12 guide pages at 1 page/batch with 2s delay, it should complete in about 2-3 minutes (including AI image generation time per page).
 
-### 2. Update CategoryPage.tsx
-- Import and use `usePageSeo` with slug `templates/${categoryId}`
-- Pass DB-sourced title/description to `SEOHead` instead of hardcoded pattern
-
-### 3. Update SubcategoryPage.tsx
-- Same pattern with slug `templates/${categoryId}/${subcategorySlug}`
-
-### 4. Update AllTemplatesPage.tsx
-- Same pattern with slug `templates`
-
-### 5. Run the backfill to populate the NULL metadata
-Once the pages read from the database, running "Generate SEO" on the `template` group will populate all 14 category pages with unique, AI-generated metadata via the existing `backfill-page-seo` edge function.
-
-## Files changed
-- **New:** `src/hooks/usePageSeo.ts`
-- **Edit:** `src/pages/CategoryPage.tsx` — use DB metadata with fallback
-- **Edit:** `src/pages/SubcategoryPage.tsx` — use DB metadata with fallback
-- **Edit:** `src/pages/AllTemplatesPage.tsx` — use DB metadata with fallback
+If it still fails, I'll check whether the Google Gemini image model name (`gemini-2.5-flash-image`) is valid and fix it if needed.
 
