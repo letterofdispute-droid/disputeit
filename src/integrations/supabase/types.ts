@@ -1349,6 +1349,7 @@ export type Database = {
           meta_description: string | null
           meta_title: string | null
           no_index: boolean
+          page_group: string | null
           page_type: string
           parent_id: string | null
           slug: string
@@ -1368,6 +1369,7 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           no_index?: boolean
+          page_group?: string | null
           page_type?: string
           parent_id?: string | null
           slug: string
@@ -1387,6 +1389,7 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           no_index?: boolean
+          page_group?: string | null
           page_type?: string
           parent_id?: string | null
           slug?: string

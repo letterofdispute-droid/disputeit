@@ -28,6 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import QueuePagination from '@/components/admin/seo/queue/QueuePagination';
@@ -48,7 +55,19 @@ interface Page {
   meta_description: string | null;
   page_type: string;
   no_index: boolean;
+  page_group: string | null;
 }
+
+const PAGE_GROUPS = [
+  { value: 'all', label: 'All Groups' },
+  { value: 'static', label: 'Static' },
+  { value: 'legal', label: 'Legal' },
+  { value: 'tool', label: 'Tools' },
+  { value: 'template', label: 'Templates' },
+  { value: 'guide', label: 'Guides' },
+  { value: 'state-rights', label: 'State Rights' },
+  { value: 'small-claims', label: 'Small Claims' },
+];
 
 interface PageWithChildren extends Page {
   children?: PageWithChildren[];
@@ -65,6 +84,7 @@ const AdminPages = () => {
   const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'system' | 'cms'>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
@@ -80,12 +100,12 @@ const AdminPages = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, typeFilter]);
+  }, [debouncedSearch, statusFilter, typeFilter, groupFilter]);
 
   // Fetch pages with pagination and filtering
   useEffect(() => {
     fetchPages();
-  }, [currentPage, debouncedSearch, statusFilter, typeFilter]);
+  }, [currentPage, debouncedSearch, statusFilter, typeFilter, groupFilter]);
 
   // Fetch draft count separately
   useEffect(() => {
@@ -97,7 +117,7 @@ const AdminPages = () => {
     try {
       let query = supabase
         .from('pages')
-        .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description, page_type, no_index', { count: 'exact' })
+        .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description, page_type, no_index, page_group', { count: 'exact' })
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -109,6 +129,11 @@ const AdminPages = () => {
       // Apply type filter
       if (typeFilter !== 'all') {
         query = query.eq('page_type', typeFilter);
+      }
+
+      // Apply group filter
+      if (groupFilter !== 'all') {
+        query = query.eq('page_group', groupFilter);
       }
 
       // Apply search filter
@@ -288,6 +313,17 @@ const AdminPages = () => {
           >
             CMS
           </Button>
+          <div className="w-px bg-border mx-1" />
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Group" />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_GROUPS.map(g => (
+                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -298,12 +334,13 @@ const AdminPages = () => {
             <Table>
               <TableHeader>
                  <TableRow>
-                   <TableHead className="min-w-[300px]">Title</TableHead>
-                   <TableHead>Slug</TableHead>
-                   <TableHead>Type</TableHead>
-                   <TableHead>Status</TableHead>
-                   <TableHead>Updated</TableHead>
-                   <TableHead className="w-[70px]"></TableHead>
+                    <TableHead className="min-w-[300px]">Title</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead className="w-[70px]"></TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
@@ -335,6 +372,13 @@ const AdminPages = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">/{page.slug}</TableCell>
+                    <TableCell>
+                      {page.page_group && (
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {page.page_group}
+                        </span>
+                      )}
+                    </TableCell>
                      <TableCell>
                        <div className="flex items-center gap-1.5">
                          <Badge variant={page.page_type === 'system' ? 'outline' : 'secondary'} className="text-[10px] px-1.5">
