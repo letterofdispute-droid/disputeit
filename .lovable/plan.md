@@ -1,103 +1,56 @@
 
-Full audit completed (codebase + database + backend functions). Here is the working fix path.
 
-## What I verified (no guessing)
+# Fix: Serve unique SEO meta to crawlers using `netlify.toml` bot detection
 
-1. **Database data is correct**
-   - `pages` has unique published rows for:
-     - `state-rights/alaska`
-     - `state-rights/california`
-   - Both have unique `meta_title` and `meta_description`.
+## Why previous attempts failed
 
-2. **Backend function audit**
-   - `backfill-page-seo` only **writes SEO data/images to `pages`**.
-   - `generate-seo` is for blog editor suggestions only.
-   - No backend function is serving route HTML for public pages.
-   - Conclusion: this is **not** an edge-function runtime serving issue.
+The `_redirects` file approach (per-route rewrite rules) is not working on Lovable hosting. Despite generating correct static HTML files and explicit rewrite rules, the hosting still serves the root `index.html` for all routes. The `_redirects` catch-all `/* /index.html 200` appears to win regardless of rule ordering.
 
-3. **Build pipeline audit**
-   - `vite.config.ts` runs `scripts/inject-page-meta.mjs` in production closeBundle.
-   - `inject-page-meta.mjs` already generates:
-     - `dist/{slug}/index.html`
-     - `dist/{slug}.html`
-     - and validates Alaska/California content.
-   - So generation is present in code.
+Your other project that works uses a fundamentally different mechanism: **`netlify.toml` with User-Agent-based bot detection**. This is the proven pattern.
 
-4. **Serving behavior problem**
-   - Pretty URL `/state-rights/california` is still returning homepage source/canonical.
-   - This means generated files exist, but pretty routes are not consistently resolved to them on hosting.
-   - Current `_redirects` only has trailing slash + SPA catch-all, so serving still falls back to `/index.html`.
+## What to implement
 
-## Root cause
+### 1. Create `netlify.toml` with bot-conditional redirects
 
-Your build creates page-specific files, but your host routing is still choosing SPA fallback for pretty routes in practice.
+Generate a `netlify.toml` file at build time (via `inject-page-meta.mjs`) that contains redirect rules with `User-Agent` conditions for all published slugs. Bots get the pre-rendered HTML; humans get the SPA.
 
-```text
-Request: /state-rights/california
-Current resolution: /index.html (homepage source meta)
-Expected resolution: /state-rights/california.html (or /state-rights/california/index.html)
+Pattern per route:
+```toml
+[[redirects]]
+  from = "/state-rights/california"
+  to = "/state-rights/california.html"
+  status = 200
+  force = true
+  conditions = {User-Agent = ["Googlebot", "bingbot", "Slurp", "DuckDuckBot", "facebookexternalhit", "Twitterbot", "LinkedInBot", "WhatsApp", "TelegramBot", "Discordbot"]}
 ```
 
-## Working solution (robust, harder)
+Final fallback for humans (SPA):
+```toml
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
 
-Implement **explicit route-to-file rewrites for every published page slug** during build, then keep SPA fallback only as last rule.
+### 2. Update `scripts/inject-page-meta.mjs`
 
-### 1) Generate rewrite manifest from the same page list used for meta injection
-Update `scripts/inject-page-meta.mjs` to also write `dist/_redirects` with:
+- Add a `generateNetlifyToml(pages)` function that writes `dist/netlify.toml`
+- Each published slug with `meta_title` gets a bot-conditional redirect entry
+- Include trailing-slash strip rule
+- SPA fallback as the last rule
+- Keep existing static HTML generation (dual file output) as-is
+- Keep existing `_redirects` generation as fallback
+- Extend validation to check `netlify.toml` exists and contains key slug entries
 
-- Existing trailing-slash rule first
-- **Auto-generated specific rules**:
-  - `/state-rights/california  /state-rights/california.html  200`
-  - `/state-rights/alaska      /state-rights/alaska.html      200`
-  - ...for all published `pages.slug` rows with `meta_title`
-- Final fallback:
-  - `/* /index.html 200`
+### 3. Keep `public/_redirects` as-is (fallback)
 
-This removes host ambiguity and forces pretty URLs to the correct HTML files.
+No changes needed. The `netlify.toml` takes priority over `_redirects` on Netlify-compatible hosting.
 
-### 2) Preserve base redirects + inject generated block
-Keep `public/_redirects` as base template, but build script should output final `dist/_redirects` including generated rules.
+## Files to change
 
-### 3) Extend build-time validation
-In `inject-page-meta.mjs` validation, also assert:
+- `scripts/inject-page-meta.mjs` — add `generateNetlifyToml()` function, call it in `main()`
 
-- `dist/_redirects` contains rewrite entries for:
-  - `state-rights/alaska`
-  - `state-rights/california`
-- Those entries point to `/{slug}.html`
-- Build fails if missing.
+## Technical note
 
-## File-level implementation plan
+`netlify.toml` is processed before `_redirects` by the hosting platform, and its `conditions` feature (User-Agent matching) is not available in `_redirects` format. This is why the other project works and this one doesn't — it's a hosting-level routing feature, not a file-generation problem.
 
-- **Edit `scripts/inject-page-meta.mjs`**
-  - Add `generateRouteRedirects(pages)` function.
-  - Read base redirects template.
-  - Insert auto-generated route rules before SPA fallback.
-  - Write to `dist/_redirects`.
-  - Extend validator to check both HTML and redirect entries.
-
-- **Optional small cleanup in `public/_redirects`**
-  - Keep only canonical base rules/comments; generated routes stay build-time only.
-
-- **No database or edge-function code changes needed** for this fix.
-
-## Acceptance criteria
-
-After publish, all must pass in **view-source**:
-
-1. `https://letterofdispute.com/state-rights/alaska`
-   - Title is Alaska-specific
-   - Canonical = `/state-rights/alaska`
-
-2. `https://letterofdispute.com/state-rights/california`
-   - Title is California-specific
-   - Canonical = `/state-rights/california`
-
-3. Source for those URLs no longer contains homepage canonical/title fragment.
-
-4. Non-generated routes still work via SPA fallback.
-
-## Risk + fallback
-
-- Risk: `_redirects` file grows with many routes.
-- Mitigation: This is still manageable for ~1,200 routes; if platform limit is hit, we switch to grouped rewrite strategy (by page group prefixes) as phase 2.
