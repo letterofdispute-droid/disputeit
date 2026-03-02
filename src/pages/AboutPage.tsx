@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Shield, Users, Scale } from 'lucide-react';
 import { useCategoryImage } from '@/hooks/useCategoryImage';
@@ -55,11 +56,17 @@ const AboutPage = () => {
     }
   }, [missionImage]);
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'about',
+    fallbackTitle: "About Us | Letter of Dispute",
+    fallbackDescription: "Learn about Letter of Dispute - how a group of friends turned their frustration with consumer disputes into a mission to help others communicate effectively.",
+  });
+
   return (
     <Layout>
       <SEOHead 
-        title="About Us | Letter of Dispute"
-        description="Learn about Letter of Dispute - how a group of friends turned their frustration with consumer disputes into a mission to help others communicate effectively."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/about"
       />
 

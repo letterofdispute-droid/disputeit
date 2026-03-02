@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { getCategoryById, templateCategories } from '@/data/templateCategories';
 import { getGuideByCategory } from '@/data/consumerRightsContent';
 import { getTemplatesByCategory, getCategoryIdFromName } from '@/data/allTemplates';
@@ -22,6 +23,15 @@ const CategoryGuidePage = () => {
   
   const category = getCategoryById(categoryId || '');
   const guide = getGuideByCategory(categoryId || '');
+
+  const fallbackTitle = guide ? `${guide.title} | Consumer Rights Guide | Letter of Dispute` : '';
+  const fallbackDesc = guide ? guide.introduction.slice(0, 155) + '...' : '';
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `guides/${categoryId || ''}`,
+    fallbackTitle,
+    fallbackDescription: fallbackDesc,
+  });
   
   if (!category || !guide) {
     return <NotFound />;
@@ -75,8 +85,8 @@ const CategoryGuidePage = () => {
   return (
     <Layout>
       <SEOHead
-        title={`${guide.title} | Consumer Rights Guide | Letter of Dispute`}
-        description={guide.introduction.slice(0, 155) + '...'}
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath={`/guides/${categoryId}`}
         faqItems={guide.faqItems}
         breadcrumbs={breadcrumbs}

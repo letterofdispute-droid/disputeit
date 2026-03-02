@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import EscalationFlowchart from '@/components/small-claims/EscalationFlowchart';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Calculator, DollarSign, Scale, GitBranch } from 'lucide-react';
@@ -7,11 +8,17 @@ import { ArrowLeft, Calculator, DollarSign, Scale, GitBranch } from 'lucide-reac
 const SmallClaimsEscalationPage = () => {
   const siteUrl = 'https://letterofdispute.com';
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'small-claims/escalation-guide',
+    fallbackTitle: "Complaint Escalation Guide - Step-by-Step Dispute Resolution Path",
+    fallbackDescription: "Follow the proven escalation path from first contact to court filing. Select your dispute category to see specific agencies, statutes, and next steps.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Complaint Escalation Guide - Step-by-Step Dispute Resolution Path"
-        description="Follow the proven escalation path from first contact to court filing. Select your dispute category to see specific agencies, statutes, and next steps."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/small-claims/escalation-guide"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },

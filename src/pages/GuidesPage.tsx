@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { templateCategories } from '@/data/templateCategories';
 import { consumerRightsGuides } from '@/data/consumerRightsContent';
 import { ArrowRight, BookOpen, Scale, Shield } from 'lucide-react';
@@ -12,11 +13,17 @@ const GuidesPage = () => {
     consumerRightsGuides.some(g => g.categoryId === cat.id)
   );
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'guides',
+    fallbackTitle: "Consumer Rights Guides | Know Your Rights | Letter of Dispute",
+    fallbackDescription: "Comprehensive guides to consumer protection laws organized by dispute category. Learn your rights for refunds, housing, travel, insurance, and more.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Consumer Rights Guides | Know Your Rights | Letter of Dispute"
-        description="Comprehensive guides to consumer protection laws organized by dispute category. Learn your rights for refunds, housing, travel, insurance, and more."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/guides"
       />
 

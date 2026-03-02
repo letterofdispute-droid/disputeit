@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { getSmallClaimsStateBySlug, formatFilingLimit } from '@/data/smallClaimsData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,15 @@ import NotFound from './NotFound';
 const SmallClaimsStatePage = () => {
   const { state: stateSlug } = useParams<{ state: string }>();
   const stateData = stateSlug ? getSmallClaimsStateBySlug(stateSlug) : undefined;
+
+  const fallbackTitle = stateData ? `${stateData.name} Small Claims Court Guide (2026) — Limits, Fees & Forms` : '';
+  const fallbackDesc = stateData ? `File in ${stateData.name} small claims court: ${formatFilingLimit(stateData.filingLimit)} limit, ${stateData.filingFee} filing fee. Step-by-step guide with forms and rules for ${stateData.courtName}.` : '';
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `small-claims/${stateSlug || ''}`,
+    fallbackTitle,
+    fallbackDescription: fallbackDesc,
+  });
 
   if (!stateData) return <NotFound />;
 
@@ -70,8 +80,8 @@ const SmallClaimsStatePage = () => {
   return (
     <Layout>
       <SEOHead
-        title={`${stateData.name} Small Claims Court Guide (2026) — Limits, Fees & Forms`}
-        description={`File in ${stateData.name} small claims court: ${formatFilingLimit(stateData.filingLimit)} limit, ${stateData.filingFee} filing fee. Step-by-step guide with forms and rules for ${stateData.courtName}.`}
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath={`/small-claims/${stateData.slug}`}
         faqItems={faqItems}
         breadcrumbs={[

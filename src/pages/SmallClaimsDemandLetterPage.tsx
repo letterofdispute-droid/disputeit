@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import DemandLetterCostCalculator from '@/components/small-claims/DemandLetterCostCalculator';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Calculator, GitBranch, FileText, DollarSign } from 'lucide-react';
@@ -7,11 +8,17 @@ import { ArrowLeft, Calculator, GitBranch, FileText, DollarSign } from 'lucide-r
 const SmallClaimsDemandLetterPage = () => {
   const siteUrl = 'https://letterofdispute.com';
 
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'small-claims/demand-letter-cost',
+    fallbackTitle: "Demand Letter Cost Comparison - DIY vs. Lawyer vs. Templates",
+    fallbackDescription: "Compare the cost of writing your own demand letter, hiring a lawyer, or using a professional template. See how much you can save with our side-by-side calculator.",
+  });
+
   return (
     <Layout>
       <SEOHead
-        title="Demand Letter Cost Comparison - DIY vs. Lawyer vs. Templates"
-        description="Compare the cost of writing your own demand letter, hiring a lawyer, or using a professional template. See how much you can save with our side-by-side calculator."
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/small-claims/demand-letter-cost"
         breadcrumbs={[
           { name: 'Home', url: `${siteUrl}/` },
