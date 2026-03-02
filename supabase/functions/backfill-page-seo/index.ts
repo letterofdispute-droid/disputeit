@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { generateImageWithGoogle, imageResultToRawBuffer, shouldBailOut, isGoogleImageError } from "../_shared/googleImageGen.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,9 +58,9 @@ serve(async (req) => {
     }
 
     const { page_ids } = await req.json();
-    if (!Array.isArray(page_ids) || page_ids.length === 0 || page_ids.length > 2) {
+    if (!Array.isArray(page_ids) || page_ids.length === 0 || page_ids.length > 1) {
       return new Response(
-        JSON.stringify({ error: "page_ids must be an array of 1-2 IDs" }),
+        JSON.stringify({ error: "page_ids must be an array of exactly 1 ID" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -78,7 +79,7 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY")!;
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY")!;
 
     let succeeded = 0;
     let failed = 0;
@@ -96,7 +97,6 @@ serve(async (req) => {
         const needsMeta = !page.meta_title || !page.meta_description;
         const needsImage = !page.featured_image_url;
 
-        // Skip if nothing to do
         if (!needsMeta && !needsImage) {
           succeeded++;
           continue;
@@ -104,7 +104,7 @@ serve(async (req) => {
 
         let metaTitle = page.meta_title;
         let metaDescription = page.meta_description;
-        let imageKeywords = page.title;
+        let imagePrompt = `A realistic, professional 16:9 photograph representing "${page.title}". Suitable as a blog featured image. No text overlay.`;
 
         // 1. Generate meta via AI only if needed
         if (needsMeta) {
@@ -126,6 +126,7 @@ Rules:
 - meta_description: Max 155 characters. Compelling, action-oriented, specific to the page's actual subject matter. Make someone want to click.
 - Do NOT use templates or patterns. Each one should read like a human copywriter wrote it specifically for this page.
 - Focus on the specific consumer rights topic, state, or category this page covers.
+- image_prompt: A vivid, descriptive scene for generating a realistic photograph that visually represents this page's topic. Focus on concrete visual subjects (e.g. "a person reviewing documents at a desk with a laptop" or "a courthouse entrance with marble columns"). 2-3 sentences max.
 
 Return using the provided tool.`;
 
@@ -157,13 +158,13 @@ Return using the provided tool.`;
                               type: "string",
                               description: "SEO meta description, max 155 characters",
                             },
-                            image_keywords: {
+                            image_prompt: {
                               type: "string",
                               description:
-                                "2-4 visual keywords for finding a relevant stock photo (e.g. 'apartment tenant keys' or 'courthouse gavel justice'). Focus on concrete visual subjects.",
+                                "A vivid descriptive scene for generating a realistic photograph. Focus on concrete visual subjects. 2-3 sentences.",
                             },
                           },
-                          required: ["meta_title", "meta_description", "image_keywords"],
+                          required: ["meta_title", "meta_description", "image_prompt"],
                           additionalProperties: false,
                         },
                       },
@@ -196,7 +197,7 @@ Return using the provided tool.`;
             const args = JSON.parse(toolCall.function.arguments);
             metaTitle = (args.meta_title || "").slice(0, 60);
             metaDescription = (args.meta_description || "").slice(0, 155);
-            imageKeywords = args.image_keywords || page.title;
+            if (args.image_prompt) imagePrompt = args.image_prompt;
           } catch (err) {
             clearTimeout(aiTimeout);
             if (err instanceof DOMException && err.name === "AbortError") {
@@ -206,34 +207,41 @@ Return using the provided tool.`;
           }
         }
 
-        // 2. Pixabay image search (only if missing)
+        // 2. AI image generation (only if missing)
         let featuredImageUrl: string | null = page.featured_image_url;
         if (needsImage) {
-          const pixController = new AbortController();
-          const pixTimeout = setTimeout(() => pixController.abort(), 10000);
-
           try {
-            const query = encodeURIComponent(imageKeywords);
-            const pixRes = await fetch(
-              `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${query}&image_type=photo&orientation=horizontal&per_page=5&safesearch=true`,
-              { signal: pixController.signal }
-            );
-            clearTimeout(pixTimeout);
+            console.log(`[PAGE-SEO] Generating image for page ${page.slug}`);
+            const imageResult = await generateImageWithGoogle(imagePrompt, GOOGLE_GEMINI_API_KEY);
+            const { buffer, extension } = imageResultToRawBuffer(imageResult);
 
-            if (pixRes.ok) {
-              const pixData = await pixRes.json();
-              if (pixData.hits && pixData.hits.length > 0) {
-                const idx = Math.floor(Math.random() * Math.min(pixData.hits.length, 5));
-                featuredImageUrl = pixData.hits[idx].largeImageURL;
-              }
+            const storagePath = `pages/${page.slug}.${extension}`;
+            const { error: uploadErr } = await supabase.storage
+              .from("blog-images")
+              .upload(storagePath, buffer, {
+                contentType: extension === "jpg" ? "image/jpeg" : "image/png",
+                upsert: true,
+              });
+
+            if (uploadErr) {
+              throw new Error(`storage_upload: ${uploadErr.message}`);
             }
+
+            const { data: publicUrlData } = supabase.storage
+              .from("blog-images")
+              .getPublicUrl(storagePath);
+
+            featuredImageUrl = publicUrlData.publicUrl;
+            console.log(`[PAGE-SEO] Image uploaded: ${storagePath}`);
           } catch (imgErr) {
-            clearTimeout(pixTimeout);
-            const reason = imgErr instanceof DOMException && imgErr.name === "AbortError"
-              ? "pixabay_timeout"
-              : "pixabay_error";
-            console.error(`${reason} for page ${page.id}:`, imgErr);
-            // Non-fatal — we still save meta
+            if (shouldBailOut(imgErr)) {
+              const category = isGoogleImageError(imgErr) ? imgErr.category.toLowerCase() : "ai_error";
+              bailReason = category;
+              throw new Error(`${category}: image generation failed`);
+            }
+            const reason = imgErr instanceof Error ? imgErr.message : String(imgErr);
+            console.error(`[PAGE-SEO] Image error for ${page.slug}:`, reason);
+            // Non-fatal for meta — we still save meta if available
           }
         }
 
