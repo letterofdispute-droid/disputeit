@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2, Settings, EyeOff, RefreshCw } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2, Settings, EyeOff, RefreshCw, Sparkles, X } from 'lucide-react';
 import { seedTemplatePages } from '@/utils/seedTemplatePages';
+import { usePageSeoBackfill } from '@/hooks/usePageSeoBackfill';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -91,6 +93,12 @@ const AdminPages = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleRefreshAfterBackfill = useCallback(() => {
+    fetchPages();
+  }, []);
+
+  const { state: backfillState, run: runBackfill, cancel: cancelBackfill } = usePageSeoBackfill(handleRefreshAfterBackfill);
 
   const handleSyncTemplates = async () => {
     setIsSyncing(true);
@@ -272,17 +280,48 @@ const AdminPages = () => {
             {totalCount} total pages • {draftCount} drafts
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSyncTemplates} disabled={isSyncing}>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleSyncTemplates} disabled={isSyncing || backfillState.isRunning}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
             Sync Templates
           </Button>
-          <Button onClick={() => navigate('/admin/pages/new')}>
+          <Button
+            variant="outline"
+            onClick={() => runBackfill(groupFilter)}
+            disabled={backfillState.isRunning || isSyncing}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generate SEO {groupFilter !== 'all' ? `(${groupFilter})` : '(all)'}
+          </Button>
+          <Button onClick={() => navigate('/admin/pages/new')} disabled={backfillState.isRunning}>
             <Plus className="h-4 w-4 mr-2" />
             New Page
           </Button>
         </div>
       </div>
+
+      {/* SEO Backfill Progress */}
+      {backfillState.isRunning && (
+        <div className="rounded-lg border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+              <span className="text-sm font-medium">
+                Generating SEO: {backfillState.processed}/{backfillState.total} pages
+                {backfillState.currentGroup && backfillState.currentGroup !== 'all' ? ` (${backfillState.currentGroup})` : ''}
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={cancelBackfill}>
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
+          </div>
+          <Progress value={backfillState.total > 0 ? (backfillState.processed / backfillState.total) * 100 : 0} />
+          <p className="text-xs text-muted-foreground">
+            {backfillState.succeeded} succeeded • {backfillState.failed} failed
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
