@@ -209,12 +209,18 @@ Return using the provided tool.`;
           }
         }
 
-        // 2. AI image generation (only if missing)
+        // 2. AI image generation (only if missing) — hard 40s timeout to prevent transport-level failures
         let featuredImageUrl: string | null = page.featured_image_url;
+        let imageError: string | null = null;
         if (needsImage) {
+          const IMAGE_TIMEOUT_MS = 40000;
+          const imgController = new AbortController();
+          const imgTimer = setTimeout(() => imgController.abort(), IMAGE_TIMEOUT_MS);
+
           try {
             console.log(`[PAGE-SEO] Generating image for page ${page.slug}`);
-            const imageResult = await generateImageWithGoogle(imagePrompt, GEMINI_API_KEY);
+            const imageResult = await generateImageWithGoogle(imagePrompt, GEMINI_API_KEY, { signal: imgController.signal });
+            clearTimeout(imgTimer);
             const { buffer, extension } = imageResultToRawBuffer(imageResult);
 
             const storagePath = `pages/${page.slug}.${extension}`;
@@ -236,14 +242,21 @@ Return using the provided tool.`;
             featuredImageUrl = publicUrlData.publicUrl;
             console.log(`[PAGE-SEO] Image uploaded: ${storagePath}`);
           } catch (imgErr) {
+            clearTimeout(imgTimer);
             if (shouldBailOut(imgErr)) {
               const category = isGoogleImageError(imgErr) ? imgErr.category.toLowerCase() : "ai_error";
               bailReason = category;
-              throw new Error(`${category}: image generation failed`);
+              // Still save meta below before bailing
+              imageError = `${category}: image generation failed`;
+            } else if (imgErr instanceof DOMException && imgErr.name === "AbortError") {
+              imageError = "image_timeout";
+              console.warn(`[PAGE-SEO] Image timed out after ${IMAGE_TIMEOUT_MS}ms for ${page.slug}`);
+            } else {
+              const reason = imgErr instanceof Error ? imgErr.message : String(imgErr);
+              imageError = reason.slice(0, 200);
+              console.error(`[PAGE-SEO] Image error for ${page.slug}:`, reason);
             }
-            const reason = imgErr instanceof Error ? imgErr.message : String(imgErr);
-            console.error(`[PAGE-SEO] Image error for ${page.slug}:`, reason);
-            // Non-fatal for meta — we still save meta if available
+            // Non-fatal — we still save meta fields below
           }
         }
 
@@ -262,7 +275,19 @@ Return using the provided tool.`;
           if (updateErr) throw new Error(`db_error: ${updateErr.message}`);
         }
 
-        succeeded++;
+        // Track partial success (meta saved but image failed)
+        if (imageError) {
+          if (bailReason) {
+            failed++;
+            errors.push({ pageId: page.id, reason: imageError });
+          } else {
+            // Meta was saved successfully — count as succeeded but note the image error
+            succeeded++;
+            errors.push({ pageId: page.id, reason: `partial:${imageError}` });
+          }
+        } else {
+          succeeded++;
+        }
       } catch (err) {
         failed++;
         const reason = err instanceof Error ? err.message : String(err);

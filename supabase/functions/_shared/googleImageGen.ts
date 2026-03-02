@@ -17,7 +17,8 @@ export interface GoogleImageError {
  */
 export async function generateImageWithGoogle(
   prompt: string,
-  apiKey: string
+  apiKey: string,
+  options?: { signal?: AbortSignal }
 ): Promise<GoogleImageResult> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
@@ -30,6 +31,7 @@ export async function generateImageWithGoogle(
           responseModalities: ['TEXT', 'IMAGE'],
         },
       }),
+      signal: options?.signal,
     }
   );
 
