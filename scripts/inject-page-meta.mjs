@@ -137,6 +137,65 @@ function escapeAttr(str) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+const BOT_USER_AGENTS = [
+  'Googlebot', 'Googlebot-Image', 'Mediapartners-Google', 'AdsBot-Google',
+  'bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider', 'YandexBot',
+  'facebookexternalhit', 'Facebot',
+  'Twitterbot', 'LinkedInBot', 'WhatsApp', 'TelegramBot', 'Discordbot',
+  'Applebot', 'PinterestBot', 'Pinterestbot',
+  'Slackbot-LinkExpanding', 'vkShare', 'W3C_Validator',
+  'redditbot', 'Rogerbot', 'SemrushBot', 'AhrefsBot',
+];
+
+function generateNetlifyToml(pages) {
+  console.log('\n📋 Generating netlify.toml with bot-conditional redirects...');
+
+  const uaCondition = `{User-Agent = [${BOT_USER_AGENTS.map(a => `"${a}"`).join(', ')}]}`;
+
+  const lines = [
+    '# Auto-generated at build time by inject-page-meta.mjs',
+    '# Bot-conditional redirects: crawlers get pre-rendered HTML, humans get the SPA.',
+    '',
+    '# Strip trailing slashes (301)',
+    '[[redirects]]',
+    '  from = "/*/"',
+    '  to = "/:splat"',
+    '  status = 301',
+    '  force = true',
+    '',
+  ];
+
+  let routeCount = 0;
+  for (const page of pages) {
+    if (!page.meta_title || !page.slug) continue;
+    const slug = page.slug.replace(/^\/+|\/+$/g, '');
+    if (!slug) continue;
+
+    lines.push('[[redirects]]');
+    lines.push(`  from = "/${slug}"`);
+    lines.push(`  to = "/${slug}.html"`);
+    lines.push('  status = 200');
+    lines.push('  force = true');
+    lines.push(`  conditions = ${uaCondition}`);
+    lines.push('');
+    routeCount++;
+  }
+
+  // SPA fallback — must be last
+  lines.push('# SPA fallback for human visitors — must be last');
+  lines.push('[[redirects]]');
+  lines.push('  from = "/*"');
+  lines.push('  to = "/index.html"');
+  lines.push('  status = 200');
+  lines.push('');
+
+  const tomlPath = path.join(distDir, 'netlify.toml');
+  fs.writeFileSync(tomlPath, lines.join('\n'));
+  console.log(`✅ Wrote netlify.toml with ${routeCount} bot-conditional redirect rules`);
+
+  return routeCount;
+}
+
 function generateRedirectsFile(pages) {
   console.log('\n🔀 Generating _redirects with per-route rewrite rules...');
 
@@ -218,6 +277,17 @@ function validateGeneratedFiles(routeRules) {
     if (!routeRules.includes(expectedRule)) {
       errors.push(`❌ slug "${slug}" missing rewrite rule in _redirects`);
     }
+
+    // Check netlify.toml contains bot-conditional redirect for this slug
+    const tomlPath = path.join(distDir, 'netlify.toml');
+    if (fs.existsSync(tomlPath)) {
+      const tomlContent = fs.readFileSync(tomlPath, 'utf-8');
+      if (!tomlContent.includes(`from = "/${slug}"`)) {
+        errors.push(`❌ slug "${slug}" missing bot redirect in netlify.toml`);
+      }
+    } else {
+      errors.push(`❌ netlify.toml not found in dist/`);
+    }
   }
 
   if (errors.length > 0) {
@@ -275,10 +345,13 @@ async function main() {
 
   console.log(`✅ Generated ${created} static HTML files (×2 each) with unique meta tags (${skipped} skipped)`);
 
-  // Generate _redirects with per-route rewrite rules
+  // Generate netlify.toml with bot-conditional redirects (primary mechanism)
+  generateNetlifyToml(pages);
+
+  // Generate _redirects with per-route rewrite rules (fallback)
   const routeRules = generateRedirectsFile(pages);
 
-  // Validate key slugs and redirect entries
+  // Validate key slugs, redirect entries, and netlify.toml
   validateGeneratedFiles(routeRules);
 }
 
