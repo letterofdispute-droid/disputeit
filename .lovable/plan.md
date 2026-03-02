@@ -1,24 +1,57 @@
 
 
-# Add "Seed Lemon Law Campaigns" Button to SEO Dashboard
+# Store All Site Pages in the Database
 
-The `seed-state-lemon-campaigns` edge function is deployed but has no UI trigger. I'll add a button to invoke it from the Coverage tab (where other bulk-plan operations live).
+## Current state
+- The `pages` table exists with 9 entries (about, contact, terms, etc.)
+- ~15 hardcoded routes are missing: state-rights, deadlines, analyze-letter, consumer-news, small-claims (5 pages), do-i-have-a-case, cookie-policy, templates, articles, guides/:categoryId
+- The table has no way to distinguish CMS-managed pages from system/hardcoded pages
 
-## What I'll do
+## Plan
 
-Add a "Seed State Campaigns" button to `TemplateCoverageMap.tsx` that:
-1. Calls `supabase.functions.invoke('seed-state-lemon-campaigns')`
-2. Shows a loading spinner while running
-3. Displays a toast with the result (e.g., "49 states seeded, 294 articles queued")
-4. After success, the queued articles will appear in the Queue tab, ready to be generated via the existing "Generate All" bulk workflow
+### 1. Add `page_type` column to `pages` table
+Add a `page_type text DEFAULT 'cms'` column to distinguish page sources:
+- `cms` — fully editable content pages (current behavior)
+- `system` — hardcoded React pages (read-only content, but SEO meta is editable)
 
-## How it works end-to-end
+Also add `no_index boolean DEFAULT false` to track indexing status.
 
-1. You click **"Seed State Campaigns"** in the Coverage tab
-2. The function creates 49 `content_plans` + 294 `content_queue` items (1 pillar + 5 clusters per state)
-3. You go to the **Queue tab**, where those 294 items appear with status "queued"
-4. You click **"Generate All"** in the Queue tab to start bulk article generation via the existing `bulk-generate-articles` pipeline
+### 2. Seed missing hardcoded pages into the database
+Insert ~15 missing routes with `page_type = 'system'` and proper meta titles/descriptions. Update the existing 9 entries to also have `page_type = 'system'` since they correspond to hardcoded components.
 
-## Files changed
-- `src/components/admin/seo/TemplateCoverageMap.tsx` — add seed button + invoke logic
+Pages to seed:
+
+| Slug | Title | Type |
+|------|-------|------|
+| / | Home | system |
+| state-rights | State Consumer Rights | system |
+| deadlines | Dispute Deadlines | system |
+| consumer-news | Consumer News | system |
+| analyze-letter | Letter Analyzer | system |
+| small-claims | Small Claims Guide | system |
+| small-claims/cost-calculator | Small Claims Cost Calculator | system |
+| small-claims/demand-letter-cost | Demand Letter Cost Guide | system |
+| small-claims/escalation-guide | Escalation Guide | system |
+| small-claims/statement-generator | Statement Generator | system |
+| do-i-have-a-case | Do I Have a Case? | system |
+| cookie-policy | Cookie Policy | system |
+| templates | All Templates | system |
+| articles | Articles | system |
+
+### 3. Update Admin Pages UI
+- Mark existing 9 pages as `page_type = 'system'`
+- Add a "Type" badge column showing `system` vs `cms`
+- System pages: Edit action opens SEO meta editor only (not full content editor)
+- CMS pages: Full edit as before
+- Add type filter alongside status filter
+- Show `no_index` status indicator
+
+### Files changed
+- **Migration**: Add `page_type` and `no_index` columns to `pages` table
+- **Data insert**: Seed ~15 missing system pages + update existing 9
+- **`src/pages/admin/AdminPages.tsx`**: Add type badge column, type filter, restrict system pages to SEO-only editing
+
+### Benefits for both of us
+- **You**: See every page on your site, manage SEO meta from one place, know what's indexed
+- **Me (Lovable)**: Can query the `pages` table to understand the full site map, update SEO programmatically, and avoid creating duplicate routes
 
