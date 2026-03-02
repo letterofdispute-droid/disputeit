@@ -100,24 +100,30 @@ export default function StateRightsCategoryPage() {
   const stateCode = stateSlug ? getStateFromSlug(stateSlug) : null;
   const categoryLabel = categorySlug ? CATEGORY_LABELS[categorySlug] : null;
 
-  if (!stateCode || !stateSpecificLaws[stateCode] || !categoryLabel) {
-    return <Navigate to="/state-rights" replace />;
-  }
-
-  const stateData = stateSpecificLaws[stateCode];
-  const stateName = US_STATES.find(s => s.code === stateCode)?.name || stateCode;
-  const statutes = getStateStatutesForCategory(stateCode, categorySlug!);
+  // Hook must be called before any early returns (Rules of Hooks)
+  const hasValidParams = !!(stateCode && stateSpecificLaws[stateCode] && categoryLabel);
+  const stateData = hasValidParams ? stateSpecificLaws[stateCode] : null;
+  const stateName = hasValidParams ? (US_STATES.find(s => s.code === stateCode)?.name || stateCode) : '';
+  const statutes = hasValidParams ? getStateStatutesForCategory(stateCode, categorySlug!) : [];
   const primaryStatute = statutes[0];
-  const federalContext = FEDERAL_CONTEXT[categorySlug!];
+  const federalContext = hasValidParams ? FEDERAL_CONTEXT[categorySlug!] : undefined;
 
-  const fallbackTitle = `${stateName} ${categoryLabel} Rights — ${primaryStatute.citation} | Letter of Dispute`;
-  const fallbackDesc = `${stateName} ${categoryLabel.toLowerCase()} consumer protection under ${primaryStatute.citation}. Find your rights, filing deadlines, and how to dispute with the ${stateData.agOffice}.`;
+  const fallbackTitle = hasValidParams
+    ? `${stateName} ${categoryLabel} Rights — ${primaryStatute.citation} | Letter of Dispute`
+    : 'State Consumer Rights | Letter of Dispute';
+  const fallbackDesc = hasValidParams
+    ? `${stateName} ${categoryLabel!.toLowerCase()} consumer protection under ${primaryStatute.citation}. Find your rights, filing deadlines, and how to dispute with the ${stateData!.agOffice}.`
+    : '';
 
   const { title: seoTitle, description: seoDescription } = usePageSeo({
     slug: `state-rights/${stateSlug || ''}/${categorySlug || ''}`,
     fallbackTitle,
     fallbackDescription: fallbackDesc,
   });
+
+  if (!hasValidParams) {
+    return <Navigate to="/state-rights" replace />;
+  }
 
   const title = seoTitle;
   const description = seoDescription;
