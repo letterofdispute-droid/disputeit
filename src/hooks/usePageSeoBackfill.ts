@@ -90,13 +90,43 @@ export function usePageSeoBackfill(onComplete?: () => void) {
       const batch = allIds.slice(i, i + BATCH_SIZE);
 
       try {
-        const { data, error } = await supabase.functions.invoke('backfill-page-seo', {
-          body: { page_ids: batch },
-        });
+        let data: any = null;
+        let lastInvokeError: any = null;
 
-        if (error) {
+        // Retry loop: 2 attempts with 3s delay (matches useContentQueue pattern)
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const result = await supabase.functions.invoke('backfill-page-seo', {
+              body: { page_ids: batch },
+            });
+
+            if (result.error) {
+              const msg = result.error.message || '';
+              // Retry on transient network errors
+              if (attempt === 0 && (msg.includes('Failed to fetch') || msg.includes('timeout'))) {
+                lastInvokeError = result.error;
+                await new Promise((r) => setTimeout(r, 3000));
+                continue;
+              }
+              lastInvokeError = result.error;
+            } else {
+              data = result.data;
+              lastInvokeError = null;
+            }
+            break;
+          } catch (fetchErr) {
+            if (attempt === 0) {
+              lastInvokeError = fetchErr;
+              await new Promise((r) => setTimeout(r, 3000));
+              continue;
+            }
+            throw fetchErr;
+          }
+        }
+
+        if (lastInvokeError) {
           totalFailed += batch.length;
-          const reason = error.message || 'invoke_error';
+          const reason = lastInvokeError.message || 'invoke_error';
           const key = reason.includes('timeout') || reason.includes('Failed to fetch') ? 'timeout' : 'invoke_error';
           errorCounts[key] = (errorCounts[key] || 0) + batch.length;
           setState((prev) => ({
@@ -107,7 +137,7 @@ export function usePageSeoBackfill(onComplete?: () => void) {
             lastError: key,
             errorCounts: { ...errorCounts },
           }));
-        } else {
+        } else if (data) {
           totalSucceeded += data?.succeeded || 0;
           totalFailed += data?.failed || 0;
 
