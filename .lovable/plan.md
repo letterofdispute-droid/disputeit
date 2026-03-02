@@ -1,38 +1,40 @@
 
 
-# Replace Pixabay with AI-Generated Images in SEO Backfill
+# Fix: Replace Hardcoded SEO Patterns with AI-Generated Metadata from Database
 
 ## Problem
-The `backfill-page-seo` edge function currently uses Pixabay stock photos for featured images. You want unique, AI-generated images that realistically represent each page's topic.
+Category pages (`/templates/travel`, `/templates/healthcare`, etc.) and subcategory pages use hardcoded template-pattern SEO strings like:
+- Title: `"{Category} Letter Templates - Free Professional Complaint Letters | Dispute Letters"`  
+- Description: `"Browse {N} professional {category} letter templates..."`
 
-## Approach
-Use the existing `googleImageGen.ts` shared helper (which calls Google Gemini image generation directly using the already-configured `GOOGLE_GEMINI_API_KEY` secret) to generate a unique image per page, then upload it to the existing public `blog-images` storage bucket.
+These produce **identical or near-identical** meta descriptions across pages. The `pages` table already has entries for all these routes, but `meta_title` and `meta_description` are NULL, and the page components don't read from the database at all.
 
-## Changes
+## Solution
 
-### 1. `supabase/functions/backfill-page-seo/index.ts`
-- Remove all Pixabay logic (lines 209-238, the `PIXABAY_API_KEY` reference on line 81)
-- Import `generateImageWithGoogle`, `imageResultToRawBuffer`, `shouldBailOut` from `../_shared/googleImageGen.ts`
-- When `needsImage`:
-  1. Build a prompt: "Create a realistic, professional 16:9 photograph representing [page title]. The image should be suitable as a blog featured image. No text overlay."
-  2. Call `generateImageWithGoogle(prompt, GOOGLE_GEMINI_API_KEY)`
-  3. Convert result to buffer via `imageResultToRawBuffer`
-  4. Upload to `blog-images` bucket at path `pages/{page.slug}.{ext}` using service role client
-  5. Get public URL, store as `featured_image_url`
-- Handle `shouldBailOut` errors (rate limit / credit exhaustion) to set `bailReason` and stop the batch
-- Add a 30s `AbortController` timeout wrapper around the image generation call
-- Change `image_keywords` in the AI tool call to `image_prompt` — a descriptive visual scene prompt instead of search keywords
+### 1. Create a `usePageSeo` hook
+A reusable hook that fetches `meta_title` and `meta_description` from the `pages` table by slug, returning them with fallback to the hardcoded values.
 
-### 2. Reduce batch size to 1
-Since image generation is slower than Pixabay lookup, keep `page_ids` max at 1 to stay well under the edge function timeout. Update validation from `> 2` to `> 1`.
+**New file: `src/hooks/usePageSeo.ts`**
+- Takes a `slug` (e.g. `templates/travel`) and fallback title/description
+- Queries `pages` table for matching slug
+- Returns `{ title, description, isLoaded }` — uses DB values when available, falls back to hardcoded
 
-### 3. `src/hooks/usePageSeoBackfill.ts`
-- Change `BATCH_SIZE` from 2 to 1
-- Increase `INTER_BATCH_DELAY` to 2000ms (image gen is heavier, helps avoid rate limits)
+### 2. Update CategoryPage.tsx
+- Import and use `usePageSeo` with slug `templates/${categoryId}`
+- Pass DB-sourced title/description to `SEOHead` instead of hardcoded pattern
 
-### Technical note
-- `GOOGLE_GEMINI_API_KEY` is already configured as a secret
-- The `blog-images` bucket is public, so the public URL works directly as `featured_image_url`
-- The shared helper already handles error categorization (rate limit, credit exhaustion, AI error)
-- Image generation adds ~5-15s per page, so processing 889 pages at 1/batch with 2s delay will take ~2-4 hours total
+### 3. Update SubcategoryPage.tsx
+- Same pattern with slug `templates/${categoryId}/${subcategorySlug}`
+
+### 4. Update AllTemplatesPage.tsx
+- Same pattern with slug `templates`
+
+### 5. Run the backfill to populate the NULL metadata
+Once the pages read from the database, running "Generate SEO" on the `template` group will populate all 14 category pages with unique, AI-generated metadata via the existing `backfill-page-seo` edge function.
+
+## Files changed
+- **New:** `src/hooks/usePageSeo.ts`
+- **Edit:** `src/pages/CategoryPage.tsx` — use DB metadata with fallback
+- **Edit:** `src/pages/SubcategoryPage.tsx` — use DB metadata with fallback
+- **Edit:** `src/pages/AllTemplatesPage.tsx` — use DB metadata with fallback
 
