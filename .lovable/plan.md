@@ -1,53 +1,37 @@
 
 
-# Why Your Live Site Shows Generic Meta Tags (and How to Fix It)
+# Fix: Per-Route Meta Tags Not Appearing on Live Site
 
-## The Problem
+## Root Cause
 
-Your site is a **Single Page Application (SPA)**. Every route (`/state-rights/california`, `/templates/refunds`, etc.) serves the exact same `index.html` file from the server. That file has these hardcoded homepage meta tags:
+The `inject-page-meta.mjs` script reads Supabase credentials from `process.env.VITE_SUPABASE_URL` and `process.env.VITE_SUPABASE_PUBLISHABLE_KEY`. At build time, these environment variables are likely **not available** to the child process spawned by `exec()`, causing the script to hit the early-return guard:
 
-```text
-<title>Dispute Letter Templates - Professional Complaint Letters That Get Results | Letter of Dispute</title>
-<meta name="description" content="Stop guessing what to write. 500+ professionally written..." />
+```
+⚠️  Missing SUPABASE env vars, skipping page meta injection
 ```
 
-The `SEOHead` component (via `react-helmet-async`) only updates these tags **after JavaScript loads and executes** in the browser. When you "View Source" or when Google crawls the page, they see the raw HTML before JavaScript runs - which is always the homepage defaults.
+Meanwhile, `build-static.mjs` (which works correctly) **hardcodes** the same credentials directly in the file.
 
-**Your database SEO data is correct. The `usePageSeo` hook works. But it only affects the client-side DOM, not the server-rendered HTML.**
+## Fix
 
-## The Fix: Build-Time Meta Tag Injection
+**File: `scripts/inject-page-meta.mjs`** (lines 19-20)
 
-Since you already have a `build-static.mjs` script that runs at build time (and fetches from the database), extend it to **generate per-route HTML files** with the correct meta tags baked in. This is the only approach that works on Lovable's hosting (no SSR available).
+Replace the env-var lookups with hardcoded values matching `build-static.mjs`:
 
-### Implementation
+```javascript
+const SUPABASE_URL = 'https://koulmtfnkuapzigcplov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
+```
 
-**1. New build script: `scripts/inject-page-meta.mjs`**
-- After the Vite build, read `dist/index.html` as a template
-- Fetch all rows from the `pages` table (slug, meta_title, meta_description, featured_image_url) via REST API
-- For each page with meta data: create `dist/{slug}/index.html` with the correct `<title>`, `<meta name="description">`, `<link rel="canonical">`, OG tags, and Twitter tags replaced
-- Pages without custom meta keep the SPA fallback behavior (homepage defaults until JS loads)
+Also add a SPA fallback rule to `public/_redirects` so routes without static files still work:
 
-**2. Update `vite.config.ts`**
-- Add the new script call inside `staticFileGenerator`'s `closeBundle` hook, after existing steps
+```
+# Strip trailing slashes (301 permanent redirect)
+/*/  /:splat  301
 
-**3. Key details**
-- Fetch pages in batches of 500 to handle 1,200+ rows
-- Only generate files for pages that have a non-null `meta_title`
-- Replace the 6 hardcoded meta values in `index.html` (title, description, canonical, og:title, og:description, og:image) using string replacement
-- Preserve all other HTML (scripts, styles, overlay, etc.)
-- Handle nested slugs like `state-rights/california/vehicle` by creating the correct directory structure
+# SPA fallback — serve per-route index.html if it exists, otherwise root
+/* /index.html 200
+```
 
-### Expected result
-- `dist/state-rights/california/index.html` will contain:
-  ```html
-  <title>California Consumer Rights Explained | Letter of Dispute</title>
-  <meta name="description" content="Know your California consumer rights..." />
-  ```
-- Google and "View Source" will see the correct, unique meta tags
-- React still hydrates and takes over normally
-
-### Scope
-- ~1,200 HTML files generated at build time (only those with meta data)
-- Build time increase: ~10-15 seconds (one DB fetch + file writes)
-- No runtime/frontend changes needed
+After publishing, `/state-rights/california` will serve `dist/state-rights/california/index.html` with the correct unique meta tags from the database.
 
