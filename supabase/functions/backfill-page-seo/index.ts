@@ -29,10 +29,8 @@ serve(async (req) => {
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claims, error: claimsErr } = await anonClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsErr || !claims?.claims?.sub) {
+    const { data: { user }, error: userError } = await anonClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -40,7 +38,7 @@ serve(async (req) => {
     }
 
     const { data: isAdmin } = await supabase.rpc("is_admin", {
-      check_user_id: claims.claims.sub,
+      check_user_id: user.id,
     });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
