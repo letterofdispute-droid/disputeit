@@ -1,37 +1,50 @@
 
+## Diagnosis (what is actually happening)
 
-# Fix: Per-Route Meta Tags Not Appearing on Live Site
+I confirmed this is **not a content-data issue**:
+- Your database already has unique, published SEO values for:
+  - `state-rights/alaska`
+  - `state-rights/california`
+- Both have unique `meta_title`, `meta_description`, and generated image URLs.
 
-## Root Cause
+The failure is in **route-to-HTML serving** on live:
+- Your deployed `_redirects` currently contains:
+  - trailing-slash rule
+  - `/* /index.html 200` catch-all
+- That catch-all is forcing homepage `index.html` source for route requests, so view-source shows homepage canonical + homepage meta.
 
-The `inject-page-meta.mjs` script reads Supabase credentials from `process.env.VITE_SUPABASE_URL` and `process.env.VITE_SUPABASE_PUBLISHABLE_KEY`. At build time, these environment variables are likely **not available** to the child process spawned by `exec()`, causing the script to hit the early-return guard:
+## Fix Plan (ASAP path)
 
-```
-⚠️  Missing SUPABASE env vars, skipping page meta injection
-```
+1. **Adjust redirect behavior so route HTML can be served**
+   - Update `public/_redirects` to stop forcing every route to root `index.html`.
+   - Keep trailing-slash normalization.
+   - Ensure route-specific static files can win for paths like `/state-rights/alaska` and `/state-rights/california`.
 
-Meanwhile, `build-static.mjs` (which works correctly) **hardcodes** the same credentials directly in the file.
+2. **Harden static meta generation output**
+   - Update `scripts/inject-page-meta.mjs` to write both:
+     - `dist/{slug}/index.html`
+     - `dist/{slug}.html`
+   - This makes serving resilient across host path-resolution behavior.
 
-## Fix
+3. **Add build-time validation guard**
+   - In `inject-page-meta.mjs`, after file generation, validate key slugs (at least Alaska + California):
+     - title is not homepage title
+     - canonical is not homepage canonical
+   - If validation fails, throw and fail build (prevents silent bad deploys).
 
-**File: `scripts/inject-page-meta.mjs`** (lines 19-20)
+4. **Republish and verify raw HTML source**
+   - Verify `view-source:` (or raw fetch) on:
+     - `/state-rights/alaska`
+     - `/state-rights/california`
+   - Confirm each now has unique `<title>`, `<meta name="description">`, and route canonical.
 
-Replace the env-var lookups with hardcoded values matching `build-static.mjs`:
+## Technical details (implementation-focused)
 
-```javascript
-const SUPABASE_URL = 'https://koulmtfnkuapzigcplov.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
-```
-
-Also add a SPA fallback rule to `public/_redirects` so routes without static files still work:
-
-```
-# Strip trailing slashes (301 permanent redirect)
-/*/  /:splat  301
-
-# SPA fallback — serve per-route index.html if it exists, otherwise root
-/* /index.html 200
-```
-
-After publishing, `/state-rights/california` will serve `dist/state-rights/california/index.html` with the correct unique meta tags from the database.
-
+- Files to update:
+  - `public/_redirects`
+  - `scripts/inject-page-meta.mjs`
+- No schema/database changes required.
+- Acceptance criteria:
+  - Alaska and California source HTML no longer show homepage meta/canonical.
+  - Route-specific meta appears in initial HTML before client JS.
+  - Build fails if route files are missing or still contain homepage metadata.
