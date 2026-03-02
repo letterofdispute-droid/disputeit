@@ -35,6 +35,9 @@ Generate the following in JSON format:
 3. "suggestedTags": An array of 5-7 relevant tags (lowercase, single or two words each)
 4. "suggestedExcerpt": A brief excerpt/summary (max 200 characters)
 
+BANNED WORDS (never use): navigating, navigate, elevate, elevating, delve, leverage, seamless, robust, comprehensive, cutting-edge, empower, unlock, unleash, streamline, optimize, foster, facilitate, paramount, pivotal, groundbreaking, revolutionary, game-changer, vital, crucial, essential, landscape, realm, enhance, enhancing, spearhead, holistic, synergy, paradigm, effortlessly, utilize, dive into, deep dive.
+Write like a direct, no-nonsense human copywriter. Plain, concrete language only.
+
 Focus on: clarity, relevant keywords, and click-worthiness. Make it compelling for search results.
 
 Return ONLY valid JSON, no markdown code blocks.`;
