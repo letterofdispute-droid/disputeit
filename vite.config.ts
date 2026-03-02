@@ -42,6 +42,12 @@ const staticFileGenerator = () => ({
       const { stdout: injectOut, stderr: injectErr } = await execAsync('node scripts/inject-homepage-content.mjs');
       if (injectOut) console.log(injectOut);
       if (injectErr) console.error(injectErr);
+      
+      // Generate per-route HTML files with unique meta tags from the database
+      console.log('\n🏷️  Injecting per-page meta tags...');
+      const { stdout: metaOut, stderr: metaErr } = await execAsync('node scripts/inject-page-meta.mjs');
+      if (metaOut) console.log(metaOut);
+      if (metaErr) console.error(metaErr);
     } catch (error) {
       console.error('❌ Error generating static files:', error);
       throw error;
