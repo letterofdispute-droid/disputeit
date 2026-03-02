@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2, Settings, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +46,8 @@ interface Page {
   updated_at: string;
   meta_title: string | null;
   meta_description: string | null;
+  page_type: string;
+  no_index: boolean;
 }
 
 interface PageWithChildren extends Page {
@@ -62,6 +64,7 @@ const AdminPages = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'system' | 'cms'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
@@ -77,12 +80,12 @@ const AdminPages = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, statusFilter, typeFilter]);
 
   // Fetch pages with pagination and filtering
   useEffect(() => {
     fetchPages();
-  }, [currentPage, debouncedSearch, statusFilter]);
+  }, [currentPage, debouncedSearch, statusFilter, typeFilter]);
 
   // Fetch draft count separately
   useEffect(() => {
@@ -94,13 +97,18 @@ const AdminPages = () => {
     try {
       let query = supabase
         .from('pages')
-        .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description', { count: 'exact' })
+        .select('id, title, slug, status, parent_id, sort_order, author, created_at, updated_at, meta_title, meta_description, page_type, no_index', { count: 'exact' })
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
       // Apply status filter
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
+      }
+
+      // Apply type filter
+      if (typeFilter !== 'all') {
+        query = query.eq('page_type', typeFilter);
       }
 
       // Apply search filter
@@ -236,7 +244,7 @@ const AdminPages = () => {
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={statusFilter === 'all' ? 'default' : 'outline'}
             size="sm"
@@ -258,6 +266,28 @@ const AdminPages = () => {
           >
             Draft
           </Button>
+          <div className="w-px bg-border mx-1" />
+          <Button
+            variant={typeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('all')}
+          >
+            All Types
+          </Button>
+          <Button
+            variant={typeFilter === 'system' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('system')}
+          >
+            System
+          </Button>
+          <Button
+            variant={typeFilter === 'cms' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('cms')}
+          >
+            CMS
+          </Button>
         </div>
       </div>
 
@@ -267,14 +297,14 @@ const AdminPages = () => {
           <div className="rounded-md border bg-card">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[300px]">Title</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
-                </TableRow>
+                 <TableRow>
+                   <TableHead className="min-w-[300px]">Title</TableHead>
+                   <TableHead>Slug</TableHead>
+                   <TableHead>Type</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Updated</TableHead>
+                   <TableHead className="w-[70px]"></TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {hierarchicalPages.map((page) => (
@@ -305,14 +335,21 @@ const AdminPages = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">/{page.slug}</TableCell>
-                    <TableCell>
-                      <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
-                        {page.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {getParentTitle(page.parent_id) || '-'}
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-1.5">
+                         <Badge variant={page.page_type === 'system' ? 'outline' : 'secondary'} className="text-[10px] px-1.5">
+                           {page.page_type}
+                         </Badge>
+                         {page.no_index && (
+                           <span title="noindex"><EyeOff className="h-3.5 w-3.5 text-muted-foreground" /></span>
+                         )}
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
+                         {page.status}
+                       </Badge>
+                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(page.updated_at).toLocaleDateString()}
                     </TableCell>
@@ -323,22 +360,31 @@ const AdminPages = () => {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(`/${page.slug}`, '_blank')}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/pages/edit/${page.id}`)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeletingPageId(page.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                         <DropdownMenuContent align="end">
+                           <DropdownMenuItem onClick={() => window.open(`/${page.slug === '/' ? '' : page.slug}`, '_blank')}>
+                             <Eye className="h-4 w-4 mr-2" />
+                             View
+                           </DropdownMenuItem>
+                           {page.page_type === 'system' ? (
+                             <DropdownMenuItem onClick={() => navigate(`/admin/pages/edit/${page.id}`)}>
+                               <Settings className="h-4 w-4 mr-2" />
+                               Edit SEO Meta
+                             </DropdownMenuItem>
+                           ) : (
+                             <DropdownMenuItem onClick={() => navigate(`/admin/pages/edit/${page.id}`)}>
+                               <Edit className="h-4 w-4 mr-2" />
+                               Edit
+                             </DropdownMenuItem>
+                           )}
+                           {page.page_type !== 'system' && (
+                             <DropdownMenuItem
+                               onClick={() => setDeletingPageId(page.id)}
+                               className="text-destructive"
+                             >
+                               <Trash2 className="h-4 w-4 mr-2" />
+                               Delete
+                             </DropdownMenuItem>
+                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
