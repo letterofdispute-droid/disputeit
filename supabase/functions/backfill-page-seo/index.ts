@@ -7,10 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function classifyError(status: number, text: string): string {
+  if (status === 429) return "rate_limited";
+  if (status === 402) return "credit_exhausted";
+  if (status >= 500) return "ai_server_error";
+  return `ai_error_${status}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -48,17 +57,17 @@ serve(async (req) => {
     }
 
     const { page_ids } = await req.json();
-    if (!Array.isArray(page_ids) || page_ids.length === 0 || page_ids.length > 5) {
+    if (!Array.isArray(page_ids) || page_ids.length === 0 || page_ids.length > 2) {
       return new Response(
-        JSON.stringify({ error: "page_ids must be an array of 1-5 IDs" }),
+        JSON.stringify({ error: "page_ids must be an array of 1-2 IDs" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch pages
+    // Fetch pages with current SEO fields to know what's missing
     const { data: pages, error: fetchErr } = await supabase
       .from("pages")
-      .select("id, title, slug, page_group, page_type")
+      .select("id, title, slug, page_group, page_type, meta_title, meta_description, featured_image_url")
       .in("id", page_ids);
 
     if (fetchErr || !pages) {
@@ -73,12 +82,37 @@ serve(async (req) => {
 
     let succeeded = 0;
     let failed = 0;
-    const errors: string[] = [];
+    const errors: Array<{ pageId: string; reason: string }> = [];
+    let bailReason: string | null = null;
 
     for (const page of pages) {
+      if (bailReason) {
+        failed++;
+        errors.push({ pageId: page.id, reason: "skipped_bail" });
+        continue;
+      }
+
       try {
-        // 1. Generate unique meta via AI
-        const aiPrompt = `You are an SEO expert for a consumer rights and dispute resolution website called "Letter of Dispute". 
+        const needsMeta = !page.meta_title || !page.meta_description;
+        const needsImage = !page.featured_image_url;
+
+        // Skip if nothing to do
+        if (!needsMeta && !needsImage) {
+          succeeded++;
+          continue;
+        }
+
+        let metaTitle = page.meta_title;
+        let metaDescription = page.meta_description;
+        let imageKeywords = page.title;
+
+        // 1. Generate meta via AI only if needed
+        if (needsMeta) {
+          const aiController = new AbortController();
+          const aiTimeout = setTimeout(() => aiController.abort(), 25000);
+
+          try {
+            const aiPrompt = `You are an SEO expert for a consumer rights and dispute resolution website called "Letter of Dispute". 
 
 Write a unique, compelling meta title and meta description for this specific page:
 
@@ -95,114 +129,142 @@ Rules:
 
 Return using the provided tool.`;
 
-        const aiResponse = await fetch(
-          "https://ai.gateway.lovable.dev/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
-              messages: [{ role: "user", content: aiPrompt }],
-              tools: [
-                {
-                  type: "function",
-                  function: {
-                    name: "set_seo_meta",
-                    description: "Set the SEO meta title and description for a page.",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        meta_title: {
-                          type: "string",
-                          description: "SEO meta title, max 60 characters",
-                        },
-                        meta_description: {
-                          type: "string",
-                          description: "SEO meta description, max 155 characters",
-                        },
-                        image_keywords: {
-                          type: "string",
-                          description:
-                            "2-4 visual keywords for finding a relevant stock photo (e.g. 'apartment tenant keys' or 'courthouse gavel justice'). Focus on concrete visual subjects.",
+            const aiResponse = await fetch(
+              "https://ai.gateway.lovable.dev/v1/chat/completions",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "google/gemini-2.5-flash-lite",
+                  messages: [{ role: "user", content: aiPrompt }],
+                  tools: [
+                    {
+                      type: "function",
+                      function: {
+                        name: "set_seo_meta",
+                        description: "Set the SEO meta title and description for a page.",
+                        parameters: {
+                          type: "object",
+                          properties: {
+                            meta_title: {
+                              type: "string",
+                              description: "SEO meta title, max 60 characters",
+                            },
+                            meta_description: {
+                              type: "string",
+                              description: "SEO meta description, max 155 characters",
+                            },
+                            image_keywords: {
+                              type: "string",
+                              description:
+                                "2-4 visual keywords for finding a relevant stock photo (e.g. 'apartment tenant keys' or 'courthouse gavel justice'). Focus on concrete visual subjects.",
+                            },
+                          },
+                          required: ["meta_title", "meta_description", "image_keywords"],
+                          additionalProperties: false,
                         },
                       },
-                      required: ["meta_title", "meta_description", "image_keywords"],
-                      additionalProperties: false,
                     },
+                  ],
+                  tool_choice: {
+                    type: "function",
+                    function: { name: "set_seo_meta" },
                   },
-                },
-              ],
-              tool_choice: {
-                type: "function",
-                function: { name: "set_seo_meta" },
-              },
-            }),
-          }
-        );
+                }),
+                signal: aiController.signal,
+              }
+            );
 
-        if (!aiResponse.ok) {
-          const errText = await aiResponse.text();
-          throw new Error(`AI call failed (${aiResponse.status}): ${errText}`);
-        }
+            clearTimeout(aiTimeout);
 
-        const aiData = await aiResponse.json();
-        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-        if (!toolCall) throw new Error("No tool call in AI response");
-
-        const args = JSON.parse(toolCall.function.arguments);
-        const metaTitle = (args.meta_title || "").slice(0, 60);
-        const metaDescription = (args.meta_description || "").slice(0, 155);
-        const imageKeywords = args.image_keywords || page.title;
-
-        // 2. Pixabay image search
-        let featuredImageUrl: string | null = null;
-        try {
-          const query = encodeURIComponent(imageKeywords);
-          const pixRes = await fetch(
-            `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${query}&image_type=photo&orientation=horizontal&per_page=5&safesearch=true`
-          );
-          if (pixRes.ok) {
-            const pixData = await pixRes.json();
-            if (pixData.hits && pixData.hits.length > 0) {
-              // Pick a random one from top 5 for variety
-              const idx = Math.floor(Math.random() * Math.min(pixData.hits.length, 5));
-              featuredImageUrl = pixData.hits[idx].largeImageURL;
+            if (!aiResponse.ok) {
+              const errText = await aiResponse.text();
+              const reason = classifyError(aiResponse.status, errText);
+              if (reason === "rate_limited" || reason === "credit_exhausted") {
+                bailReason = reason;
+              }
+              throw new Error(`${reason}: ${errText.slice(0, 200)}`);
             }
+
+            const aiData = await aiResponse.json();
+            const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+            if (!toolCall) throw new Error("ai_no_tool_call");
+
+            const args = JSON.parse(toolCall.function.arguments);
+            metaTitle = (args.meta_title || "").slice(0, 60);
+            metaDescription = (args.meta_description || "").slice(0, 155);
+            imageKeywords = args.image_keywords || page.title;
+          } catch (err) {
+            clearTimeout(aiTimeout);
+            if (err instanceof DOMException && err.name === "AbortError") {
+              throw new Error("ai_timeout");
+            }
+            throw err;
           }
-        } catch (imgErr) {
-          console.error(`Pixabay error for page ${page.id}:`, imgErr);
-          // Non-fatal — we still save meta
         }
 
-        // 3. Update DB
-        const updateData: Record<string, string | null> = {
-          meta_title: metaTitle,
-          meta_description: metaDescription,
-        };
-        if (featuredImageUrl) {
-          updateData.featured_image_url = featuredImageUrl;
+        // 2. Pixabay image search (only if missing)
+        let featuredImageUrl: string | null = page.featured_image_url;
+        if (needsImage) {
+          const pixController = new AbortController();
+          const pixTimeout = setTimeout(() => pixController.abort(), 10000);
+
+          try {
+            const query = encodeURIComponent(imageKeywords);
+            const pixRes = await fetch(
+              `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${query}&image_type=photo&orientation=horizontal&per_page=5&safesearch=true`,
+              { signal: pixController.signal }
+            );
+            clearTimeout(pixTimeout);
+
+            if (pixRes.ok) {
+              const pixData = await pixRes.json();
+              if (pixData.hits && pixData.hits.length > 0) {
+                const idx = Math.floor(Math.random() * Math.min(pixData.hits.length, 5));
+                featuredImageUrl = pixData.hits[idx].largeImageURL;
+              }
+            }
+          } catch (imgErr) {
+            clearTimeout(pixTimeout);
+            const reason = imgErr instanceof DOMException && imgErr.name === "AbortError"
+              ? "pixabay_timeout"
+              : "pixabay_error";
+            console.error(`${reason} for page ${page.id}:`, imgErr);
+            // Non-fatal — we still save meta
+          }
         }
 
-        const { error: updateErr } = await supabase
-          .from("pages")
-          .update(updateData)
-          .eq("id", page.id);
+        // 3. Update DB — only set fields that were missing
+        const updateData: Record<string, string | null> = {};
+        if (needsMeta && metaTitle) updateData.meta_title = metaTitle;
+        if (needsMeta && metaDescription) updateData.meta_description = metaDescription;
+        if (needsImage && featuredImageUrl) updateData.featured_image_url = featuredImageUrl;
 
-        if (updateErr) throw new Error(`DB update failed: ${updateErr.message}`);
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateErr } = await supabase
+            .from("pages")
+            .update(updateData)
+            .eq("id", page.id);
+
+          if (updateErr) throw new Error(`db_error: ${updateErr.message}`);
+        }
 
         succeeded++;
       } catch (err) {
         failed++;
-        errors.push(`${page.id}: ${err instanceof Error ? err.message : String(err)}`);
+        const reason = err instanceof Error ? err.message : String(err);
+        errors.push({ pageId: page.id, reason: reason.slice(0, 300) });
         console.error(`Failed page ${page.id}:`, err);
       }
     }
 
+    const durationMs = Date.now() - startTime;
+
     return new Response(
-      JSON.stringify({ succeeded, failed, errors }),
+      JSON.stringify({ succeeded, failed, errors, bailReason, duration_ms: durationMs }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
