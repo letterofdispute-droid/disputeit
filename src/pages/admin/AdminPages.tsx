@@ -317,9 +317,18 @@ const AdminPages = () => {
             </Button>
           </div>
           <Progress value={backfillState.total > 0 ? (backfillState.processed / backfillState.total) * 100 : 0} />
-          <p className="text-xs text-muted-foreground">
-            {backfillState.succeeded} succeeded • {backfillState.failed} failed
-          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span>{backfillState.succeeded} succeeded</span>
+            <span>• {backfillState.failed} failed</span>
+            {backfillState.errorCounts && Object.entries(backfillState.errorCounts).map(([key, count]) => (
+              <span key={key} className="text-destructive">• {key}: {count}</span>
+            ))}
+          </div>
+          {backfillState.lastError && (
+            <p className="text-xs text-destructive/80 truncate">
+              Last error: {backfillState.lastError}
+            </p>
+          )}
         </div>
       )}
 
