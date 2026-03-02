@@ -1,57 +1,69 @@
 
 
-# Store All Site Pages in the Database
+# Seed All Dynamic Route Pages into the Database
 
-## Current state
-- The `pages` table exists with 9 entries (about, contact, terms, etc.)
-- ~15 hardcoded routes are missing: state-rights, deadlines, analyze-letter, consumer-news, small-claims (5 pages), do-i-have-a-case, cookie-policy, templates, articles, guides/:categoryId
-- The table has no way to distinguish CMS-managed pages from system/hardcoded pages
+## Problem
+Only ~23 top-level system pages were seeded. Hundreds of dynamic pages are invisible in admin:
+- **51 state rights hubs** (`/state-rights/new-york`, etc.)
+- **663 state+category pages** (`/state-rights/new-york/lemon-law`, etc.)
+- **14 template category pages** (`/templates/vehicle`, etc.)
+- **14 guide pages** (`/guides/housing`, etc.)
+- **51 small claims state pages** (`/small-claims/california`, etc.)
+- **Subcategory pages** (`/templates/vehicle/lemon-law`, etc.)
 
-## Plan
+Total: ~800+ missing pages.
 
-### 1. Add `page_type` column to `pages` table
-Add a `page_type text DEFAULT 'cms'` column to distinguish page sources:
-- `cms` — fully editable content pages (current behavior)
-- `system` — hardcoded React pages (read-only content, but SEO meta is editable)
+## Approach
 
-Also add `no_index boolean DEFAULT false` to track indexing status.
+### 1. Database migration to seed dynamic system pages
 
-### 2. Seed missing hardcoded pages into the database
-Insert ~15 missing routes with `page_type = 'system'` and proper meta titles/descriptions. Update the existing 9 entries to also have `page_type = 'system'` since they correspond to hardcoded components.
+Run a single migration that INSERTs all dynamic routes as `page_type = 'system'` rows. We'll batch them in groups:
 
-Pages to seed:
+**Group A — Template categories (14 rows)**
+One row per category: `templates/refunds`, `templates/housing`, etc.
 
-| Slug | Title | Type |
-|------|-------|------|
-| / | Home | system |
-| state-rights | State Consumer Rights | system |
-| deadlines | Dispute Deadlines | system |
-| consumer-news | Consumer News | system |
-| analyze-letter | Letter Analyzer | system |
-| small-claims | Small Claims Guide | system |
-| small-claims/cost-calculator | Small Claims Cost Calculator | system |
-| small-claims/demand-letter-cost | Demand Letter Cost Guide | system |
-| small-claims/escalation-guide | Escalation Guide | system |
-| small-claims/statement-generator | Statement Generator | system |
-| do-i-have-a-case | Do I Have a Case? | system |
-| cookie-policy | Cookie Policy | system |
-| templates | All Templates | system |
-| articles | Articles | system |
+**Group B — Guide categories (14 rows)**
+One row per category: `guides/refunds`, `guides/housing`, etc.
 
-### 3. Update Admin Pages UI
-- Mark existing 9 pages as `page_type = 'system'`
-- Add a "Type" badge column showing `system` vs `cms`
-- System pages: Edit action opens SEO meta editor only (not full content editor)
-- CMS pages: Full edit as before
-- Add type filter alongside status filter
-- Show `no_index` status indicator
+**Group C — State rights hubs (51 rows)**
+One per state/DC: `state-rights/new-york`, `state-rights/california`, etc.
+
+**Group D — State rights category pages (663 rows)**
+51 states × 13 categories: `state-rights/new-york/lemon-law`, etc.
+
+**Group E — Small claims state pages (51 rows)**
+One per state: `small-claims/california`, `small-claims/new-york`, etc.
+
+**Group F — Subcategory pages (~50-80 rows)**
+From the subcategory mappings: `templates/vehicle/lemon-law`, etc.
+
+We'll use `ON CONFLICT (slug) DO NOTHING` to avoid duplicates with existing entries.
+
+### 2. Add unique constraint on slug
+The `pages` table needs a unique constraint on `slug` to support `ON CONFLICT` and prevent duplicates.
+
+### 3. Add `page_group` column for filtering
+Add `page_group text` to categorize pages for admin filtering:
+- `static` — Home, About, FAQ, etc.
+- `legal` — Terms, Privacy, Disclaimer, Cookie Policy
+- `tool` — State Rights hub, Deadlines, Analyzer, Small Claims tools
+- `template` — Template categories and subcategories
+- `guide` — Guide category pages
+- `state-rights` — All 714 state rights pages
+- `small-claims` — Small claims state pages
+- `auth` — Login, Signup (if desired)
+
+Update the existing 23 rows to set their `page_group`. Add a group filter dropdown to AdminPages.
+
+### 4. Update AdminPages UI
+- Replace the simple System/CMS type filter with a `page_group` dropdown filter
+- Keep the existing type filter alongside it
+- Show page_group as a subtle label or badge
 
 ### Files changed
-- **Migration**: Add `page_type` and `no_index` columns to `pages` table
-- **Data insert**: Seed ~15 missing system pages + update existing 9
-- **`src/pages/admin/AdminPages.tsx`**: Add type badge column, type filter, restrict system pages to SEO-only editing
+- **Migration SQL**: Add `page_group` column, unique constraint on `slug`, INSERT all dynamic routes (~800 rows), UPDATE existing 23 rows with `page_group`
+- **`src/pages/admin/AdminPages.tsx`**: Add `page_group` filter dropdown, display group badge
 
-### Benefits for both of us
-- **You**: See every page on your site, manage SEO meta from one place, know what's indexed
-- **Me (Lovable)**: Can query the `pages` table to understand the full site map, update SEO programmatically, and avoid creating duplicate routes
+### Data generation approach
+The migration SQL will use `generate_series` patterns and explicit value lists for states and categories rather than relying on TypeScript data files, keeping everything in pure SQL.
 
