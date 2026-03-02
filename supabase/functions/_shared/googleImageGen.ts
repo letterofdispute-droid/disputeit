@@ -110,3 +110,62 @@ export function shouldBailOut(err: unknown): boolean {
   if (!isGoogleImageError(err)) return false;
   return err.category === 'RATE_LIMITED' || err.category === 'CREDIT_EXHAUSTED';
 }
+
+/**
+ * Generate an image using the Lovable AI gateway (google/gemini-2.5-flash-image).
+ * Returns the same GoogleImageResult format as generateImageWithGoogle.
+ */
+export async function generateImageWithLovable(
+  prompt: string,
+  apiKey: string
+): Promise<GoogleImageResult> {
+  const response = await fetch(
+    'https://ai.gateway.lovable.dev/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image',
+        messages: [{ role: 'user', content: prompt }],
+        modalities: ['image', 'text'],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[LOVABLE_IMAGE] API error:', response.status, errorText);
+    throw categorizeGatewayError(response.status, errorText);
+  }
+
+  const data = await response.json();
+  const images = data.choices?.[0]?.message?.images;
+  if (!images || images.length === 0) {
+    throw { category: 'AI_ERROR', message: 'No image generated in response', httpStatus: 500 } as GoogleImageError;
+  }
+
+  const imageUrl: string = images[0].image_url?.url || '';
+  // Extract base64 data from data URL
+  const base64Match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!base64Match) {
+    throw { category: 'AI_ERROR', message: 'Invalid image data format', httpStatus: 500 } as GoogleImageError;
+  }
+
+  return {
+    base64Data: base64Match[2],
+    mimeType: base64Match[1],
+  };
+}
+
+function categorizeGatewayError(status: number, errorText: string): GoogleImageError {
+  if (status === 429) {
+    return { category: 'RATE_LIMITED', message: 'RATE_LIMITED: Lovable AI rate limit exceeded', httpStatus: 429 };
+  }
+  if (status === 402) {
+    return { category: 'CREDIT_EXHAUSTED', message: 'CREDIT_EXHAUSTED: Lovable AI credits exhausted', httpStatus: 402 };
+  }
+  return { category: 'AI_ERROR', message: `AI_ERROR: Lovable AI returned ${status}`, httpStatus: 500 };
+}

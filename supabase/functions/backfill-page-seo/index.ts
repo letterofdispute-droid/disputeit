@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { generateImageWithGoogle, imageResultToRawBuffer, shouldBailOut, isGoogleImageError } from "../_shared/googleImageGen.ts";
+import { generateImageWithLovable, imageResultToRawBuffer, shouldBailOut, isGoogleImageError } from "../_shared/googleImageGen.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,7 +79,6 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY")!;
 
     let succeeded = 0;
     let failed = 0;
@@ -214,7 +213,7 @@ Return using the provided tool.`;
         if (needsImage) {
           try {
             console.log(`[PAGE-SEO] Generating image for page ${page.slug}`);
-            const imageResult = await generateImageWithGoogle(imagePrompt, GOOGLE_GEMINI_API_KEY);
+            const imageResult = await generateImageWithLovable(imagePrompt, LOVABLE_API_KEY);
             const { buffer, extension } = imageResultToRawBuffer(imageResult);
 
             const storagePath = `pages/${page.slug}.${extension}`;
