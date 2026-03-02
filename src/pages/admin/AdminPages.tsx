@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2, Settings, EyeOff } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, FileText, ChevronRight, Loader2, Settings, EyeOff, RefreshCw } from 'lucide-react';
+import { seedTemplatePages } from '@/utils/seedTemplatePages';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,7 @@ const PAGE_GROUPS = [
   { value: 'guide', label: 'Guides' },
   { value: 'state-rights', label: 'State Rights' },
   { value: 'small-claims', label: 'Small Claims' },
+  { value: 'auth', label: 'Auth & User' },
 ];
 
 interface PageWithChildren extends Page {
@@ -88,6 +90,24 @@ const AdminPages = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncTemplates = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await seedTemplatePages();
+      toast({
+        title: 'Template pages synced',
+        description: `${result.inserted} inserted, ${result.skipped} skipped${result.errors.length ? `. ${result.errors.length} errors.` : '.'}`,
+      });
+      fetchPages();
+      fetchDraftCount();
+    } catch (error) {
+      toast({ title: 'Sync failed', description: String(error), variant: 'destructive' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -252,10 +272,16 @@ const AdminPages = () => {
             {totalCount} total pages • {draftCount} drafts
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/pages/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Page
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleSyncTemplates} disabled={isSyncing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            Sync Templates
+          </Button>
+          <Button onClick={() => navigate('/admin/pages/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Page
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
