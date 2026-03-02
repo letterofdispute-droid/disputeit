@@ -2,11 +2,8 @@
  * Post-build script: Generate per-route HTML files with correct meta tags.
  *
  * Reads dist/index.html as a template, fetches all pages from the database
- * that have a meta_title, and writes dist/{slug}/index.html with the correct
- * <title>, <meta description>, <link canonical>, OG and Twitter tags.
- *
- * This ensures crawlers and "View Source" see unique meta for every page,
- * even though this is an SPA.
+ * that have a meta_title, and writes dist/{slug}/index.html AND dist/{slug}.html
+ * with the correct <title>, <meta description>, <link canonical>, OG and Twitter tags.
  */
 
 import fs from 'fs';
@@ -20,6 +17,10 @@ const SUPABASE_URL = 'https://koulmtfnkuapzigcplov.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvdWxtdGZua3VhcHppZ2NwbG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDI5NTcsImV4cCI6MjA4MzgxODk1N30.6BkDwzeApLBvQOiY60xsH0aVu7GFxWRp1GRebWtph4Y';
 const SITE_URL = 'https://letterofdispute.com';
 const BATCH_SIZE = 500;
+
+// Slugs to validate after generation — build fails if these still have homepage meta
+const VALIDATION_SLUGS = ['state-rights/alaska', 'state-rights/california'];
+const HOMEPAGE_TITLE_FRAGMENT = 'Professional Complaint Letters That Get Results';
 
 async function fetchAllPages() {
   const allPages = [];
@@ -136,15 +137,50 @@ function escapeAttr(str) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function validateGeneratedFiles() {
+  console.log('\n🔍 Validating key route HTML files...');
+  const errors = [];
+
+  for (const slug of VALIDATION_SLUGS) {
+    const dirPath = path.join(distDir, slug, 'index.html');
+    const flatPath = path.join(distDir, `${slug}.html`);
+
+    // Check at least one file exists
+    const existsDir = fs.existsSync(dirPath);
+    const existsFlat = fs.existsSync(flatPath);
+    if (!existsDir && !existsFlat) {
+      errors.push(`❌ No HTML file generated for slug "${slug}"`);
+      continue;
+    }
+
+    // Read whichever exists and check content
+    const html = fs.readFileSync(existsDir ? dirPath : flatPath, 'utf-8');
+
+    // Title must NOT contain homepage fragment
+    if (html.includes(HOMEPAGE_TITLE_FRAGMENT)) {
+      errors.push(`❌ slug "${slug}" still contains homepage title fragment`);
+    }
+
+    // Canonical must point to the route, not homepage
+    const expectedCanonical = `${SITE_URL}/${slug}`;
+    if (!html.includes(expectedCanonical)) {
+      errors.push(`❌ slug "${slug}" canonical does not contain "${expectedCanonical}"`);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error('\n🚨 Build-time validation FAILED:');
+    errors.forEach(e => console.error(e));
+    throw new Error(`inject-page-meta validation failed for ${errors.length} slug(s)`);
+  }
+
+  console.log(`✅ Validation passed for ${VALIDATION_SLUGS.length} key slug(s)`);
+}
+
 async function main() {
   const indexPath = path.join(distDir, 'index.html');
   if (!fs.existsSync(indexPath)) {
     console.log('⚠️  dist/index.html not found, skipping page meta injection');
-    return;
-  }
-
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.log('⚠️  Missing SUPABASE env vars, skipping page meta injection');
     return;
   }
 
@@ -171,22 +207,24 @@ async function main() {
     }
 
     const html = replaceMetaTags(template, { ...page, slug });
+
+    // Write dist/{slug}/index.html
     const dir = path.join(distDir, slug);
     fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), html);
 
-    const filePath = path.join(dir, 'index.html');
-    // Don't overwrite if already exists (e.g. from build-static.mjs)
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, html);
-      created++;
-    } else {
-      // Overwrite with updated meta tags
-      fs.writeFileSync(filePath, html);
-      created++;
-    }
+    // Write dist/{slug}.html (flat file for hosts that resolve this way)
+    const parentDir = path.dirname(path.join(distDir, `${slug}.html`));
+    fs.mkdirSync(parentDir, { recursive: true });
+    fs.writeFileSync(path.join(distDir, `${slug}.html`), html);
+
+    created++;
   }
 
-  console.log(`✅ Generated ${created} static HTML files with unique meta tags (${skipped} skipped)`);
+  console.log(`✅ Generated ${created} static HTML files (×2 each) with unique meta tags (${skipped} skipped)`);
+
+  // Validate key slugs
+  validateGeneratedFiles();
 }
 
 main().catch((err) => {
