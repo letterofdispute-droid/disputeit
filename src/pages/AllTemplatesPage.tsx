@@ -3,6 +3,7 @@ import Layout from '@/components/layout/Layout';
 import { templateCategories } from '@/data/templateCategories';
 import { allTemplates } from '@/data/allTemplates';
 import SEOHead from '@/components/SEOHead';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { ChevronRight } from 'lucide-react';
 import {
   Breadcrumb,
@@ -17,8 +18,14 @@ import { Badge } from '@/components/ui/badge';
 const AllTemplatesPage = () => {
   const totalCount = allTemplates.length;
 
-  const seoTitle = `All Letter Templates - ${totalCount}+ Free Professional Complaint Letters | Dispute Letters`;
-  const seoDescription = `Browse our complete library of ${totalCount}+ professional letter templates across ${templateCategories.length} categories. Generate legally-referenced complaint letters for any situation.`;
+  const fallbackTitle = `All Letter Templates - ${totalCount}+ Free Professional Complaint Letters | Dispute Letters`;
+  const fallbackDescription = `Browse our complete library of ${totalCount}+ professional letter templates across ${templateCategories.length} categories. Generate legally-referenced complaint letters for any situation.`;
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: 'templates',
+    fallbackTitle,
+    fallbackDescription,
+  });
 
   // BreadcrumbList schema for SEO
   const breadcrumbSchema = {

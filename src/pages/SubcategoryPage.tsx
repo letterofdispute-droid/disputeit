@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import CategorySearch from '@/components/category/CategorySearch';
 import TemplateCard from '@/components/category/TemplateCard';
+import { usePageSeo } from '@/hooks/usePageSeo';
 
 const SubcategoryPage = () => {
   const { categoryId, subcategorySlug } = useParams<{ categoryId: string; subcategorySlug: string }>();
@@ -51,14 +52,21 @@ const SubcategoryPage = () => {
     );
   }, [subcategoryTemplates, searchQuery]);
 
+  // Fetch AI-generated SEO from database (must be before early return)
+  const fallbackTitle = (category && subcategoryInfo) ? `${subcategoryInfo.name} Letter Templates | ${category.name} | Dispute Letters` : '';
+  const fallbackDescription = (category && subcategoryInfo) ? `Browse ${subcategoryTemplates.length} professional ${subcategoryInfo.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.` : '';
+
+  const { title: seoTitle, description: seoDescription } = usePageSeo({
+    slug: `templates/${categoryId || ''}/${subcategorySlug || ''}`,
+    fallbackTitle,
+    fallbackDescription,
+  });
+
   if (!category || !subcategoryInfo) {
     return <Navigate to="/404" replace />;
   }
 
   const IconComponent = category.icon;
-
-  const seoTitle = `${subcategoryInfo.name} Letter Templates | ${category.name} | Dispute Letters`;
-  const seoDescription = `Browse ${subcategoryTemplates.length} professional ${subcategoryInfo.name.toLowerCase()} letter templates. Create legally-referenced complaint letters for ${category.name.toLowerCase()} disputes.`;
 
   // BreadcrumbList schema for SEO
   const breadcrumbSchema = {
