@@ -2,8 +2,8 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-const BATCH_SIZE = 2;
-const INTER_BATCH_DELAY = 1500;
+const BATCH_SIZE = 1;
+const INTER_BATCH_DELAY = 2000;
 
 interface BackfillState {
   isRunning: boolean;
