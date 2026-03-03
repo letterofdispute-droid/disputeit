@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.backfill-page-seo]
 verify_jwt = false
+
+[functions.migrate-export]
+verify_jwt = false
