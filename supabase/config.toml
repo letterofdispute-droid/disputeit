@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.migrate-push]
 verify_jwt = false
+
+[functions.push-data]
+verify_jwt = false

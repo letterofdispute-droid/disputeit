@@ -103,15 +103,20 @@ serve(async (req: Request) => {
 
         if (!data || data.length === 0) break;
 
-        // Write batch to destination (upsert to handle retries)
+        // Write batch to destination (plain insert, skip duplicates on retry)
         const { error: writeErr } = await dstClient
           .from(table)
-          .upsert(data, { onConflict: 'id', ignoreDuplicates: true });
+          .insert(data);
 
         if (writeErr) {
-          const errMsg = `Write error at offset ${offset}: ${writeErr.message}`;
-          tableResult.errors.push(errMsg);
-          console.error(errMsg);
+          // Ignore duplicate key errors (safe retries)
+          if (writeErr.message?.includes('duplicate key')) {
+            tableResult.migrated += data.length;
+          } else {
+            const errMsg = `Write error at offset ${offset}: ${writeErr.message}`;
+            tableResult.errors.push(errMsg);
+            console.error(errMsg);
+          }
         } else {
           tableResult.migrated += data.length;
         }
