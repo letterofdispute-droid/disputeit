@@ -18,9 +18,9 @@ serve(async (req) => {
       throw new Error('Title or content is required');
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
     if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     const prompt = `You are an SEO expert. Based on the following blog post, generate optimized SEO metadata.
@@ -42,7 +42,7 @@ Focus on: clarity, relevant keywords, and click-worthiness. Make it compelling f
 
 Return ONLY valid JSON, no markdown code blocks.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

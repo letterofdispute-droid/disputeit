@@ -71,7 +71,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const lovableApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // 1. Get latest GSC data (top 200 by impressions, deduplicated)
@@ -200,7 +200,7 @@ Rules:
 - Return 5-10 items per category max
 - Target US audiences, reference US consumer protection laws`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

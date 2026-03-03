@@ -10,7 +10,7 @@ const corsHeaders = {
 // ── Constants ──
 const BATCH_SIZE = 5; // Process 5 articles concurrently per invocation
 const ARTICLE_TIMEOUT_MS = 45_000; // 45s per article (AI call takes longer)
-const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+const AI_GATEWAY_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
 // ── State Rights configuration ──
 // Maps template category IDs to their state-rights URL segment
@@ -199,8 +199,8 @@ async function callAI(
   sections: ParsedSection[],
   candidates: CandidateTarget[],
 ): Promise<AISuggestion[]> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
+  const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GOOGLE_GEMINI_API_KEY not configured');
 
   // Build sections text (exclude intro and conclusion)
   const bodyText = sections

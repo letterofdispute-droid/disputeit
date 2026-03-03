@@ -78,7 +78,6 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
     const GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY")!;
 
     let succeeded = 0;
@@ -133,11 +132,11 @@ Rules:
 Return using the provided tool.`;
 
             const aiResponse = await fetch(
-              "https://ai.gateway.lovable.dev/v1/chat/completions",
+              "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
               {
                 method: "POST",
                 headers: {
-                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  Authorization: `Bearer ${GEMINI_API_KEY}`,
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({

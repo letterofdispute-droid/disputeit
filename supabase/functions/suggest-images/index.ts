@@ -40,7 +40,7 @@ serve(async (req) => {
     }
 
     const pixabayKey = Deno.env.get('PIXABAY_API_KEY');
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 
     if (!pixabayKey) {
       throw new Error('PIXABAY_API_KEY is not configured');
@@ -51,7 +51,7 @@ serve(async (req) => {
     
     if (lovableKey) {
       try {
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableKey}`,
@@ -129,7 +129,7 @@ Return ONLY the keywords, no explanation, no punctuation.`
       // Use AI to generate better alt text if available
       if (lovableKey) {
         try {
-          const altResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const altResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableKey}`,
