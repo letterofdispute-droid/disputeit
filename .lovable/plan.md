@@ -1,46 +1,28 @@
 
-Goal: migrate all remaining tables (including the 95MB `blog_posts` dataset) reliably without requiring you to run local scripts.
 
-What I found
-- The migration function is available and works when called with table-specific query params.
-- A full “all tables at once” call is timing out because it tries to process too much in one request.
-- Your large `blog_posts` table size is expected; it just requires strict chunking + resume.
+# Plan: Fix CSV Export for Database Import
 
-Plan A (do this first, no code changes required)
-1. Run chunked migration table-by-table using the existing migration endpoint with:
-   - `table=<name>`
-   - `offset=<resume point>`
-   - `max_batches=5`
-2. Process in dependency order:
-   - `blog_posts` → `article_embeddings` → `content_queue` → `keyword_targets` → `link_suggestions`
-3. Keep resuming from `next_offset` until it returns `null` for each table.
-4. If any request fails/timeouts, retry the same offset (safe because writes are idempotent via upsert).
-5. After those complete, run a final pass for any remaining small tables not yet synced.
+## Problem
+The current `export-data` function produces CSVs with human-readable headers (`ID`, `Title`, `Slug`, `Featured`) instead of actual database column names (`id`, `title`, `slug`, `featured`). It also only exports 14 of 30+ columns. Supabase's CSV import requires exact column name matches.
 
-Why this should work for 95MB
-- `blog_posts` uses the small internal batch size (50 rows).
-- With `max_batches=5`, each request handles about 250 rows, keeping each call small enough for gateway limits.
-- Estimated calls for `blog_posts`: ~28 total (6,841 / 250).
+## Solution
+Create a new edge function `migrate-csv` that exports a table as a raw CSV with:
+- Headers matching exact database column names
+- All columns included
+- Proper handling of arrays (PostgreSQL `{a,b}` format), JSON, booleans, and nulls
+- Pagination support for the 95MB dataset — export in chunks (e.g. 500 rows per call) so you can download multiple CSVs and import them sequentially
 
-Plan B (fallback if Plan A still unstable)
-1. Harden migration function to support:
-   - POST body params (so orchestration tools can pass options reliably)
-   - per-table `batch_size_override`
-   - execution time budget (stop early, always return clean checkpoint)
-2. Add a lightweight “status/count” mode to compare source vs destination counts per table.
-3. Resume automatically until each table matches.
+## How it works
+1. Call `GET /migrate-csv?table=blog_posts&offset=0&limit=500` → returns CSV chunk 1
+2. Call with `offset=500` → chunk 2, etc.
+3. Each CSV file will have proper headers and be directly importable into the new project's Table Editor
+4. Response includes a header `X-Next-Offset` and `X-Total-Count` so you know when you're done
 
-Technical details
-- Root issue: request duration/size, not data corruption.
-- Current batching config:
-  - standard tables: 500 rows/batch
-  - heavy tables (`blog_posts`, `article_embeddings`, `link_suggestions`, `content_queue`): 50 rows/batch
-- Safe resume model:
-  - invoke with `offset`
-  - read response `next_offset`
-  - continue until `next_offset = null`
-- `user_roles` remains special because it depends on authentication users existing in the target backend.
+## Steps
+1. Create `supabase/functions/migrate-csv/index.ts`
+2. Deploy it
+3. You download each chunk and import via the Supabase Table Editor
 
-Expected outcome
-- Full migration completion for all content tables, including the large `blog_posts` dataset, via resumable chunked execution.
-- No local terminal work needed from you.
+## Why not fix the push function?
+The push function keeps hitting deployment/404 issues. CSV import through the Supabase UI is the most reliable path — we just need the CSV format to be correct.
+
