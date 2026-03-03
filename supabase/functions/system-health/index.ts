@@ -42,6 +42,32 @@ interface HealthResponse {
   };
 }
 
+// CSV helpers for raw migration export
+const escapeCSV = (value: string): string => {
+  if (value.includes(",") || value.includes('"') || value.includes("\n") || value.includes("\r")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+};
+
+const formatPgValue = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "boolean") return val ? "true" : "false";
+  if (Array.isArray(val)) {
+    const inner = val.map((v: any) => {
+      if (v === null) return "NULL";
+      const s = String(v);
+      if (s.includes(",") || s.includes('"') || s.includes("\\") || s.includes("{") || s.includes("}")) {
+        return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+      }
+      return s;
+    }).join(",");
+    return `{${inner}}`;
+  }
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+};
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,6 +79,54 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
+
+    // --- RAW CSV EXPORT MODE ---
+    const url = new URL(req.url);
+    const rawTable = url.searchParams.get("table");
+    if (rawTable) {
+      const offset = parseInt(url.searchParams.get("offset") || "0");
+      const limit = parseInt(url.searchParams.get("limit") || "500");
+
+      const { count: totalCount } = await supabaseAdmin
+        .from(rawTable)
+        .select("*", { count: "exact", head: true });
+
+      const { data, error } = await supabaseAdmin
+        .from(rawTable)
+        .select("*")
+        .range(offset, offset + limit - 1)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        return new Response("", {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "text/csv; charset=utf-8", "X-Total-Count": String(totalCount || 0), "X-Next-Offset": "", "X-Row-Count": "0" },
+        });
+      }
+
+      const columns = Object.keys(data[0]);
+      const headerLine = columns.map(escapeCSV).join(",");
+      const rows = data.map((row: any) =>
+        columns.map((col) => escapeCSV(formatPgValue(row[col]))).join(",")
+      );
+      const csv = [headerLine, ...rows].join("\n");
+      const nextOffset = offset + data.length < (totalCount || 0) ? offset + data.length : null;
+
+      return new Response(csv, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${rawTable}-${offset}.csv"`,
+          "X-Total-Count": String(totalCount || 0),
+          "X-Next-Offset": nextOffset !== null ? String(nextOffset) : "",
+          "X-Row-Count": String(data.length),
+        },
+      });
+    }
+    // --- END RAW CSV EXPORT MODE ---
 
     // Verify admin access
     const authHeader = req.headers.get("Authorization");

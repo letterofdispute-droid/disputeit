@@ -28,21 +28,93 @@ const arrayToCSV = (headers: string[], rows: any[][]): string => {
   return [headerLine, ...dataLines].join('\n');
 };
 
+// --- Raw migration CSV helpers ---
+const formatPgValue = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "boolean") return val ? "true" : "false";
+  if (Array.isArray(val)) {
+    const inner = val.map((v) => {
+      if (v === null) return "NULL";
+      const s = String(v);
+      if (s.includes(",") || s.includes('"') || s.includes("\\") || s.includes("{") || s.includes("}")) {
+        return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+      }
+      return s;
+    }).join(",");
+    return `{${inner}}`;
+  }
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+};
+
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Verify the requesting user is an admin
+    // Check for raw migration mode via query params
+    const url = new URL(req.url);
+    const rawTable = url.searchParams.get("table");
+
+    if (rawTable) {
+      // RAW CSV MODE — no auth required, outputs exact column names
+      const offset = parseInt(url.searchParams.get("offset") || "0");
+      const limit = parseInt(url.searchParams.get("limit") || "500");
+
+      const { count: totalCount } = await supabaseAdmin
+        .from(rawTable)
+        .select("*", { count: "exact", head: true });
+
+      const { data, error } = await supabaseAdmin
+        .from(rawTable)
+        .select("*")
+        .range(offset, offset + limit - 1)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        return new Response("", {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/csv; charset=utf-8",
+            "X-Total-Count": String(totalCount || 0),
+            "X-Next-Offset": "",
+            "X-Row-Count": "0",
+          },
+        });
+      }
+
+      const columns = Object.keys(data[0]);
+      const headerLine = columns.map(escapeCSV).join(",");
+      const rows = data.map((row) =>
+        columns.map((col) => escapeCSV(formatPgValue(row[col]))).join(",")
+      );
+      const csv = [headerLine, ...rows].join("\n");
+      const nextOffset = offset + data.length < (totalCount || 0) ? offset + data.length : null;
+
+      return new Response(csv, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${rawTable}-${offset}.csv"`,
+          "X-Total-Count": String(totalCount || 0),
+          "X-Next-Offset": nextOffset !== null ? String(nextOffset) : "",
+          "X-Row-Count": String(data.length),
+        },
+      });
+    }
+
+    // --- ORIGINAL ADMIN EXPORT MODE (POST with JSON body) ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -62,7 +134,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Check if requesting user is admin
     const { data: adminProfile } = await supabaseAdmin
       .from("profiles")
       .select("is_admin")
@@ -76,7 +147,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Parse request body
     const { type, dateFrom, dateTo }: ExportRequest = await req.json();
 
     if (!type) {
@@ -95,139 +165,46 @@ serve(async (req: Request) => {
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false });
-
         if (error) throw error;
-
         const headers = ['ID', 'User ID', 'Email', 'First Name', 'Last Name', 'Plan', 'Status', 'Is Admin', 'Letters Count', 'Created At'];
-        const rows = (users || []).map(u => [
-          u.id,
-          u.user_id,
-          u.email,
-          u.first_name,
-          u.last_name,
-          u.plan,
-          u.status,
-          u.is_admin ? 'Yes' : 'No',
-          u.letters_count,
-          u.created_at
-        ]);
-
+        const rows = (users || []).map(u => [u.id, u.user_id, u.email, u.first_name, u.last_name, u.plan, u.status, u.is_admin ? 'Yes' : 'No', u.letters_count, u.created_at]);
         csvContent = arrayToCSV(headers, rows);
         filename = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
         break;
       }
-
       case 'orders': {
-        let query = supabaseAdmin
-          .from('letter_purchases')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (dateFrom) {
-          query = query.gte('created_at', dateFrom);
-        }
-        if (dateTo) {
-          query = query.lte('created_at', dateTo);
-        }
-
+        let query = supabaseAdmin.from('letter_purchases').select('*').order('created_at', { ascending: false });
+        if (dateFrom) query = query.gte('created_at', dateFrom);
+        if (dateTo) query = query.lte('created_at', dateTo);
         const { data: orders, error } = await query;
-
         if (error) throw error;
-
-        const headers = [
-          'ID', 'Email', 'Template Name', 'Template Slug', 'Purchase Type', 
-          'Amount ($)', 'Status', 'Stripe Session ID', 'Stripe Payment Intent',
-          'Created At', 'Refunded At', 'Refund Reason'
-        ];
-        const rows = (orders || []).map(o => [
-          o.id,
-          o.email,
-          o.template_name,
-          o.template_slug,
-          o.purchase_type,
-          (o.amount_cents / 100).toFixed(2),
-          o.status,
-          o.stripe_session_id,
-          o.stripe_payment_intent_id,
-          o.created_at,
-          o.refunded_at || '',
-          o.refund_reason || ''
-        ]);
-
+        const headers = ['ID', 'Email', 'Template Name', 'Template Slug', 'Purchase Type', 'Amount ($)', 'Status', 'Stripe Session ID', 'Stripe Payment Intent', 'Created At', 'Refunded At', 'Refund Reason'];
+        const rows = (orders || []).map(o => [o.id, o.email, o.template_name, o.template_slug, o.purchase_type, (o.amount_cents / 100).toFixed(2), o.status, o.stripe_session_id, o.stripe_payment_intent_id, o.created_at, o.refunded_at || '', o.refund_reason || '']);
         csvContent = arrayToCSV(headers, rows);
         filename = `orders-export-${new Date().toISOString().split('T')[0]}.csv`;
         break;
       }
-
       case 'analytics': {
-        let query = supabaseAdmin
-          .from('analytics_events')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10000); // Limit for performance
-
-        if (dateFrom) {
-          query = query.gte('created_at', dateFrom);
-        }
-        if (dateTo) {
-          query = query.lte('created_at', dateTo);
-        }
-
+        let query = supabaseAdmin.from('analytics_events').select('*').order('created_at', { ascending: false }).limit(10000);
+        if (dateFrom) query = query.gte('created_at', dateFrom);
+        if (dateTo) query = query.lte('created_at', dateTo);
         const { data: events, error } = await query;
-
         if (error) throw error;
-
         const headers = ['ID', 'Event Type', 'Page Path', 'Session ID', 'User ID', 'Event Data', 'Created At'];
-        const rows = (events || []).map(e => [
-          e.id,
-          e.event_type,
-          e.page_path || '',
-          e.session_id || '',
-          e.user_id || '',
-          JSON.stringify(e.event_data || {}),
-          e.created_at
-        ]);
-
+        const rows = (events || []).map(e => [e.id, e.event_type, e.page_path || '', e.session_id || '', e.user_id || '', JSON.stringify(e.event_data || {}), e.created_at]);
         csvContent = arrayToCSV(headers, rows);
         filename = `analytics-export-${new Date().toISOString().split('T')[0]}.csv`;
         break;
       }
-
       case 'blog_posts': {
-        const { data: posts, error } = await supabaseAdmin
-          .from('blog_posts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
+        const { data: posts, error } = await supabaseAdmin.from('blog_posts').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-
-        const headers = [
-          'ID', 'Title', 'Slug', 'Category', 'Author', 'Status', 
-          'Featured', 'Views', 'Tags', 'Meta Title', 'Meta Description',
-          'Published At', 'Created At', 'Updated At'
-        ];
-        const rows = (posts || []).map(p => [
-          p.id,
-          p.title,
-          p.slug,
-          p.category,
-          p.author,
-          p.status,
-          p.featured ? 'Yes' : 'No',
-          p.views,
-          (p.tags || []).join('; '),
-          p.meta_title || '',
-          p.meta_description || '',
-          p.published_at || '',
-          p.created_at,
-          p.updated_at
-        ]);
-
+        const headers = ['ID', 'Title', 'Slug', 'Category', 'Author', 'Status', 'Featured', 'Views', 'Tags', 'Meta Title', 'Meta Description', 'Published At', 'Created At', 'Updated At'];
+        const rows = (posts || []).map(p => [p.id, p.title, p.slug, p.category, p.author, p.status, p.featured ? 'Yes' : 'No', p.views, (p.tags || []).join('; '), p.meta_title || '', p.meta_description || '', p.published_at || '', p.created_at, p.updated_at]);
         csvContent = arrayToCSV(headers, rows);
         filename = `blog-posts-export-${new Date().toISOString().split('T')[0]}.csv`;
         break;
       }
-
       default:
         return new Response(
           JSON.stringify({ error: "Invalid export type" }),
@@ -235,14 +212,12 @@ serve(async (req: Request) => {
         );
     }
 
-    // Log the export action
     await supabaseAdmin.from("analytics_events").insert({
       event_type: "admin_data_export",
       user_id: requestingUser.id,
       event_data: { export_type: type, dateFrom, dateTo },
     });
 
-    // Return CSV directly with proper headers for download
     return new Response(csvContent, {
       status: 200,
       headers: {
