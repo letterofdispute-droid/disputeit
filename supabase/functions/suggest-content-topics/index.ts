@@ -60,7 +60,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const lovableApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')!;
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -197,7 +197,7 @@ TASK: Return 3-5 topic suggestions as a JSON array with this exact structure:
 
 Produce exactly 3 items. Prioritize verticals with low article counts, low keyword saturation, or high commercial intent gaps. Target US audiences only and use American English throughout. Reference US federal and state laws (e.g., FTC, CFPB, FDCPA, state consumer protection statutes). Do NOT reference any UK bodies, UK laws, or UK terminology (no Ombudsman, no Trading Standards, no Citizens Advice, no FCA, no UK-specific agencies).`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

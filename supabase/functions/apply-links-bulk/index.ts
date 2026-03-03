@@ -165,8 +165,8 @@ async function generateContextualSentence(
   targetKeywords: string[],
   targetUrl: string,
 ): Promise<{ sentence: string; anchorPhrase: string } | null> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) return null;
+  const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+  if (!GOOGLE_GEMINI_API_KEY) return null;
 
   const cleanText = paragraphText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   if (cleanText.length < 30) return null;
@@ -174,10 +174,10 @@ async function generateContextualSentence(
   const keywordList = targetKeywords.filter(k => k && k.length > 0).join(', ');
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

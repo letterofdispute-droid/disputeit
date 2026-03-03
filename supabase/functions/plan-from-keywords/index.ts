@@ -41,8 +41,8 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
+    const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!apiKey) throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
 
     const { vertical, allVerticals, jobId } = await req.json() as {
       vertical?: string;
@@ -347,7 +347,7 @@ async function processColumnGroup(
 
     console.log(`[PLAN] AI call for "${groupName}" batch ${batchIdx + 1}/${batches.length} (${batch.length} keywords)`);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

@@ -406,7 +406,7 @@ Return JSON:
   ]
 }`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -591,9 +591,9 @@ async function processNextBatch(
   }
   
   // 3. Get API key and prepare for processing
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
   if (!apiKey) {
-    throw new Error('LOVABLE_API_KEY is not configured');
+    throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
   }
   
   // Fetch existing blog post titles for deduplication

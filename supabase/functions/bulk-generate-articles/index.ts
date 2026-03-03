@@ -373,7 +373,7 @@ INSTRUCTIONS:
 OUTPUT: Updated HTML content with all keywords integrated`;
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -421,7 +421,7 @@ async function generateSEOAltText(
   imageContext: string
 ): Promise<string> {
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -545,7 +545,7 @@ async function extractVisualKeywords(
   category: string
 ): Promise<string> {
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -1055,7 +1055,7 @@ Respond with ONLY this JSON:
 
     console.log(`Generating article: ${item.suggested_title}`);
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -1725,8 +1725,8 @@ serve(async (req) => {
       }
 
       // Process this batch
-      const apiKey = Deno.env.get('LOVABLE_API_KEY');
-      if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
+      const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+      if (!apiKey) throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
 
       const { data: existingPosts } = await supabaseAdmin
         .from('blog_posts')
@@ -1962,8 +1962,8 @@ serve(async (req) => {
 
     // Process first article (1 per invocation to avoid timeout)
     const firstBatch = allQueueItems.slice(0, 1);
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
+    const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!apiKey) throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
 
     const { data: existingPosts } = await supabaseAdmin
       .from('blog_posts')

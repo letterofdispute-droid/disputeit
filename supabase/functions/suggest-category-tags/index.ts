@@ -18,9 +18,9 @@ serve(async (req) => {
       throw new Error('Title is required');
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
     if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     // Truncate content to first 1500 chars for analysis
@@ -61,7 +61,7 @@ ${categoriesList}
 
 Return the JSON response with category slug, 2 tags, and confidence score.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

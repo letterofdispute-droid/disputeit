@@ -65,13 +65,11 @@ Format it as a clean, professional legal document. Use plain language appropriat
 
 Output ONLY the statement text — no markdown, no explanations, no commentary.`;
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+        'Authorization': `Bearer ${Deno.env.get('GOOGLE_GEMINI_API_KEY')}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://letterofdispute.com',
-        'X-Title': 'Letter of Dispute - Small Claims Generator',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',

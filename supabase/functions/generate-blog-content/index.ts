@@ -70,9 +70,9 @@ serve(async (req) => {
       throw new Error('Topic is required');
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
     if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.expert_professional;
@@ -147,7 +147,7 @@ Respond with ONLY this JSON structure (no markdown code blocks):
 
     console.log('Generating blog content for topic:', topic);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
