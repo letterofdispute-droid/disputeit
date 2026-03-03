@@ -24,24 +24,27 @@ CREATE TYPE public.app_role AS ENUM ('admin', 'moderator', 'user');
 -- 1. profiles
 CREATE TABLE public.profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
+  user_id uuid NOT NULL UNIQUE,
   email text,
   first_name text,
   last_name text,
   avatar_url text,
   is_admin boolean NOT NULL DEFAULT false,
-  role text,
+  role text DEFAULT 'user'::text,
   plan text NOT NULL DEFAULT 'free'::text,
   status text NOT NULL DEFAULT 'active'::text,
   letters_count integer NOT NULL DEFAULT 0,
   stripe_subscription_id text,
-  subscription_status text,
+  subscription_status text DEFAULT 'none'::text,
   subscription_end timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 2. user_roles
+CREATE INDEX idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX idx_profiles_is_admin ON public.profiles(is_admin);
+
+
 CREATE TABLE public.user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
