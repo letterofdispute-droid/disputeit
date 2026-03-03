@@ -146,3 +146,6 @@ verify_jwt = false
 
 [functions.push-data]
 verify_jwt = false
+
+[functions.migrate-csv]
+verify_jwt = false
