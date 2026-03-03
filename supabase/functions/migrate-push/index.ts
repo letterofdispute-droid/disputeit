@@ -52,7 +52,7 @@ const TABLES = [
 // Smaller batch for content-heavy tables
 const SMALL_BATCH_TABLES = ["blog_posts", "article_embeddings", "link_suggestions", "content_queue"];
 const BATCH_SIZE = 500;
-const SMALL_BATCH_SIZE = 100;
+const SMALL_BATCH_SIZE = 50;
 const NEW_PROJECT_URL = "https://penadwjjzszlzxipuptr.supabase.co";
 
 serve(async (req: Request) => {
@@ -103,14 +103,15 @@ serve(async (req: Request) => {
 
         if (!data || data.length === 0) break;
 
-        // Write batch to destination
+        // Write batch to destination (upsert to handle retries)
         const { error: writeErr } = await dstClient
           .from(table)
-          .insert(data);
+          .upsert(data, { onConflict: 'id', ignoreDuplicates: true });
 
         if (writeErr) {
-          tableResult.errors.push(`Write error at offset ${offset}: ${writeErr.message}`);
-          // Continue to next batch anyway
+          const errMsg = `Write error at offset ${offset}: ${writeErr.message}`;
+          tableResult.errors.push(errMsg);
+          console.error(errMsg);
         } else {
           tableResult.migrated += data.length;
         }
