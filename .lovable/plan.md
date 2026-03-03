@@ -1,35 +1,35 @@
 
 
-# Plan: Full Data Migration via Edge Function
+# Plan: Complete Migration for Remaining Tables
 
-Since you can't run scripts locally, I'll create an edge function on this project that reads from this database and writes directly to your new project — no terminal needed.
+Your new project's `blog_posts` table is correctly set up (primary key exists, table is empty). The previous failure was a timeout, not a schema issue.
 
-## What it does
+## What needs migrating
 
-A new `migrate-push` edge function that:
-1. Reads all rows from each table in this project (using `SUPABASE_SERVICE_ROLE_KEY`)
-2. Upserts them into the new project (`penadwjjzszlzxipuptr`) using its service role key
-3. Handles pagination (1000 rows per batch) for large tables
-4. Returns progress as it goes
-
-## Tables (all 31 non-empty + empty ones)
-
-Every table in the TABLES list from `migrate-export` plus any missing ones from the schema: `blog_categories`, `site_settings`, `profiles`, `user_roles`, `content_plans`, `blog_posts`, `article_embeddings`, `content_queue`, `keyword_targets`, `link_suggestions`, `template_stats`, `letter_purchases`, `analytics_events`, `embedding_queue`, `gsc_performance_cache`, `semantic_scan_jobs`, `category_images`, `consumer_news_cache`, `bulk_planning_jobs`, `og_images`, `image_optimization_jobs`, `user_credits`, `embedding_jobs`, `backfill_jobs`, `keyword_planning_jobs`, `dispute_outcomes`, `gsc_index_status`, `gsc_recommendations_cache`, `generation_jobs`, `pages`, `blog_tags`, `template_seo_overrides`, `canonical_anchors`, `user_letters`, `letter_analyses`, `evidence_photos`, `refund_logs`, `daily_publish_jobs`, `template_stats`, `embedding_queue`
-
-## Requirement
-
-I need the **new project's service role key** stored as a secret. I'll use the `add_secret` tool to ask you for it. The function will use:
-- `SUPABASE_SERVICE_ROLE_KEY` (already available) to read from this project
-- `NEW_SUPABASE_SERVICE_ROLE_KEY` secret to write to the new project
-
-## How you'll use it
-
-Just call the URL once — the function migrates everything automatically. No terminal, no scripts. You'll see it working right here.
+These tables failed or were skipped last time:
+- `blog_posts` (6,841 rows) — timed out
+- `article_embeddings` (6,841 rows) — timed out
+- `content_queue` (6,753 rows) — depends on blog_posts
+- `keyword_targets` (4,276 rows) — depends on blog_posts
+- `link_suggestions` (53,278 rows) — depends on blog_posts
+- `user_roles` (1 row) — depends on auth.users
 
 ## Steps
 
-1. Add `NEW_SUPABASE_SERVICE_ROLE_KEY` secret (you get this from your new Supabase dashboard → Settings → API → service_role)
-2. Create `supabase/functions/migrate-push/index.ts`
-3. Deploy and invoke it — migration happens server-side
-4. Delete both `migrate-export` and `migrate-push` after completion
+1. **Call migrate-push one table at a time** with `max_batches=5` to prevent timeouts (500 rows per batch = 2,500 rows per call)
+2. **Start with `blog_posts`** — call 3 times to cover all 6,841 rows
+3. **Then `article_embeddings`** — 3 calls
+4. **Then `content_queue`, `keyword_targets`** — 2-3 calls each
+5. **Then `link_suggestions`** — this is the biggest (53K rows), will need ~22 calls with `max_batches=5`
+6. **Skip `user_roles`** — depends on auth.users which can't be migrated; you'll need to recreate the user and role manually in the new project
+
+All of this happens automatically by me calling the edge function — you don't need to do anything.
+
+## Technical detail
+
+I'll invoke the existing `migrate-push` function with URL parameters like:
+```
+?table=blog_posts&offset=0&max_batches=5
+```
+Then continue from where it left off using the `next_offset` value.
 
