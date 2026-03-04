@@ -21,7 +21,8 @@ const ALL_TABLES = [
   "user_letters", "canonical_anchors", "generation_jobs",
 ];
 
-const BATCH = 500;
+const STREAM_BATCH = 200;
+const DEFAULT_LIMIT = 5000;
 
 const escapeSql = (val: any): string => {
   if (val === null || val === undefined) return "NULL";
@@ -42,6 +43,8 @@ const escapeSql = (val: any): string => {
   return `'${s}'`;
 };
 
+const encoder = new TextEncoder();
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -57,9 +60,9 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const tablesParam = url.searchParams.get("tables");
     const offset = parseInt(url.searchParams.get("offset") || "0");
-    const limit = parseInt(url.searchParams.get("limit") || "0"); // 0 = all rows
+    const limit = parseInt(url.searchParams.get("limit") || String(DEFAULT_LIMIT));
 
-    // If "summary" mode — return row counts
+    // Summary mode — return row counts as JSON
     if (url.searchParams.get("mode") === "summary") {
       const summary: Record<string, number> = {};
       for (const t of ALL_TABLES) {
@@ -77,7 +80,6 @@ serve(async (req: Request) => {
       ? tablesParam.split(",").map((t) => t.trim())
       : ALL_TABLES;
 
-    // Validate
     for (const t of tablesToExport) {
       if (!ALL_TABLES.includes(t)) {
         return new Response(JSON.stringify({ error: `Invalid table: ${t}` }), {
@@ -87,67 +89,80 @@ serve(async (req: Request) => {
       }
     }
 
-    const sqlParts: string[] = [];
-    sqlParts.push("-- SQL Dump generated at " + new Date().toISOString());
-    sqlParts.push("-- Tables: " + tablesToExport.join(", "));
-    sqlParts.push("");
+    // Streaming response
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          controller.enqueue(encoder.encode(`-- SQL Dump generated at ${new Date().toISOString()}\n`));
+          controller.enqueue(encoder.encode(`-- Tables: ${tablesToExport.join(", ")}\n`));
+          controller.enqueue(encoder.encode(`-- Offset: ${offset}, Limit: ${limit}\n\n`));
 
-    for (const table of tablesToExport) {
-      const maxRows = limit > 0 ? limit : 999999;
-      let currentOffset = offset;
-      let allRows: any[] = [];
+          let totalExported = 0;
 
-      while (allRows.length < maxRows) {
-        const fetchSize = Math.min(BATCH, maxRows - allRows.length);
-        const { data, error } = await supabaseAdmin
-          .from(table)
-          .select("*")
-          .range(currentOffset, currentOffset + fetchSize - 1);
+          for (const table of tablesToExport) {
+            let currentOffset = offset;
+            let rowsForTable = 0;
+            let columns: string[] | null = null;
+            const maxRows = limit;
 
-        if (error) {
-          sqlParts.push(`-- ERROR exporting ${table}: ${error.message}`);
-          break;
+            while (rowsForTable < maxRows) {
+              const fetchSize = Math.min(STREAM_BATCH, maxRows - rowsForTable);
+              const { data, error } = await supabaseAdmin
+                .from(table)
+                .select("*")
+                .range(currentOffset, currentOffset + fetchSize - 1);
+
+              if (error) {
+                controller.enqueue(encoder.encode(`-- ERROR exporting ${table}: ${error.message}\n\n`));
+                break;
+              }
+              if (!data || data.length === 0) break;
+
+              if (!columns) {
+                columns = Object.keys(data[0]);
+                controller.enqueue(encoder.encode(`-- Table: ${table}\n`));
+              }
+
+              const colList = columns.join(", ");
+              const valueLines = data.map((row) => {
+                const vals = columns!.map((col) => escapeSql(row[col]));
+                return `(${vals.join(", ")})`;
+              });
+
+              controller.enqueue(encoder.encode(
+                `INSERT INTO ${table} (${colList}) VALUES\n${valueLines.join(",\n")}\nON CONFLICT DO NOTHING;\n\n`
+              ));
+
+              rowsForTable += data.length;
+              currentOffset += data.length;
+
+              if (data.length < fetchSize) break;
+            }
+
+            if (rowsForTable === 0) {
+              controller.enqueue(encoder.encode(`-- Table: ${table} (0 rows, skipped)\n\n`));
+            } else {
+              controller.enqueue(encoder.encode(`-- ${table}: ${rowsForTable} rows exported\n\n`));
+            }
+
+            totalExported += rowsForTable;
+          }
+
+          controller.enqueue(encoder.encode(`-- Done. Total rows exported: ${totalExported}\n`));
+          controller.close();
+        } catch (err) {
+          controller.enqueue(encoder.encode(`-- FATAL ERROR: ${err.message}\n`));
+          controller.close();
         }
-        if (!data || data.length === 0) break;
+      },
+    });
 
-        allRows = allRows.concat(data);
-        currentOffset += data.length;
-
-        if (data.length < fetchSize) break; // no more rows
-      }
-
-      if (allRows.length === 0) {
-        sqlParts.push(`-- Table: ${table} (0 rows, skipped)`);
-        sqlParts.push("");
-        continue;
-      }
-
-      const columns = Object.keys(allRows[0]);
-      const colList = columns.join(", ");
-
-      sqlParts.push(`-- Table: ${table} (${allRows.length} rows)`);
-
-      // Chunk INSERT statements at 100 rows each to avoid huge statements
-      for (let i = 0; i < allRows.length; i += 100) {
-        const chunk = allRows.slice(i, i + 100);
-        const valueLines = chunk.map((row) => {
-          const vals = columns.map((col) => escapeSql(row[col]));
-          return `(${vals.join(", ")})`;
-        });
-
-        sqlParts.push(`INSERT INTO ${table} (${colList}) VALUES`);
-        sqlParts.push(valueLines.join(",\n") + ";");
-        sqlParts.push("");
-      }
-    }
-
-    const sql = sqlParts.join("\n");
-
-    return new Response(sql, {
+    return new Response(stream, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/plain; charset=utf-8",
         "Content-Disposition": `attachment; filename="dump-${tablesToExport.length === 1 ? tablesToExport[0] : "all"}.sql"`,
+        "Transfer-Encoding": "chunked",
       },
     });
   } catch (error: any) {
