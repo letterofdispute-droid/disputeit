@@ -1,51 +1,28 @@
 
 
-# Plan: Full SQL Dump Edge Function
+# Plan: Fix CSV Export for Database Import
 
 ## Problem
-Downloading 100+ CSV chunks manually is tedious. A single SQL dump with INSERT statements would be much easier to import.
+The current `export-data` function produces CSVs with human-readable headers (`ID`, `Title`, `Slug`, `Featured`) instead of actual database column names (`id`, `title`, `slug`, `featured`). It also only exports 14 of 30+ columns. Supabase's CSV import requires exact column name matches.
 
 ## Solution
-Create an edge function `migrate-export` (reuse existing name from config.toml) that generates a full SQL dump with INSERT statements for all tables. You can then copy-paste or download the SQL and run it in the new Supabase project's SQL Editor.
+Create a new edge function `migrate-csv` that exports a table as a raw CSV with:
+- Headers matching exact database column names
+- All columns included
+- Proper handling of arrays (PostgreSQL `{a,b}` format), JSON, booleans, and nulls
+- Pagination support for the 95MB dataset — export in chunks (e.g. 500 rows per call) so you can download multiple CSVs and import them sequentially
 
 ## How it works
-1. The function iterates through all tables
-2. For each table, it fetches all rows (paginated internally)
-3. Generates `INSERT INTO table_name (col1, col2, ...) VALUES (...)` statements
-4. Returns one big SQL file you can download
-
-## Handling large tables
-- Tables like `link_suggestions` (53k rows) and `analytics_events` (18k rows) are too large for a single response
-- The function will accept a `tables` query param to export specific tables, so you can do it in batches:
-  - `GET /migrate-export` → all small tables in one dump
-  - `GET /migrate-export?tables=blog_posts` → just blog_posts
-  - `GET /migrate-export?tables=link_suggestions&offset=0&limit=5000` → chunks of large tables
-
-## Output format
-```sql
--- Table: profiles
-INSERT INTO profiles (id, user_id, email, ...) VALUES
-('uuid-1', 'uuid-2', 'test@email.com', ...),
-('uuid-3', 'uuid-4', 'other@email.com', ...);
-
--- Table: blog_categories
-INSERT INTO blog_categories (id, name, slug, ...) VALUES
-(...);
-```
-
-## Import steps
-1. Open the new Supabase project's **SQL Editor**
-2. Paste the SQL dump (or upload the .sql file)
-3. Click **Run**
-4. Done
+1. Call `GET /migrate-csv?table=blog_posts&offset=0&limit=500` → returns CSV chunk 1
+2. Call with `offset=500` → chunk 2, etc.
+3. Each CSV file will have proper headers and be directly importable into the new project's Table Editor
+4. Response includes a header `X-Next-Offset` and `X-Total-Count` so you know when you're done
 
 ## Steps
-1. Update `supabase/functions/migrate-export/index.ts` with the SQL dump logic
+1. Create `supabase/functions/migrate-csv/index.ts`
 2. Deploy it
-3. Provide you with the exact URLs to visit
+3. You download each chunk and import via the Supabase Table Editor
 
-## Tables to export (28 non-empty)
-Small (single dump): `profiles`, `blog_categories`, `blog_tags`, `site_settings`, `template_stats`, `og_images`, `content_plans`, `pages`, `letter_purchases`, `refund_logs`, `user_roles`, `category_images`, `consumer_news_cache`, `dispute_outcomes`, `user_credits`, `template_seo_overrides`, `letter_analyses`, `bulk_planning_jobs`, `daily_publish_jobs`, `backfill_jobs`, `semantic_scan_jobs`, `embedding_jobs`, `image_optimization_jobs`, `keyword_planning_jobs`, `gsc_index_status`, `gsc_performance_cache`
-
-Large (separate calls): `blog_posts`, `content_queue`, `article_embeddings`, `keyword_targets`, `embedding_queue`, `analytics_events`, `link_suggestions`
+## Why not fix the push function?
+The push function keeps hitting deployment/404 issues. CSV import through the Supabase UI is the most reliable path — we just need the CSV format to be correct.
 
