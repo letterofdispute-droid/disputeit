@@ -82,11 +82,11 @@ const subcategoryPatterns: Record<string, { pattern: RegExp | string; subcategor
     { pattern: /scam|impersonation|tech-support|romance|pig-butchering|recovery-room|account-takeover|authorized-push|card-fraud|bank-security|cryptocurrency/, subcategory: { name: 'Fraud & Scams', slug: 'fraud' } },
   ],
   'Refunds & Purchases': [
-    { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },
     { pattern: /warranty|guarantee|defect/, subcategory: { name: 'Warranty', slug: 'warranty' } },
     { pattern: /subscription|recurring|cancel|auto-renew/, subcategory: { name: 'Subscriptions', slug: 'subscriptions' } },
     { pattern: /delivery|shipping|late|missing|lost-package/, subcategory: { name: 'Delivery Issues', slug: 'delivery' } },
     { pattern: /service|poor-service|unsatisfactory/, subcategory: { name: 'Service Complaints', slug: 'service' } },
+    { pattern: /refund|return|money-back/, subcategory: { name: 'Refunds', slug: 'refunds' } },
   ],
   'Damaged Goods': [
     { pattern: /delivery|shipping|transit|carrier/, subcategory: { name: 'Delivery Damage', slug: 'delivery-damage' } },
