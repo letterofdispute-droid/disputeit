@@ -1,28 +1,45 @@
 
 
-# Plan: Fix CSV Export for Database Import
+# Problem
 
-## Problem
-The current `export-data` function produces CSVs with human-readable headers (`ID`, `Title`, `Slug`, `Featured`) instead of actual database column names (`id`, `title`, `slug`, `featured`). It also only exports 14 of 30+ columns. Supabase's CSV import requires exact column name matches.
+The `migrate-export` function crashes with **"Memory limit exceeded"** because it loads ALL rows into memory (`allRows` array) before building the SQL string. Tables like `link_suggestions` (53k rows with HTML content) and `blog_posts` (6.8k rows with full article HTML) easily blow past the ~150MB Edge Function memory limit.
 
-## Solution
-Create a new edge function `migrate-csv` that exports a table as a raw CSV with:
-- Headers matching exact database column names
-- All columns included
-- Proper handling of arrays (PostgreSQL `{a,b}` format), JSON, booleans, and nulls
-- Pagination support for the 95MB dataset — export in chunks (e.g. 500 rows per call) so you can download multiple CSVs and import them sequentially
+# Solution: Streaming Response
 
-## How it works
-1. Call `GET /migrate-csv?table=blog_posts&offset=0&limit=500` → returns CSV chunk 1
-2. Call with `offset=500` → chunk 2, etc.
-3. Each CSV file will have proper headers and be directly importable into the new project's Table Editor
-4. Response includes a header `X-Next-Offset` and `X-Total-Count` so you know when you're done
+Rewrite the function to use a **ReadableStream** that fetches and writes SQL one batch at a time, never holding more than 500 rows in memory.
 
-## Steps
-1. Create `supabase/functions/migrate-csv/index.ts`
-2. Deploy it
-3. You download each chunk and import via the Supabase Table Editor
+## Key changes
 
-## Why not fix the push function?
-The push function keeps hitting deployment/404 issues. CSV import through the Supabase UI is the most reliable path — we just need the CSV format to be correct.
+1. **Replace array accumulation with streaming** — Use `ReadableStream` to write SQL chunks directly to the response as each batch is fetched, then discard the batch immediately
+2. **Require single-table mode** — When called without `tables` param, only export small tables (< 1000 rows). Large tables must be called individually with `?tables=blog_posts`
+3. **Enforce a default limit** — Default `limit=5000` instead of "all rows" to prevent timeouts on huge tables. User increments offset across multiple calls
+4. **Add `ON CONFLICT DO NOTHING`** — Makes re-running safe if a chunk was already imported
+
+## How you'll use it
+
+**Small tables (all at once):**
+```
+/migrate-export?tables=profiles,blog_categories,blog_tags,site_settings,user_roles
+```
+
+**Large tables (chunked, 5000 rows per call):**
+```
+/migrate-export?tables=blog_posts&offset=0&limit=5000
+/migrate-export?tables=blog_posts&offset=5000&limit=5000
+/migrate-export?tables=link_suggestions&offset=0&limit=5000
+/migrate-export?tables=link_suggestions&offset=5000&limit=5000
+... etc
+```
+
+Each URL returns a `.sql` file you paste into the new Supabase SQL Editor.
+
+## Implementation
+
+One file change: `supabase/functions/migrate-export/index.ts`
+
+- Stream rows in batches of 200 (fetch 200 → write SQL → discard → fetch next 200)
+- Default limit = 5000 rows per call
+- `ON CONFLICT DO NOTHING` on all INSERT statements
+- Response header `X-Total-Rows` and `X-Exported-Rows` so you know if more chunks are needed
+- `mode=summary` still returns JSON row counts (unchanged)
 
