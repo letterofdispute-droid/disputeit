@@ -47,7 +47,7 @@ This letter formally disputes the denial and demands reconsideration, citing the
     seoDescription: 'Fight a denied warranty claim with a professional appeal letter. Free template citing Magnuson-Moss Act, Consumer Rights Act & EU law.',
     tones: ['neutral', 'firm', 'final'],
     fields: [
-      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'e.g., Samsung, LG, Dyson', required: true, impactLevel: 'high' as const },
+      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'e.g., Samsung, LG, Dyson', required: true, impactLevel: 'important' as const },
       { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address of warranty department', required: true },
       { id: 'productName', label: 'Product Name', type: 'text', placeholder: 'e.g., 65" OLED Television', required: true, impactLevel: 'high' as const },
       { id: 'productModel', label: 'Model/Serial Number', type: 'text', placeholder: 'e.g., OLED65C1PUB / SN: ABC123', required: true },
