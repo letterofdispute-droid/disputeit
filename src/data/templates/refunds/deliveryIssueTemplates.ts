@@ -237,4 +237,256 @@ Check the packing slip against received items and take photos of what was receiv
     ],
     jurisdictions: deliveryJurisdictions,
   },
+  {
+    id: 'delivery-wrong-item-sent',
+    slug: 'delivery-wrong-item-sent',
+    category: 'Refunds & Purchases',
+    title: 'Wrong Item Delivered – Correction Request',
+    shortDescription: 'Demand the correct item or a refund when you received the wrong product in your delivery.',
+    longDescription: `Receiving the wrong item is a fulfillment error that the retailer must correct at their own expense. You are under no obligation to return the wrong item at your own cost, and the company must send the correct product or issue a refund.
+
+When to use this letter:
+• You received a completely different product than what you ordered
+• The correct product was listed on the order but the wrong variant (size, color, model) was shipped
+• You received someone else's order entirely
+• The product received doesn't match the listing photos or description
+• The retailer wants you to pay return shipping for their mistake
+
+Under US law (FTC rules), you may be entitled to keep unordered merchandise. Under UK/EU law, the seller bears the cost of correcting delivery errors.`,
+    seoTitle: 'Wrong Item Delivered Letter – Get the Right Product or Refund',
+    seoDescription: 'Received the wrong item? Demand a correction at no cost with this professional letter. Free template for wrong product deliveries.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Retailer Name', type: 'text', placeholder: 'e.g., Amazon, Zara, B&H Photo', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Retailer Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'e.g., ORD-2024-789012', required: true, impactLevel: 'important' as const },
+      { id: 'orderDate', label: 'Order Date', type: 'date', required: true },
+      { id: 'deliveryDate', label: 'Delivery Date', type: 'date', required: true },
+      { id: 'itemOrdered', label: 'Item You Ordered', type: 'textarea', placeholder: 'Exact product name, size, color, variant you ordered', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'itemReceived', label: 'Item You Actually Received', type: 'textarea', placeholder: 'What was actually in the package?', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'amountPaid', label: 'Amount Paid', type: 'text', placeholder: 'e.g., $129.99', required: true },
+      { id: 'hasPhotos', label: 'Do You Have Photos?', type: 'select', options: ['Yes - photos of wrong item received', 'Yes - photos of item and packaging', 'No'], required: true },
+      { id: 'preferredResolution', label: 'Preferred Resolution', type: 'select', options: ['Send the correct item', 'Full refund', 'Either correct item or refund'], required: true },
+      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'Have you already contacted customer service?', required: false },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing regarding order {orderNumber}, placed on {orderDate}, which was delivered on {deliveryDate} containing the wrong item.', placeholders: ['orderNumber', 'orderDate', 'deliveryDate'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'What I ordered: {itemOrdered}\n\nWhat I received: {itemReceived}\n\nAmount paid: {amountPaid}\n\nPhotographic evidence: {hasPhotos}\n\nThis is a fulfillment error on your part. I should not incur any cost to correct this mistake.', placeholders: ['itemOrdered', 'itemReceived', 'amountPaid', 'hasPhotos'] },
+      { id: 'request', name: 'Request', template: 'I am requesting that you {preferredResolution}. If a return of the incorrect item is needed, please provide a prepaid return label at your expense.', placeholders: ['preferredResolution'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 7 days with a resolution. If the correct item is being sent, please provide a new tracking number.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'I have retained the incorrect item and all packaging. If this is not resolved promptly, I will dispute the charge with my payment provider.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
+  {
+    id: 'delivery-signature-dispute',
+    slug: 'delivery-signature-dispute',
+    category: 'Refunds & Purchases',
+    title: 'Delivery Signature Dispute – Package Not Received',
+    shortDescription: 'Dispute a delivery that was signed for by an unauthorized person or where the signature was forged.',
+    longDescription: `Sometimes carriers mark packages as "signed for and delivered" when you never actually signed for or received the package. A forged, unauthorized, or fabricated signature does not constitute valid proof of delivery.
+
+When to use this letter:
+• The carrier claims someone signed for the package but you don't recognize the name
+• A signature was captured but you were not home at the time of delivery
+• The signature appears forged or is just a scribble
+• A neighbor or building manager signed but never passed the package to you
+• The carrier's proof of delivery shows a signature that is not yours
+• GPS data or delivery photo doesn't match your address
+
+This letter disputes the validity of the claimed signature and demands resolution.`,
+    seoTitle: 'Delivery Signature Dispute Letter – Unauthorized or Forged',
+    seoDescription: 'Package signed for but never received? Dispute an unauthorized or forged delivery signature. Professional letter for carrier and retailer disputes.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Retailer/Carrier Name', type: 'text', placeholder: 'e.g., FedEx, UPS, or the retailer', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'orderNumber', label: 'Order/Package Number', type: 'text', placeholder: 'Order number or shipment reference', required: true, impactLevel: 'important' as const },
+      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', placeholder: 'Full tracking number', required: true },
+      { id: 'claimedDeliveryDate', label: 'Claimed Delivery Date', type: 'date', required: true },
+      { id: 'claimedSignatory', label: 'Name on the Signature (if visible)', type: 'text', placeholder: 'e.g., "J. SMITH" or illegible', required: false },
+      { id: 'amountPaid', label: 'Package Value', type: 'text', placeholder: 'e.g., $499.99', required: true, impactLevel: 'important' as const },
+      { id: 'productName', label: 'Contents of Package', type: 'text', placeholder: 'e.g., Laptop, Camera equipment', required: true },
+      { id: 'whyNotYou', label: 'Why the Signature Is Not Valid', type: 'textarea', placeholder: 'e.g., I was at work, name doesn\'t match anyone in household, signature looks nothing like mine', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'alibiEvidence', label: 'Evidence You Were Not Present', type: 'textarea', placeholder: 'e.g., work records, security camera footage, travel records', required: false, evidenceHint: 'Work schedules, building security logs, or Ring/doorbell camera footage strengthen your case' },
+      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'Who have you spoken to?', required: false },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute the claimed delivery of tracking number {trackingNumber}, which your records indicate was signed for on {claimedDeliveryDate}. I did not receive this package and did not sign for it.', placeholders: ['trackingNumber', 'claimedDeliveryDate'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Package contents: {productName}\nValue: {amountPaid}\nOrder reference: {orderNumber}\nClaimed signatory name: {claimedSignatory}\n\nWhy this signature is not valid: {whyNotYou}\n\nEvidence supporting my position: {alibiEvidence}\n\nThe signature on file does not represent a valid delivery to me or any authorized recipient at my address.', placeholders: ['productName', 'amountPaid', 'orderNumber', 'claimedSignatory', 'whyNotYou', 'alibiEvidence'] },
+      { id: 'request', name: 'Request', template: 'I am requesting either: (1) reshipment of {productName}, or (2) a full refund of {amountPaid}. The purported signature does not constitute proof that I received this package.', placeholders: ['productName', 'amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 10 days. If this is not resolved, I will file a chargeback with my payment provider and a complaint with the relevant postal or carrier regulatory body.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'A signature from an unverified or unauthorized person does not release you from your obligation to deliver the package to the intended recipient.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
+  {
+    id: 'delivery-left-unsafe-location',
+    slug: 'delivery-left-unsafe-location',
+    category: 'Refunds & Purchases',
+    title: 'Package Left in Unsafe Location – Complaint',
+    shortDescription: 'Complain when a carrier left your package in an unsecured, unsafe, or unauthorized location resulting in loss or damage.',
+    longDescription: `Carriers sometimes leave packages in exposed, unsecured, or inappropriate locations—leading to theft, water damage, or loss. If you provided delivery instructions that were ignored, or if the carrier left a high-value package unattended without authorization, you may be entitled to a replacement or refund.
+
+When to use this letter:
+• A package was left on an unsecured porch or doorstep and was stolen
+• The carrier ignored "safe place" or delivery instructions
+• A package was left in the rain, resulting in water damage
+• A high-value item was left without requiring a signature
+• The package was left at a communal area, loading dock, or with an unauthorized person
+• Delivery photo shows the package in a clearly inappropriate location
+
+Carriers and retailers have a duty of care for packages until they are securely delivered.`,
+    seoTitle: 'Package Left Unsafe Location – Complaint Letter Template',
+    seoDescription: 'Package left in an unsafe spot and stolen or damaged? File a complaint and demand compensation. Free letter template for negligent deliveries.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Retailer or Carrier Name', type: 'text', placeholder: 'e.g., Amazon, UPS, Royal Mail', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'Order or shipment reference', required: true },
+      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', placeholder: 'Full tracking number', required: true },
+      { id: 'deliveryDate', label: 'Delivery Date', type: 'date', required: true },
+      { id: 'productName', label: 'Package Contents', type: 'text', placeholder: 'e.g., AirPods Pro, Winter Coat', required: true },
+      { id: 'amountPaid', label: 'Package Value', type: 'text', placeholder: 'e.g., $249.99', required: true, impactLevel: 'important' as const },
+      { id: 'whereLeft', label: 'Where the Package Was Left', type: 'textarea', placeholder: 'e.g., Front porch in plain view, next to garbage bins, in the rain', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'deliveryInstructions', label: 'Your Delivery Instructions (if provided)', type: 'textarea', placeholder: 'e.g., "Leave with concierge", "Do not leave unattended"', required: false },
+      { id: 'whatHappened', label: 'What Happened to the Package', type: 'select', options: ['Stolen/missing when I got home', 'Damaged by weather (rain, snow, heat)', 'Found opened/tampered with', 'Left with unauthorized person', 'Other'], required: true, impactLevel: 'important' as const },
+      { id: 'hasDeliveryPhoto', label: 'Is There a Delivery Photo?', type: 'select', options: ['Yes - shows package in unsafe location', 'Yes - but doesn\'t match my address', 'No delivery photo available'], required: true, evidenceHint: 'Check your carrier app or delivery notification for a proof-of-delivery photo' },
+      { id: 'hasSecurityFootage', label: 'Do You Have Security Camera Footage?', type: 'select', options: ['Yes - shows package being stolen', 'Yes - shows carrier leaving in unsafe spot', 'Yes - shows no delivery at all', 'No security camera'], required: false },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to complain about the negligent delivery of tracking number {trackingNumber} on {deliveryDate}. The package containing {productName} (value: {amountPaid}) was left in an unsafe location, resulting in {whatHappened}.', placeholders: ['trackingNumber', 'deliveryDate', 'productName', 'amountPaid', 'whatHappened'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Order reference: {orderNumber}\n\nThe package was left: {whereLeft}\n\nMy delivery instructions stated: {deliveryInstructions}\n\nDelivery photo available: {hasDeliveryPhoto}\nSecurity footage: {hasSecurityFootage}\n\nThe carrier failed to exercise reasonable care in delivering this package. Leaving a {amountPaid} package unattended in an exposed location is negligent.', placeholders: ['orderNumber', 'whereLeft', 'deliveryInstructions', 'hasDeliveryPhoto', 'hasSecurityFootage', 'amountPaid'] },
+      { id: 'request', name: 'Request', template: 'I am requesting a full replacement or refund of {amountPaid} for {productName}. The loss/damage was a direct result of the carrier\'s failure to follow delivery instructions and exercise due care.', placeholders: ['amountPaid', 'productName'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 14 days with a resolution. If the carrier is responsible, that is a matter between you and the carrier—not the customer.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'I have retained all available evidence including delivery photos, security footage, and tracking records. If this matter is not resolved, I will pursue a chargeback and file a complaint with the relevant consumer protection authority.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
+  {
+    id: 'delivery-refused-return-to-sender',
+    slug: 'delivery-refused-return-to-sender',
+    category: 'Refunds & Purchases',
+    title: 'Delivery Refused / Returned to Sender – Refund Request',
+    shortDescription: 'Request a refund when you refused delivery or the package was returned to sender but no refund was issued.',
+    longDescription: `When you refuse a delivery or a package is returned to the sender (due to failed delivery attempts, incorrect address on their end, or customs rejection), the retailer should process a refund. However, many companies drag their feet or charge restocking fees for packages that were never accepted.
+
+When to use this letter:
+• You refused delivery but no refund has been issued
+• The carrier returned the package after failed delivery attempts
+• The package was sent to the wrong address and returned
+• Customs rejected an international shipment and sent it back
+• The company is charging a restocking fee for a refused/returned package
+• Weeks have passed since the return and no refund has appeared
+
+You should not be charged for goods you never accepted or received.`,
+    seoTitle: 'Refused Delivery Refund Letter – Package Returned to Sender',
+    seoDescription: 'Refused delivery or package returned to sender but no refund? Demand your money back with this professional refund request letter template.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Retailer Name', type: 'text', placeholder: 'e.g., Wish, Shein, eBay seller', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Retailer Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'e.g., WS-2024-98765', required: true, impactLevel: 'important' as const },
+      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', placeholder: 'Tracking showing return to sender', required: true, evidenceHint: 'The tracking history will show the return journey' },
+      { id: 'orderDate', label: 'Order Date', type: 'date', required: true },
+      { id: 'amountPaid', label: 'Total Amount Paid', type: 'text', placeholder: 'e.g., $67.99', required: true, impactLevel: 'important' as const },
+      { id: 'returnReason', label: 'Why Was Delivery Refused/Returned?', type: 'select', options: ['I refused delivery at the door', 'Carrier returned after failed delivery attempts', 'Wrong address (seller\'s error)', 'Customs rejected the shipment', 'I requested cancellation before delivery', 'Package was undeliverable'], required: true, impactLevel: 'important' as const },
+      { id: 'returnConfirmationDate', label: 'Date Package Was Returned/Confirmed Received by Seller', type: 'date', required: false },
+      { id: 'daysSinceReturn', label: 'Days Since Package Was Returned', type: 'number', placeholder: 'e.g., 30', required: true },
+      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'What did the company say when you asked for a refund?', required: false },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to demand a refund of {amountPaid} for order {orderNumber}, placed on {orderDate}. The package was {returnReason} and tracking ({trackingNumber}) confirms it has been returned to sender.', placeholders: ['amountPaid', 'orderNumber', 'orderDate', 'returnReason', 'trackingNumber'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Reason for return: {returnReason}\nTracking: {trackingNumber}\nDate returned: {returnConfirmationDate}\n\nIt has been {daysSinceReturn} days since the package was returned and I have not received a refund.\n\nPrevious contact: {previousContact}\n\nI never accepted or used the goods. There is no justification for withholding my refund.', placeholders: ['returnReason', 'trackingNumber', 'returnConfirmationDate', 'daysSinceReturn', 'previousContact'] },
+      { id: 'request', name: 'Request', template: 'I am requesting an immediate full refund of {amountPaid}, including any shipping charges. No restocking fee should apply to goods that were never accepted by the customer.', placeholders: ['amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please process the refund within 7 days. If the refund is not issued, I will initiate a chargeback with my payment provider.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Tracking records clearly confirm the package was returned. Retaining payment for undelivered goods is not permissible and I expect a prompt resolution.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
+  {
+    id: 'delivery-international-customs-issue',
+    slug: 'delivery-international-customs-issue',
+    category: 'Refunds & Purchases',
+    title: 'International Delivery Customs Issue – Complaint',
+    shortDescription: 'Complain about unexpected customs charges, seized shipments, or misleading international shipping terms.',
+    longDescription: `International online shopping can result in unexpected customs duties, import taxes, or even seized shipments. When retailers fail to disclose these costs upfront—or misrepresent shipping terms like DDP (Delivered Duty Paid)—consumers end up paying far more than expected.
+
+When to use this letter:
+• You were charged unexpected customs duties or import taxes on delivery
+• The retailer advertised "free shipping" but customs charges were not disclosed
+• The product was seized by customs due to the seller's improper documentation
+• Customs fees exceeded the value of the product itself
+• The retailer claimed DDP (Delivered Duty Paid) shipping but you were still charged duties
+• The item was returned to sender by customs and no refund was issued
+• The retailer under-declared the value on customs forms, creating legal risk for you
+
+Retailers selling internationally must clearly disclose all potential customs and import charges.`,
+    seoTitle: 'International Delivery Customs Complaint – Hidden Charges Letter',
+    seoDescription: 'Hit with unexpected customs charges on an online order? Complain about undisclosed fees or seized shipments with this professional letter template.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Retailer Name', type: 'text', placeholder: 'e.g., AliExpress, ASOS, iHerb', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Retailer Address', type: 'textarea', placeholder: 'Full address (or country of origin)', required: true },
+      { id: 'orderNumber', label: 'Order Number', type: 'text', placeholder: 'Order reference', required: true, impactLevel: 'important' as const },
+      { id: 'orderDate', label: 'Order Date', type: 'date', required: true },
+      { id: 'itemDescription', label: 'Item(s) Ordered', type: 'textarea', placeholder: 'What did you order?', required: true },
+      { id: 'amountPaid', label: 'Order Amount Paid (product + shipping)', type: 'text', placeholder: 'e.g., $89.99', required: true, impactLevel: 'important' as const },
+      { id: 'customsCharges', label: 'Customs/Import Charges Incurred', type: 'text', placeholder: 'e.g., $45.00', required: true, impactLevel: 'important' as const },
+      { id: 'shippingTermsAdvertised', label: 'Shipping Terms Advertised', type: 'select', options: ['Free international shipping', 'DDP (Delivered Duty Paid)', 'Flat rate shipping (no mention of duties)', 'No customs information provided', 'Stated "no additional fees"', 'Other'], required: true },
+      { id: 'customsIssue', label: 'Specific Customs Issue', type: 'select', options: ['Unexpected duties/taxes charged on delivery', 'Package seized by customs', 'Seller under-declared value on customs form', 'Package returned to sender by customs', 'Customs broker fees charged', 'Prohibited item not disclosed by seller'], required: true, impactLevel: 'important' as const },
+      { id: 'disclosureEvidence', label: 'What Was Disclosed at Checkout', type: 'textarea', placeholder: 'What did the checkout page say about duties/customs? Was there any warning?', required: true, aiEnhanced: true, evidenceHint: 'Screenshot the checkout page, shipping policy, or terms of sale' },
+      { id: 'preferredResolution', label: 'Preferred Resolution', type: 'select', options: ['Refund of customs charges', 'Full refund (product + shipping + customs)', 'Reship with proper DDP terms', 'Partial refund for undisclosed costs'], required: true },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to complain about undisclosed customs and import charges associated with order {orderNumber}, placed on {orderDate} for {amountPaid}. I was subsequently charged an additional {customsCharges} in customs/import fees that were not disclosed at the time of purchase.', placeholders: ['orderNumber', 'orderDate', 'amountPaid', 'customsCharges'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Item(s): {itemDescription}\nShipping terms advertised: {shippingTermsAdvertised}\nCustoms issue encountered: {customsIssue}\n\nAt checkout, the following was disclosed about customs/duties: {disclosureEvidence}\n\nThe total cost of this order has effectively increased from {amountPaid} to a significantly higher amount due to the undisclosed {customsCharges} in customs charges. This was not communicated before purchase.', placeholders: ['itemDescription', 'shippingTermsAdvertised', 'customsIssue', 'disclosureEvidence', 'amountPaid', 'customsCharges'] },
+      { id: 'request', name: 'Request', template: 'I am requesting: {preferredResolution}. The failure to disclose these costs before purchase constitutes a misleading pricing practice.', placeholders: ['preferredResolution'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 14 days with a proposed resolution. If you are unable to reimburse the customs charges, I will pursue a chargeback for the full order amount.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Retailers selling internationally have an obligation to clearly disclose all potential costs to the consumer before purchase. Failure to do so is a deceptive practice and I will escalate this matter if necessary.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
+  {
+    id: 'delivery-subscription-box-missing',
+    slug: 'delivery-subscription-box-missing',
+    category: 'Refunds & Purchases',
+    title: 'Subscription Box Not Delivered – Complaint',
+    shortDescription: 'Complain about a subscription box or recurring delivery that was never received or arrived incomplete.',
+    longDescription: `Subscription boxes—whether for food, beauty products, clothing, or other goods—are recurring commitments. When a box goes missing, arrives incomplete, or contains spoiled/expired products, subscribers deserve a replacement or credit.
+
+When to use this letter:
+• Your monthly subscription box was never delivered
+• The box arrived but was missing advertised items
+• Perishable subscription items arrived spoiled or expired
+• The contents were significantly different from what was advertised for that month
+• You've been charged for a box during a month you paused or cancelled
+• Multiple boxes in a row have had issues with no resolution from the company
+
+Subscription services must deliver what they promise each billing cycle.`,
+    seoTitle: 'Subscription Box Missing Letter – Complaint & Refund Request',
+    seoDescription: 'Subscription box never arrived or was incomplete? Demand a replacement or refund. Professional complaint letter for recurring delivery issues.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Subscription Service Name', type: 'text', placeholder: 'e.g., HelloFresh, Birchbox, Stitch Fix', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'subscriptionPlan', label: 'Subscription Plan', type: 'text', placeholder: 'e.g., Premium Monthly, Family Plan', required: true },
+      { id: 'monthlyCharge', label: 'Monthly Charge', type: 'text', placeholder: 'e.g., $49.99/month', required: true, impactLevel: 'important' as const },
+      { id: 'affectedMonth', label: 'Month/Period Affected', type: 'text', placeholder: 'e.g., February 2024', required: true },
+      { id: 'orderNumber', label: 'Order/Shipment Number', type: 'text', placeholder: 'If available', required: false },
+      { id: 'trackingNumber', label: 'Tracking Number', type: 'text', placeholder: 'If provided', required: false },
+      { id: 'issueType', label: 'What Happened?', type: 'select', options: ['Box never arrived', 'Box arrived incomplete/missing items', 'Contents spoiled or expired', 'Contents different from advertised', 'Charged for paused/cancelled subscription', 'Box arrived damaged'], required: true, impactLevel: 'important' as const },
+      { id: 'issueDetails', label: 'Describe the Issue in Detail', type: 'textarea', placeholder: 'What specifically was wrong?', required: true, aiEnhanced: true },
+      { id: 'previousIssues', label: 'Have Previous Boxes Had Issues?', type: 'textarea', placeholder: 'Is this a recurring problem?', required: false },
+      { id: 'preferredResolution', label: 'Preferred Resolution', type: 'select', options: ['Reship the box', 'Credit for next month', 'Full refund for this month', 'Cancel subscription and refund'], required: true },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing regarding my {subscriptionPlan} subscription with {companyName}. The {affectedMonth} delivery (charged at {monthlyCharge}) has the following unresolved issue: {issueType}.', placeholders: ['subscriptionPlan', 'companyName', 'affectedMonth', 'monthlyCharge', 'issueType'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Order/shipment reference: {orderNumber}\nTracking: {trackingNumber}\n\nDetails: {issueDetails}\n\nPrevious issues with this subscription: {previousIssues}\n\nAs a paying subscriber, I expect to receive the full contents as advertised each billing cycle.', placeholders: ['orderNumber', 'trackingNumber', 'issueDetails', 'previousIssues'] },
+      { id: 'request', name: 'Request', template: 'I am requesting: {preferredResolution}. I was charged {monthlyCharge} for a delivery that did not meet the subscription terms.', placeholders: ['preferredResolution', 'monthlyCharge'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 7 days with confirmation of the resolution. Recurring delivery failures may prompt me to cancel the subscription entirely and seek refunds for prior affected months.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Subscription services are built on trust and consistency. Repeated delivery failures erode that trust and I expect immediate corrective action.', placeholders: [] },
+    ],
+    jurisdictions: deliveryJurisdictions,
+  },
 ];
