@@ -4,6 +4,8 @@ import { digitalPurchaseTemplates } from './refunds/digitalPurchaseTemplates';
 import { serviceRefundTemplates } from './refunds/serviceRefundTemplates';
 import { billingDisputeTemplates } from './refunds/billingDisputeTemplates';
 import { specialPurchaseTemplates } from './refunds/specialPurchaseTemplates';
+import { warrantyTemplates } from './refunds/warrantyTemplates';
+import { deliveryIssueTemplates } from './refunds/deliveryIssueTemplates';
 
 
 const standardJurisdictions = [
@@ -647,4 +649,6 @@ export const refundsTemplates: LetterTemplate[] = [
   ...serviceRefundTemplates,
   ...billingDisputeTemplates,
   ...specialPurchaseTemplates,
+  ...warrantyTemplates,
+  ...deliveryIssueTemplates,
 ];
