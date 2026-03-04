@@ -275,4 +275,215 @@ Under most consumer laws, you have the right to reject defective goods within 30
     ],
     jurisdictions: warrantyJurisdictions,
   },
+  {
+    id: 'warranty-voided-unfairly',
+    slug: 'warranty-voided-unfairly',
+    category: 'Refunds & Purchases',
+    title: 'Warranty Voided Unfairly – Dispute Letter',
+    shortDescription: 'Challenge a company that voided your warranty for an illegitimate reason such as using third-party parts or independent repair.',
+    longDescription: `Companies frequently void warranties for reasons that are not legally permissible. Under US law, the Magnuson-Moss Warranty Act and FTC guidelines prohibit manufacturers from voiding warranties simply because a consumer used third-party parts, performed their own repairs, or had an independent shop service the product.
+
+When to use this letter:
+• Your warranty was voided because you used non-OEM parts or accessories
+• A third-party repair (even a minor one) was cited as voiding the entire warranty
+• The company claims a broken "warranty seal" or sticker voids coverage
+• You were told that not using an authorized service center voided the warranty
+• The company claims cosmetic modifications voided coverage for an unrelated mechanical defect
+
+The FTC's Warranty Act Guides make clear that "tie-in" provisions requiring OEM parts or authorized service are generally prohibited unless provided free of charge.`,
+    seoTitle: 'Warranty Voided Unfairly? Dispute Letter – Right to Repair',
+    seoDescription: 'Company voided your warranty for using third-party repair or parts? That may be illegal. Free dispute letter citing FTC and Magnuson-Moss Act.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Manufacturer Name', type: 'text', placeholder: 'e.g., John Deere, Apple, Samsung', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address of warranty department', required: true },
+      { id: 'productName', label: 'Product Name', type: 'text', placeholder: 'e.g., Riding Lawn Mower, iPhone 15', required: true, impactLevel: 'important' as const },
+      { id: 'productModel', label: 'Model/Serial Number', type: 'text', placeholder: 'e.g., X350 / SN: 1GX350ABCD', required: true },
+      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
+      { id: 'amountPaid', label: 'Purchase Price', type: 'text', placeholder: 'e.g., $3,499.00', required: true, impactLevel: 'important' as const },
+      { id: 'warrantyExpiry', label: 'Warranty Expiry Date', type: 'date', required: true },
+      { id: 'voidReason', label: 'Reason Given for Voiding Warranty', type: 'textarea', placeholder: 'e.g., "Used non-OEM ink cartridges", "Third-party screen repair detected"', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'thirdPartyAction', label: 'What Third-Party Service/Part Was Used?', type: 'textarea', placeholder: 'Describe the repair or part that allegedly voided the warranty', required: true, aiEnhanced: true },
+      { id: 'currentDefect', label: 'Current Defect Requiring Warranty Service', type: 'textarea', placeholder: 'What is actually wrong with the product now?', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'defectRelated', label: 'Is the Defect Related to the Third-Party Service?', type: 'select', options: ['No – completely unrelated issue', 'Possibly related but not certain', 'Company claims it is related'], required: true },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute {companyName}\'s decision to void the warranty on my {productName} (Model: {productModel}), purchased on {purchaseDate} for {amountPaid}.', placeholders: ['companyName', 'productName', 'productModel', 'purchaseDate', 'amountPaid'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Your company has refused warranty service for the following defect: {currentDefect}\n\nThe stated reason for voiding the warranty: {voidReason}\n\nThe third-party action cited: {thirdPartyAction}\n\nRelationship between third-party action and current defect: {defectRelated}\n\nThe warranty does not expire until {warrantyExpiry}. Voiding a warranty for using third-party parts or independent repair is a prohibited "tie-in" provision under federal law unless you can demonstrate the third-party action directly caused the current defect.', placeholders: ['currentDefect', 'voidReason', 'thirdPartyAction', 'defectRelated', 'warrantyExpiry'] },
+      { id: 'request', name: 'Request', template: 'I demand that {companyName} reinstate the warranty and provide repair or replacement for {productName}. If the warranty is not honored, I am requesting a full refund of {amountPaid}.', placeholders: ['companyName', 'productName', 'amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'I require a response within 14 days. If the warranty remains improperly voided, I will file a complaint with the FTC and my state attorney general.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'The FTC has made clear that consumers have the right to use independent repair services and third-party parts without losing warranty protection. I expect this matter to be resolved accordingly.', placeholders: [] },
+    ],
+    jurisdictions: warrantyJurisdictions,
+  },
+  {
+    id: 'warranty-repeated-repair-failure',
+    slug: 'warranty-repeated-repair-failure',
+    category: 'Refunds & Purchases',
+    title: 'Repeated Warranty Repairs – Lemon Demand Letter',
+    shortDescription: 'Demand a replacement or refund after multiple failed warranty repair attempts for the same defect.',
+    longDescription: `When a product keeps breaking down and warranty repairs fail to fix it permanently, the product may qualify as a "lemon." Under most consumer protection frameworks, repeated repair failures for the same issue entitle you to a replacement or refund.
+
+When to use this letter:
+• The same defect has recurred after two or more warranty repairs
+• Different defects keep appearing one after another, making the product unreliable
+• The product has spent more time in repair than in your possession
+• Each repair only temporarily fixes the problem before it returns
+• The company keeps repairing instead of offering a replacement
+
+Many US states have "lemon laws" for vehicles, and general consumer protection statutes provide similar rights for other products.`,
+    seoTitle: 'Repeated Warranty Repair Failure – Lemon Law Demand Letter',
+    seoDescription: 'Product keeps breaking after warranty repairs? Demand a replacement or refund. Professional lemon law demand letter template for recurring defects.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Company Name', type: 'text', placeholder: 'e.g., LG, Kenmore, HP', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'productName', label: 'Product Name', type: 'text', placeholder: 'e.g., Front-Load Washing Machine', required: true, impactLevel: 'important' as const },
+      { id: 'productModel', label: 'Model/Serial Number', type: 'text', placeholder: 'e.g., WM4500HBA / SN: 506KW123', required: true },
+      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
+      { id: 'amountPaid', label: 'Purchase Price', type: 'text', placeholder: 'e.g., $1,099.00', required: true, impactLevel: 'important' as const },
+      { id: 'numberOfRepairs', label: 'Number of Repair Attempts', type: 'number', placeholder: 'e.g., 3', required: true, impactLevel: 'important' as const },
+      { id: 'repairHistory', label: 'Repair History', type: 'textarea', placeholder: 'List each repair: date, what was done, service order number', required: true, impactLevel: 'important' as const, aiEnhanced: true, evidenceHint: 'Include service order numbers, technician names, and dates for each repair' },
+      { id: 'recurringDefect', label: 'Recurring Defect Description', type: 'textarea', placeholder: 'What keeps going wrong?', required: true, aiEnhanced: true },
+      { id: 'totalDaysOutOfService', label: 'Total Days Product Has Been Unusable', type: 'number', placeholder: 'e.g., 60', required: true },
+      { id: 'additionalCosts', label: 'Additional Costs Incurred', type: 'textarea', placeholder: 'e.g., laundromat expenses, time off work for repair visits', required: false, aiEnhanced: true },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to demand a replacement or full refund for {productName} (Model: {productModel}), purchased on {purchaseDate} for {amountPaid}. This product has undergone {numberOfRepairs} warranty repairs for the same recurring defect and remains unreliable.', placeholders: ['productName', 'productModel', 'purchaseDate', 'amountPaid', 'numberOfRepairs'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'The recurring defect: {recurringDefect}\n\nRepair history:\n{repairHistory}\n\nThe product has been out of service for approximately {totalDaysOutOfService} days total. Despite {numberOfRepairs} repair attempts, the same fundamental problem persists.\n\nAdditional costs incurred due to the defective product: {additionalCosts}', placeholders: ['recurringDefect', 'repairHistory', 'totalDaysOutOfService', 'numberOfRepairs', 'additionalCosts'] },
+      { id: 'request', name: 'Request', template: 'Further repair attempts are not acceptable. I am demanding either: (1) a brand-new replacement unit, or (2) a full refund of {amountPaid} plus reimbursement for additional costs incurred. The product has proven to be fundamentally defective.', placeholders: ['amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'I require a definitive response within 10 days. Offering yet another repair is not a satisfactory resolution given the documented history of failures.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'I have maintained detailed records of every repair visit and communication. If this is not resolved, I will pursue remedies under applicable lemon law and consumer protection statutes.', placeholders: [] },
+    ],
+    jurisdictions: warrantyJurisdictions,
+  },
+  {
+    id: 'warranty-extended-plan-dispute',
+    slug: 'warranty-extended-plan-dispute',
+    category: 'Refunds & Purchases',
+    title: 'Extended Warranty Plan Dispute – Coverage Denied',
+    shortDescription: 'Challenge an extended warranty provider that is refusing to cover a legitimate claim.',
+    longDescription: `Extended warranty plans (also called service plans or protection plans) are sold as peace-of-mind add-ons, but claims are frequently denied with vague or contradictory reasons. These plans are contracts, and the provider must honor the terms they sold you.
+
+When to use this letter:
+• Your extended warranty claim was denied for a covered issue
+• The plan provider says the defect is "pre-existing" without evidence
+• Coverage was denied because the issue is classified as "wear and tear" despite being a mechanical failure
+• The provider is requiring you to use a specific repair shop that is inconvenient or unavailable
+• The company is delaying or ignoring your claim entirely
+• Accidental damage coverage was denied despite being included in your plan
+
+Always review your service agreement terms before filing a dispute.`,
+    seoTitle: 'Extended Warranty Dispute Letter – Claim Denied? Fight Back',
+    seoDescription: 'Extended warranty claim denied? Dispute the decision with a professional letter. Template for service plan coverage disputes with retailers and insurers.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'warrantyProvider', label: 'Warranty Plan Provider', type: 'text', placeholder: 'e.g., Asurion, Allstate Protection Plans, SquareTrade', required: true, impactLevel: 'important' as const },
+      { id: 'providerAddress', label: 'Provider Address', type: 'textarea', placeholder: 'Full address of claims department', required: true },
+      { id: 'retailerName', label: 'Retailer Where Plan Was Purchased', type: 'text', placeholder: 'e.g., Best Buy, Home Depot, Costco', required: true },
+      { id: 'productName', label: 'Covered Product', type: 'text', placeholder: 'e.g., 75" Smart TV, Refrigerator', required: true, impactLevel: 'important' as const },
+      { id: 'productModel', label: 'Model Number', type: 'text', placeholder: 'e.g., QN75QN90B', required: true },
+      { id: 'planName', label: 'Protection Plan Name', type: 'text', placeholder: 'e.g., Geek Squad Protection, 5-Year Service Plan', required: true },
+      { id: 'planCost', label: 'Plan Cost', type: 'text', placeholder: 'e.g., $249.99', required: true, impactLevel: 'important' as const },
+      { id: 'planPurchaseDate', label: 'Plan Purchase Date', type: 'date', required: true },
+      { id: 'planExpiry', label: 'Plan Expiry Date', type: 'date', required: true },
+      { id: 'claimReference', label: 'Claim Reference Number', type: 'text', placeholder: 'e.g., CLM-2024-12345', required: false },
+      { id: 'defectDescription', label: 'Describe the Issue', type: 'textarea', placeholder: 'What is wrong with the product?', required: true, aiEnhanced: true },
+      { id: 'denialReason', label: 'Reason Given for Denial', type: 'textarea', placeholder: 'Exactly what the provider told you', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'planTermsRelevant', label: 'Relevant Plan Terms (from your agreement)', type: 'textarea', placeholder: 'Copy the section of your agreement that should cover this issue', required: false, evidenceHint: 'Review your service agreement document—quote the specific coverage terms' },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing to dispute the denial of my claim (Ref: {claimReference}) under {planName}, purchased from {retailerName} on {planPurchaseDate} for {planCost}, covering my {productName} (Model: {productModel}).', placeholders: ['claimReference', 'planName', 'retailerName', 'planPurchaseDate', 'planCost', 'productName', 'productModel'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'The product issue: {defectDescription}\n\nYour stated reason for denial: {denialReason}\n\nHowever, the service agreement terms state: {planTermsRelevant}\n\nThe plan remains active until {planExpiry}. The denial is inconsistent with the coverage terms under which this plan was sold.', placeholders: ['defectDescription', 'denialReason', 'planTermsRelevant', 'planExpiry'] },
+      { id: 'request', name: 'Request', template: 'I am requesting that {warrantyProvider} reverse the denial and process my claim as covered under the {planName}. Alternatively, I request a full refund of the plan cost ({planCost}) if you are unable or unwilling to provide the coverage that was sold to me.', placeholders: ['warrantyProvider', 'planName', 'planCost'] },
+      { id: 'deadline', name: 'Response Expected', template: 'I require a written response within 14 days explaining either how the claim will be honored or the legal basis for the denial with specific reference to the plan terms.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Selling a protection plan and then refusing to honor it constitutes a deceptive business practice. I will file complaints with my state attorney general and the Better Business Bureau if this is not resolved.', placeholders: [] },
+    ],
+    jurisdictions: warrantyJurisdictions,
+  },
+  {
+    id: 'warranty-recall-no-remedy',
+    slug: 'warranty-recall-no-remedy',
+    category: 'Refunds & Purchases',
+    title: 'Product Recall – No Remedy Provided',
+    shortDescription: 'Demand a repair, replacement, or refund when a recalled product has not been remedied by the manufacturer.',
+    longDescription: `When a product is recalled for safety or defect reasons, the manufacturer is typically required to provide a free repair, replacement, or refund. However, some companies issue recalls and then fail to follow through—leaving consumers with unsafe or non-functional products and no remedy.
+
+When to use this letter:
+• A product you own was recalled but no repair or replacement is available yet
+• The manufacturer's recall remedy is inadequate (e.g., a software patch for a hardware defect)
+• You've been waiting months for recall parts or a fix
+• The recall requires you to stop using the product but offers no interim solution
+• The company is unresponsive to your recall claim
+• You want a refund instead of the offered recall remedy
+
+Check CPSC.gov (US), GOV.UK product recalls, or the EU Safety Gate (RAPEX) for official recall notices.`,
+    seoTitle: 'Product Recall No Remedy Letter – Demand Resolution',
+    seoDescription: 'Product recalled but no fix available? Demand a replacement or refund from the manufacturer. Free letter template for unresolved product recalls.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'companyName', label: 'Manufacturer Name', type: 'text', placeholder: 'e.g., Fisher-Price, Peloton, Tesla', required: true, impactLevel: 'important' as const },
+      { id: 'companyAddress', label: 'Company Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'productName', label: 'Recalled Product Name', type: 'text', placeholder: 'e.g., Infant Sleeper, Treadmill', required: true, impactLevel: 'important' as const },
+      { id: 'productModel', label: 'Model/Serial Number', type: 'text', placeholder: 'e.g., Model 1234 / SN: ABC789', required: true },
+      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
+      { id: 'amountPaid', label: 'Purchase Price', type: 'text', placeholder: 'e.g., $599.00', required: true },
+      { id: 'recallNumber', label: 'Recall Number or Notice ID', type: 'text', placeholder: 'e.g., CPSC Recall #24-123', required: true, impactLevel: 'important' as const, evidenceHint: 'Find on CPSC.gov, manufacturer website, or the recall notice you received' },
+      { id: 'recallDate', label: 'Date Recall Was Announced', type: 'date', required: true },
+      { id: 'recallReason', label: 'Reason for Recall', type: 'textarea', placeholder: 'e.g., fire hazard, choking risk, electrical fault', required: true, aiEnhanced: true },
+      { id: 'remedyOffered', label: 'Remedy Offered (if any)', type: 'textarea', placeholder: 'What did the manufacturer offer? Or has nothing been offered?', required: true, aiEnhanced: true },
+      { id: 'currentStatus', label: 'Current Situation', type: 'textarea', placeholder: 'What is happening now? Are you still waiting? Is the product unusable?', required: true, aiEnhanced: true },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing regarding the recall of {productName} (Model: {productModel}), Recall #{recallNumber}, announced on {recallDate}. I purchased this product on {purchaseDate} for {amountPaid} and have yet to receive an adequate remedy.', placeholders: ['productName', 'productModel', 'recallNumber', 'recallDate', 'purchaseDate', 'amountPaid'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'Recall reason: {recallReason}\n\nRemedy offered by {companyName}: {remedyOffered}\n\nCurrent status: {currentStatus}\n\nI have been left with a product I cannot safely use and no effective remedy has been provided despite the recall being announced on {recallDate}.', placeholders: ['recallReason', 'companyName', 'remedyOffered', 'currentStatus', 'recallDate'] },
+      { id: 'request', name: 'Request', template: 'I am requesting either: (1) an immediate replacement with a safe, equivalent product, or (2) a full refund of {amountPaid}. Continued delay in providing a recall remedy is unacceptable, particularly given the safety implications.', placeholders: ['amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'I require a definitive response within 14 days. If no remedy is provided, I will file a complaint with the CPSC (or relevant safety authority) regarding the lack of remedy and pursue a refund through my payment provider.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Manufacturers have a legal obligation to provide timely remedies for recalled products. I expect {companyName} to fulfill this obligation without further delay.', placeholders: [] },
+    ],
+    jurisdictions: warrantyJurisdictions,
+  },
+  {
+    id: 'warranty-refurbished-product-failure',
+    slug: 'warranty-refurbished-product-failure',
+    category: 'Refunds & Purchases',
+    title: 'Refurbished/Renewed Product Failure – Warranty Claim',
+    shortDescription: 'File a warranty claim for a certified refurbished or renewed product that failed prematurely.',
+    longDescription: `Certified refurbished, renewed, or reconditioned products are sold with the promise of being "like new" and typically carry their own warranty. When these products fail, consumers often face pushback from sellers who try to limit liability because the product wasn't sold as new.
+
+When to use this letter:
+• A "certified refurbished" product failed within its stated warranty period
+• The seller claims limited warranty coverage for refurbished items that wasn't disclosed at sale
+• An Amazon Renewed, Apple Certified Refurbished, or similar program product is defective
+• The product arrived with a pre-existing defect that should have been caught during refurbishment
+• The seller or platform is redirecting you between different parties without resolution
+• You received a product advertised as refurbished that appears to be used or damaged
+
+Refurbished products must meet the quality standards advertised and carry enforceable warranties.`,
+    seoTitle: 'Refurbished Product Warranty Claim – Failure Complaint Letter',
+    seoDescription: 'Certified refurbished product broke? File a warranty claim with this professional letter. Covers Amazon Renewed, Apple Certified & more.',
+    tones: ['neutral', 'firm', 'final'],
+    fields: [
+      { id: 'sellerName', label: 'Seller/Platform Name', type: 'text', placeholder: 'e.g., Amazon Renewed, Back Market, Apple', required: true, impactLevel: 'important' as const },
+      { id: 'sellerAddress', label: 'Seller Address', type: 'textarea', placeholder: 'Full address', required: true },
+      { id: 'refurbisherName', label: 'Refurbisher Name (if different from seller)', type: 'text', placeholder: 'e.g., Third-party refurbisher name', required: false },
+      { id: 'productName', label: 'Product Name', type: 'text', placeholder: 'e.g., MacBook Air M2, Galaxy S23', required: true, impactLevel: 'important' as const },
+      { id: 'productModel', label: 'Model/Serial Number', type: 'text', placeholder: 'e.g., A2681 / SN: FVFXYZ123', required: true },
+      { id: 'certificationLevel', label: 'Refurbished Certification Level', type: 'select', options: ['Certified Refurbished', 'Amazon Renewed', 'Apple Certified Refurbished', 'Manufacturer Refurbished', 'Seller Refurbished', 'Renewed Premium', 'Grade A/B/C Refurbished', 'Other'], required: true },
+      { id: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
+      { id: 'amountPaid', label: 'Amount Paid', type: 'text', placeholder: 'e.g., $849.00', required: true, impactLevel: 'important' as const },
+      { id: 'warrantyLength', label: 'Stated Warranty Length', type: 'text', placeholder: 'e.g., 90 days, 1 year', required: true },
+      { id: 'defectDescription', label: 'Describe the Failure', type: 'textarea', placeholder: 'What went wrong? When did it happen?', required: true, impactLevel: 'important' as const, aiEnhanced: true },
+      { id: 'productConditionOnArrival', label: 'Product Condition on Arrival', type: 'textarea', placeholder: 'Did it look truly refurbished? Any signs of wear, scratches, or previous damage?', required: false, evidenceHint: 'Note any signs that the product was not properly refurbished' },
+      { id: 'previousContact', label: 'Previous Contact Attempts', type: 'textarea', placeholder: 'Who have you spoken to and what was the outcome?', required: false },
+    ],
+    sections: [
+      { id: 'introduction', name: 'Introduction', template: 'I am writing regarding a {certificationLevel} {productName} (Model: {productModel}), purchased from {sellerName} on {purchaseDate} for {amountPaid}, which has failed within the stated {warrantyLength} warranty period.', placeholders: ['certificationLevel', 'productName', 'productModel', 'sellerName', 'purchaseDate', 'amountPaid', 'warrantyLength'] },
+      { id: 'facts', name: 'Facts of the Matter', template: 'The product was sold as {certificationLevel}, which carries an expectation of thorough testing and quality assurance.\n\nThe failure: {defectDescription}\n\nCondition upon arrival: {productConditionOnArrival}\n\nPrevious contact: {previousContact}\n\nThis failure occurred within the warranty period and may indicate the product was not properly refurbished or tested before sale.', placeholders: ['certificationLevel', 'defectDescription', 'productConditionOnArrival', 'previousContact'] },
+      { id: 'request', name: 'Request', template: 'I am requesting either: (1) a replacement with a properly functioning {certificationLevel} unit, or (2) a full refund of {amountPaid}. A product sold as {certificationLevel} must meet the advertised quality standards.', placeholders: ['certificationLevel', 'amountPaid'] },
+      { id: 'deadline', name: 'Response Expected', template: 'Please respond within 14 days with a resolution. If the product cannot be replaced with a unit that works properly, a full refund is the only acceptable outcome.', placeholders: [] },
+      { id: 'closing', name: 'Closing', template: 'Selling refurbished products that fail prematurely undermines consumer trust and may constitute a misrepresentation of product quality. I expect this to be resolved promptly.', placeholders: [] },
+    ],
+    jurisdictions: warrantyJurisdictions,
+  },
 ];
