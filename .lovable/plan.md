@@ -1,36 +1,28 @@
 
-You’re right to call this out. The base URL you pasted is not enough for CSV export.
 
-What happened
-- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/system-health` is the health endpoint.
-- For CSV export, you must add query params: `table`, `offset`, `limit`.
+# Plan: Fix CSV Export for Database Import
 
-Use this exact URL (first chunk of `blog_posts`)
-- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/system-health?table=blog_posts&offset=0&limit=500`
+## Problem
+The current `export-data` function produces CSVs with human-readable headers (`ID`, `Title`, `Slug`, `Featured`) instead of actual database column names (`id`, `title`, `slug`, `featured`). It also only exports 14 of 30+ columns. Supabase's CSV import requires exact column name matches.
 
-Where to paste it
-1. Open a new browser tab (not inside any import field).
-2. Paste the full URL above in the address bar.
-3. Save the response as `blog_posts-0.csv` (or it may auto-download).
+## Solution
+Create a new edge function `migrate-csv` that exports a table as a raw CSV with:
+- Headers matching exact database column names
+- All columns included
+- Proper handling of arrays (PostgreSQL `{a,b}` format), JSON, booleans, and nulls
+- Pagination support for the 95MB dataset — export in chunks (e.g. 500 rows per call) so you can download multiple CSVs and import them sequentially
 
-Next chunks (same table)
-- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/system-health?table=blog_posts&offset=500&limit=500`
-- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/system-health?table=blog_posts&offset=1000&limit=500`
-- Keep increasing offset by 500 until the file is empty or only has headers.
+## How it works
+1. Call `GET /migrate-csv?table=blog_posts&offset=0&limit=500` → returns CSV chunk 1
+2. Call with `offset=500` → chunk 2, etc.
+3. Each CSV file will have proper headers and be directly importable into the new project's Table Editor
+4. Response includes a header `X-Next-Offset` and `X-Total-Count` so you know when you're done
 
-Template for any table
-- `https://koulmtfnkuapzigcplov.supabase.co/functions/v1/system-health?table=TABLE_NAME&offset=OFFSET&limit=500`
+## Steps
+1. Create `supabase/functions/migrate-csv/index.ts`
+2. Deploy it
+3. You download each chunk and import via the Supabase Table Editor
 
-Examples:
-- `...table=article_embeddings&offset=0&limit=500`
-- `...table=content_queue&offset=0&limit=500`
-- `...table=keyword_targets&offset=0&limit=500`
-- `...table=link_suggestions&offset=0&limit=500`
+## Why not fix the push function?
+The push function keeps hitting deployment/404 issues. CSV import through the Supabase UI is the most reliable path — we just need the CSV format to be correct.
 
-Import flow (destination project)
-1. Open target table.
-2. Import CSV.
-3. Start with offset `0`, then `500`, `1000`, etc. for same table.
-4. Repeat table-by-table.
-
-If you want, next I can give you a clean copy-paste checklist in exact order (table + every offset) so you can execute without thinking.
